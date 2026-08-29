@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+:root {
+  --print-font-size: 10px;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  background-color: #020617;
+  color: #f8fafc;
+}
+
+/* Custom Hide Scrollbar Utilities */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Bento custom scrollbars for dark mode */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Custom Formation & Bento Card Print Boundaries */
+.formation-container {
+  page-break-inside: avoid;
+}
+
+/* Print Optimization */
+@media print {
+  @page {
+    size: letter portrait;
+    margin: 0.3in;
+  }
+
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-size: var(--print-font-size, 10px) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    width: 100% !important;
+  }
+
+  /* Hide navigation, toolbars, buttons, modals in print */
+  header,
+  nav,
+  aside,
+  button,
+  .print\:hidden,
+  .hidden-print {
+    display: none !important;
+  }
+
+  /* Printable formation cards */
+  .formation-container {
+    border: 2px solid #000000 !important;
+    box-shadow: none !important;
+    padding: 6px !important;
+    margin-bottom: 12px !important;
+    background: #ffffff !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    color: #000000 !important;
+  }
+
+  /* Practice table print formatting */
+  .practice-table {
+    font-size: var(--print-font-size, 10px) !important;
+    border: 2px solid #000000 !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .practice-table thead {
+    display: table-header-group !important;
+  }
+
+  .practice-table th {
+    font-size: calc(var(--print-font-size, 10px) * 1.05) !important;
+    background-color: #e2e8f0 !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    padding: 4px 6px !important;
+  }
+
+  .practice-table td {
+    font-size: var(--print-font-size, 10px) !important;
+    border: 1px solid #000000 !important;
+    padding: 4px 6px !important;
+    color: #000000 !important;
+    vertical-align: top !important;
+    word-break: break-word !important;
+    background-color: #ffffff !important;
+  }
+
+  .practice-table tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}

@@ -1,0 +1,503 @@
+import React, { useState } from 'react';
+import {
+  Plus,
+  Printer,
+  Filter,
+  ArrowUp,
+  ArrowDown,
+  Copy,
+  Edit2,
+  Trash2,
+  Move,
+  Settings2,
+  GripHorizontal,
+  X,
+  Shield,
+  Zap,
+} from 'lucide-react';
+import {
+  FormationBoard,
+  FormationRow,
+  PositionSlot,
+  PlacedPlayer,
+  UserRole,
+  UnitType,
+} from '../types';
+
+interface FormationsViewProps {
+  unit: 'offense' | 'defense' | 'st' | 'groups';
+  formations: FormationBoard[];
+  depthChart: Record<string, PlacedPlayer[]>;
+  selectedFormationId: string | null;
+  onSelectFormation: (formId: string) => void;
+  userRole: UserRole;
+  onAddFormation: (unit: 'offense' | 'defense' | 'st' | 'groups') => void;
+  onMoveFormation: (formId: string, direction: number) => void;
+  onDuplicateFormation: (formId: string) => void;
+  onRenameFormation: (formId: string) => void;
+  onDeleteFormation: (formId: string) => void;
+  onAddRow: (formId: string) => void;
+  onEditRowName: (formId: string, rIdx: number) => void;
+  onEditRowSlots: (formId: string, rIdx: number) => void;
+  onDeleteRow: (formId: string, rIdx: number) => void;
+  onAddPosition: (formId: string, rIdx: number) => void;
+  onEditPositionName: (formId: string, rIdx: number, pIdx: number) => void;
+  onMovePositionRow: (formId: string, rIdx: number, pIdx: number) => void;
+  onCopyPositionToOtherForm: (formId: string, rIdx: number, pIdx: number) => void;
+  onDeletePosition: (formId: string, rIdx: number, pIdx: number) => void;
+  onDropPlayerOnCard: (
+    targetPosId: string,
+    targetFormId: string,
+    targetRowId: string
+  ) => void;
+  onRemovePlayerFromCard: (posId: string, playerIndex: number) => void;
+  onOpenSelectivePrintModal: (unit: 'offense' | 'defense' | 'st' | 'groups') => void;
+  onDragStartPlacedPlayer: (
+    e: React.DragEvent,
+    posId: string,
+    idx: number,
+    player: PlacedPlayer
+  ) => void;
+  onPositionCardDragStart: (
+    e: React.DragEvent,
+    formId: string,
+    rIdx: number,
+    pIdx: number
+  ) => void;
+  onPositionCardDropOnSlot: (
+    e: React.DragEvent,
+    targetFormId: string,
+    targetRIdx: number,
+    targetPIdx: number
+  ) => void;
+}
+
+export const FormationsView: React.FC<FormationsViewProps> = ({
+  unit,
+  formations,
+  depthChart,
+  selectedFormationId,
+  onSelectFormation,
+  userRole,
+  onAddFormation,
+  onMoveFormation,
+  onDuplicateFormation,
+  onRenameFormation,
+  onDeleteFormation,
+  onAddRow,
+  onEditRowName,
+  onEditRowSlots,
+  onDeleteRow,
+  onAddPosition,
+  onEditPositionName,
+  onMovePositionRow,
+  onCopyPositionToOtherForm,
+  onDeletePosition,
+  onDropPlayerOnCard,
+  onRemovePlayerFromCard,
+  onOpenSelectivePrintModal,
+  onDragStartPlacedPlayer,
+  onPositionCardDragStart,
+  onPositionCardDropOnSlot,
+}) => {
+  const [filterViewId, setFilterViewId] = useState<string>('ALL');
+  const [dragOverPosId, setDragOverPosId] = useState<string | null>(null);
+  const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null);
+
+  const unitFormations = formations.filter((f) => f && f.unit === unit);
+  const displayedFormations =
+    filterViewId === 'ALL'
+      ? unitFormations
+      : unitFormations.filter((f) => f.id === filterViewId);
+
+  return (
+    <div className="space-y-6">
+      {/* Top Action & Filter Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 backdrop-blur-md p-4 rounded-3xl border border-slate-800 shadow-xl print:hidden">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {userRole === 'admin' && (
+            <button
+              onClick={() => onAddFormation(unit)}
+              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/20 border border-indigo-500/30 flex items-center gap-1.5 transition-all active:scale-95"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>
+                Add {unit === 'offense' ? 'Offensive' : unit === 'defense' ? 'Defensive' : unit === 'st' ? 'Special Teams' : 'Depth Chart'} Formation
+              </span>
+            </button>
+          )}
+
+          {/* On-screen view filter */}
+          <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-800 px-3 py-1.5 rounded-xl">
+            <Filter className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="text-xs font-black text-slate-300">Filter View:</span>
+            <select
+              value={filterViewId}
+              onChange={(e) => setFilterViewId(e.target.value)}
+              className="bg-slate-900 border border-slate-700/80 text-xs font-bold text-slate-100 rounded-lg px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+            >
+              <option value="ALL">All Formations ({unitFormations.length})</option>
+              {unitFormations.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <button
+          onClick={() => onOpenSelectivePrintModal(unit)}
+          className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-amber-300 font-bold text-xs rounded-xl border border-slate-800 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+        >
+          <Printer className="w-3.5 h-3.5" />
+          <span>Selective Print</span>
+        </button>
+      </div>
+
+      {displayedFormations.length === 0 && (
+        <div className="bg-slate-900/90 rounded-3xl border border-dashed border-slate-800 p-12 text-center text-slate-400 shadow-xl">
+          <p className="text-sm font-bold text-slate-300">No formations found for this unit.</p>
+          {userRole === 'admin' && (
+            <button
+              onClick={() => onAddFormation(unit)}
+              className="mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl inline-flex items-center gap-1.5 shadow-md shadow-indigo-600/30 transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" /> Create New Formation
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Formation Cards */}
+      <div className="space-y-6">
+        {displayedFormations.map((form) => {
+          const isSelected = selectedFormationId === form.id;
+
+          return (
+            <div
+              key={form.id}
+              onClick={() => onSelectFormation(form.id)}
+              className={`formation-container bg-slate-900/90 backdrop-blur-md rounded-3xl border transition-all p-5 relative shadow-xl ${
+                isSelected
+                  ? 'border-indigo-500/70 shadow-indigo-500/10 ring-2 ring-indigo-500/30'
+                  : 'border-slate-800 hover:border-slate-700/90'
+              }`}
+            >
+              {/* Formation Card Header */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-slate-800/80 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-black text-xs">
+                    {unit === 'offense' ? 'OFF' : unit === 'defense' ? 'DEF' : unit === 'st' ? 'ST' : 'GRP'}
+                  </div>
+                  <h2 className="font-black text-base md:text-lg text-slate-100 tracking-tight">
+                    {form.name}
+                  </h2>
+                </div>
+
+                {/* Admin Controls */}
+                {userRole === 'admin' && (
+                  <div className="flex items-center gap-1.5 flex-wrap print:hidden" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => onMoveFormation(form.id, -1)}
+                      title="Move Formation Up"
+                      className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-bold transition-all"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => onMoveFormation(form.id, 1)}
+                      title="Move Formation Down"
+                      className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-bold transition-all"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => onAddRow(form.id)}
+                      className="px-2.5 py-1 text-xs font-bold bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-xl transition-all flex items-center gap-1 shadow-xs"
+                    >
+                      <Plus className="w-3 h-3 text-indigo-400" />
+                      <span>Add Row</span>
+                    </button>
+                    <button
+                      onClick={() => onDuplicateFormation(form.id)}
+                      title="Duplicate formation with all players"
+                      className="px-2.5 py-1 text-xs font-bold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 rounded-xl transition-all flex items-center gap-1 shadow-xs"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span className="hidden sm:inline">Duplicate</span>
+                    </button>
+                    <button
+                      onClick={() => onRenameFormation(form.id)}
+                      title="Rename formation"
+                      className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 border border-slate-800 rounded-xl transition-all"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => onDeleteFormation(form.id)}
+                      title="Delete formation"
+                      className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 border border-rose-900/40 rounded-xl transition-all"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Rows inside Formation */}
+              <div className="space-y-4">
+                {form.rows.map((row, rIdx) => {
+                  const positionsList = row.positions || [];
+                  const slotCount = positionsList.length || row.slotCount || 7;
+
+                  return (
+                    <div key={row.id || rIdx} className="space-y-1.5">
+                      {/* Level/Row Header Bar */}
+                      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-950/80 border border-slate-800 rounded-xl">
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (userRole === 'admin') onEditRowName(form.id, rIdx);
+                          }}
+                          className={`text-[10.5px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5 ${
+                            userRole === 'admin' ? 'cursor-pointer hover:text-indigo-300' : ''
+                          }`}
+                        >
+                          <span>{row.label || `Level ${rIdx + 1}`}</span>
+                          {userRole === 'admin' && (
+                            <Edit2 className="w-2.5 h-2.5 opacity-60" />
+                          )}
+                        </div>
+
+                        {/* Row Level Action buttons */}
+                        {userRole === 'admin' && (
+                          <div
+                            className="flex items-center gap-1.5 print:hidden"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              onClick={() => onEditRowSlots(form.id, rIdx)}
+                              title="Edit number of position slots (1 to 10)"
+                              className="px-2 py-0.5 text-[10px] font-bold bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded-lg flex items-center gap-1"
+                            >
+                              <Settings2 className="w-2.5 h-2.5 text-indigo-400" />
+                              <span>Slots ({slotCount})</span>
+                            </button>
+                            <button
+                              onClick={() => onAddPosition(form.id, rIdx)}
+                              className="px-2 py-0.5 text-[10px] font-bold bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded-lg flex items-center gap-1"
+                            >
+                              <Plus className="w-2.5 h-2.5 text-emerald-400" />
+                              <span>Pos</span>
+                            </button>
+                            <button
+                              onClick={() => onDeleteRow(form.id, rIdx)}
+                              title="Delete Row"
+                              className="p-1 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 rounded-lg"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Formation Grid Row */}
+                      <div
+                        className="grid gap-2.5 p-3 bg-slate-950/50 border border-slate-800/80 rounded-2xl overflow-x-auto"
+                        style={{
+                          gridTemplateColumns: `repeat(${slotCount}, minmax(115px, 1fr))`,
+                        }}
+                      >
+                        {positionsList.map((pos, pIdx) => {
+                          const slotKey = `${form.id}_${rIdx}_${pIdx}`;
+                          const isSlotDragOver = dragOverSlotKey === slotKey;
+
+                          return (
+                            <div
+                              key={pIdx}
+                              onDragOver={(e) => {
+                                if (userRole === 'admin') {
+                                  e.preventDefault();
+                                  setDragOverSlotKey(slotKey);
+                                }
+                              }}
+                              onDragLeave={() => {
+                                if (dragOverSlotKey === slotKey) setDragOverSlotKey(null);
+                              }}
+                              onDrop={(e) => {
+                                if (userRole === 'admin') {
+                                  setDragOverSlotKey(null);
+                                  onPositionCardDropOnSlot(e, form.id, rIdx, pIdx);
+                                }
+                              }}
+                              className={`min-h-[110px] rounded-2xl flex flex-col transition-all relative ${
+                                isSlotDragOver
+                                  ? 'bg-indigo-950/60 border-2 border-dashed border-indigo-400 ring-2 ring-indigo-500/40'
+                                  : pos
+                                  ? 'bg-slate-900/90'
+                                  : 'bg-slate-950/40 border border-dashed border-slate-800/60'
+                              }`}
+                            >
+                              {pos ? (
+                                <div
+                                  onDragOver={(e) => {
+                                    if (userRole === 'admin') {
+                                      e.preventDefault();
+                                      setDragOverPosId(pos.id);
+                                    }
+                                  }}
+                                  onDragLeave={() => {
+                                    if (dragOverPosId === pos.id) setDragOverPosId(null);
+                                  }}
+                                  onDrop={(e) => {
+                                    if (userRole === 'admin') {
+                                      setDragOverPosId(null);
+                                      onDropPlayerOnCard(pos.id, form.id, row.id);
+                                    }
+                                  }}
+                                  className={`h-full flex flex-col rounded-2xl border transition-all ${
+                                    dragOverPosId === pos.id
+                                      ? 'border-indigo-500 ring-2 ring-indigo-500/50 bg-indigo-950/40 shadow-lg'
+                                      : 'border-slate-800/90 shadow-sm'
+                                  }`}
+                                >
+                                  {/* Card Header (Position Name + Actions) */}
+                                  <div
+                                    draggable={userRole === 'admin'}
+                                    onDragStart={(e) =>
+                                      onPositionCardDragStart(e, form.id, rIdx, pIdx)
+                                    }
+                                    className={`px-2.5 py-1.5 bg-slate-950 border-b border-slate-800 rounded-t-2xl flex items-center justify-between text-xs font-black select-none ${
+                                      userRole === 'admin' ? 'cursor-grab active:cursor-grabbing' : ''
+                                    }`}
+                                  >
+                                    <div
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (userRole === 'admin')
+                                          onEditPositionName(form.id, rIdx, pIdx);
+                                      }}
+                                      className={`flex items-center gap-1 truncate ${
+                                        userRole === 'admin' ? 'hover:text-indigo-400 cursor-pointer' : ''
+                                      }`}
+                                    >
+                                      <span className="font-black text-[11px] text-indigo-300 tracking-tight">
+                                        {pos.name}
+                                      </span>
+                                    </div>
+
+                                    {/* Position Header Actions */}
+                                    {userRole === 'admin' && (
+                                      <div
+                                        className="flex items-center gap-1 print:hidden"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <button
+                                          onClick={() => onMovePositionRow(form.id, rIdx, pIdx)}
+                                          title="Move position to another row"
+                                          className="p-0.5 text-slate-500 hover:text-indigo-400 rounded hover:bg-slate-800"
+                                        >
+                                          <Move className="w-2.5 h-2.5" />
+                                        </button>
+                                        <button
+                                          onClick={() => onCopyPositionToOtherForm(form.id, rIdx, pIdx)}
+                                          title="Copy position to another formation"
+                                          className="p-0.5 text-slate-500 hover:text-indigo-400 rounded hover:bg-slate-800"
+                                        >
+                                          <Copy className="w-2.5 h-2.5" />
+                                        </button>
+                                        <button
+                                          onClick={() => onDeletePosition(form.id, rIdx, pIdx)}
+                                          title="Delete position slot"
+                                          className="p-0.5 text-rose-400 hover:text-rose-300 rounded hover:bg-rose-950/40"
+                                        >
+                                          <X className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Player List on this Position Card */}
+                                  <div className="p-2 flex-1 flex flex-col gap-1.5 min-h-[64px]">
+                                    {(depthChart[pos.id] || []).map((player, plIdx) => {
+                                      const isStarter = plIdx === 0;
+                                      const isD2 = plIdx === 1;
+
+                                      return (
+                                        <div
+                                          key={plIdx}
+                                          draggable={userRole === 'admin'}
+                                          onDragStart={(e) =>
+                                            onDragStartPlacedPlayer(e, pos.id, plIdx, player)
+                                          }
+                                          className={`px-2 py-1 rounded-xl border text-[10.5px] font-bold flex items-center justify-between transition-all select-none ${
+                                            isStarter
+                                              ? 'bg-slate-950 text-indigo-300 border-indigo-500/40 shadow-xs'
+                                              : isD2
+                                              ? 'bg-amber-400 text-slate-950 border-amber-500 font-extrabold shadow-xs'
+                                              : 'bg-indigo-600 text-white border-indigo-500 font-extrabold shadow-xs'
+                                          } ${userRole === 'admin' ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                                        >
+                                          <div className="flex items-center gap-1.5 min-w-0 truncate">
+                                            <span
+                                              className={`text-[8.5px] font-black uppercase px-1 py-0.2 rounded-md ${
+                                                isStarter
+                                                  ? 'bg-indigo-500/20 text-indigo-300'
+                                                  : isD2
+                                                  ? 'bg-black/20 text-black'
+                                                  : 'bg-white/20 text-white'
+                                              }`}
+                                            >
+                                              {isStarter ? 'ST' : isD2 ? 'D2' : 'D3'}
+                                            </span>
+                                            <span className="font-mono text-[10px] opacity-90">
+                                              #{player.num}
+                                            </span>
+                                            <span className="truncate uppercase">
+                                              {player.name}
+                                            </span>
+                                          </div>
+
+                                          {userRole === 'admin' && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                onRemovePlayerFromCard(pos.id, plIdx);
+                                              }}
+                                              className="ml-1 opacity-70 hover:opacity-100 hover:text-rose-300 print:hidden text-xs"
+                                            >
+                                              &times;
+                                            </button>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+
+                                    {(!depthChart[pos.id] || depthChart[pos.id].length === 0) && (
+                                      <div className="flex-1 flex items-center justify-center text-[10px] text-slate-500 font-medium italic border border-dashed border-slate-800 rounded-xl p-2">
+                                        Drop Player
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex-1 flex items-center justify-center text-[10px] text-slate-600 italic">
+                                  Empty Slot
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};

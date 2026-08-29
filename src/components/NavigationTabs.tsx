@@ -1,0 +1,78 @@
+import React from 'react';
+import {
+  Shield,
+  Zap,
+  Target,
+  Swords,
+  Watch,
+  FileSpreadsheet,
+  BookOpen,
+  Dumbbell,
+  ClipboardList,
+  Users,
+} from 'lucide-react';
+import { UnitType, UserRole } from '../types';
+
+interface NavigationTabsProps {
+  activeUnit: UnitType;
+  onSelectUnit: (unit: UnitType) => void;
+  userRole: UserRole;
+}
+
+interface TabItem {
+  id: UnitType;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  adminOnly?: boolean;
+}
+
+export const NavigationTabs: React.FC<NavigationTabsProps> = ({
+  activeUnit,
+  onSelectUnit,
+  userRole,
+}) => {
+  const tabs: TabItem[] = [
+    { id: 'offense', label: 'Offense', icon: Zap },
+    { id: 'defense', label: 'Defense', icon: Shield },
+    { id: 'st', label: 'Special Teams', icon: Target },
+    { id: 'groups', label: 'Depth Chart', icon: ClipboardList },
+    { id: 'scrimmage', label: 'Practice / Scrimmage', icon: Swords },
+    { id: 'wristband', label: 'Wristband', icon: Watch },
+    { id: 'scouting', label: 'Scouting', icon: FileSpreadsheet },
+    { id: 'guide', label: 'Playbooks & Guides', icon: BookOpen },
+    { id: 'drills', label: 'Drills Library', icon: Dumbbell },
+    { id: 'practice', label: 'Practice Plan', icon: ClipboardList },
+    { id: 'users', label: 'Staff & Users', icon: Users, adminOnly: true },
+  ];
+
+  return (
+    <div className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-[108px] z-30 shadow-lg print:hidden">
+      <div className="max-w-[1700px] mx-auto px-4 py-2.5 flex gap-2 overflow-x-auto no-scrollbar items-center">
+        {tabs
+          .filter((tab) => !tab.adminOnly || userRole === 'admin')
+          .map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeUnit === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onSelectUnit(tab.id)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black tracking-tight whitespace-nowrap transition-all select-none border active:scale-95 ${
+                  isActive
+                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-600/30 border-indigo-500/50 ring-1 ring-white/10'
+                    : 'bg-slate-950/60 hover:bg-slate-800/80 text-slate-400 hover:text-slate-200 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <Icon
+                  className={`w-3.5 h-3.5 ${
+                    isActive ? 'text-white' : 'text-slate-400'
+                  }`}
+                />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+      </div>
+    </div>
+  );
+};
