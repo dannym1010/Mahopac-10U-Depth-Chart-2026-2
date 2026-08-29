@@ -264,6 +264,16 @@ export default function App() {
     const { auth, db } = getFirebaseServices();
 
     if (auth) {
+      // Process any pending redirect auth results from Google Sign-in
+      auth.getRedirectResult().then((result: any) => {
+        if (result?.user) {
+          setCurrentUser(result.user);
+          setIsAuthModalOpen(false);
+        }
+      }).catch((err: any) => {
+        console.warn('Redirect auth result error:', err);
+      });
+
       const unsubscribeAuth = auth.onAuthStateChanged((user: any) => {
         if (user) {
           setCurrentUser(user);
@@ -272,6 +282,30 @@ export default function App() {
           // Check if coach is approved or master admin
           const cleanEmail = (user.email || '').toLowerCase().trim();
           const isMaster = cleanEmail === 'dannym1010@gmail.com';
+          
+          setStaffList((prevStaff) => {
+            const exists = prevStaff.some(
+              (c) => c.email.toLowerCase().trim() === cleanEmail
+            );
+            if (!exists && cleanEmail) {
+              const newEntry: StaffCoach = {
+                email: cleanEmail,
+                role: isMaster ? 'Head Coach / Admin' : 'Assistant Coach',
+                status: isMaster ? 'Active' : 'Pending',
+              };
+              const updatedStaff = [...prevStaff, newEntry];
+              // Save to Firestore
+              if (db) {
+                db.collection('teamData').doc('depthChartData').set(
+                  { staffList: updatedStaff },
+                  { merge: true }
+                ).catch((err: any) => console.warn('Staff update error:', err));
+              }
+              return updatedStaff;
+            }
+            return prevStaff;
+          });
+
           const coachEntry = staffList.find(
             (c) => c.email.toLowerCase().trim() === cleanEmail
           );
@@ -2176,6 +2210,17 @@ export default function App() {
             setCurrentUser(result.user);
             setIsAuthModalOpen(false);
           }
+        }}
+        onGoogleSignInRedirect={async () => {
+          const { auth } = getFirebaseServices();
+          if (!auth) {
+            setCurrentUser({ email: 'coach@google.com' });
+            setIsAuthModalOpen(false);
+            return;
+          }
+          const provider = new window.firebase.auth.GoogleAuthProvider();
+          provider.setCustomParameters({ prompt: 'select_account' });
+          await auth.signInWithRedirect(provider);
         }}
         onBypassLogin={() => {
           setCurrentUser({ email: 'Head Coach (Offline)' });
