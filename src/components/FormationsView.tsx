@@ -402,7 +402,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         userRole === 'admin' ? 'hover:text-indigo-400 cursor-pointer' : ''
                                       }`}
                                     >
-                                      <span className="font-black text-[11px] print:text-[10px] text-indigo-300 print:text-white tracking-tight">
+                                      <span className="font-black text-[11px] print:text-[10px] text-indigo-300 print:text-slate-950 tracking-tight">
                                         {pos.name}
                                       </span>
                                     </div>
@@ -456,17 +456,17 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                               ? 'bg-slate-950 text-indigo-300 border-indigo-500/40 shadow-xs print-player-badge-starter'
                                               : isD2
                                               ? 'bg-amber-400 text-slate-950 border-amber-500 font-extrabold shadow-xs print-player-badge-d2'
-                                              : 'bg-indigo-600 text-white border-indigo-500 font-extrabold shadow-xs print-player-badge-d3'
+                                              : 'bg-blue-700 text-white border-blue-500 font-extrabold shadow-xs print-player-badge-d3'
                                           } ${userRole === 'admin' ? 'cursor-grab active:cursor-grabbing' : ''}`}
                                         >
                                           <div className="flex items-center gap-1.5 min-w-0 truncate">
                                             <span
-                                              className={`text-[8.5px] print:text-[7px] font-black uppercase px-1 py-0.2 rounded-md ${
+                                              className={`text-[8.5px] print:text-[7.5px] font-black uppercase px-1 py-0.2 rounded-md ${
                                                 isStarter
-                                                  ? 'bg-indigo-500/20 text-indigo-300 print:bg-black print:text-white'
+                                                  ? 'bg-indigo-500/20 text-indigo-300 print-tag-st'
                                                   : isD2
-                                                  ? 'bg-black/20 text-black'
-                                                  : 'bg-white/20 text-white'
+                                                  ? 'bg-black/20 text-black print-tag-d2'
+                                                  : 'bg-white/20 text-white print-tag-d3'
                                               }`}
                                             >
                                               {isStarter ? 'ST' : isD2 ? 'D2' : 'D3'}

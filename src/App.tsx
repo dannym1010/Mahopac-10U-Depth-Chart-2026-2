@@ -2170,7 +2170,12 @@ export default function App() {
             return;
           }
           const provider = new window.firebase.auth.GoogleAuthProvider();
-          await auth.signInWithPopup(provider);
+          provider.setCustomParameters({ prompt: 'select_account' });
+          const result = await auth.signInWithPopup(provider);
+          if (result?.user) {
+            setCurrentUser(result.user);
+            setIsAuthModalOpen(false);
+          }
         }}
         onBypassLogin={() => {
           setCurrentUser({ email: 'Head Coach (Offline)' });

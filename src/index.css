@@ -67,111 +67,161 @@ body {
     display: none !important;
   }
 
-  /* Printable formation cards: fits 2 per letter page cleanly */
+  /* Printable formation cards: crisp white, clean borders, fits 2 per letter page cleanly */
   .formation-container {
-    border: 2px solid #000000 !important;
-    border-radius: 4px !important;
+    border: 1.5px solid #334155 !important;
+    border-radius: 6px !important;
     box-shadow: none !important;
-    padding: 4px 6px !important;
-    margin-bottom: 8px !important;
+    padding: 6px 8px !important;
+    margin-bottom: 10px !important;
     background: #ffffff !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    color: #000000 !important;
+    color: #0f172a !important;
     overflow: visible !important;
   }
 
   .formation-card-header {
-    border-bottom: 2px solid #000000 !important;
-    padding-bottom: 2px !important;
-    margin-bottom: 4px !important;
+    border-bottom: 1.5px solid #cbd5e1 !important;
+    padding-bottom: 4px !important;
+    margin-bottom: 6px !important;
   }
 
   .formation-row-header {
-    background-color: #f1f5f9 !important;
-    border: 1px solid #000000 !important;
-    color: #000000 !important;
+    background-color: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #0f172a !important;
     font-size: 8.5px !important;
     font-weight: 900 !important;
-    padding: 2px 4px !important;
-    margin-bottom: 2px !important;
-    border-radius: 2px !important;
+    padding: 2px 5px !important;
+    margin-bottom: 3px !important;
+    border-radius: 4px !important;
   }
 
   .formation-grid-row {
     background-color: #ffffff !important;
-    border: 1px solid #000000 !important;
-    padding: 2px 3px !important;
-    gap: 3px !important;
+    border: 1px solid #e2e8f0 !important;
+    padding: 3px !important;
+    gap: 4px !important;
     overflow: visible !important;
     display: grid !important;
-    border-radius: 2px !important;
+    border-radius: 4px !important;
   }
 
   .position-slot-card {
-    border: 1.5px solid #000000 !important;
+    border: 1px solid #cbd5e1 !important;
     background-color: #ffffff !important;
-    border-radius: 2px !important;
+    border-radius: 4px !important;
     min-height: 48px !important;
   }
 
   .position-card-title {
-    background-color: #000000 !important;
-    color: #ffffff !important;
-    font-size: 9px !important;
+    background-color: #e0e7ff !important;
+    color: #1e1b4b !important;
+    font-size: 9.5px !important;
     font-weight: 900 !important;
-    padding: 1px 3px !important;
-    border-bottom: 1px solid #000000 !important;
+    padding: 1.5px 3px !important;
+    border-bottom: 1px solid #cbd5e1 !important;
     text-align: center !important;
+    border-top-left-radius: 3px !important;
+    border-top-right-radius: 3px !important;
   }
 
+  /* Player Badges - White with highlighted tags */
   .print-player-badge-starter {
-    background-color: #000000 !important;
-    color: #ffffff !important;
-    border: 1px solid #000000 !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border: 1.5px solid #0f172a !important;
     font-size: 8.5px !important;
     font-weight: 900 !important;
-    padding: 1px 3px !important;
-    border-radius: 2px !important;
+    padding: 1.5px 3px !important;
+    border-radius: 3px !important;
     margin-bottom: 1px !important;
+  }
+
+  .print-tag-st {
+    background-color: #fef08a !important;
+    color: #713f12 !important;
+    border: 1px solid #eab308 !important;
+    font-size: 7.5px !important;
+    font-weight: 900 !important;
   }
 
   .print-player-badge-d2 {
-    background-color: #e2e8f0 !important;
-    color: #000000 !important;
-    border: 1px solid #000000 !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border: 1px solid #94a3b8 !important;
     font-size: 8px !important;
     font-weight: 800 !important;
     padding: 1px 3px !important;
-    border-radius: 2px !important;
+    border-radius: 3px !important;
     margin-bottom: 1px !important;
+  }
+
+  .print-tag-d2 {
+    background-color: #e0f2fe !important;
+    color: #0369a1 !important;
+    border: 1px solid #7dd3fc !important;
+    font-size: 7.5px !important;
+    font-weight: 900 !important;
   }
 
   .print-player-badge-d3 {
     background-color: #ffffff !important;
-    color: #000000 !important;
-    border: 1px solid #000000 !important;
+    color: #475569 !important;
+    border: 1px dashed #cbd5e1 !important;
     font-size: 7.5px !important;
     font-weight: 700 !important;
     padding: 1px 3px !important;
-    border-radius: 2px !important;
+    border-radius: 3px !important;
     margin-bottom: 1px !important;
   }
 
+  .print-tag-d3 {
+    background-color: #f1f5f9 !important;
+    color: #475569 !important;
+    border: 1px solid #e2e8f0 !important;
+    font-size: 7px !important;
+    font-weight: 800 !important;
+  }
+
+  /* Scrimmage Badges */
   .print-scrimmage-gold {
-    background-color: #000000 !important;
-    color: #ffffff !important;
-    border: 1px solid #000000 !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border: 1.5px solid #ca8a04 !important;
     font-size: 8.5px !important;
+    font-weight: 900 !important;
+    padding: 1.5px 3px !important;
+    border-radius: 3px !important;
+    margin-bottom: 1px !important;
+  }
+
+  .print-tag-gold {
+    background-color: #fef08a !important;
+    color: #713f12 !important;
+    border: 1px solid #eab308 !important;
+    font-size: 7.5px !important;
     font-weight: 900 !important;
   }
 
   .print-scrimmage-blue {
-    background-color: #e2e8f0 !important;
-    color: #000000 !important;
-    border: 1px solid #000000 !important;
-    font-size: 8px !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border: 1.5px solid #1d4ed8 !important;
+    font-size: 8.5px !important;
     font-weight: 800 !important;
+    padding: 1.5px 3px !important;
+    border-radius: 3px !important;
+    margin-bottom: 1px !important;
+  }
+
+  .print-tag-blue {
+    background-color: #1d4ed8 !important;
+    color: #ffffff !important;
+    border: 1px solid #1e40af !important;
+    font-size: 7.5px !important;
+    font-weight: 900 !important;
   }
 
   /* Wristband print table */
@@ -190,12 +240,12 @@ body {
   /* Practice table print formatting */
   .practice-table {
     font-size: var(--print-font-size, 10px) !important;
-    border: 2px solid #000000 !important;
+    border: 1.5px solid #475569 !important;
     width: 100% !important;
     table-layout: fixed !important;
     border-collapse: collapse !important;
     background-color: #ffffff !important;
-    color: #000000 !important;
+    color: #0f172a !important;
   }
 
   .practice-table thead {
@@ -204,22 +254,25 @@ body {
 
   .practice-table th {
     font-size: calc(var(--print-font-size, 10px) * 1.05) !important;
-    background-color: #e2e8f0 !important;
-    color: #000000 !important;
-    border: 1px solid #000000 !important;
-    padding: 4px 6px !important;
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+    border: 1px solid #94a3b8 !important;
+    border-bottom: 2px solid #475569 !important;
+    padding: 6px 8px !important;
     font-weight: 900 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.025em !important;
   }
 
   .practice-table td {
     font-size: var(--print-font-size, 10px) !important;
-    border: 1px solid #000000 !important;
-    padding: 4px 6px !important;
-    color: #000000 !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 6px 8px !important;
+    color: #0f172a !important;
     vertical-align: top !important;
     word-break: break-word !important;
     background-color: #ffffff !important;
-    font-weight: 700 !important;
+    font-weight: 600 !important;
   }
 
   .practice-table tr {

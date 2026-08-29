@@ -159,7 +159,7 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
                             badgeClass:
                               idx === 0
                                 ? 'bg-amber-400 text-slate-950 font-black border border-amber-500 shadow-xs'
-                                : 'bg-indigo-600 text-white font-black border border-indigo-500 shadow-xs',
+                                : 'bg-blue-700 text-white font-black border border-blue-500 shadow-xs',
                           });
                         }
                       });
@@ -184,7 +184,7 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
                               ? 'bg-slate-950 text-indigo-300 border border-indigo-500/40 font-black'
                               : idx === 1
                               ? 'bg-amber-400 text-slate-950 border border-amber-500 font-black'
-                              : 'bg-indigo-600 text-white border border-indigo-500 font-black',
+                              : 'bg-blue-700 text-white border border-blue-500 font-black',
                         });
                       }
                     });

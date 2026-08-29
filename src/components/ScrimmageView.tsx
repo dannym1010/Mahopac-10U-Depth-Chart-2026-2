@@ -187,7 +187,7 @@ export const ScrimmageView: React.FC<ScrimmageViewProps> = ({
                             }`}
                           >
                             {/* Header */}
-                            <div className="position-card-title px-2.5 py-1.5 bg-slate-950 border-b border-slate-800 rounded-t-2xl print:rounded-none text-[11px] print:text-[10px] font-black text-indigo-300 print:text-white text-center tracking-tight">
+                            <div className="position-card-title px-2.5 py-1.5 bg-slate-950 border-b border-slate-800 rounded-t-2xl print:rounded-none text-[11px] print:text-[10px] font-black text-indigo-300 print:text-slate-950 text-center tracking-tight">
                               {pos.name}
                             </div>
 
@@ -206,15 +206,15 @@ export const ScrimmageView: React.FC<ScrimmageViewProps> = ({
                                     className={`px-2 py-1 print:px-1 print:py-0.5 rounded-xl print:rounded-sm border text-[10.5px] print:text-[8.5px] font-bold flex items-center justify-between transition-all select-none ${
                                       isGold
                                         ? 'bg-amber-400 text-slate-950 border-amber-500 font-black shadow-xs print-scrimmage-gold'
-                                        : 'bg-indigo-600 text-white border-indigo-500 font-black shadow-xs print-scrimmage-blue'
+                                        : 'bg-blue-700 text-white border-blue-500 font-black shadow-xs print-scrimmage-blue'
                                     } ${userRole === 'admin' ? 'cursor-grab active:cursor-grabbing' : ''}`}
                                   >
                                     <div className="flex items-center gap-1.5 min-w-0 truncate">
                                       <span
-                                        className={`text-[8.5px] print:text-[7px] font-black uppercase px-1 py-0.2 rounded-md ${
+                                        className={`text-[8.5px] print:text-[7.5px] font-black uppercase px-1 py-0.2 rounded-md ${
                                           isGold
-                                            ? 'bg-black/20 text-black print:bg-black print:text-white'
-                                            : 'bg-white/20 text-white print:bg-slate-700 print:text-white'
+                                            ? 'bg-black/20 text-black print-tag-gold'
+                                            : 'bg-white/20 text-white print-tag-blue'
                                         }`}
                                       >
                                         {isGold ? 'Gold' : 'Blue'}

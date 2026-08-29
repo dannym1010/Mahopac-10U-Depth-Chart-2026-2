@@ -137,11 +137,51 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
         </div>
 
+        {error && (
+          <div className="p-3 bg-rose-950/80 border border-rose-700/80 rounded-xl text-xs text-rose-200 font-semibold space-y-1">
+            <div className="flex items-center gap-1.5 font-black text-rose-300">
+              <span>⚠️ Authentication Notice</span>
+            </div>
+            <p className="leading-snug">{error}</p>
+          </div>
+        )}
+
         {/* Google Sign In Button */}
         <button
           type="button"
-          onClick={onGoogleSignIn}
-          className="w-full py-2.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all"
+          disabled={loading}
+          onClick={async () => {
+            setError(null);
+            setLoading(true);
+            try {
+              await onGoogleSignIn();
+            } catch (err: any) {
+              console.error('Firebase Google Sign-In Error:', err);
+              const code = err?.code || '';
+              const message = err?.message || '';
+              
+              if (code === 'auth/unauthorized-domain') {
+                setError(
+                  `Unauthorized Domain (${window.location.hostname}). Please add "${window.location.hostname}" to Firebase Console -> Authentication -> Settings -> Authorized Domains.`
+                );
+              } else if (code === 'auth/operation-not-allowed') {
+                setError(
+                  'Google Sign-in is not enabled in your Firebase Project. Go to Firebase Console -> Authentication -> Sign-in Method and enable Google.'
+                );
+              } else if (code === 'auth/popup-blocked') {
+                setError('Popup blocked by browser. Please allow popups or use Email/Password.');
+              } else if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+                setError(
+                  `Popup closed (${code}). If third-party cookies or popups are restricted on your domain, please use Email/Password or Offline Mode.`
+                );
+              } else {
+                setError(message ? `${code ? `[${code}] ` : ''}${message}` : 'Google Sign-In failed. Try Email/Password or Offline Mode.');
+              }
+            } finally {
+              setLoading(false);
+            }
+          }}
+          className="w-full py-2.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95"
         >
           <svg width="18" height="18" viewBox="0 0 24 24">
             <path
@@ -161,8 +201,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
             />
           </svg>
-          <span>Continue with Google</span>
+          <span>{loading ? 'Signing in...' : 'Continue with Google'}</span>
         </button>
+
+        {/* New Tab Helper if in iframe preview */}
+        <div className="text-center pt-0.5">
+          <a
+            href={window.location.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 underline underline-offset-2 transition-colors"
+          >
+            ↗ Open in New Tab for Google Auth
+          </a>
+        </div>
 
         <div className="flex items-center gap-2 text-slate-500 text-[10.5px] font-black uppercase tracking-wider">
           <div className="flex-1 border-b border-slate-800" />

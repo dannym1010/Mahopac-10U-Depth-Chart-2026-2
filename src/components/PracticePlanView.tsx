@@ -522,7 +522,10 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                         rowSpan={numStations}
                         className="py-3.5 px-3.5 align-top border-r border-slate-800 font-bold"
                       >
-                        <div className="text-xs font-black text-indigo-300 uppercase tracking-tight">
+                        <div className="text-xs font-black text-indigo-300 uppercase tracking-tight print:hidden">
+                          Period {pIdx + 1}
+                        </div>
+                        <div className="hidden print:block text-xs font-black text-slate-950 uppercase tracking-tight">
                           Period {pIdx + 1}
                         </div>
                         <div className="flex items-center gap-1.5 mt-1 print:hidden">
@@ -540,11 +543,14 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                           />
                           <span className="text-[11px] text-slate-400 font-medium">mins</span>
                         </div>
-                        <div className="text-[11px] font-extrabold text-amber-300 mt-1.5 font-mono">
+                        <div className="text-[11px] font-extrabold text-amber-300 mt-1.5 font-mono print:hidden">
                           {timeString}
                         </div>
-                        <div className="hidden print:block text-[11px] font-black text-black mt-1">
-                          {row.time} min
+                        <div className="hidden print:block text-[11px] font-extrabold text-slate-900 font-mono mt-0.5">
+                          {timeString}
+                        </div>
+                        <div className="hidden print:block text-[10px] font-bold text-slate-600 mt-0.5">
+                          ({row.time} min)
                         </div>
                       </td>
                     )}
@@ -571,7 +577,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                             ))}
                           </select>
                         </div>
-                        <div className="hidden print:block font-bold text-black text-xs">
+                        <div className="hidden print:block font-black text-slate-950 text-xs uppercase tracking-tight">
                           {row.category}
                         </div>
 
@@ -595,8 +601,8 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                             <option value="rotating">Rotating Stations</option>
                           </select>
                         </div>
-                        <div className="hidden print:block text-[10px] italic text-slate-700">
-                          Format: {isRotating ? 'Rotating' : 'Static'}
+                        <div className="hidden print:block text-[10px] font-bold text-slate-600 mt-0.5">
+                          {isRotating ? 'Rotating Stations' : 'Full Group'}
                         </div>
                       </td>
                     )}
@@ -604,9 +610,9 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                     {/* Station / Drill Title & Instructions */}
                     <td className="py-3 px-3.5 align-top border-r border-slate-800 space-y-2">
                       {isRotating && (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-300 text-[10.5px] font-black border border-indigo-500/20">
-                          <Clock className="w-3 h-3" />
-                          <span>
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-300 text-[10.5px] font-black border border-indigo-500/20 print:bg-slate-100 print:text-slate-900 print:border-slate-300 print:py-0.5 print:px-1.5">
+                          <Clock className="w-3 h-3 print:hidden" />
+                          <span className="font-mono print:text-[9.5px]">
                             Station {sIdx + 1}: {formatTimeMinutes(stationStartMin)} -{' '}
                             {formatTimeMinutes(stationEndMin)} (
                             {Math.round(stationDuration)} min)
@@ -647,7 +653,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                           onUpdateStation(pIdx, sIdx, 'name', e.target.value)
                         }
                         placeholder="Drill / Group Name"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-100 focus:ring-1 focus:ring-indigo-500 disabled:bg-transparent disabled:border-transparent"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-100 focus:ring-1 focus:ring-indigo-500 disabled:bg-transparent disabled:border-transparent print:hidden"
                       />
 
                       {/* Station Details */}
@@ -659,15 +665,19 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                           onUpdateStation(pIdx, sIdx, 'desc', e.target.value)
                         }
                         placeholder="Instructions, alignments, cone layout..."
-                        className="w-full bg-slate-950/90 border border-slate-800 rounded-xl p-2.5 text-xs font-medium text-slate-300 leading-relaxed focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-600"
+                        className="w-full bg-slate-950/90 border border-slate-800 rounded-xl p-2.5 text-xs font-medium text-slate-300 leading-relaxed focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-600 print:hidden"
                       />
 
                       {/* Print view */}
-                      <div className="hidden print:block text-xs font-black text-black">
-                        {station.name}
-                      </div>
-                      <div className="hidden print:block text-xs font-medium text-slate-900 whitespace-pre-wrap leading-tight">
-                        {station.desc}
+                      <div className="hidden print:block">
+                        <div className="text-[11px] font-black text-slate-950 uppercase tracking-tight">
+                          {station.name || 'Station / Drill'}
+                        </div>
+                        {station.desc && (
+                          <div className="text-[10px] font-medium text-slate-800 mt-1 whitespace-pre-wrap leading-snug">
+                            {station.desc}
+                          </div>
+                        )}
                       </div>
                     </td>
 
@@ -681,7 +691,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                           onUpdateStation(pIdx, sIdx, 'coach', e.target.value)
                         }
                         placeholder="Type coach names..."
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs font-bold text-slate-100 leading-tight focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-600"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs font-bold text-slate-100 leading-tight focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-600 print:hidden"
                       />
 
                       <div
@@ -696,8 +706,8 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                         <ChevronDown className="w-2.5 h-2.5" />
                       </div>
 
-                      <div className="hidden print:block text-xs font-bold text-black">
-                        {station.coach}
+                      <div className="hidden print:block text-[10.5px] font-bold text-slate-950 leading-snug">
+                        {station.coach || '—'}
                       </div>
 
                       {/* Coach Multi-select Popup */}
@@ -797,10 +807,10 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                           onUpdateStation(pIdx, sIdx, 'focus', e.target.value)
                         }
                         placeholder="Key coaching cues & assignments..."
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs font-semibold text-slate-200 leading-tight focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-600"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs font-semibold text-slate-200 leading-tight focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-600 print:hidden"
                       />
-                      <div className="hidden print:block text-xs font-medium text-black whitespace-pre-wrap leading-tight">
-                        {station.focus}
+                      <div className="hidden print:block text-[10.5px] font-medium text-slate-900 whitespace-pre-wrap leading-snug">
+                        {station.focus || '—'}
                       </div>
                     </td>
 
