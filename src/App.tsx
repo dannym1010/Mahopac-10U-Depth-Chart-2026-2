@@ -2210,9 +2210,21 @@ export default function App() {
                   card.classList.remove('hidden-print');
                 }
               });
+
+            const cleanup = () => {
+              document
+                .querySelectorAll('.formation-container')
+                .forEach((card: any) => {
+                  card.classList.remove('hidden-print');
+                });
+              window.removeEventListener('afterprint', cleanup);
+            };
+
+            window.addEventListener('afterprint', cleanup);
             setTimeout(() => {
               window.print();
-            }, 250);
+              setTimeout(cleanup, 2500);
+            }, 200);
           }}
         />
       )}

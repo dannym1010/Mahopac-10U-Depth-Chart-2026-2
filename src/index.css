@@ -45,7 +45,7 @@ body {
 @media print {
   @page {
     size: letter portrait;
-    margin: 0.3in;
+    margin: 0.25in;
   }
 
   body {
@@ -67,15 +67,123 @@ body {
     display: none !important;
   }
 
-  /* Printable formation cards */
+  /* Printable formation cards: fits 2 per letter page cleanly */
   .formation-container {
     border: 2px solid #000000 !important;
+    border-radius: 4px !important;
     box-shadow: none !important;
-    padding: 6px !important;
-    margin-bottom: 12px !important;
+    padding: 4px 6px !important;
+    margin-bottom: 8px !important;
     background: #ffffff !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    color: #000000 !important;
+    overflow: visible !important;
+  }
+
+  .formation-card-header {
+    border-bottom: 2px solid #000000 !important;
+    padding-bottom: 2px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .formation-row-header {
+    background-color: #f1f5f9 !important;
+    border: 1px solid #000000 !important;
+    color: #000000 !important;
+    font-size: 8.5px !important;
+    font-weight: 900 !important;
+    padding: 2px 4px !important;
+    margin-bottom: 2px !important;
+    border-radius: 2px !important;
+  }
+
+  .formation-grid-row {
+    background-color: #ffffff !important;
+    border: 1px solid #000000 !important;
+    padding: 2px 3px !important;
+    gap: 3px !important;
+    overflow: visible !important;
+    display: grid !important;
+    border-radius: 2px !important;
+  }
+
+  .position-slot-card {
+    border: 1.5px solid #000000 !important;
+    background-color: #ffffff !important;
+    border-radius: 2px !important;
+    min-height: 48px !important;
+  }
+
+  .position-card-title {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    font-size: 9px !important;
+    font-weight: 900 !important;
+    padding: 1px 3px !important;
+    border-bottom: 1px solid #000000 !important;
+    text-align: center !important;
+  }
+
+  .print-player-badge-starter {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    border: 1px solid #000000 !important;
+    font-size: 8.5px !important;
+    font-weight: 900 !important;
+    padding: 1px 3px !important;
+    border-radius: 2px !important;
+    margin-bottom: 1px !important;
+  }
+
+  .print-player-badge-d2 {
+    background-color: #e2e8f0 !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    font-size: 8px !important;
+    font-weight: 800 !important;
+    padding: 1px 3px !important;
+    border-radius: 2px !important;
+    margin-bottom: 1px !important;
+  }
+
+  .print-player-badge-d3 {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    font-size: 7.5px !important;
+    font-weight: 700 !important;
+    padding: 1px 3px !important;
+    border-radius: 2px !important;
+    margin-bottom: 1px !important;
+  }
+
+  .print-scrimmage-gold {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    border: 1px solid #000000 !important;
+    font-size: 8.5px !important;
+    font-weight: 900 !important;
+  }
+
+  .print-scrimmage-blue {
+    background-color: #e2e8f0 !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    font-size: 8px !important;
+    font-weight: 800 !important;
+  }
+
+  /* Wristband print table */
+  .wristband-print-table {
+    border: 2px solid #000000 !important;
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  .wristband-print-table th,
+  .wristband-print-table td {
+    border: 1.5px solid #000000 !important;
     color: #000000 !important;
   }
 
@@ -100,6 +208,7 @@ body {
     color: #000000 !important;
     border: 1px solid #000000 !important;
     padding: 4px 6px !important;
+    font-weight: 900 !important;
   }
 
   .practice-table td {
@@ -110,6 +219,7 @@ body {
     vertical-align: top !important;
     word-break: break-word !important;
     background-color: #ffffff !important;
+    font-weight: 700 !important;
   }
 
   .practice-table tr {

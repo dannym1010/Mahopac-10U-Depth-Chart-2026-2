@@ -146,13 +146,32 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
           </div>
         </div>
 
-        <button
-          onClick={() => onOpenSelectivePrintModal(unit)}
-          className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-amber-300 font-bold text-xs rounded-xl border border-slate-800 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
-        >
-          <Printer className="w-3.5 h-3.5" />
-          <span>Selective Print</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => window.print()}
+            className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-slate-100 font-bold text-xs rounded-xl border border-slate-800 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+          >
+            <Printer className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Print All</span>
+          </button>
+          <button
+            onClick={() => onOpenSelectivePrintModal(unit)}
+            className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-amber-300 font-bold text-xs rounded-xl border border-slate-800 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Selective Print</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Printable Sheet Title Header (Shown only on Print) */}
+      <div className="hidden print:block mb-2 border-b-2 border-black pb-1.5 text-center">
+        <h1 className="font-black text-sm uppercase text-black tracking-wider">
+          Mahopac 10U Football &bull; {unit === 'offense' ? 'Offensive' : unit === 'defense' ? 'Defensive' : unit === 'st' ? 'Special Teams' : 'Depth Chart'} Formation Sheets
+        </h1>
+        <p className="text-[10px] font-bold text-black mt-0.5">
+          High-Visibility Sideline Depth Chart &bull; Starters (ST) &bull; 2nd String (D2) &bull; 3rd String (D3)
+        </p>
       </div>
 
       {displayedFormations.length === 0 && (
@@ -170,13 +189,14 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
       )}
 
       {/* Formation Cards */}
-      <div className="space-y-6">
+      <div className="space-y-6 print:space-y-3">
         {displayedFormations.map((form) => {
           const isSelected = selectedFormationId === form.id;
 
           return (
             <div
               key={form.id}
+              data-form-id={form.id}
               onClick={() => onSelectFormation(form.id)}
               className={`formation-container bg-slate-900/90 backdrop-blur-md rounded-3xl border transition-all p-5 relative shadow-xl ${
                 isSelected
@@ -185,12 +205,12 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
               }`}
             >
               {/* Formation Card Header */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-slate-800/80 mb-4">
+              <div className="formation-card-header flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-slate-800/80 mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-black text-xs">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-black text-xs print:bg-black print:text-white print:border-black">
                     {unit === 'offense' ? 'OFF' : unit === 'defense' ? 'DEF' : unit === 'st' ? 'ST' : 'GRP'}
                   </div>
-                  <h2 className="font-black text-base md:text-lg text-slate-100 tracking-tight">
+                  <h2 className="font-black text-base md:text-lg text-slate-100 tracking-tight print:text-black print:text-sm">
                     {form.name}
                   </h2>
                 </div>
@@ -246,27 +266,27 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
               </div>
 
               {/* Rows inside Formation */}
-              <div className="space-y-4">
+              <div className="space-y-4 print:space-y-2">
                 {form.rows.map((row, rIdx) => {
                   const positionsList = row.positions || [];
                   const slotCount = positionsList.length || row.slotCount || 7;
 
                   return (
-                    <div key={row.id || rIdx} className="space-y-1.5">
+                    <div key={row.id || rIdx} className="space-y-1.5 print:space-y-1">
                       {/* Level/Row Header Bar */}
-                      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-950/80 border border-slate-800 rounded-xl">
+                      <div className="formation-row-header flex items-center justify-between px-3 py-1.5 bg-slate-950/80 border border-slate-800 rounded-xl">
                         <div
                           onClick={(e) => {
                             e.stopPropagation();
                             if (userRole === 'admin') onEditRowName(form.id, rIdx);
                           }}
-                          className={`text-[10.5px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5 ${
+                          className={`text-[10.5px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5 print:text-black ${
                             userRole === 'admin' ? 'cursor-pointer hover:text-indigo-300' : ''
                           }`}
                         >
                           <span>{row.label || `Level ${rIdx + 1}`}</span>
                           {userRole === 'admin' && (
-                            <Edit2 className="w-2.5 h-2.5 opacity-60" />
+                            <Edit2 className="w-2.5 h-2.5 opacity-60 print:hidden" />
                           )}
                         </div>
 
@@ -304,9 +324,9 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
 
                       {/* Formation Grid Row */}
                       <div
-                        className="grid gap-2.5 p-3 bg-slate-950/50 border border-slate-800/80 rounded-2xl overflow-x-auto"
+                        className="formation-grid-row grid gap-2.5 p-3 bg-slate-950/50 border border-slate-800/80 rounded-2xl overflow-x-auto print:overflow-visible print:p-1.5 print:gap-1.5"
                         style={{
-                          gridTemplateColumns: `repeat(${slotCount}, minmax(115px, 1fr))`,
+                          gridTemplateColumns: `repeat(${slotCount}, minmax(0, 1fr))`,
                         }}
                       >
                         {positionsList.map((pos, pIdx) => {
@@ -331,7 +351,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                   onPositionCardDropOnSlot(e, form.id, rIdx, pIdx);
                                 }
                               }}
-                              className={`min-h-[110px] rounded-2xl flex flex-col transition-all relative ${
+                              className={`position-slot-card min-h-[110px] print:min-h-[55px] rounded-2xl flex flex-col transition-all relative ${
                                 isSlotDragOver
                                   ? 'bg-indigo-950/60 border-2 border-dashed border-indigo-400 ring-2 ring-indigo-500/40'
                                   : pos
@@ -356,7 +376,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                       onDropPlayerOnCard(pos.id, form.id, row.id);
                                     }
                                   }}
-                                  className={`h-full flex flex-col rounded-2xl border transition-all ${
+                                  className={`h-full flex flex-col rounded-2xl print:rounded-none border transition-all ${
                                     dragOverPosId === pos.id
                                       ? 'border-indigo-500 ring-2 ring-indigo-500/50 bg-indigo-950/40 shadow-lg'
                                       : 'border-slate-800/90 shadow-sm'
@@ -368,7 +388,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                     onDragStart={(e) =>
                                       onPositionCardDragStart(e, form.id, rIdx, pIdx)
                                     }
-                                    className={`px-2.5 py-1.5 bg-slate-950 border-b border-slate-800 rounded-t-2xl flex items-center justify-between text-xs font-black select-none ${
+                                    className={`position-card-title px-2.5 py-1.5 bg-slate-950 border-b border-slate-800 rounded-t-2xl print:rounded-none flex items-center justify-between text-xs font-black select-none ${
                                       userRole === 'admin' ? 'cursor-grab active:cursor-grabbing' : ''
                                     }`}
                                   >
@@ -382,7 +402,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         userRole === 'admin' ? 'hover:text-indigo-400 cursor-pointer' : ''
                                       }`}
                                     >
-                                      <span className="font-black text-[11px] text-indigo-300 tracking-tight">
+                                      <span className="font-black text-[11px] print:text-[10px] text-indigo-300 print:text-white tracking-tight">
                                         {pos.name}
                                       </span>
                                     </div>
@@ -419,7 +439,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                   </div>
 
                                   {/* Player List on this Position Card */}
-                                  <div className="p-2 flex-1 flex flex-col gap-1.5 min-h-[64px]">
+                                  <div className="p-2 print:p-1 flex-1 flex flex-col gap-1.5 print:gap-1 min-h-[64px] print:min-h-[40px]">
                                     {(depthChart[pos.id] || []).map((player, plIdx) => {
                                       const isStarter = plIdx === 0;
                                       const isD2 = plIdx === 1;
@@ -431,19 +451,19 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                           onDragStart={(e) =>
                                             onDragStartPlacedPlayer(e, pos.id, plIdx, player)
                                           }
-                                          className={`px-2 py-1 rounded-xl border text-[10.5px] font-bold flex items-center justify-between transition-all select-none ${
+                                          className={`px-2 py-1 print:px-1 print:py-0.5 rounded-xl print:rounded-sm border text-[10.5px] print:text-[8.5px] font-bold flex items-center justify-between transition-all select-none ${
                                             isStarter
-                                              ? 'bg-slate-950 text-indigo-300 border-indigo-500/40 shadow-xs'
+                                              ? 'bg-slate-950 text-indigo-300 border-indigo-500/40 shadow-xs print-player-badge-starter'
                                               : isD2
-                                              ? 'bg-amber-400 text-slate-950 border-amber-500 font-extrabold shadow-xs'
-                                              : 'bg-indigo-600 text-white border-indigo-500 font-extrabold shadow-xs'
+                                              ? 'bg-amber-400 text-slate-950 border-amber-500 font-extrabold shadow-xs print-player-badge-d2'
+                                              : 'bg-indigo-600 text-white border-indigo-500 font-extrabold shadow-xs print-player-badge-d3'
                                           } ${userRole === 'admin' ? 'cursor-grab active:cursor-grabbing' : ''}`}
                                         >
                                           <div className="flex items-center gap-1.5 min-w-0 truncate">
                                             <span
-                                              className={`text-[8.5px] font-black uppercase px-1 py-0.2 rounded-md ${
+                                              className={`text-[8.5px] print:text-[7px] font-black uppercase px-1 py-0.2 rounded-md ${
                                                 isStarter
-                                                  ? 'bg-indigo-500/20 text-indigo-300'
+                                                  ? 'bg-indigo-500/20 text-indigo-300 print:bg-black print:text-white'
                                                   : isD2
                                                   ? 'bg-black/20 text-black'
                                                   : 'bg-white/20 text-white'
@@ -451,10 +471,10 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                             >
                                               {isStarter ? 'ST' : isD2 ? 'D2' : 'D3'}
                                             </span>
-                                            <span className="font-mono text-[10px] opacity-90">
+                                            <span className="font-mono text-[10px] print:text-[8.5px] opacity-90 font-black">
                                               #{player.num}
                                             </span>
-                                            <span className="truncate uppercase">
+                                            <span className="truncate uppercase font-extrabold">
                                               {player.name}
                                             </span>
                                           </div>
@@ -475,15 +495,15 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                     })}
 
                                     {(!depthChart[pos.id] || depthChart[pos.id].length === 0) && (
-                                      <div className="flex-1 flex items-center justify-center text-[10px] text-slate-500 font-medium italic border border-dashed border-slate-800 rounded-xl p-2">
-                                        Drop Player
+                                      <div className="flex-1 flex items-center justify-center text-[10px] print:text-[8px] text-slate-500 print:text-slate-400 font-medium italic border border-dashed border-slate-800 print:border-slate-300 rounded-xl print:rounded-none p-2 print:p-0.5">
+                                        Open
                                       </div>
                                     )}
                                   </div>
                                 </div>
                               ) : (
-                                <div className="flex-1 flex items-center justify-center text-[10px] text-slate-600 italic">
-                                  Empty Slot
+                                <div className="flex-1 flex items-center justify-center text-[10px] print:text-[8px] text-slate-600 print:text-slate-300 italic">
+                                  Empty
                                 </div>
                               )}
                             </div>

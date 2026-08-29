@@ -77,7 +77,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
             Mahopac 10U Play Calling Insert
           </div>
 
-          <table className="w-full border-collapse">
+          <table className="w-full border-collapse wristband-print-table">
             <tbody>
               {Array.from({ length: rowCount }).map((_, rIdx) => {
                 const playText = col.plays?.[rIdx]?.text || '';
@@ -85,10 +85,10 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                 return (
                   <tr
                     key={rIdx}
-                    className="border-b border-slate-200 last:border-b-0 hover:bg-indigo-50/50 transition-colors"
+                    className="border-b border-slate-200 print:border-black last:border-b-0 hover:bg-indigo-50/50 transition-colors"
                   >
                     {/* Row Index */}
-                    <td className="w-12 text-center py-2.5 px-2 border-r border-slate-300 bg-slate-100 font-black text-xs text-slate-900 select-none">
+                    <td className="w-12 text-center py-2.5 px-2 border-r border-slate-300 print:border-black bg-slate-100 print:bg-slate-200 font-black text-xs md:text-sm text-slate-900 print:text-black select-none">
                       {rIdx + 1}
                     </td>
 
@@ -100,8 +100,11 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                         disabled={userRole !== 'admin'}
                         onChange={(e) => onUpdatePlay(0, rIdx, e.target.value)}
                         placeholder={`Play #${rIdx + 1} (e.g. 24 Trap / Sweep Right)`}
-                        className="w-full h-full px-3.5 py-2.5 text-xs md:text-sm font-bold uppercase text-slate-900 placeholder:text-slate-400 placeholder:normal-case focus:outline-none focus:bg-indigo-50/70 disabled:bg-transparent"
+                        className="w-full h-full px-3.5 py-2.5 text-xs md:text-sm font-black uppercase text-slate-900 print:text-black placeholder:text-slate-400 placeholder:normal-case focus:outline-none focus:bg-indigo-50/70 disabled:bg-transparent print:hidden"
                       />
+                      <div className="hidden print:block px-3.5 py-2 text-xs font-black uppercase text-black">
+                        {playText || '—'}
+                      </div>
                     </td>
                   </tr>
                 );

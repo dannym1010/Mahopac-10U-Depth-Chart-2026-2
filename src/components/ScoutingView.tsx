@@ -86,7 +86,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
         </div>
 
         {/* Text Areas Bento Columns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:hidden">
           {/* Team Overview */}
           <div className="space-y-2.5">
             <div className="flex items-center gap-2 text-indigo-300 font-black text-sm pb-1">
@@ -117,6 +117,27 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
               placeholder="#12 QB - Runs outside contain when pressured.&#10;#24 RB - Hard downhill runner, cuts back inside A-gap.&#10;#55 MLB - Aggressive flow, vulnerable to play-action pass..."
               className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-xs text-slate-200 font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 leading-relaxed resize-y disabled:opacity-60 placeholder:text-slate-600"
             />
+          </div>
+        </div>
+
+        {/* Printable View (Visible only during print for high visibility) */}
+        <div className="hidden print:block space-y-4">
+          <div className="border-2 border-black p-3 rounded-md">
+            <h3 className="font-black text-xs uppercase border-b-2 border-black pb-1 mb-2 text-black">
+              1. Team Overview, Formations & Tendencies
+            </h3>
+            <p className="text-xs font-bold text-black whitespace-pre-wrap leading-relaxed">
+              {scouting.teamOverview || 'No overview notes entered.'}
+            </p>
+          </div>
+
+          <div className="border-2 border-black p-3 rounded-md">
+            <h3 className="font-black text-xs uppercase border-b-2 border-black pb-1 mb-2 text-black">
+              2. Key Players to Watch & Matchup Notes
+            </h3>
+            <p className="text-xs font-bold text-black whitespace-pre-wrap leading-relaxed">
+              {scouting.keyPlayers || 'No player matchup notes entered.'}
+            </p>
           </div>
         </div>
       </div>

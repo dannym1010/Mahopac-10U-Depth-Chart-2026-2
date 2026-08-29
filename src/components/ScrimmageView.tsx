@@ -83,6 +83,16 @@ export const ScrimmageView: React.FC<ScrimmageViewProps> = ({
         </div>
       </div>
 
+      {/* Printable Sheet Title Header (Shown only on Print) */}
+      <div className="hidden print:block mb-2 border-b-2 border-black pb-1.5 text-center">
+        <h1 className="font-black text-sm uppercase text-black tracking-wider">
+          Mahopac 10U Football &bull; Practice / Scrimmage Rotation Sheet
+        </h1>
+        <p className="text-[10px] font-bold text-black mt-0.5">
+          Gold Group (Primary) &bull; Blue Group (Rotational Subs)
+        </p>
+      </div>
+
       {activeForms.length === 0 && (
         <div className="bg-slate-900/90 rounded-3xl border border-dashed border-slate-800 p-12 text-center text-slate-400 shadow-xl">
           <p className="text-sm font-bold text-slate-300">No scrimmage boards selected.</p>
@@ -96,17 +106,17 @@ export const ScrimmageView: React.FC<ScrimmageViewProps> = ({
       )}
 
       {/* Scrimmage Formation Cards */}
-      <div className="space-y-6">
+      <div className="space-y-6 print:space-y-3">
         {activeForms.map((form) => (
           <div
             key={form.id}
             data-form-id={form.id}
             className="formation-container bg-slate-900/90 backdrop-blur-md rounded-3xl border border-slate-800 shadow-xl p-5"
           >
-            <div className="flex items-center justify-between pb-3.5 border-b border-slate-800/80 mb-4">
+            <div className="formation-card-header flex items-center justify-between pb-3.5 border-b border-slate-800/80 mb-4">
               <div className="flex items-center gap-3">
                 <span
-                  className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-lg border ${
+                  className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-lg border print:bg-black print:text-white print:border-black ${
                     form.unit === 'offense'
                       ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20'
                       : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
@@ -114,27 +124,27 @@ export const ScrimmageView: React.FC<ScrimmageViewProps> = ({
                 >
                   {form.unit.toUpperCase()}
                 </span>
-                <h3 className="font-black text-base md:text-lg text-slate-100">
+                <h3 className="font-black text-base md:text-lg text-slate-100 print:text-black print:text-sm">
                   {form.name}
                 </h3>
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 print:space-y-2">
               {form.rows.map((row, rIdx) => {
                 const positionsList = row.positions || [];
                 const slotCount = positionsList.length || row.slotCount || 7;
 
                 return (
-                  <div key={row.id || rIdx} className="space-y-1.5">
-                    <div className="px-3 py-1.5 bg-slate-950/80 border border-slate-800 rounded-xl text-[10.5px] font-black text-slate-400 uppercase tracking-widest">
+                  <div key={row.id || rIdx} className="space-y-1.5 print:space-y-1">
+                    <div className="formation-row-header px-3 py-1.5 bg-slate-950/80 border border-slate-800 rounded-xl text-[10.5px] font-black text-slate-400 uppercase tracking-widest print:text-black">
                       {row.label || `Level ${rIdx + 1}`} (Gold & Blue Rotation)
                     </div>
 
                     <div
-                      className="grid gap-2.5 p-3 bg-slate-950/50 border border-slate-800/80 rounded-2xl overflow-x-auto"
+                      className="formation-grid-row grid gap-2.5 p-3 bg-slate-950/50 border border-slate-800/80 rounded-2xl overflow-x-auto print:overflow-visible print:p-1.5 print:gap-1.5"
                       style={{
-                        gridTemplateColumns: `repeat(${slotCount}, minmax(115px, 1fr))`,
+                        gridTemplateColumns: `repeat(${slotCount}, minmax(0, 1fr))`,
                       }}
                     >
                       {positionsList.map((pos, pIdx) => {
@@ -142,7 +152,7 @@ export const ScrimmageView: React.FC<ScrimmageViewProps> = ({
                           return (
                             <div
                               key={pIdx}
-                              className="min-h-[95px] rounded-2xl bg-slate-950/40 border border-dashed border-slate-800/60 flex items-center justify-center text-[10px] text-slate-600 italic"
+                              className="position-slot-card min-h-[95px] print:min-h-[50px] rounded-2xl bg-slate-950/40 border border-dashed border-slate-800/60 flex items-center justify-center text-[10px] print:text-[8px] text-slate-600 print:text-slate-300 italic"
                             >
                               Empty
                             </div>
@@ -170,19 +180,19 @@ export const ScrimmageView: React.FC<ScrimmageViewProps> = ({
                                 onDropPlayerOnScrimmageCard(pos.id, form.id, row.id);
                               }
                             }}
-                            className={`min-h-[95px] rounded-2xl border flex flex-col transition-all bg-slate-900/90 shadow-sm ${
+                            className={`position-slot-card min-h-[95px] print:min-h-[50px] rounded-2xl print:rounded-none border flex flex-col transition-all bg-slate-900/90 shadow-sm ${
                               isDragOver
                                 ? 'border-amber-500 ring-2 ring-amber-500/40 bg-amber-950/30'
                                 : 'border-slate-800'
                             }`}
                           >
                             {/* Header */}
-                            <div className="px-2.5 py-1.5 bg-slate-950 border-b border-slate-800 rounded-t-2xl text-[11px] font-black text-indigo-300 text-center tracking-tight">
+                            <div className="position-card-title px-2.5 py-1.5 bg-slate-950 border-b border-slate-800 rounded-t-2xl print:rounded-none text-[11px] print:text-[10px] font-black text-indigo-300 print:text-white text-center tracking-tight">
                               {pos.name}
                             </div>
 
                             {/* Players */}
-                            <div className="p-2 flex-1 flex flex-col gap-1.5">
+                            <div className="p-2 print:p-1 flex-1 flex flex-col gap-1.5 print:gap-1">
                               {players.map((player, sIdx) => {
                                 const isGold = sIdx === 0;
 
@@ -193,26 +203,26 @@ export const ScrimmageView: React.FC<ScrimmageViewProps> = ({
                                     onDragStart={(e) =>
                                       onDragStartPlacedPlayer(e, pos.id, sIdx, player)
                                     }
-                                    className={`px-2 py-1 rounded-xl border text-[10.5px] font-bold flex items-center justify-between transition-all select-none ${
+                                    className={`px-2 py-1 print:px-1 print:py-0.5 rounded-xl print:rounded-sm border text-[10.5px] print:text-[8.5px] font-bold flex items-center justify-between transition-all select-none ${
                                       isGold
-                                        ? 'bg-amber-400 text-slate-950 border-amber-500 font-black shadow-xs'
-                                        : 'bg-indigo-600 text-white border-indigo-500 font-black shadow-xs'
+                                        ? 'bg-amber-400 text-slate-950 border-amber-500 font-black shadow-xs print-scrimmage-gold'
+                                        : 'bg-indigo-600 text-white border-indigo-500 font-black shadow-xs print-scrimmage-blue'
                                     } ${userRole === 'admin' ? 'cursor-grab active:cursor-grabbing' : ''}`}
                                   >
                                     <div className="flex items-center gap-1.5 min-w-0 truncate">
                                       <span
-                                        className={`text-[8.5px] font-black uppercase px-1 py-0.2 rounded-md ${
+                                        className={`text-[8.5px] print:text-[7px] font-black uppercase px-1 py-0.2 rounded-md ${
                                           isGold
-                                            ? 'bg-black/20 text-black'
-                                            : 'bg-white/20 text-white'
+                                            ? 'bg-black/20 text-black print:bg-black print:text-white'
+                                            : 'bg-white/20 text-white print:bg-slate-700 print:text-white'
                                         }`}
                                       >
                                         {isGold ? 'Gold' : 'Blue'}
                                       </span>
-                                      <span className="font-mono text-[10px] opacity-90">
+                                      <span className="font-mono text-[10px] print:text-[8.5px] opacity-90 font-black">
                                         #{player.num}
                                       </span>
-                                      <span className="truncate uppercase">
+                                      <span className="truncate uppercase font-black">
                                         {player.name}
                                       </span>
                                     </div>
@@ -233,7 +243,7 @@ export const ScrimmageView: React.FC<ScrimmageViewProps> = ({
                               })}
 
                               {players.length === 0 && (
-                                <div className="flex-1 flex items-center justify-center text-[9.5px] text-slate-500 font-medium italic">
+                                <div className="flex-1 flex items-center justify-center text-[9.5px] print:text-[8px] text-slate-500 print:text-slate-300 font-medium italic">
                                   Drop Sub
                                 </div>
                               )}
