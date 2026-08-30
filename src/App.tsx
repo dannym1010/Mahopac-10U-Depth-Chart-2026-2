@@ -54,6 +54,7 @@ import {
   SelectivePrintModal,
   ScrimmageFilterModal,
   TemplatesManagerModal,
+  ImportBackupModal,
 } from './components/Modals';
 
 export default function App() {
@@ -137,6 +138,7 @@ export default function App() {
   >(null);
   const [isScrimmageFilterOpen, setIsScrimmageFilterOpen] = useState(false);
   const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   // Drag-and-Drop Transferred Data Ref
   const draggedPlayerRef = useRef<{
@@ -161,6 +163,7 @@ export default function App() {
   // Debounced Cloud Sync Timeout
   const saveTimeoutRef = useRef<any>(null);
   const initialCloudLoadDoneRef = useRef<boolean>(false);
+  const isImportingRef = useRef<boolean>(false);
 
   // Ensure current week object exists
   const ensureWeekExists = (week: string) => {
@@ -333,6 +336,10 @@ export default function App() {
           .doc('depthChartData')
           .onSnapshot(
             (doc: any) => {
+              if (isImportingRef.current) {
+                // Ignore incoming snapshot during active local backup import
+                return;
+              }
               if (doc && doc.exists) {
                 const data = doc.data();
                 if (data.weeklyData && Object.keys(data.weeklyData).length > 0) {
@@ -1638,6 +1645,119 @@ export default function App() {
     a.click();
   };
 
+  const applyImportDataObject = (parsed: any) => {
+    try {
+      isImportingRef.current = true;
+
+      const importedWeekly = parsed.weeklyData || (parsed['0'] && parsed['0'].depthChart ? parsed : null);
+      const importedDefaults = parsed.defaultFormations || null;
+      const importedPractice = parsed.practiceData || null;
+      const importedTemplates = parsed.practiceTemplates || null;
+      const importedDrills = parsed.cascadingDrills || null;
+      const importedGuideTree = parsed.guideTree || parsed.pdfGuidesTree || null;
+      const importedGuideOrder = parsed.guideOrder || parsed.pdfGuidesOrder || null;
+      const importedSavedCoaches = parsed.savedCoaches || parsed.savedCoachesList || null;
+      const importedStaffList = parsed.staffList || parsed.teamCoachesList || null;
+      const importedPlays = parsed.masterPlayLibrary || null;
+      const importedCollapsed = parsed.collapsedFolders || {};
+
+      if (importedWeekly) {
+        setWeeklyData(importedWeekly);
+        safeJSONSet('footballWeeklyData', importedWeekly);
+      }
+      if (importedDefaults) {
+        setDefaultFormations(importedDefaults);
+        safeJSONSet('footballDefaultFormations', importedDefaults);
+      }
+      if (importedPractice) {
+        setPracticeData(importedPractice);
+        safeJSONSet('footballPracticeData', importedPractice);
+      }
+      if (importedTemplates) {
+        setPracticeTemplates(importedTemplates);
+        safeJSONSet('footballPracticeTemplates', importedTemplates);
+      }
+      if (importedDrills) {
+        setCascadingDrills(importedDrills);
+        safeJSONSet('footballCascadingDrills', importedDrills);
+      }
+      if (importedGuideTree) {
+        setGuideTree(importedGuideTree);
+        safeJSONSet('footballPdfGuidesTree', importedGuideTree);
+      }
+      if (importedGuideOrder) {
+        setGuideOrder(importedGuideOrder);
+        safeJSONSet('footballPdfGuidesOrder', importedGuideOrder);
+      }
+      if (importedSavedCoaches) {
+        setSavedCoaches(importedSavedCoaches);
+        safeJSONSet('footballSavedCoaches', importedSavedCoaches);
+      }
+      if (importedStaffList) {
+        setStaffList(importedStaffList);
+        safeJSONSet('footballTeamCoaches', importedStaffList);
+      }
+      if (importedPlays) {
+        setMasterPlayLibrary(importedPlays);
+        safeJSONSet('footballMasterPlays', importedPlays);
+      }
+      if (importedCollapsed) {
+        setCollapsedFolders(importedCollapsed);
+        safeJSONSet('footballCollapsedFolders', importedCollapsed);
+      }
+
+      // Direct synchronous push to Cloud Firestore
+      const { db } = getFirebaseServices();
+      if (db) {
+        setSyncStatus({ text: '☁️ Uploading Backup to Cloud...', color: '#f59e0b' });
+        const payload = deepClone({
+          weeklyData: importedWeekly || weeklyData,
+          defaultFormations: importedDefaults || defaultFormations,
+          practiceData: importedPractice || practiceData,
+          practiceTemplates: importedTemplates || practiceTemplates,
+          cascadingDrills: importedDrills || cascadingDrills,
+          guideTree: importedGuideTree || guideTree,
+          guideOrder: importedGuideOrder || guideOrder,
+          savedCoaches: importedSavedCoaches || savedCoaches,
+          staffList: importedStaffList || staffList,
+          masterPlayLibrary: importedPlays || masterPlayLibrary,
+          collapsedFolders: importedCollapsed,
+        });
+
+        db.collection('teamData')
+          .doc('depthChartData')
+          .set(
+            {
+              ...payload,
+              updatedAt: window.firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
+            },
+            { merge: true }
+          )
+          .then(() => {
+            setSyncStatus({ text: '✅ Live Cloud Synced', color: '#22c55e' });
+            setTimeout(() => {
+              isImportingRef.current = false;
+            }, 3000);
+          })
+          .catch((err: any) => {
+            console.warn('Direct cloud sync error:', err);
+            setTimeout(() => {
+              isImportingRef.current = false;
+            }, 3000);
+          });
+      } else {
+        setTimeout(() => {
+          isImportingRef.current = false;
+        }, 3000);
+      }
+
+      alert('Complete team backup imported and saved to cloud successfully!');
+    } catch (err: any) {
+      isImportingRef.current = false;
+      alert(`Error importing backup: ${err.message}`);
+    }
+  };
+
   const handleImportFullBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1645,26 +1765,22 @@ export default function App() {
     reader.onload = (evt) => {
       try {
         const parsed = JSON.parse(evt.target?.result as string);
-        if (parsed.weeklyData) setWeeklyData(parsed.weeklyData);
-        if (parsed.defaultFormations)
-          setDefaultFormations(parsed.defaultFormations);
-        if (parsed.practiceData) setPracticeData(parsed.practiceData);
-        if (parsed.practiceTemplates)
-          setPracticeTemplates(parsed.practiceTemplates);
-        if (parsed.cascadingDrills) setCascadingDrills(parsed.cascadingDrills);
-        if (parsed.guideTree) setGuideTree(parsed.guideTree);
-        if (parsed.guideOrder) setGuideOrder(parsed.guideOrder);
-        if (parsed.savedCoaches) setSavedCoaches(parsed.savedCoaches);
-        if (parsed.staffList) setStaffList(parsed.staffList);
-        if (parsed.masterPlayLibrary)
-          setMasterPlayLibrary(parsed.masterPlayLibrary);
-        alert('Complete team backup imported successfully!');
+        applyImportDataObject(parsed);
       } catch (err: any) {
-        alert(`Error importing backup: ${err.message}`);
+        alert(`Error parsing JSON file: ${err.message}`);
       }
       e.target.value = '';
     };
     reader.readAsText(file);
+  };
+
+  const handlePasteImport = (jsonString: string) => {
+    try {
+      const parsed = JSON.parse(jsonString);
+      applyImportDataObject(parsed);
+    } catch (err: any) {
+      alert(`Error parsing pasted JSON: ${err.message}`);
+    }
   };
 
   const handleResetData = () => {
@@ -1760,7 +1876,7 @@ export default function App() {
           }
         }}
         onExportData={handleExportFullBackup}
-        onImportClick={() => fileInputRef.current?.click()}
+        onImportClick={() => setIsImportModalOpen(true)}
         onResetData={handleResetData}
         onOpenCopyWeekModal={() => setIsCopyWeekModalOpen(true)}
       />
@@ -2334,6 +2450,13 @@ export default function App() {
             return updated;
           });
         }}
+      />
+
+      <ImportBackupModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSelectFile={() => fileInputRef.current?.click()}
+        onPasteImport={handlePasteImport}
       />
     </div>
   );

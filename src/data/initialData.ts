@@ -508,16 +508,16 @@ export const DEFAULT_TEAM_COACHES: StaffCoach[] = [
 ];
 
 export const MASTER_PLAY_LIBRARY: string[] = [
+  "24 Dive",
+  "25 Trap",
+  "Sweep Right",
+  "Bootleg Pass",
+  "Screen Pass",
   "12 Dive (Lead Right)",
   "13 Dive (Lead Left)",
-  "24 Trap Right",
-  "25 Trap Left",
   "Sweep 28 Right",
   "Sweep 29 Left",
-  "Bootleg 18 Pass (Y Corner)",
-  "Quick Screen to Z",
   "Iso Power 36",
-  "Counter 21 Reverse",
-  "Sprint Out Pass Right",
-  "Four Verticals (Hail Mary)"
+  "Counter 21 Reverse"
 ];
+
