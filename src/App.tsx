@@ -185,6 +185,40 @@ export default function App() {
   const isRemoteSyncRef = useRef<boolean>(false);
   const lastSavedPayloadRef = useRef<string>('');
 
+  const latestStateRef = useRef({
+    weeklyData,
+    defaultFormations,
+    practiceData,
+    practiceTemplates,
+    cascadingDrills,
+    guideTree,
+    guideOrder,
+    savedCoaches,
+    staffList,
+    masterPlayLibrary,
+    collapsedFolders,
+    scheduleEvents,
+    roster,
+  });
+
+  useEffect(() => {
+    latestStateRef.current = {
+      weeklyData,
+      defaultFormations,
+      practiceData,
+      practiceTemplates,
+      cascadingDrills,
+      guideTree,
+      guideOrder,
+      savedCoaches,
+      staffList,
+      masterPlayLibrary,
+      collapsedFolders,
+      scheduleEvents,
+      roster,
+    };
+  });
+
   // Ensure current week object exists
   const ensureWeekExists = (week: string) => {
     setWeeklyData((prev) => {
@@ -389,28 +423,74 @@ export default function App() {
                   return;
                 }
                 const data = doc.data();
-                isRemoteSyncRef.current = true;
+                if (!data) return;
 
                 const remotePayload = {
-                  weeklyData: data.weeklyData || weeklyData,
-                  defaultFormations: (data.defaultFormations && Array.isArray(data.defaultFormations) && data.defaultFormations.length > 0) ? data.defaultFormations : defaultFormations,
-                  practiceData: (data.practiceData && Array.isArray(data.practiceData)) ? data.practiceData : practiceData,
-                  practiceTemplates: data.practiceTemplates || practiceTemplates,
-                  cascadingDrills: data.cascadingDrills || cascadingDrills,
-                  guideTree: data.guideTree || guideTree,
-                  guideOrder: data.guideOrder || guideOrder,
-                  savedCoaches: data.savedCoaches || savedCoaches,
-                  staffList: data.staffList || staffList,
-                  masterPlayLibrary: data.masterPlayLibrary || masterPlayLibrary,
-                  collapsedFolders: data.collapsedFolders || collapsedFolders,
-                  scheduleEvents: (data.scheduleEvents && Array.isArray(data.scheduleEvents)) ? data.scheduleEvents : scheduleEvents,
+                  weeklyData: data.weeklyData || latestStateRef.current.weeklyData,
+                  defaultFormations:
+                    data.defaultFormations &&
+                    Array.isArray(data.defaultFormations) &&
+                    data.defaultFormations.length > 0
+                      ? data.defaultFormations
+                      : latestStateRef.current.defaultFormations,
+                  practiceData:
+                    data.practiceData && Array.isArray(data.practiceData)
+                      ? data.practiceData
+                      : latestStateRef.current.practiceData,
+                  practiceTemplates:
+                    data.practiceTemplates ||
+                    latestStateRef.current.practiceTemplates,
+                  cascadingDrills:
+                    data.cascadingDrills ||
+                    latestStateRef.current.cascadingDrills,
+                  guideTree:
+                    data.guideTree || latestStateRef.current.guideTree,
+                  guideOrder:
+                    data.guideOrder || latestStateRef.current.guideOrder,
+                  savedCoaches:
+                    data.savedCoaches || latestStateRef.current.savedCoaches,
+                  staffList:
+                    data.staffList || latestStateRef.current.staffList,
+                  masterPlayLibrary:
+                    data.masterPlayLibrary ||
+                    latestStateRef.current.masterPlayLibrary,
+                  collapsedFolders:
+                    data.collapsedFolders ||
+                    latestStateRef.current.collapsedFolders,
+                  scheduleEvents:
+                    data.scheduleEvents && Array.isArray(data.scheduleEvents)
+                      ? data.scheduleEvents
+                      : latestStateRef.current.scheduleEvents,
+                  roster:
+                    data.roster && Array.isArray(data.roster)
+                      ? data.roster
+                      : latestStateRef.current.roster,
                 };
-                lastSavedPayloadRef.current = JSON.stringify(remotePayload);
+                const remotePayloadJson = JSON.stringify(remotePayload);
+
+                // If remote matches what we just sent or already have, do not reset state
+                if (remotePayloadJson === lastSavedPayloadRef.current) {
+                  initialCloudLoadDoneRef.current = true;
+                  setSyncStatus({ text: '✅ Live Cloud Synced', color: '#22c55e' });
+                  return;
+                }
+
+                // If local user is actively typing / debounce save is queued, don't clobber local edits
+                if (saveTimeoutRef.current && initialCloudLoadDoneRef.current) {
+                  return;
+                }
+
+                isRemoteSyncRef.current = true;
+                lastSavedPayloadRef.current = remotePayloadJson;
 
                 if (data.weeklyData && Object.keys(data.weeklyData).length > 0) {
                   setWeeklyData(data.weeklyData);
                 }
-                if (data.defaultFormations && Array.isArray(data.defaultFormations) && data.defaultFormations.length > 0) {
+                if (
+                  data.defaultFormations &&
+                  Array.isArray(data.defaultFormations) &&
+                  data.defaultFormations.length > 0
+                ) {
                   setDefaultFormations(data.defaultFormations);
                 }
                 if (data.practiceData && Array.isArray(data.practiceData)) {
@@ -437,8 +517,22 @@ export default function App() {
                 if (data.masterPlayLibrary) {
                   setMasterPlayLibrary(data.masterPlayLibrary);
                 }
-                if (data.scheduleEvents && Array.isArray(data.scheduleEvents) && data.scheduleEvents.length > 0) {
+                if (data.collapsedFolders) {
+                  setCollapsedFolders(data.collapsedFolders);
+                }
+                if (
+                  data.scheduleEvents &&
+                  Array.isArray(data.scheduleEvents) &&
+                  data.scheduleEvents.length > 0
+                ) {
                   setScheduleEvents(data.scheduleEvents);
+                }
+                if (
+                  data.roster &&
+                  Array.isArray(data.roster) &&
+                  data.roster.length > 0
+                ) {
+                  setRoster(data.roster);
                 }
                 initialCloudLoadDoneRef.current = true;
                 setSyncStatus({ text: '✅ Live Cloud Synced', color: '#22c55e' });
@@ -451,7 +545,10 @@ export default function App() {
             (err: any) => {
               console.warn('Firestore subscription error:', err);
               initialCloudLoadDoneRef.current = true;
-              setSyncStatus({ text: '⚠️ Cloud Sync Error (Check Rules)', color: '#f59e0b' });
+              setSyncStatus({
+                text: '⚠️ Cloud Sync Error (Check Rules)',
+                color: '#f59e0b',
+              });
             }
           );
 
@@ -506,6 +603,7 @@ export default function App() {
     masterPlayLibrary,
     collapsedFolders,
     scheduleEvents,
+    roster,
   ]);
 
   const currentWeekState: WeekState = weeklyData[currentWeek] || {
@@ -1394,42 +1492,51 @@ export default function App() {
   const handleAddSubfolder = (pathKey: string) => {
     const name = prompt('Enter Subfolder Name:');
     if (name && name.trim()) {
-      const updated = deepClone(cascadingDrills);
-      const target = findFolderByPath(updated, pathKey);
-      if (target) {
-        if (!target.subfolders) target.subfolders = [];
-        target.subfolders.push({
-          name: name.trim(),
-          subfolders: [],
-          drills: [],
-        });
-        setCascadingDrills(updated);
-      }
+      setCascadingDrills((prev) => {
+        const updated = deepClone(prev);
+        const target = findFolderByPath(updated, pathKey);
+        if (target) {
+          if (!target.subfolders) target.subfolders = [];
+          target.subfolders.push({
+            name: name.trim(),
+            subfolders: [],
+            drills: [],
+          });
+        }
+        return updated;
+      });
     }
   };
 
   const handleAddDrill = (pathKey: string) => {
-    const updated = deepClone(cascadingDrills);
-    const target = findFolderByPath(updated, pathKey);
-    if (target) {
-      if (!target.drills) target.drills = [];
-      target.drills.push({
-        name: 'New Drill',
-        desc: 'Instructions and setup...',
-        key: 'Coaching key...',
-      });
-      setCascadingDrills(updated);
-    }
+    setCascadingDrills((prev) => {
+      const updated = deepClone(prev);
+      const target = findFolderByPath(updated, pathKey);
+      if (target) {
+        if (!target.drills) target.drills = [];
+        target.drills.push({
+          name: 'New Drill',
+          desc: 'Instructions and setup...',
+          key: 'Coaching key...',
+        });
+      }
+      return updated;
+    });
   };
 
   const handleRenameDrillFolder = (pathKey: string) => {
-    const updated = deepClone(cascadingDrills);
-    const target = findFolderByPath(updated, pathKey);
+    const target = findFolderByPath(cascadingDrills, pathKey);
     if (target) {
       const newName = prompt('Rename Folder:', target.name);
       if (newName && newName.trim()) {
-        target.name = newName.trim();
-        setCascadingDrills(updated);
+        setCascadingDrills((prev) => {
+          const updated = deepClone(prev);
+          const t = findFolderByPath(updated, pathKey);
+          if (t) {
+            t.name = newName.trim();
+          }
+          return updated;
+        });
       }
     }
   };
@@ -1440,16 +1547,18 @@ export default function App() {
     const idx = parseInt(parts.pop()!, 10);
     const parentPath = parts.join('_');
 
-    const updated = deepClone(cascadingDrills);
-    if (parentPath === '') {
-      updated.splice(idx, 1);
-    } else {
-      const parent = findFolderByPath(updated, parentPath);
-      if (parent && parent.subfolders) {
-        parent.subfolders.splice(idx, 1);
+    setCascadingDrills((prev) => {
+      const updated = deepClone(prev);
+      if (parentPath === '') {
+        updated.splice(idx, 1);
+      } else {
+        const parent = findFolderByPath(updated, parentPath);
+        if (parent && parent.subfolders) {
+          parent.subfolders.splice(idx, 1);
+        }
       }
-    }
-    setCascadingDrills(updated);
+      return updated;
+    });
   };
 
   const handleMoveDrillFolder = (pathKey: string, direction: number) => {
@@ -1457,18 +1566,20 @@ export default function App() {
     const idx = parseInt(parts.pop()!, 10);
     const parentPath = parts.join('_');
 
-    const updated = deepClone(cascadingDrills);
-    let list = updated;
-    if (parentPath !== '') {
-      const parent = findFolderByPath(updated, parentPath);
-      if (parent && parent.subfolders) list = parent.subfolders;
-    }
+    setCascadingDrills((prev) => {
+      const updated = deepClone(prev);
+      let list = updated;
+      if (parentPath !== '') {
+        const parent = findFolderByPath(updated, parentPath);
+        if (parent && parent.subfolders) list = parent.subfolders;
+      }
 
-    const newIdx = idx + direction;
-    if (newIdx < 0 || newIdx >= list.length) return;
-    const [moved] = list.splice(idx, 1);
-    list.splice(newIdx, 0, moved);
-    setCascadingDrills(updated);
+      const newIdx = idx + direction;
+      if (newIdx < 0 || newIdx >= list.length) return prev;
+      const [moved] = list.splice(idx, 1);
+      list.splice(newIdx, 0, moved);
+      return updated;
+    });
   };
 
   const handleUpdateDrill = (
@@ -1477,22 +1588,26 @@ export default function App() {
     field: keyof DrillItem,
     value: string
   ) => {
-    const updated = deepClone(cascadingDrills);
-    const target = findFolderByPath(updated, pathKey);
-    if (target && target.drills?.[drillIdx]) {
-      target.drills[drillIdx][field] = value;
-      setCascadingDrills(updated);
-    }
+    setCascadingDrills((prev) => {
+      const updated = deepClone(prev);
+      const target = findFolderByPath(updated, pathKey);
+      if (target && target.drills?.[drillIdx]) {
+        target.drills[drillIdx][field] = value;
+      }
+      return updated;
+    });
   };
 
   const handleDeleteDrill = (pathKey: string, drillIdx: number) => {
     if (confirm('Delete this drill?')) {
-      const updated = deepClone(cascadingDrills);
-      const target = findFolderByPath(updated, pathKey);
-      if (target && target.drills) {
-        target.drills.splice(drillIdx, 1);
-        setCascadingDrills(updated);
-      }
+      setCascadingDrills((prev) => {
+        const updated = deepClone(prev);
+        const target = findFolderByPath(updated, pathKey);
+        if (target && target.drills) {
+          target.drills.splice(drillIdx, 1);
+        }
+        return updated;
+      });
     }
   };
 
@@ -1502,16 +1617,18 @@ export default function App() {
     targetPath: string
   ) => {
     if (sourcePath === targetPath) return;
-    const updated = deepClone(cascadingDrills);
-    const source = findFolderByPath(updated, sourcePath);
-    const target = findFolderByPath(updated, targetPath);
+    setCascadingDrills((prev) => {
+      const updated = deepClone(prev);
+      const source = findFolderByPath(updated, sourcePath);
+      const target = findFolderByPath(updated, targetPath);
 
-    if (source && target && source.drills?.[drillIdx]) {
-      const [movedDrill] = source.drills.splice(drillIdx, 1);
-      if (!target.drills) target.drills = [];
-      target.drills.push(movedDrill);
-      setCascadingDrills(updated);
-    }
+      if (source && target && source.drills?.[drillIdx]) {
+        const [movedDrill] = source.drills.splice(drillIdx, 1);
+        if (!target.drills) target.drills = [];
+        target.drills.push(movedDrill);
+      }
+      return updated;
+    });
   };
 
   // CSV & JSON Drill Import / Export

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dumbbell,
   Folder,
@@ -16,6 +16,163 @@ import {
   X,
 } from 'lucide-react';
 import { DrillFolder, DrillItem, UserRole } from '../types';
+
+interface DrillRowItemProps {
+  drill: DrillItem;
+  pathKey: string;
+  drillIdx: number;
+  userRole: UserRole;
+  allFolders: { path: string; name: string }[];
+  onUpdateDrill: (
+    pathKey: string,
+    drillIdx: number,
+    field: keyof DrillItem,
+    value: string
+  ) => void;
+  onDeleteDrill: (pathKey: string, drillIdx: number) => void;
+  onMoveDrillToFolder: (
+    sourcePath: string,
+    drillIdx: number,
+    targetPath: string
+  ) => void;
+  onDragStart: () => void;
+}
+
+const DrillRowItem: React.FC<DrillRowItemProps> = ({
+  drill,
+  pathKey,
+  drillIdx,
+  userRole,
+  allFolders,
+  onUpdateDrill,
+  onDeleteDrill,
+  onMoveDrillToFolder,
+  onDragStart,
+}) => {
+  const [name, setName] = useState(drill.name || '');
+  const [desc, setDesc] = useState(drill.desc || '');
+  const [keyVal, setKeyVal] = useState(drill.key || '');
+  const isEditingRef = useRef(false);
+
+  useEffect(() => {
+    if (!isEditingRef.current) {
+      setName(drill.name || '');
+      setDesc(drill.desc || '');
+      setKeyVal(drill.key || '');
+    }
+  }, [drill.name, drill.desc, drill.key]);
+
+  const handleNameChange = (val: string) => {
+    setName(val);
+    onUpdateDrill(pathKey, drillIdx, 'name', val);
+  };
+
+  const handleDescChange = (val: string) => {
+    setDesc(val);
+    onUpdateDrill(pathKey, drillIdx, 'desc', val);
+  };
+
+  const handleKeyChange = (val: string) => {
+    setKeyVal(val);
+    onUpdateDrill(pathKey, drillIdx, 'key', val);
+  };
+
+  return (
+    <div
+      draggable={userRole === 'admin'}
+      onDragStart={onDragStart}
+      className="grid grid-cols-12 gap-2.5 p-3 rounded-2xl bg-slate-950/80 border border-slate-800/80 hover:border-slate-700 items-start transition-all"
+    >
+      {/* Drill Name */}
+      <div className="col-span-12 md:col-span-3 flex items-start gap-2">
+        {userRole === 'admin' && (
+          <GripVertical className="w-4 h-4 text-slate-500 mt-2 flex-shrink-0 cursor-grab active:cursor-grabbing" />
+        )}
+        <input
+          type="text"
+          value={name}
+          disabled={userRole !== 'admin'}
+          onFocus={() => {
+            isEditingRef.current = true;
+          }}
+          onBlur={() => {
+            isEditingRef.current = false;
+            onUpdateDrill(pathKey, drillIdx, 'name', name);
+          }}
+          onChange={(e) => handleNameChange(e.target.value)}
+          placeholder="Drill Title"
+          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-transparent disabled:border-transparent"
+        />
+      </div>
+
+      {/* Description / Instructions */}
+      <div className="col-span-12 md:col-span-5">
+        <textarea
+          rows={2}
+          value={desc}
+          disabled={userRole !== 'admin'}
+          onFocus={() => {
+            isEditingRef.current = true;
+          }}
+          onBlur={() => {
+            isEditingRef.current = false;
+            onUpdateDrill(pathKey, drillIdx, 'desc', desc);
+          }}
+          onChange={(e) => handleDescChange(e.target.value)}
+          placeholder="Setup instructions, number of players, cone placement..."
+          className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs font-medium text-slate-300 leading-relaxed focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-600"
+        />
+      </div>
+
+      {/* Coaching Key / Focus */}
+      <div className="col-span-12 md:col-span-2">
+        <textarea
+          rows={2}
+          value={keyVal}
+          disabled={userRole !== 'admin'}
+          onFocus={() => {
+            isEditingRef.current = true;
+          }}
+          onBlur={() => {
+            isEditingRef.current = false;
+            onUpdateDrill(pathKey, drillIdx, 'key', keyVal);
+          }}
+          onChange={(e) => handleKeyChange(e.target.value)}
+          placeholder="Key coaching cues (e.g. eyes on hips)..."
+          className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs font-medium text-slate-300 leading-relaxed focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-600"
+        />
+      </div>
+
+      {/* Move to folder & Delete */}
+      <div className="col-span-12 md:col-span-2 flex items-center justify-end gap-1.5 pt-1">
+        {userRole === 'admin' ? (
+          <>
+            <select
+              value={pathKey}
+              onChange={(e) =>
+                onMoveDrillToFolder(pathKey, drillIdx, e.target.value)
+              }
+              className="bg-slate-900 border border-slate-800 rounded-xl px-2 py-1 text-[11px] font-semibold text-slate-300 max-w-[115px] truncate focus:outline-none"
+            >
+              {allFolders.map((f) => (
+                <option key={f.path} value={f.path}>
+                  ↳ {f.name}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => onDeleteDrill(pathKey, drillIdx)}
+              title="Delete Drill"
+              className="p-1.5 hover:bg-rose-950/50 text-rose-400 rounded-lg transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+};
 
 interface DrillLibraryViewProps {
   cascadingDrills: DrillFolder[];
@@ -238,87 +395,20 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
                 </div>
 
                 {folder.drills.map((drill, dIdx) => (
-                  <div
-                    key={dIdx}
-                    draggable={userRole === 'admin'}
+                  <DrillRowItem
+                    key={`${pathKey}_drill_${dIdx}`}
+                    drill={drill}
+                    pathKey={pathKey}
+                    drillIdx={dIdx}
+                    userRole={userRole}
+                    allFolders={allFolders}
+                    onUpdateDrill={onUpdateDrill}
+                    onDeleteDrill={onDeleteDrill}
+                    onMoveDrillToFolder={onMoveDrillToFolder}
                     onDragStart={() =>
                       setDraggedDrill({ sourcePath: pathKey, drillIndex: dIdx })
                     }
-                    className="grid grid-cols-12 gap-2.5 p-3 rounded-2xl bg-slate-950/80 border border-slate-800/80 hover:border-slate-700 items-start transition-all"
-                  >
-                    {/* Drill Name */}
-                    <div className="col-span-12 md:col-span-3 flex items-start gap-2">
-                      {userRole === 'admin' && (
-                        <GripVertical className="w-4 h-4 text-slate-500 mt-2 flex-shrink-0 cursor-grab active:cursor-grabbing" />
-                      )}
-                      <input
-                        type="text"
-                        value={drill.name || ''}
-                        disabled={userRole !== 'admin'}
-                        onChange={(e) =>
-                          onUpdateDrill(pathKey, dIdx, 'name', e.target.value)
-                        }
-                        placeholder="Drill Title"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-transparent disabled:border-transparent"
-                      />
-                    </div>
-
-                    {/* Description / Instructions */}
-                    <div className="col-span-12 md:col-span-5">
-                      <textarea
-                        rows={2}
-                        value={drill.desc || ''}
-                        disabled={userRole !== 'admin'}
-                        onChange={(e) =>
-                          onUpdateDrill(pathKey, dIdx, 'desc', e.target.value)
-                        }
-                        placeholder="Setup instructions, number of players, cone placement..."
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs font-medium text-slate-300 leading-relaxed focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-600"
-                      />
-                    </div>
-
-                    {/* Coaching Key / Focus */}
-                    <div className="col-span-12 md:col-span-2">
-                      <textarea
-                        rows={2}
-                        value={drill.key || ''}
-                        disabled={userRole !== 'admin'}
-                        onChange={(e) =>
-                          onUpdateDrill(pathKey, dIdx, 'key', e.target.value)
-                        }
-                        placeholder="Key coaching cues (e.g. eyes on hips)..."
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs font-medium text-slate-300 leading-relaxed focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-600"
-                      />
-                    </div>
-
-                    {/* Move to folder & Delete */}
-                    <div className="col-span-12 md:col-span-2 flex items-center justify-end gap-1.5 pt-1">
-                      {userRole === 'admin' ? (
-                        <>
-                          <select
-                            value={pathKey}
-                            onChange={(e) =>
-                              onMoveDrillToFolder(pathKey, dIdx, e.target.value)
-                            }
-                            className="bg-slate-900 border border-slate-800 rounded-xl px-2 py-1 text-[11px] font-semibold text-slate-300 max-w-[115px] truncate focus:outline-none"
-                          >
-                            {allFolders.map((f) => (
-                              <option key={f.path} value={f.path}>
-                                ↳ {f.name}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            onClick={() => onDeleteDrill(pathKey, dIdx)}
-                            title="Delete Drill"
-                            className="p-1.5 hover:bg-rose-950/50 text-rose-400 rounded-lg transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      ) : null}
-                    </div>
-                  </div>
+                  />
                 ))}
               </div>
             ) : (

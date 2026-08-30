@@ -24,6 +24,7 @@ import {
   Info,
   Check,
   X,
+  Users,
 } from 'lucide-react';
 import {
   RosterPlayer,
