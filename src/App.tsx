@@ -1677,7 +1677,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] flex flex-col font-sans text-slate-100 selection:bg-indigo-600 selection:text-white">
+    <div className="min-h-screen bg-[#020617] print:bg-white print:text-black flex flex-col font-sans text-slate-100 selection:bg-indigo-600 selection:text-white">
       {/* Hidden File Inputs for Import */}
       <input
         type="file"

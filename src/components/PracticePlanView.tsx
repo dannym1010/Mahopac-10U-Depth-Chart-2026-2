@@ -464,13 +464,13 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
         <table className="w-full border-collapse practice-table text-xs">
           <thead>
             <tr className="bg-slate-950 text-slate-300 font-black uppercase text-[11px] border-b border-slate-800">
-              <th className="py-3 px-3.5 text-left w-28">Time / Period</th>
-              <th className="py-3 px-3.5 text-left w-44">Category / Format</th>
-              <th className="py-3 px-3.5 text-left">Stations / Drills</th>
-              <th className="py-3 px-3.5 text-left w-40">Coaches Assigned</th>
-              <th className="py-3 px-3.5 text-left w-48">Coaching Focus</th>
+              <th className="py-3 px-3 text-left w-24 sm:w-28 print:w-[14%]">Time / Period</th>
+              <th className="py-3 px-3 text-left w-32 sm:w-36 print:w-[16%]">Category / Format</th>
+              <th className="py-3 px-3.5 text-left print:w-[42%]">Stations / Drills</th>
+              <th className="py-3 px-2.5 text-left w-28 sm:w-32 print:w-[13%]">Coaches</th>
+              <th className="py-3 px-3 text-left w-36 sm:w-40 print:w-[15%]">Focus / Cues</th>
               {userRole === 'admin' && (
-                <th className="py-3 px-2 text-center w-24 print:hidden">
+                <th className="py-3 px-2 text-center w-20 print:hidden">
                   Actions
                 </th>
               )}

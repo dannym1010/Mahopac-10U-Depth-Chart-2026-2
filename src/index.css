@@ -48,13 +48,27 @@ body {
     margin: 0.25in;
   }
 
-  body {
+  body, html, #root {
     background-color: #ffffff !important;
+    background: #ffffff !important;
     color: #000000 !important;
     font-size: var(--print-font-size, 10px) !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
     width: 100% !important;
+  }
+
+  /* Force all background containers to transparent or white for clean printing */
+  * {
+    background-image: none !important;
+  }
+
+  div, main, section, table, tbody, thead, tr, td, th {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
   }
 
   /* Hide navigation, toolbars, buttons, modals in print */
