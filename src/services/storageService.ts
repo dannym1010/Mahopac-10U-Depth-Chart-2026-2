@@ -80,13 +80,12 @@ export function safeJSONSet(key: string, data: any) {
 
 // Firebase configuration from original app
 export const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBxAet3UzgBNuMUyUgj2MDWgrK5X63IPvg",
-  authDomain: "u-depth-chart.firebaseapp.com",
-  projectId: "u-depth-chart",
-  storageBucket: "u-depth-chart.firebasestorage.app",
-  messagingSenderId: "303577845736",
-  appId: "1:303577845736:web:34588bbe5e07f1322e1e5d",
-  measurementId: "G-K15ZKX0S45"
+  apiKey: "AIzaSyByWAe6BpeDboNzqsC_NxWw0pfnca0sfqE",
+  authDomain: "u-football-manager.firebaseapp.com",
+  projectId: "u-football-manager",
+  storageBucket: "u-football-manager.firebasestorage.app",
+  messagingSenderId: "707897728538",
+  appId: "1:707897728538:web:5b35e49df4b81d85eb7ba3"
 };
 
 let db: any = null;
