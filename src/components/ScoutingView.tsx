@@ -39,6 +39,7 @@ interface ScoutingViewProps {
   staffList?: StaffCoach[];
   savedCoaches?: string[];
   onUpdateScouting: (field: keyof ScoutingData, val: any) => void;
+  onNavigateToSchedule?: () => void;
 }
 
 const NOTE_CATEGORIES = [
@@ -59,6 +60,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
   staffList = [],
   savedCoaches = [],
   onUpdateScouting,
+  onNavigateToSchedule,
 }) => {
   // Current user email & power admin check
   const currentEmail = (currentUser?.email || '').toLowerCase().trim();
@@ -121,7 +123,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
   };
 
   const handleRemoveKey = (idx: number) => {
-    if (!isPowerAdmin && userRole !== 'admin') return;
+    if (!isPowerAdmin) return;
     const updated = keysToVictory.filter((_, i) => i !== idx);
     onUpdateScouting('keysToVictory', updated);
   };
@@ -147,7 +149,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
   };
 
   const handleRemovePlayer = (id: string) => {
-    if (!isPowerAdmin && userRole !== 'admin') return;
+    if (!isPowerAdmin) return;
     const updated = keyPlayersList.filter((p) => p.id !== id);
     onUpdateScouting('keyPlayersList', updated);
   };
@@ -336,9 +338,22 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
             <Calendar className="w-4 h-4 text-amber-400" />
             <span>Game Information &amp; Opponent Header</span>
           </div>
-          <span className="text-[11px] text-slate-400 font-bold">
-            Mahopac 10U Football
-          </span>
+          <div className="flex items-center gap-2">
+            {onNavigateToSchedule && (
+              <button
+                type="button"
+                onClick={onNavigateToSchedule}
+                className="px-2.5 py-1 bg-slate-900 hover:bg-slate-700 text-amber-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all shadow-xs"
+                title="View in Season Schedule"
+              >
+                <Calendar className="w-3 h-3 text-amber-400" />
+                <span>📅 Season Schedule</span>
+              </button>
+            )}
+            <span className="text-[11px] text-slate-400 font-bold hidden sm:inline">
+              Mahopac 10U Football
+            </span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3.5">
@@ -349,7 +364,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
             <input
               type="text"
               value={scouting.year || '2026'}
-              disabled={!isPowerAdmin && userRole !== 'admin'}
+              disabled={!isPowerAdmin}
               onChange={(e) => onUpdateScouting('year', e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-amber-400 disabled:opacity-60"
             />
@@ -362,7 +377,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
             <input
               type="text"
               value={scouting.week || 'Week 1'}
-              disabled={!isPowerAdmin && userRole !== 'admin'}
+              disabled={!isPowerAdmin}
               onChange={(e) => onUpdateScouting('week', e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-amber-400 disabled:opacity-60"
             />
@@ -375,7 +390,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
             <input
               type="text"
               value={scouting.opponent || ''}
-              disabled={!isPowerAdmin && userRole !== 'admin'}
+              disabled={!isPowerAdmin}
               onChange={(e) => onUpdateScouting('opponent', e.target.value)}
               placeholder="e.g. Carmel Rams"
               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-400 disabled:opacity-60"
@@ -389,7 +404,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
             <input
               type="text"
               value={scouting.gameDate || ''}
-              disabled={!isPowerAdmin && userRole !== 'admin'}
+              disabled={!isPowerAdmin}
               onChange={(e) => onUpdateScouting('gameDate', e.target.value)}
               placeholder="e.g. Sun, Oct 4 @ 10:00 AM"
               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-400 disabled:opacity-60"
@@ -403,7 +418,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
             <input
               type="text"
               value={scouting.gameLocation || ''}
-              disabled={!isPowerAdmin && userRole !== 'admin'}
+              disabled={!isPowerAdmin}
               onChange={(e) => onUpdateScouting('gameLocation', e.target.value)}
               placeholder="Home @ Mahopac HS / Away"
               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-400 disabled:opacity-60"
@@ -440,7 +455,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
                   {keyItem}
                 </p>
               </div>
-              {(isPowerAdmin || userRole === 'admin') && (
+              {isPowerAdmin && (
                 <button
                   onClick={() => handleRemoveKey(idx)}
                   className="text-slate-500 hover:text-rose-400 p-1 transition-colors shrink-0"
@@ -459,7 +474,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
           )}
         </div>
 
-        {(isPowerAdmin || userRole === 'admin') && (
+        {isPowerAdmin && (
           <div className="flex items-center gap-2 pt-2">
             <input
               type="text"
@@ -489,7 +504,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
               Opponent Key Players &amp; Matchup Watchlist
             </h3>
           </div>
-          {(isPowerAdmin || userRole === 'admin') && (
+          {isPowerAdmin && (
             <button
               onClick={() => setIsAddingPlayer(!isAddingPlayer)}
               className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1 transition-all active:scale-95 shadow-xs"
@@ -621,7 +636,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
                   >
                     {player.threatLevel}
                   </span>
-                  {(isPowerAdmin || userRole === 'admin') && (
+                  {isPowerAdmin && (
                     <button
                       onClick={() => handleRemovePlayer(player.id)}
                       className="text-slate-500 hover:text-rose-400 p-0.5 transition-colors"
@@ -669,7 +684,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
           <textarea
             rows={5}
             value={scouting.teamOverview || ''}
-            disabled={!isPowerAdmin && userRole !== 'admin'}
+            disabled={!isPowerAdmin}
             onChange={(e) => onUpdateScouting('teamOverview', e.target.value)}
             placeholder="General team strengths, coaching habits, tempo (fast-break vs huddle), disciplined vs penalty prone, preferred hash marks..."
             className="w-full bg-slate-900/90 border border-slate-700 rounded-2xl p-3.5 text-xs text-slate-200 font-medium focus:outline-none focus:border-indigo-400 leading-relaxed resize-y disabled:opacity-60 placeholder:text-slate-500"
@@ -696,7 +711,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
           <textarea
             rows={5}
             value={scouting.offensiveTendencies || ''}
-            disabled={!isPowerAdmin && userRole !== 'admin'}
+            disabled={!isPowerAdmin}
             onChange={(e) => onUpdateScouting('offensiveTendencies', e.target.value)}
             placeholder="Primary offensive formations (I-Formation, Wing-T, Single Wing, Spread), run/pass ratio, sweep tendencies, QB scramble habits, favorite third-down calls..."
             className="w-full bg-slate-900/90 border border-slate-700 rounded-2xl p-3.5 text-xs text-slate-200 font-medium focus:outline-none focus:border-amber-400 leading-relaxed resize-y disabled:opacity-60 placeholder:text-slate-500"
@@ -723,7 +738,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
           <textarea
             rows={5}
             value={scouting.defensiveFronts || ''}
-            disabled={!isPowerAdmin && userRole !== 'admin'}
+            disabled={!isPowerAdmin}
             onChange={(e) => onUpdateScouting('defensiveFronts', e.target.value)}
             placeholder="Base defensive front (5-3, 4-4, 6-2 goal line), secondary coverage (Cover 2, Cover 3, Man), corner run support aggressiveness, inside blitz frequency..."
             className="w-full bg-slate-900/90 border border-slate-700 rounded-2xl p-3.5 text-xs text-slate-200 font-medium focus:outline-none focus:border-sky-400 leading-relaxed resize-y disabled:opacity-60 placeholder:text-slate-500"
@@ -750,7 +765,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
           <textarea
             rows={5}
             value={scouting.specialTeamsNotes || ''}
-            disabled={!isPowerAdmin && userRole !== 'admin'}
+            disabled={!isPowerAdmin}
             onChange={(e) => onUpdateScouting('specialTeamsNotes', e.target.value)}
             placeholder="Kickoff return coverage strengths, dangerous returners, onside kick likelihood, punt block vulnerability, extra point kick vs 2-pt conversion strategy..."
             className="w-full bg-slate-900/90 border border-slate-700 rounded-2xl p-3.5 text-xs text-slate-200 font-medium focus:outline-none focus:border-emerald-400 leading-relaxed resize-y disabled:opacity-60 placeholder:text-slate-500"

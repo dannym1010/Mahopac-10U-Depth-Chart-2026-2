@@ -15,6 +15,7 @@ import {
   PracticeStation,
   DrillItem,
   ScoutingData,
+  ScheduleEvent,
 } from './types';
 import {
   MASTER_ROSTER,
@@ -26,6 +27,7 @@ import {
   DEFAULT_SAVED_COACHES,
   DEFAULT_TEAM_COACHES,
   MASTER_PLAY_LIBRARY,
+  DEFAULT_SCHEDULE_EVENTS,
 } from './data/initialData';
 import {
   safeJSONParse,
@@ -48,6 +50,10 @@ import { PlaybookGuidesView } from './components/PlaybookGuidesView';
 import { DrillLibraryView } from './components/DrillLibraryView';
 import { PracticePlanView } from './components/PracticePlanView';
 import { StaffManagerView } from './components/StaffManagerView';
+import { ScheduleView } from './components/ScheduleView';
+import { PlayerHoursTracker } from './components/PlayerHoursTracker';
+import { RosterManagerModal } from './components/RosterManagerModal';
+import { PracticeWizardGeneratedResult } from './components/PracticeWizardModal';
 import {
   AuthModal,
   CopyWeekModal,
@@ -91,6 +97,16 @@ export default function App() {
   const [masterPlayLibrary, setMasterPlayLibrary] = useState<string[]>(() =>
     safeJSONParse('footballMasterPlays', MASTER_PLAY_LIBRARY)
   );
+  const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>(() =>
+    safeJSONParse('footballScheduleEvents', DEFAULT_SCHEDULE_EVENTS)
+  );
+  const [roster, setRoster] = useState<RosterPlayer[]>(() => {
+    const saved = safeJSONParse('footballRoster', null);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      return saved;
+    }
+    return MASTER_ROSTER;
+  });
 
   // App Navigation & Session States
   const [currentWeek, setCurrentWeek] = useState<string>(() =>
@@ -133,6 +149,8 @@ export default function App() {
 
   // Modal Dialog States
   const [isCopyWeekModalOpen, setIsCopyWeekModalOpen] = useState(false);
+  const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
+  const [editingPlayerForModal, setEditingPlayerForModal] = useState<RosterPlayer | null>(null);
   const [selectivePrintUnit, setSelectivePrintUnit] = useState<
     'offense' | 'defense' | 'st' | 'groups' | null
   >(null);
@@ -164,6 +182,8 @@ export default function App() {
   const saveTimeoutRef = useRef<any>(null);
   const initialCloudLoadDoneRef = useRef<boolean>(false);
   const isImportingRef = useRef<boolean>(false);
+  const isRemoteSyncRef = useRef<boolean>(false);
+  const lastSavedPayloadRef = useRef<string>('');
 
   // Ensure current week object exists
   const ensureWeekExists = (week: string) => {
@@ -218,11 +238,12 @@ export default function App() {
     safeJSONSet('footballTeamCoaches', staffList);
     safeJSONSet('footballMasterPlays', masterPlayLibrary);
     safeJSONSet('footballCollapsedFolders', collapsedFolders);
+    safeJSONSet('footballScheduleEvents', scheduleEvents);
+    safeJSONSet('footballRoster', roster);
 
     const { db } = getFirebaseServices();
-    if (db) {
-      setSyncStatus({ text: '☁️ Saving to Cloud...', color: '#f59e0b' });
-      const payload = deepClone({
+    if (db && initialCloudLoadDoneRef.current) {
+      const payload = {
         weeklyData,
         defaultFormations,
         practiceData,
@@ -234,14 +255,25 @@ export default function App() {
         staffList,
         masterPlayLibrary,
         collapsedFolders,
-      });
+        scheduleEvents,
+        roster,
+      };
+
+      const payloadJson = JSON.stringify(payload);
+      if (payloadJson === lastSavedPayloadRef.current) {
+        // No data change detected, skip Firestore set to prevent write loop
+        return;
+      }
+      lastSavedPayloadRef.current = payloadJson;
+
+      setSyncStatus({ text: '☁️ Saving to Cloud...', color: '#f59e0b' });
 
       db.collection('teamData')
         .doc('depthChartData')
         .set(
           {
             ...payload,
-            updatedAt: window.firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
+            updatedAt: Date.now(),
           },
           { merge: true }
         )
@@ -256,10 +288,14 @@ export default function App() {
   };
 
   const debouncedSave = (scope: string = 'all') => {
+    if (isRemoteSyncRef.current) {
+      isRemoteSyncRef.current = false;
+      return;
+    }
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
       saveStateToStorage(scope);
-    }, 400);
+    }, 1200);
   };
 
   // Update root CSS variable for print font size
@@ -348,7 +384,29 @@ export default function App() {
                 return;
               }
               if (doc && doc.exists) {
+                if (doc.metadata && doc.metadata.hasPendingWrites) {
+                  // Ignore optimistic local writes to prevent echo loops
+                  return;
+                }
                 const data = doc.data();
+                isRemoteSyncRef.current = true;
+
+                const remotePayload = {
+                  weeklyData: data.weeklyData || weeklyData,
+                  defaultFormations: (data.defaultFormations && Array.isArray(data.defaultFormations) && data.defaultFormations.length > 0) ? data.defaultFormations : defaultFormations,
+                  practiceData: (data.practiceData && Array.isArray(data.practiceData)) ? data.practiceData : practiceData,
+                  practiceTemplates: data.practiceTemplates || practiceTemplates,
+                  cascadingDrills: data.cascadingDrills || cascadingDrills,
+                  guideTree: data.guideTree || guideTree,
+                  guideOrder: data.guideOrder || guideOrder,
+                  savedCoaches: data.savedCoaches || savedCoaches,
+                  staffList: data.staffList || staffList,
+                  masterPlayLibrary: data.masterPlayLibrary || masterPlayLibrary,
+                  collapsedFolders: data.collapsedFolders || collapsedFolders,
+                  scheduleEvents: (data.scheduleEvents && Array.isArray(data.scheduleEvents)) ? data.scheduleEvents : scheduleEvents,
+                };
+                lastSavedPayloadRef.current = JSON.stringify(remotePayload);
+
                 if (data.weeklyData && Object.keys(data.weeklyData).length > 0) {
                   setWeeklyData(data.weeklyData);
                 }
@@ -378,6 +436,9 @@ export default function App() {
                 }
                 if (data.masterPlayLibrary) {
                   setMasterPlayLibrary(data.masterPlayLibrary);
+                }
+                if (data.scheduleEvents && Array.isArray(data.scheduleEvents) && data.scheduleEvents.length > 0) {
+                  setScheduleEvents(data.scheduleEvents);
                 }
                 initialCloudLoadDoneRef.current = true;
                 setSyncStatus({ text: '✅ Live Cloud Synced', color: '#22c55e' });
@@ -444,6 +505,7 @@ export default function App() {
     staffList,
     masterPlayLibrary,
     collapsedFolders,
+    scheduleEvents,
   ]);
 
   const currentWeekState: WeekState = weeklyData[currentWeek] || {
@@ -1642,13 +1704,14 @@ export default function App() {
       staffList,
       masterPlayLibrary,
       collapsedFolders,
+      scheduleEvents,
     };
     const dataStr =
       'data:text/json;charset=utf-8,' +
       encodeURIComponent(safeJSONStringify(fullBackup, 2));
     const a = document.createElement('a');
-    a.href = dataStr;
     a.download = `mahopac10u_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.href = dataStr;
     a.click();
   };
 
@@ -1667,6 +1730,7 @@ export default function App() {
       const importedStaffList = parsed.staffList || parsed.teamCoachesList || null;
       const importedPlays = parsed.masterPlayLibrary || null;
       const importedCollapsed = parsed.collapsedFolders || {};
+      const importedSchedule = parsed.scheduleEvents || null;
 
       if (importedWeekly) {
         setWeeklyData(importedWeekly);
@@ -1712,6 +1776,10 @@ export default function App() {
         setCollapsedFolders(importedCollapsed);
         safeJSONSet('footballCollapsedFolders', importedCollapsed);
       }
+      if (importedSchedule) {
+        setScheduleEvents(importedSchedule);
+        safeJSONSet('footballScheduleEvents', importedSchedule);
+      }
 
       // Direct synchronous push to Cloud Firestore
       const { db } = getFirebaseServices();
@@ -1729,6 +1797,7 @@ export default function App() {
           staffList: importedStaffList || staffList,
           masterPlayLibrary: importedPlays || masterPlayLibrary,
           collapsedFolders: importedCollapsed,
+          scheduleEvents: importedSchedule || scheduleEvents,
         });
 
         db.collection('teamData')
@@ -1824,6 +1893,224 @@ export default function App() {
     );
   };
 
+  /* =========================================================================
+     SEASON SCHEDULE & WORKFLOW SYNC HANDLERS
+     ========================================================================= */
+  const handleSyncGameToWeeklyData = (
+    eventOrWeek: ScheduleEvent | string,
+    opponentName?: string,
+    dateStr?: string,
+    timeStr?: string,
+    locationStr?: string
+  ) => {
+    let weekKey = '1';
+    let oppName = '';
+    let gameDateTime = '';
+    let location = 'Mahopac High School Turf';
+
+    if (typeof eventOrWeek === 'object') {
+      weekKey = eventOrWeek.week || '1';
+      oppName = eventOrWeek.opponent || eventOrWeek.title;
+      gameDateTime = `${eventOrWeek.date} @ ${eventOrWeek.startTime || '10:00 AM'}`;
+      location = eventOrWeek.location || 'Mahopac High School Turf';
+    } else {
+      weekKey = eventOrWeek || '1';
+      oppName = opponentName || '';
+      gameDateTime = `${dateStr || ''} @ ${timeStr || '10:00 AM'}`.trim();
+      location = locationStr || 'Mahopac High School Turf';
+    }
+
+    ensureWeekExists(weekKey);
+
+    setWeeklyData((prev) => {
+      const existingWeek = prev[weekKey] || {
+        formations: deepClone(defaultFormations),
+        depthChart: {},
+        scrimmageChart: {},
+        opponent: oppName,
+        scouting: {
+          year: '2026',
+          week: `Week ${weekKey}`,
+          opponent: oppName,
+          gameDate: gameDateTime,
+          gameLocation: location,
+          teamOverview: '',
+          offensiveTendencies: '',
+          defensiveFronts: '',
+          specialTeamsNotes: '',
+          keysToVictory: [],
+          keyPlayersList: [],
+          coachNotes: [],
+        },
+      };
+
+      return {
+        ...prev,
+        [weekKey]: {
+          ...existingWeek,
+          opponent: oppName,
+          scouting: {
+            ...(existingWeek.scouting || {}),
+            opponent: oppName,
+            gameDate: gameDateTime,
+            gameLocation: location,
+            week: `Week ${weekKey}`,
+            year: '2026',
+          },
+        },
+      };
+    });
+  };
+
+  const handleSyncPracticeToPlan = (event: ScheduleEvent, templateName?: string): string => {
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const eventDateObj = new Date(event.date + 'T12:00:00');
+    const dayOfWeek = isNaN(eventDateObj.getDay()) ? 'Wednesday' : dayNames[eventDateObj.getDay()];
+
+    if (event.linkedPracticePlanId) {
+      const existing = practiceData.find((p) => p.id === event.linkedPracticePlanId);
+      if (existing) {
+        setPracticeData((prev) =>
+          prev.map((p) =>
+            p.id === event.linkedPracticePlanId
+              ? {
+                  ...p,
+                  title: event.title,
+                  date: event.date,
+                  day: dayOfWeek,
+                  startTime: event.startTime || '17:05',
+                  weekFolder: `Week ${event.week}`,
+                  year: '2026',
+                  lastEdited: Date.now(),
+                }
+              : p
+          )
+        );
+        setCurrentPracticeId(event.linkedPracticePlanId);
+        return event.linkedPracticePlanId;
+      }
+    }
+
+    const newPracticeId = 'prac_' + Date.now();
+    const planTemplate = (templateName && DEFAULT_PRACTICE_TEMPLATES[templateName])
+      ? DEFAULT_PRACTICE_TEMPLATES[templateName]
+      : DEFAULT_PRACTICE_TEMPLATES['Standard Practice'] || [];
+
+    const newPlan: PracticePlan = {
+      id: newPracticeId,
+      year: '2026',
+      weekFolder: `Week ${event.week}`,
+      title: event.title,
+      date: event.date,
+      day: dayOfWeek,
+      startTime: event.startTime || '17:05',
+      lastEdited: Date.now(),
+      plan: deepClone(planTemplate),
+    };
+
+    setPracticeData((prev) => [...prev, newPlan]);
+    setCurrentPracticeId(newPracticeId);
+
+    setScheduleEvents((prev) =>
+      prev.map((ev) => (ev.id === event.id ? { ...ev, linkedPracticePlanId: newPracticeId } : ev))
+    );
+    return newPracticeId;
+  };
+
+  const handleAddScheduleEvent = (
+    eventData: Omit<ScheduleEvent, 'id' | 'createdAt' | 'lastEdited'>
+  ) => {
+    const newId = 'evt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+    const newEvent: ScheduleEvent = {
+      ...eventData,
+      id: newId,
+      createdAt: Date.now(),
+      lastEdited: Date.now(),
+    };
+
+    setScheduleEvents((prev) => [...prev, newEvent]);
+
+    if (newEvent.type === 'game') {
+      handleSyncGameToWeeklyData(newEvent);
+    }
+  };
+
+  const handleUpdateScheduleEvent = (
+    id: string,
+    updates: Partial<ScheduleEvent>
+  ) => {
+    setScheduleEvents((prev) =>
+      prev.map((ev) => {
+        if (ev.id === id) {
+          const updated = { ...ev, ...updates, lastEdited: Date.now() };
+          if (updated.type === 'game') {
+            handleSyncGameToWeeklyData(updated);
+          }
+          return updated;
+        }
+        return ev;
+      })
+    );
+  };
+
+  const handleDeleteScheduleEvent = (id: string) => {
+    setScheduleEvents((prev) => prev.filter((ev) => ev.id !== id));
+  };
+
+  const handleBulkAddScheduleEvents = (
+    eventsList: Array<Omit<ScheduleEvent, 'id' | 'createdAt' | 'lastEdited'>>
+  ) => {
+    const created: ScheduleEvent[] = eventsList.map((e, idx) => ({
+      ...e,
+      id: `evt_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
+      createdAt: Date.now(),
+      lastEdited: Date.now(),
+    }));
+
+    setScheduleEvents((prev) => [...prev, ...created]);
+  };
+
+  const handlePracticeWizardGenerate = (result: PracticeWizardGeneratedResult) => {
+    if (result.practicePlans && result.practicePlans.length > 0) {
+      setPracticeData((prev) => [...prev, ...result.practicePlans]);
+      if (result.practicePlans[0]?.id) {
+        setCurrentPracticeId(result.practicePlans[0].id);
+      }
+    }
+
+    if (result.scheduleEvents && result.scheduleEvents.length > 0) {
+      const created: ScheduleEvent[] = result.scheduleEvents.map((e, idx) => ({
+        ...e,
+        id: `evt_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
+        createdAt: Date.now(),
+        lastEdited: Date.now(),
+      }));
+      setScheduleEvents((prev) => [...prev, ...created]);
+    }
+
+    debouncedSave('all');
+  };
+
+  const handleNavigateToWeek = (
+    weekFolder: string,
+    unit?: UnitType,
+    practiceId?: string
+  ) => {
+    const match = weekFolder.match(/Week\s*(\d+)/i);
+    const weekKey = match ? match[1] : weekFolder.replace(/\D/g, '') || '1';
+
+    ensureWeekExists(weekKey);
+    setCurrentWeek(weekKey);
+
+    if (practiceId) {
+      setCurrentPracticeId(practiceId);
+    }
+
+    if (unit) {
+      setActiveUnit(unit);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0f172a] print:bg-white print:text-black flex flex-col font-sans text-slate-100 selection:bg-indigo-600 selection:text-white">
       {/* Hidden File Inputs for Import */}
@@ -1870,6 +2157,8 @@ export default function App() {
         userRole={userRole}
         onRoleChange={setUserRole}
         syncStatus={syncStatus}
+        activeUnit={activeUnit}
+        onNavigateToSchedule={() => setActiveUnit('schedule')}
         onSignOut={() => {
           const { auth } = getFirebaseServices();
           if (auth) auth.signOut().then(() => window.location.reload());
@@ -2077,6 +2366,7 @@ export default function App() {
                     },
                   }));
                 }}
+                onNavigateToSchedule={() => setActiveUnit('schedule')}
               />
             )}
 
@@ -2284,6 +2574,8 @@ export default function App() {
                 onDeleteSavedCoach={(name) => {
                   setSavedCoaches((prev) => prev.filter((c) => c !== name));
                 }}
+                onNavigateToSchedule={() => setActiveUnit('schedule')}
+                onPracticeWizardGenerate={handlePracticeWizardGenerate}
               />
             )}
 
@@ -2349,10 +2641,30 @@ export default function App() {
                 }}
               />
             )}
+
+            {/* 9. Season Schedule & Games Hub */}
+            {activeUnit === 'schedule' && (
+              <ScheduleView
+                scheduleEvents={scheduleEvents}
+                userRole={userRole}
+                currentWeek={currentWeek}
+                practicePlans={practiceData}
+                weeklyData={weeklyData}
+                practiceTemplates={practiceTemplates}
+                onAddEvent={handleAddScheduleEvent}
+                onUpdateEvent={handleUpdateScheduleEvent}
+                onDeleteEvent={handleDeleteScheduleEvent}
+                onBulkAddEvents={handleBulkAddScheduleEvents}
+                onPracticeWizardGenerate={handlePracticeWizardGenerate}
+                onSyncGameToWeeklyData={handleSyncGameToWeeklyData}
+                onSyncPracticeToPlan={handleSyncPracticeToPlan}
+                onNavigateToWeek={handleNavigateToWeek}
+              />
+            )}
           </div>
 
           {/* Master Roster Sidebar (Shown on Depth Charts, Scrimmage, Wristband) */}
-          {!['drills', 'scouting', 'guide', 'practice', 'users'].includes(
+          {!['drills', 'scouting', 'guide', 'practice', 'users', 'schedule'].includes(
             activeUnit
           ) && (
             <RosterSidebar

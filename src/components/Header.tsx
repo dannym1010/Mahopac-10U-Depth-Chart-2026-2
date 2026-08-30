@@ -1,9 +1,6 @@
 import React from 'react';
 import {
   Shield,
-  Cloud,
-  CloudCheck,
-  CloudAlert,
   Maximize,
   Download,
   Upload,
@@ -32,6 +29,8 @@ interface HeaderProps {
   onImportClick: () => void;
   onResetData: () => void;
   onOpenCopyWeekModal: () => void;
+  activeUnit?: string;
+  onNavigateToSchedule?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -49,6 +48,8 @@ export const Header: React.FC<HeaderProps> = ({
   onImportClick,
   onResetData,
   onOpenCopyWeekModal,
+  activeUnit,
+  onNavigateToSchedule,
 }) => {
   return (
     <header className="bg-slate-850/95 bg-slate-800/95 backdrop-blur-md border-b border-slate-700/80 text-slate-100 shadow-xl sticky top-0 z-40">
@@ -165,18 +166,27 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 text-slate-300 font-black uppercase tracking-widest text-[10px]">
               <Calendar className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Game Week:</span>
+              <span>Season Week:</span>
             </div>
             <select
               value={currentWeek}
               onChange={(e) => onWeekChange(e.target.value)}
               className="bg-slate-900 border border-slate-700 text-slate-100 font-bold px-3 py-1.5 rounded-xl text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none cursor-pointer"
             >
-              {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((wk) => (
-                <option key={wk} value={String(wk)}>
-                  {wk === 0 ? 'Week 0 (Preseason / Base)' : `Week ${wk}`}
-                </option>
-              ))}
+              <optgroup label="⚡ Pre-Season (Acclimatization & Prep)">
+                <option value="0">Pre-Season • Week 1 (Conditioning Only)</option>
+                <option value="pre-2">Pre-Season • Week 2 (Pads & Scrimmage)</option>
+              </optgroup>
+              <optgroup label="🏈 Regular Season">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((wk) => (
+                  <option key={wk} value={String(wk)}>
+                    Regular Season • Week {wk}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="🏆 Post-Season">
+                <option value="playoffs">Post-Season • Playoffs</option>
+              </optgroup>
             </select>
           </div>
 
@@ -196,16 +206,34 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Copy Week Button */}
-        {userRole === 'admin' && (
-          <button
-            onClick={onOpenCopyWeekModal}
-            className="px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 border border-indigo-500/30 transition-all active:scale-95"
-          >
-            <Copy className="w-3.5 h-3.5" />
-            <span>Copy Week Data</span>
-          </button>
-        )}
+        {/* Right Action Buttons */}
+        <div className="flex items-center gap-2">
+          {onNavigateToSchedule && (
+            <button
+              onClick={onNavigateToSchedule}
+              className={`px-3.5 py-1.5 font-black rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-95 border ${
+                activeUnit === 'schedule'
+                  ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-amber-500/20 font-black'
+                  : 'bg-slate-900/90 hover:bg-slate-700 text-amber-400 hover:text-amber-300 border-amber-500/40 hover:border-amber-400/80'
+              }`}
+              title="Open Full Season Schedule & Games Calendar"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>📅 Season Schedule</span>
+            </button>
+          )}
+
+          {/* Copy Week Button */}
+          {userRole === 'admin' && (
+            <button
+              onClick={onOpenCopyWeekModal}
+              className="px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 border border-indigo-500/30 transition-all active:scale-95"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span>Copy Week Data</span>
+            </button>
+          )}
+        </div>
       </div>
     </header>
   );

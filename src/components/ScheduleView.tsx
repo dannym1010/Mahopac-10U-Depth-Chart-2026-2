@@ -1,0 +1,1931 @@
+import React, { useState, useMemo } from 'react';
+import {
+  Calendar as CalendarIcon,
+  Plus,
+  Clock,
+  MapPin,
+  Shield,
+  Zap,
+  Swords,
+  Users,
+  Trophy,
+  Printer,
+  Download,
+  Copy,
+  Check,
+  Search,
+  Filter,
+  ArrowRight,
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  Edit2,
+  Trash2,
+  AlertCircle,
+  FileSpreadsheet,
+  ClipboardList,
+  Sparkles,
+  Shirt,
+  Info,
+  CalendarDays,
+  ListFilter,
+  CheckCircle2,
+  X,
+  SlidersHorizontal,
+} from 'lucide-react';
+import {
+  ScheduleEvent,
+  ScheduleEventType,
+  PracticePlan,
+  WeekState,
+  UserRole,
+  PracticePeriod,
+} from '../types';
+import { PracticeWizardModal, PracticeWizardGeneratedResult } from './PracticeWizardModal';
+
+interface ScheduleViewProps {
+  scheduleEvents: ScheduleEvent[];
+  practicePlans: PracticePlan[];
+  weeklyData: Record<string, WeekState>;
+  currentWeek: string;
+  userRole: UserRole;
+  practiceTemplates?: Record<string, PracticePeriod[]>;
+  onAddEvent: (event: Omit<ScheduleEvent, 'id' | 'createdAt' | 'lastEdited'>) => void;
+  onUpdateEvent: (id: string, updates: Partial<ScheduleEvent>) => void;
+  onDeleteEvent: (id: string) => void;
+  onBulkAddEvents?: (events: Omit<ScheduleEvent, 'id' | 'createdAt' | 'lastEdited'>[]) => void;
+  onPracticeWizardGenerate?: (result: PracticeWizardGeneratedResult) => void;
+  onNavigateToWeek: (week: string, unit: 'scouting' | 'practice' | 'wristband' | 'groups', practiceId?: string) => void;
+  onSyncGameToWeeklyData?: (week: string, opponent: string, date: string, time: string, location: string) => void;
+  onSyncPracticeToPlan?: (event: ScheduleEvent, templateName?: string) => string; // returns practicePlan id
+}
+
+type ViewMode = 'timeline' | 'month' | 'grid';
+type FilterType = 'all' | 'game' | 'practice' | 'scrimmage' | 'meeting';
+
+export const ScheduleView: React.FC<ScheduleViewProps> = ({
+  scheduleEvents = [],
+  practicePlans = [],
+  weeklyData = {},
+  currentWeek,
+  userRole,
+  practiceTemplates = {},
+  onAddEvent,
+  onUpdateEvent,
+  onDeleteEvent,
+  onBulkAddEvents,
+  onPracticeWizardGenerate,
+  onNavigateToWeek,
+  onSyncGameToWeeklyData,
+  onSyncPracticeToPlan,
+}) => {
+  const safeScheduleEvents = useMemo(() => scheduleEvents || [], [scheduleEvents]);
+
+  const [viewMode, setViewMode] = useState<ViewMode>('timeline');
+  const [typeFilter, setTypeFilter] = useState<FilterType>('all');
+  const [weekFilter, setWeekFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [copied, setCopied] = useState(false);
+
+  // Calendar month state (default to Sept 2026 or current active date)
+  const [currentMonthDate, setCurrentMonthDate] = useState<Date>(() => new Date(2026, 8, 1)); // September 2026
+
+  // Modals state
+  const [isAddGameModalOpen, setIsAddGameModalOpen] = useState(false);
+  const [isAddPracticeModalOpen, setIsAddPracticeModalOpen] = useState(false);
+  const [isCadenceWizardOpen, setIsCadenceWizardOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
+  const [scoreModalEvent, setScoreModalEvent] = useState<ScheduleEvent | null>(null);
+
+  // Form states for New Game Modal
+  const [gameOpponent, setGameOpponent] = useState('');
+  const [gameWeek, setGameWeek] = useState('1');
+  const [gameDate, setGameDate] = useState('2026-09-05');
+  const [gameStartTime, setGameStartTime] = useState('10:00');
+  const [gameEndTime, setGameEndTime] = useState('12:00');
+  const [gameLocation, setGameLocation] = useState('Carmel High School Athletic Stadium');
+  const [gameLocationType, setGameLocationType] = useState<'home' | 'away' | 'neutral'>('away');
+  const [gameUniform, setGameUniform] = useState('Gold Jerseys & White Pants');
+  const [gameArrivalMins, setGameArrivalMins] = useState(60);
+  const [gameNotes, setGameNotes] = useState('');
+  const [autoSyncScouting, setAutoSyncScouting] = useState(true);
+
+  // Form states for New Practice Modal
+  const [practiceTitle, setPracticeTitle] = useState('');
+  const [practiceWeek, setPracticeWeek] = useState('1');
+  const [practiceDate, setPracticeDate] = useState('2026-09-01');
+  const [practiceStartTime, setPracticeStartTime] = useState('17:30');
+  const [practiceEndTime, setPracticeEndTime] = useState('19:00');
+  const [practiceLocation, setPracticeLocation] = useState('Mahopac High School - Turf Field');
+  const [practiceFocus, setPracticeFocus] = useState('');
+  const [autoCreatePlan, setAutoCreatePlan] = useState(true);
+  const [selectedTemplate, setSelectedTemplate] = useState('Offense & Defense Full Practice');
+
+  // Form state for Result Logger Modal
+  const [teamScore, setTeamScore] = useState<number>(0);
+  const [oppScore, setOppScore] = useState<number>(0);
+  const [recapNotes, setRecapNotes] = useState<string>('');
+
+  // Cadence Wizard Form State
+  const [cadenceWeeksCount, setCadenceWeeksCount] = useState<number>(8);
+  const [cadenceDays, setCadenceDays] = useState<{ tuesday: boolean; thursday: boolean }>({
+    tuesday: true,
+    thursday: true,
+  });
+  const [cadenceStartTime, setCadenceStartTime] = useState('17:30');
+  const [cadenceEndTime, setCadenceEndTime] = useState('19:00');
+  const [cadenceLocation, setCadenceLocation] = useState('Mahopac High School - Turf Field');
+
+  // Sort events chronologically
+  const sortedEvents = useMemo(() => {
+    return [...safeScheduleEvents].sort((a, b) => {
+      const dateDiff = (a.date || '').localeCompare(b.date || '');
+      if (dateDiff !== 0) return dateDiff;
+      return (a.startTime || '').localeCompare(b.startTime || '');
+    });
+  }, [safeScheduleEvents]);
+
+  // Filtered Events
+  const filteredEvents = useMemo(() => {
+    return sortedEvents.filter((event) => {
+      // Type Filter
+      if (typeFilter !== 'all') {
+        if (typeFilter === 'game' && event.type !== 'game' && event.type !== 'tournament') return false;
+        if (typeFilter === 'practice' && event.type !== 'practice' && event.type !== 'walkthrough') return false;
+        if (typeFilter === 'scrimmage' && event.type !== 'scrimmage') return false;
+        if (typeFilter === 'meeting' && event.type !== 'meeting') return false;
+      }
+
+      // Week Filter
+      if (weekFilter !== 'all' && event.week !== weekFilter) {
+        return false;
+      }
+
+      // Search Query
+      if (searchQuery.trim() !== '') {
+        const q = searchQuery.toLowerCase();
+        const matchTitle = event.title.toLowerCase().includes(q);
+        const matchOpp = event.opponent?.toLowerCase().includes(q);
+        const matchLoc = event.location.toLowerCase().includes(q);
+        const matchNotes = event.focusOrNotes?.toLowerCase().includes(q);
+        const matchDate = event.date.includes(q);
+        if (!matchTitle && !matchOpp && !matchLoc && !matchNotes && !matchDate) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [sortedEvents, typeFilter, weekFilter, searchQuery]);
+
+  // Group events by Week for timeline view
+  const eventsByWeek = useMemo(() => {
+    const map: Record<string, ScheduleEvent[]> = {};
+    filteredEvents.forEach((evt) => {
+      const key = evt.week;
+      if (!map[key]) map[key] = [];
+      map[key].push(evt);
+    });
+    return map;
+  }, [filteredEvents]);
+
+  // Stats calculation
+  const stats = useMemo(() => {
+    const totalGames = safeScheduleEvents.filter((e) => e.type === 'game' || e.type === 'tournament').length;
+    const totalPractices = safeScheduleEvents.filter((e) => e.type === 'practice' || e.type === 'walkthrough').length;
+    const totalScrimmages = safeScheduleEvents.filter((e) => e.type === 'scrimmage').length;
+
+    let wins = 0;
+    let losses = 0;
+    let ties = 0;
+    safeScheduleEvents.forEach((e) => {
+      if (e.result?.outcome === 'W') wins++;
+      if (e.result?.outcome === 'L') losses++;
+      if (e.result?.outcome === 'T') ties++;
+    });
+
+    const hasResults = wins > 0 || losses > 0 || ties > 0;
+
+    return {
+      totalGames,
+      totalPractices,
+      totalScrimmages,
+      record: hasResults ? `${wins}-${losses}${ties > 0 ? `-${ties}` : ''}` : null,
+      wins,
+      losses,
+    };
+  }, [safeScheduleEvents]);
+
+  // Next Upcoming Event
+  const nextEvent = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const upcoming = sortedEvents.filter((e) => e.date >= '2026-08-25'); // reference season start
+    return upcoming[0] || sortedEvents[0];
+  }, [sortedEvents]);
+
+  // Helper to format date string nicely (e.g., "Saturday, Sep 5, 2026")
+  const formatDateDisplay = (dateStr: string): string => {
+    if (!dateStr) return '';
+    try {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const date = new Date(y, m - 1, d);
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatTimeDisplay = (time24: string): string => {
+    if (!time24) return '';
+    const [hStr, mStr] = time24.split(':');
+    let h = parseInt(hStr, 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12;
+    if (h === 0) h = 12;
+    return `${h}:${mStr} ${ampm}`;
+  };
+
+  const getWeekName = (weekVal: string): string => {
+    if (!weekVal) return 'Regular Season • Week 1';
+    if (weekVal === '0' || weekVal === 'pre-1' || weekVal === 'pre1') return 'Pre-Season • Week 1 (Conditioning)';
+    if (weekVal === 'pre-2' || weekVal === 'pre2') return 'Pre-Season • Week 2 (Pads & Scrimmage)';
+    if (weekVal === '8') return 'Regular Season • Week 8 (Playoffs)';
+    if (weekVal === 'playoffs') return 'Post-Season • Playoffs';
+    return `Regular Season • Week ${weekVal}`;
+  };
+
+  // Get matching practice plan for an event
+  const getLinkedPracticePlan = (evt: ScheduleEvent): PracticePlan | undefined => {
+    if (evt.linkedPracticePlanId) {
+      return practicePlans.find((p) => p.id === evt.linkedPracticePlanId);
+    }
+    return practicePlans.find(
+      (p) =>
+        p.date === evt.date ||
+        (p.weekFolder === `Week ${evt.week}` && p.title.toLowerCase() === evt.title.toLowerCase())
+    );
+  };
+
+  // Handle Save Game
+  const handleSaveGame = () => {
+    if (!gameOpponent.trim()) {
+      alert('Please provide an opponent name.');
+      return;
+    }
+    const newGame: Omit<ScheduleEvent, 'id' | 'createdAt' | 'lastEdited'> = {
+      type: 'game',
+      title: `${gameLocationType === 'home' ? 'vs' : '@'} ${gameOpponent}`,
+      week: gameWeek,
+      date: gameDate,
+      startTime: gameStartTime,
+      endTime: gameEndTime,
+      location: gameLocation,
+      locationType: gameLocationType,
+      opponent: gameOpponent.trim(),
+      uniform: gameUniform,
+      arrivalMinutesBefore: gameArrivalMins,
+      focusOrNotes: gameNotes.trim(),
+    };
+
+    onAddEvent(newGame);
+
+    // Auto-sync with weekly scouting and opponent header
+    if (autoSyncScouting && onSyncGameToWeeklyData) {
+      onSyncGameToWeeklyData(gameWeek, gameOpponent.trim(), gameDate, gameStartTime, gameLocation);
+    }
+
+    setIsAddGameModalOpen(false);
+    setGameOpponent('');
+    setGameNotes('');
+  };
+
+  // Handle Save Practice
+  const handleSavePractice = () => {
+    const title = practiceTitle.trim() || `Week ${practiceWeek} Practice`;
+    const newPractice: Omit<ScheduleEvent, 'id' | 'createdAt' | 'lastEdited'> = {
+      type: 'practice',
+      title,
+      week: practiceWeek,
+      date: practiceDate,
+      startTime: practiceStartTime,
+      endTime: practiceEndTime,
+      location: practiceLocation,
+      locationType: 'home',
+      arrivalMinutesBefore: 15,
+      focusOrNotes: practiceFocus.trim(),
+    };
+
+    // Auto-create matching Practice Plan
+    if (autoCreatePlan && onSyncPracticeToPlan) {
+      const dummyEvt: ScheduleEvent = {
+        ...newPractice,
+        id: 'evt_' + Date.now(),
+        createdAt: Date.now(),
+        lastEdited: Date.now(),
+      };
+      const planId = onSyncPracticeToPlan(dummyEvt, selectedTemplate);
+      newPractice.linkedPracticePlanId = planId;
+    }
+
+    onAddEvent(newPractice);
+    setIsAddPracticeModalOpen(false);
+    setPracticeTitle('');
+    setPracticeFocus('');
+  };
+
+  // Cadence Generator (Generates Tuesday & Thursday practices for weeks 1..N)
+  const handleGenerateCadence = () => {
+    if (!onBulkAddEvents) return;
+    const newEvents: Omit<ScheduleEvent, 'id' | 'createdAt' | 'lastEdited'>[] = [];
+    const baseDate = new Date(2026, 8, 1); // Tuesday Sep 1, 2026
+
+    for (let w = 1; w <= cadenceWeeksCount; w++) {
+      // Week offset
+      const weekOffsetDays = (w - 1) * 7;
+
+      if (cadenceDays.tuesday) {
+        const tue = new Date(baseDate);
+        tue.setDate(baseDate.getDate() + weekOffsetDays);
+        const dateStr = tue.toISOString().split('T')[0];
+        newEvents.push({
+          type: 'practice',
+          title: `Week ${w} - Tuesday Practice`,
+          week: w.toString(),
+          date: dateStr,
+          startTime: cadenceStartTime,
+          endTime: cadenceEndTime,
+          location: cadenceLocation,
+          locationType: 'home',
+          arrivalMinutesBefore: 15,
+          focusOrNotes: 'Full Pads. Inside run, 11-on-11 scrimmage, and position fundamentals.',
+        });
+      }
+
+      if (cadenceDays.thursday) {
+        const thu = new Date(baseDate);
+        thu.setDate(baseDate.getDate() + weekOffsetDays + 2); // Thursday
+        const dateStr = thu.toISOString().split('T')[0];
+        newEvents.push({
+          type: 'practice',
+          title: `Week ${w} - Thursday Walkthrough & Specials`,
+          week: w.toString(),
+          date: dateStr,
+          startTime: cadenceStartTime,
+          endTime: cadenceEndTime,
+          location: cadenceLocation,
+          locationType: 'home',
+          arrivalMinutesBefore: 15,
+          focusOrNotes: 'Shells / Helmets. Redzone execution, special teams, and wristband signals.',
+        });
+      }
+    }
+
+    onBulkAddEvents(newEvents);
+    setIsCadenceWizardOpen(false);
+  };
+
+  // Record Game Result
+  const handleSaveResult = () => {
+    if (!scoreModalEvent) return;
+    const outcome = teamScore > oppScore ? 'W' : teamScore < oppScore ? 'L' : 'T';
+    onUpdateEvent(scoreModalEvent.id, {
+      result: {
+        teamScore,
+        opponentScore: oppScore,
+        outcome,
+        recapNotes: recapNotes.trim(),
+      },
+    });
+    setScoreModalEvent(null);
+  };
+
+  // Copy plain text schedule to clipboard
+  const handleCopySchedule = () => {
+    const lines: string[] = ['=== MAHOPAC 10U SEASON SCHEDULE ==='];
+    lines.push(`Record: ${stats.record || '0-0'} | Total Games: ${stats.totalGames} | Practices: ${stats.totalPractices}\n`);
+
+    sortedEvents.forEach((evt) => {
+      const typeIcon = evt.type === 'game' ? '🏈 GAME' : evt.type === 'practice' ? '📋 PRACTICE' : '⚔️ SCRIMMAGE';
+      lines.push(`[${typeIcon} - ${getWeekName(evt.week)}] ${formatDateDisplay(evt.date)} @ ${formatTimeDisplay(evt.startTime)}`);
+      lines.push(`  ${evt.title}`);
+      lines.push(`  📍 Location: ${evt.location}`);
+      if (evt.uniform) lines.push(`  🎽 Uniform: ${evt.uniform}`);
+      if (evt.arrivalMinutesBefore) lines.push(`  ⏰ Arrival: ${evt.arrivalMinutesBefore} min prior`);
+      if (evt.focusOrNotes) lines.push(`  📝 Notes: ${evt.focusOrNotes}`);
+      if (evt.result) lines.push(`  🏆 Final: ${evt.result.outcome} (${evt.result.teamScore} - ${evt.result.opponentScore})`);
+      lines.push('');
+    });
+
+    navigator.clipboard.writeText(lines.join('\n'));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  // Export iCal (.ics) file
+  const handleExportICS = () => {
+    let icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Mahopac 10U Football//Operations Schedule//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'X-WR-CALNAME:Mahopac 10U Football Schedule',
+      'X-WR-TIMEZONE:America/New_York',
+    ];
+
+    sortedEvents.forEach((evt) => {
+      const [y, m, d] = evt.date.split('-');
+      const [sh, sm] = evt.startTime.split(':');
+      const eh = evt.endTime ? evt.endTime.split(':')[0] : (parseInt(sh, 10) + 2).toString().padStart(2, '0');
+      const em = evt.endTime ? evt.endTime.split(':')[1] : sm;
+
+      const dtStart = `${y}${m}${d}T${sh}${sm}00`;
+      const dtEnd = `${y}${m}${d}T${eh}${em}00`;
+
+      icsContent.push('BEGIN:VEVENT');
+      icsContent.push(`UID:evt_${evt.id}@mahopacfootball.org`);
+      icsContent.push(`DTSTAMP:${y}${m}${d}T000000Z`);
+      icsContent.push(`DTSTART:${dtStart}`);
+      icsContent.push(`DTEND:${dtEnd}`);
+      icsContent.push(`SUMMARY:Mahopac 10U - ${evt.title}`);
+      icsContent.push(`LOCATION:${evt.location}`);
+      icsContent.push(
+        `DESCRIPTION:Week: ${getWeekName(evt.week)}\\nUniform: ${evt.uniform || 'TBD'}\\nNotes: ${evt.focusOrNotes || 'None'}`
+      );
+      icsContent.push('STATUS:CONFIRMED');
+      icsContent.push('END:VEVENT');
+    });
+
+    icsContent.push('END:VCALENDAR');
+
+    const blob = new Blob([icsContent.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Mahopac_10U_Season_Schedule_2026.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Month Calendar Days Generator
+  const monthCalendarData = useMemo(() => {
+    const year = currentMonthDate.getFullYear();
+    const month = currentMonthDate.getMonth();
+
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const prevMonthDays = new Date(year, month, 0).getDate();
+
+    const days: {
+      dayNum: number;
+      dateStr: string;
+      isCurrentMonth: boolean;
+      events: ScheduleEvent[];
+    }[] = [];
+
+    // Prev month padding
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      const dNum = prevMonthDays - i;
+      const prevM = month === 0 ? 12 : month;
+      const prevY = month === 0 ? year - 1 : year;
+      const dateStr = `${prevY}-${String(prevM).padStart(2, '0')}-${String(dNum).padStart(2, '0')}`;
+      days.push({
+        dayNum: dNum,
+        dateStr,
+        isCurrentMonth: false,
+        events: sortedEvents.filter((e) => e.date === dateStr),
+      });
+    }
+
+    // Current month
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      days.push({
+        dayNum: d,
+        dateStr,
+        isCurrentMonth: true,
+        events: sortedEvents.filter((e) => e.date === dateStr),
+      });
+    }
+
+    // Next month padding to fill 35 or 42 grid slots
+    const totalSlots = days.length <= 35 ? 35 : 42;
+    const remaining = totalSlots - days.length;
+    for (let n = 1; n <= remaining; n++) {
+      const nextM = month === 11 ? 1 : month + 2;
+      const nextY = month === 11 ? year + 1 : year;
+      const dateStr = `${nextY}-${String(nextM).padStart(2, '0')}-${String(n).padStart(2, '0')}`;
+      days.push({
+        dayNum: n,
+        dateStr,
+        isCurrentMonth: false,
+        events: sortedEvents.filter((e) => e.date === dateStr),
+      });
+    }
+
+    return days;
+  }, [currentMonthDate, sortedEvents]);
+
+  return (
+    <div className="space-y-6 max-w-[1700px] mx-auto">
+      {/* Top Banner Toolbar */}
+      <div className="bg-slate-800/95 backdrop-blur-md p-4 md:p-5 rounded-3xl border border-slate-700/80 shadow-xl print:hidden flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Title & Season Overview */}
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-amber-500/20 border border-amber-500/30 text-amber-300 flex items-center justify-center font-black shadow-inner">
+              <CalendarIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="font-black text-base md:text-lg text-slate-100 tracking-tight">
+                  Mahopac 10U Season Schedule &amp; Games
+                </h2>
+                {stats.record && (
+                  <span className="px-2.5 py-0.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black rounded-lg">
+                    Record: {stats.record}
+                  </span>
+                )}
+                <span className="px-2 py-0.5 bg-amber-400/20 border border-amber-400/40 text-amber-300 text-[10px] font-black rounded-lg">
+                  {stats.totalGames} Games
+                </span>
+                <span className="px-2 py-0.5 bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-[10px] font-black rounded-lg">
+                  {stats.totalPractices} Practices
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 font-medium mt-0.5">
+                Automatically synchronizes game dates to Scouting Reports &amp; practices to Practice Generator
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Action Buttons */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {userRole === 'admin' && (
+              <>
+                <button
+                  onClick={() => setIsAddGameModalOpen(true)}
+                  className="px-3.5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl border border-amber-500 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+                >
+                  <Plus className="w-3.5 h-3.5 text-slate-950" />
+                  <span>+ Add Game</span>
+                </button>
+
+                <button
+                  onClick={() => setIsAddPracticeModalOpen(true)}
+                  className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl border border-indigo-500 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+                >
+                  <Plus className="w-3.5 h-3.5 text-white" />
+                  <span>+ Add Practice</span>
+                </button>
+
+                <button
+                  onClick={() => setIsCadenceWizardOpen(true)}
+                  className="px-3 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
+                  title="Generate recurring Tuesday & Thursday practice schedule"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline">Practice Wizard</span>
+                </button>
+              </>
+            )}
+
+            <button
+              onClick={handleExportICS}
+              className="px-3 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
+              title="Download iCal (.ics) file to import into Apple / Google Calendar"
+            >
+              <Download className="w-3.5 h-3.5 text-indigo-300" />
+              <span className="hidden sm:inline">Sync iCal</span>
+            </button>
+
+            <button
+              onClick={handleCopySchedule}
+              className="px-3 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
+              title="Copy formatted schedule text for team emails or texts"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-indigo-300" />}
+              <span>{copied ? 'Copied' : 'Copy'}</span>
+            </button>
+
+            <button
+              onClick={() => window.print()}
+              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-100 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
+            >
+              <Printer className="w-3.5 h-3.5 text-slate-300" />
+              <span>Print</span>
+            </button>
+          </div>
+        </div>
+
+        {/* View Switcher, Filter Pills & Search Bar */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-slate-700/60 text-xs items-center">
+          {/* View Modes */}
+          <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-700 w-fit">
+            <button
+              onClick={() => setViewMode('timeline')}
+              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                viewMode === 'timeline'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <ClipboardList className="w-3.5 h-3.5" />
+              <span>Weekly Agenda</span>
+            </button>
+            <button
+              onClick={() => setViewMode('month')}
+              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                viewMode === 'month'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              <span>Month Calendar</span>
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                viewMode === 'grid'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <ListFilter className="w-3.5 h-3.5" />
+              <span>Season Table</span>
+            </button>
+          </div>
+
+          {/* Event Type Filter Pills */}
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+            {(
+              [
+                { id: 'all', label: 'All Events' },
+                { id: 'game', label: '🏈 Games' },
+                { id: 'practice', label: '📋 Practices' },
+                { id: 'scrimmage', label: '⚔️ Scrimmage' },
+              ] as { id: FilterType; label: string }[]
+            ).map((filter) => (
+              <button
+                key={filter.id}
+                onClick={() => setTypeFilter(filter.id)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all border ${
+                  typeFilter === filter.id
+                    ? 'bg-amber-400 text-slate-950 border-amber-500 font-black shadow-xs'
+                    : 'bg-slate-900/60 text-slate-300 border-slate-700/80 hover:border-slate-600'
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Week Filter & Quick Search */}
+          <div className="flex items-center gap-2">
+            <select
+              value={weekFilter}
+              onChange={(e) => setWeekFilter(e.target.value)}
+              className="bg-slate-900 text-slate-200 font-bold text-xs px-2.5 py-1.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 shrink-0"
+            >
+              <option value="all">All Weeks</option>
+              <optgroup label="⚡ Pre-Season">
+                <option value="0">Pre-Season Wk 1 (Conditioning)</option>
+                <option value="pre-2">Pre-Season Wk 2 (Pads & Scrimmage)</option>
+              </optgroup>
+              <optgroup label="🏈 Regular Season">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((w) => (
+                  <option key={w} value={String(w)}>
+                    Regular Season • Week {w}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="🏆 Post-Season">
+                <option value="playoffs">Post-Season • Playoffs</option>
+              </optgroup>
+            </select>
+
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search games, fields, notes..."
+                className="w-full bg-slate-900 text-slate-100 font-medium text-xs pl-7 pr-3 py-1.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
+              />
+              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2 top-2" />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1.5 text-slate-400 hover:text-slate-200 text-xs font-bold"
+                >
+                  &times;
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Next Upcoming Event Spotlight Banner */}
+      {nextEvent && (
+        <div className="bg-gradient-to-r from-amber-500/15 via-slate-800/90 to-indigo-900/30 p-4 rounded-3xl border border-amber-500/30 shadow-lg print:hidden flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-black shadow-md text-lg">
+              {nextEvent.type === 'game' || nextEvent.type === 'tournament' ? '🏈' : '📋'}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 bg-amber-400 text-slate-950 text-[10px] font-black uppercase rounded-md">
+                  Next Up • {getWeekName(nextEvent.week)}
+                </span>
+                <span className="font-extrabold text-sm text-slate-100">{nextEvent.title}</span>
+                {nextEvent.locationType && (
+                  <span
+                    className={`px-1.5 py-0.2 text-[9.5px] font-black uppercase rounded ${
+                      nextEvent.locationType === 'home'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                    }`}
+                  >
+                    {nextEvent.locationType}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-300 mt-1">
+                <span className="flex items-center gap-1 font-bold text-amber-300">
+                  <CalendarIcon className="w-3.5 h-3.5" />
+                  {formatDateDisplay(nextEvent.date)} @ {formatTimeDisplay(nextEvent.startTime)}
+                </span>
+                <span className="flex items-center gap-1 text-slate-400">
+                  <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                  {nextEvent.location}
+                </span>
+                {nextEvent.uniform && (
+                  <span className="flex items-center gap-1 text-slate-300 font-medium">
+                    <Shirt className="w-3.5 h-3.5 text-indigo-400" />
+                    {nextEvent.uniform}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Action Navigation for Next Event */}
+          <div className="flex items-center gap-2">
+            {nextEvent.type === 'game' || nextEvent.type === 'tournament' ? (
+              <>
+                <button
+                  onClick={() => onNavigateToWeek(nextEvent.week, 'scouting')}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1 transition-all"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Open Scouting Report</span>
+                </button>
+                <button
+                  onClick={() => onNavigateToWeek(nextEvent.week, 'wristband')}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1 transition-all"
+                >
+                  <span>Wristband</span>
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() =>
+                  onNavigateToWeek(
+                    nextEvent.week,
+                    'practice',
+                    nextEvent.linkedPracticePlanId || getLinkedPracticePlan(nextEvent)?.id
+                  )
+                }
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1 transition-all"
+              >
+                <ClipboardList className="w-3.5 h-3.5" />
+                <span>Open Practice Plan</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* VIEW 1: WEEKLY AGENDA / TIMELINE VIEW */}
+      {viewMode === 'timeline' && (
+        <div className="space-y-6 print:hidden">
+          {Object.keys(eventsByWeek).length === 0 ? (
+            <div className="bg-slate-800/90 rounded-3xl border border-slate-700/80 p-12 text-center text-slate-400">
+              <CalendarIcon className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+              <h3 className="font-bold text-base text-slate-200">No events found</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Try adjusting your filters or click "+ Add Game" / "+ Add Practice" above.
+              </p>
+            </div>
+          ) : (
+            (Object.entries(eventsByWeek) as [string, ScheduleEvent[]][]).map(([weekKey, events]) => {
+              const weekGames = events.filter((e) => e.type === 'game' || e.type === 'tournament');
+              const weekPractices = events.filter((e) => e.type === 'practice' || e.type === 'walkthrough');
+              const weekScrimmages = events.filter((e) => e.type === 'scrimmage');
+              const mainGame = weekGames[0];
+              const weekOpponent = mainGame?.opponent || weeklyData[weekKey]?.opponent || 'Opponent TBD';
+
+              return (
+                <div
+                  key={weekKey}
+                  className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl overflow-hidden"
+                >
+                  {/* Week Header Banner */}
+                  <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 px-5 py-3.5 border-b border-slate-700/80 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="px-3 py-1 bg-indigo-600 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-xs">
+                        {getWeekName(weekKey)}
+                      </span>
+                      {mainGame ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-black text-slate-100">
+                            vs {weekOpponent}
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            &bull; {formatDateDisplay(mainGame.date)} @ {formatTimeDisplay(mainGame.startTime)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs font-bold text-slate-400">
+                          {events.length} Scheduled Event{events.length > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Week-level Quick Translation Links */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => onNavigateToWeek(weekKey, 'scouting')}
+                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all"
+                        title="Open weekly scouting report and coaching keys"
+                      >
+                        <FileSpreadsheet className="w-3 h-3 text-amber-400" />
+                        <span>Scouting</span>
+                      </button>
+
+                      <button
+                        onClick={() => onNavigateToWeek(weekKey, 'practice')}
+                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all"
+                        title="Open practice plans for this week"
+                      >
+                        <ClipboardList className="w-3 h-3 text-indigo-400" />
+                        <span>Practices</span>
+                      </button>
+
+                      <button
+                        onClick={() => onNavigateToWeek(weekKey, 'wristband')}
+                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all"
+                        title="Open wristband call sheet"
+                      >
+                        <span>Wristband</span>
+                      </button>
+
+                      <button
+                        onClick={() => onNavigateToWeek(weekKey, 'groups')}
+                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all"
+                        title="Open weekly depth chart"
+                      >
+                        <span>Depth Chart</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Event Cards Grid for this week */}
+                  <div className="p-4 md:p-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {events.map((evt) => {
+                      const isGame = evt.type === 'game' || evt.type === 'tournament';
+                      const isScrimmage = evt.type === 'scrimmage';
+                      const isPractice = evt.type === 'practice' || evt.type === 'walkthrough';
+                      const linkedPlan = getLinkedPracticePlan(evt);
+
+                      return (
+                        <div
+                          key={evt.id}
+                          className={`rounded-2xl p-4 border transition-all flex flex-col justify-between ${
+                            isGame
+                              ? 'bg-slate-900/90 border-amber-500/40 shadow-lg shadow-amber-500/5 hover:border-amber-400'
+                              : isScrimmage
+                              ? 'bg-slate-900/80 border-purple-500/40 hover:border-purple-400'
+                              : 'bg-slate-900/70 border-slate-700/80 hover:border-slate-600'
+                          }`}
+                        >
+                          <div>
+                            {/* Card Top Pill & Actions */}
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`px-2 py-0.5 text-[10px] font-black uppercase rounded-md tracking-wider ${
+                                    isGame
+                                      ? 'bg-amber-400 text-slate-950 font-black'
+                                      : isScrimmage
+                                      ? 'bg-purple-600 text-white font-bold'
+                                      : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                                  }`}
+                                >
+                                  {isGame ? '🏈 GAME' : isScrimmage ? '⚔️ SCRIMMAGE' : '📋 PRACTICE'}
+                                </span>
+
+                                {evt.locationType && (
+                                  <span
+                                    className={`px-1.5 py-0.2 text-[9px] font-black uppercase rounded ${
+                                      evt.locationType === 'home'
+                                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                        : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                    }`}
+                                  >
+                                    {evt.locationType}
+                                  </span>
+                                )}
+
+                                {evt.result?.outcome && (
+                                  <span
+                                    className={`px-2 py-0.5 text-[10px] font-black rounded-md ${
+                                      evt.result.outcome === 'W'
+                                        ? 'bg-emerald-500 text-slate-950'
+                                        : evt.result.outcome === 'L'
+                                        ? 'bg-rose-500 text-white'
+                                        : 'bg-amber-500 text-slate-950'
+                                    }`}
+                                  >
+                                    FINAL: {evt.result.outcome} ({evt.result.teamScore} - {evt.result.opponentScore})
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Admin Edit / Delete / Result Actions */}
+                              {userRole === 'admin' && (
+                                <div className="flex items-center gap-1 text-slate-400">
+                                  {isGame && (
+                                    <button
+                                      onClick={() => {
+                                        setScoreModalEvent(evt);
+                                        setTeamScore(evt.result?.teamScore || 0);
+                                        setOppScore(evt.result?.opponentScore || 0);
+                                        setRecapNotes(evt.result?.recapNotes || '');
+                                      }}
+                                      className="p-1 hover:text-amber-300 text-[10px] font-bold flex items-center gap-0.5 bg-slate-800 px-2 py-0.5 rounded border border-slate-700"
+                                      title="Record game final score and recap"
+                                    >
+                                      <Trophy className="w-3 h-3 text-amber-400" />
+                                      <span>Score</span>
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => {
+                                      setEditingEvent(evt);
+                                    }}
+                                    className="p-1 hover:text-slate-200"
+                                    title="Edit event details"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (confirm(`Delete "${evt.title}" from schedule?`)) {
+                                        onDeleteEvent(evt.id);
+                                      }
+                                    }}
+                                    className="p-1 hover:text-rose-400"
+                                    title="Delete event"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Title & Timing */}
+                            <h4 className="font-extrabold text-sm md:text-base text-slate-100 mb-1">
+                              {evt.title}
+                            </h4>
+
+                            <div className="space-y-1 text-xs text-slate-300">
+                              <div className="flex items-center gap-2 font-bold text-amber-300">
+                                <CalendarIcon className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                <span>
+                                  {formatDateDisplay(evt.date)} &bull; {formatTimeDisplay(evt.startTime)}
+                                  {evt.endTime ? ` - ${formatTimeDisplay(evt.endTime)}` : ''}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2 text-slate-300">
+                                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                <span className="truncate">{evt.location}</span>
+                              </div>
+
+                              {evt.arrivalMinutesBefore && (
+                                <div className="flex items-center gap-2 text-slate-400 text-[11px]">
+                                  <Clock className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                                  <span>
+                                    Arrival:{' '}
+                                    <strong className="text-slate-200">
+                                      {evt.arrivalMinutesBefore} mins prior
+                                    </strong>
+                                  </span>
+                                </div>
+                              )}
+
+                              {evt.uniform && (
+                                <div className="flex items-center gap-2 text-slate-300 text-[11px]">
+                                  <Shirt className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                  <span>
+                                    Uniform: <strong className="text-slate-200">{evt.uniform}</strong>
+                                  </span>
+                                </div>
+                              )}
+
+                              {evt.focusOrNotes && (
+                                <p className="text-[11px] text-slate-400 mt-2 bg-slate-950/60 p-2 rounded-xl border border-slate-800 leading-snug">
+                                  {evt.focusOrNotes}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Direct Action Jumpers (Translate directly to Scouting / Practice Plan) */}
+                          <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2 text-xs">
+                            {isGame ? (
+                              <>
+                                <button
+                                  onClick={() => onNavigateToWeek(evt.week, 'scouting')}
+                                  className="flex-1 px-3 py-1.5 bg-indigo-600/90 hover:bg-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs"
+                                >
+                                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                                  <span>Open Scouting Report</span>
+                                </button>
+                                <button
+                                  onClick={() => onNavigateToWeek(evt.week, 'wristband')}
+                                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold rounded-xl border border-slate-700 transition-all"
+                                >
+                                  <span>Wristband</span>
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    if (linkedPlan) {
+                                      onNavigateToWeek(evt.week, 'practice', linkedPlan.id);
+                                    } else if (onSyncPracticeToPlan) {
+                                      const planId = onSyncPracticeToPlan(evt);
+                                      onNavigateToWeek(evt.week, 'practice', planId);
+                                    } else {
+                                      onNavigateToWeek(evt.week, 'practice');
+                                    }
+                                  }}
+                                  className="flex-1 px-3 py-1.5 bg-indigo-600/80 hover:bg-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs"
+                                >
+                                  <ClipboardList className="w-3.5 h-3.5" />
+                                  <span>
+                                    {linkedPlan
+                                      ? `Open Practice Plan (${linkedPlan.plan.length} Periods)`
+                                      : 'Create & Open Practice Plan'}
+                                  </span>
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* VIEW 2: INTERACTIVE MONTH CALENDAR VIEW */}
+      {viewMode === 'month' && (
+        <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 p-4 md:p-6 shadow-xl print:hidden space-y-4">
+          {/* Month Navigation */}
+          <div className="flex items-center justify-between border-b border-slate-700/80 pb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="font-black text-lg md:text-xl text-slate-100">
+                {currentMonthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </h3>
+              <span className="px-2 py-0.5 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-bold rounded-lg">
+                Fall 2026 Season
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  const prev = new Date(currentMonthDate);
+                  prev.setMonth(prev.getMonth() - 1);
+                  setCurrentMonthDate(prev);
+                }}
+                className="p-2 bg-slate-900 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition-all"
+                title="Previous Month"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setCurrentMonthDate(new Date(2026, 8, 1))}
+                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-700 text-xs font-bold text-amber-300 rounded-xl border border-slate-700 transition-all"
+              >
+                Season Start (Sep 2026)
+              </button>
+              <button
+                onClick={() => {
+                  const next = new Date(currentMonthDate);
+                  next.setMonth(next.getMonth() + 1);
+                  setCurrentMonthDate(next);
+                }}
+                className="p-2 bg-slate-900 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition-all"
+                title="Next Month"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Calendar Day Labels */}
+          <div className="grid grid-cols-7 gap-1 text-center font-black text-xs uppercase tracking-wider text-slate-400 py-1">
+            <span>Sun</span>
+            <span>Mon</span>
+            <span>Tue</span>
+            <span>Wed</span>
+            <span>Thu</span>
+            <span>Fri</span>
+            <span className="text-amber-400">Sat (Game Day)</span>
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7 gap-1.5">
+            {monthCalendarData.map((cell, idx) => {
+              const hasEvents = cell.events.length > 0;
+              const hasGame = cell.events.some((e) => e.type === 'game' || e.type === 'tournament');
+
+              return (
+                <div
+                  key={idx}
+                  className={`min-h-[110px] md:min-h-[125px] p-1.5 md:p-2 rounded-2xl border flex flex-col justify-between transition-all ${
+                    cell.isCurrentMonth
+                      ? hasGame
+                        ? 'bg-slate-900/90 border-amber-500/50 shadow-md ring-1 ring-amber-500/20'
+                        : hasEvents
+                        ? 'bg-slate-900/80 border-slate-700 hover:border-slate-600'
+                        : 'bg-slate-900/40 border-slate-800/80 hover:bg-slate-900/60'
+                      : 'bg-slate-950/30 border-slate-850 opacity-40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span
+                      className={`text-xs font-black px-1.5 py-0.5 rounded-md ${
+                        cell.isCurrentMonth
+                          ? hasGame
+                            ? 'bg-amber-400 text-slate-950 font-black'
+                            : 'text-slate-300'
+                          : 'text-slate-600'
+                      }`}
+                    >
+                      {cell.dayNum}
+                    </span>
+                    {hasEvents && (
+                      <span className="text-[10px] text-slate-400 font-bold">
+                        {cell.events.length} {cell.events.length === 1 ? 'evt' : 'evts'}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Day Events Badges */}
+                  <div className="flex-1 space-y-1 overflow-y-auto no-scrollbar">
+                    {cell.events.map((evt) => {
+                      const isGame = evt.type === 'game' || evt.type === 'tournament';
+                      const isScrimmage = evt.type === 'scrimmage';
+
+                      return (
+                        <div
+                          key={evt.id}
+                          onClick={() => {
+                            if (isGame) {
+                              onNavigateToWeek(evt.week, 'scouting');
+                            } else {
+                              onNavigateToWeek(
+                                evt.week,
+                                'practice',
+                                evt.linkedPracticePlanId || getLinkedPracticePlan(evt)?.id
+                              );
+                            }
+                          }}
+                          className={`px-1.5 py-1 rounded-lg text-[10px] font-bold truncate cursor-pointer transition-transform active:scale-95 flex items-center justify-between gap-1 ${
+                            isGame
+                              ? 'bg-amber-400 text-slate-950 font-black hover:bg-amber-300'
+                              : isScrimmage
+                              ? 'bg-purple-600 text-white hover:bg-purple-500'
+                              : 'bg-indigo-900/70 text-indigo-200 border border-indigo-500/30 hover:bg-indigo-800'
+                          }`}
+                          title={`${evt.title} (${formatTimeDisplay(evt.startTime)}) - Click to open details`}
+                        >
+                          <span className="truncate">
+                            {formatTimeDisplay(evt.startTime)} &bull; {evt.title}
+                          </span>
+                          {isGame && <ExternalLink className="w-2.5 h-2.5 shrink-0 opacity-80" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* VIEW 3: SEASON TABLE / GRID VIEW */}
+      {viewMode === 'grid' && (
+        <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl overflow-hidden print:hidden">
+          <div className="p-4 border-b border-slate-700/80 flex items-center justify-between">
+            <h3 className="font-black text-base text-slate-100">
+              Season Master Schedule Table ({filteredEvents.length} Events)
+            </h3>
+            <span className="text-xs text-slate-400">Click any row to open details</span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-900/90 text-slate-400 uppercase font-black tracking-wider text-[10px] border-b border-slate-700">
+                <tr>
+                  <th className="p-3">Week</th>
+                  <th className="p-3">Type</th>
+                  <th className="p-3">Date &amp; Time</th>
+                  <th className="p-3">Title / Opponent</th>
+                  <th className="p-3">Location</th>
+                  <th className="p-3">Uniform</th>
+                  <th className="p-3">Result / Plan</th>
+                  <th className="p-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700/60 text-slate-200 font-medium">
+                {filteredEvents.map((evt) => {
+                  const isGame = evt.type === 'game' || evt.type === 'tournament';
+                  const linkedPlan = getLinkedPracticePlan(evt);
+
+                  return (
+                    <tr
+                      key={evt.id}
+                      className="hover:bg-slate-750/50 transition-colors"
+                    >
+                      <td className="p-3 font-bold text-amber-300 whitespace-nowrap">
+                        {getWeekName(evt.week)}
+                      </td>
+                      <td className="p-3">
+                        <span
+                          className={`px-2 py-0.5 text-[10px] font-black uppercase rounded ${
+                            isGame
+                              ? 'bg-amber-400 text-slate-950 font-black'
+                              : evt.type === 'scrimmage'
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-indigo-500/20 text-indigo-300'
+                          }`}
+                        >
+                          {evt.type}
+                        </span>
+                      </td>
+                      <td className="p-3 whitespace-nowrap">
+                        <div className="font-bold text-slate-100">{formatDateDisplay(evt.date)}</div>
+                        <div className="text-[11px] text-slate-400">{formatTimeDisplay(evt.startTime)}</div>
+                      </td>
+                      <td className="p-3">
+                        <div className="font-extrabold text-slate-100">{evt.title}</div>
+                        {evt.focusOrNotes && (
+                          <div className="text-[10px] text-slate-400 truncate max-w-xs">{evt.focusOrNotes}</div>
+                        )}
+                      </td>
+                      <td className="p-3 text-slate-300 truncate max-w-xs">
+                        {evt.location}
+                      </td>
+                      <td className="p-3 text-slate-400 whitespace-nowrap">
+                        {evt.uniform || '—'}
+                      </td>
+                      <td className="p-3 whitespace-nowrap">
+                        {isGame ? (
+                          evt.result?.outcome ? (
+                            <span
+                              className={`px-2 py-0.5 rounded font-black text-[10px] ${
+                                evt.result.outcome === 'W'
+                                  ? 'bg-emerald-500 text-slate-950'
+                                  : 'bg-rose-500 text-white'
+                              }`}
+                            >
+                              {evt.result.outcome} {evt.result.teamScore} - {evt.result.opponentScore}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 italic">Upcoming</span>
+                          )
+                        ) : linkedPlan ? (
+                          <span className="text-indigo-300 text-[11px] font-bold">
+                            ✅ Plan ({linkedPlan.plan.length} periods)
+                          </span>
+                        ) : (
+                          <span className="text-slate-500 italic">No plan yet</span>
+                        )}
+                      </td>
+                      <td className="p-3 text-right whitespace-nowrap">
+                        {isGame ? (
+                          <button
+                            onClick={() => onNavigateToWeek(evt.week, 'scouting')}
+                            className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition-all"
+                          >
+                            Scouting
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() =>
+                              onNavigateToWeek(
+                                evt.week,
+                                'practice',
+                                evt.linkedPracticePlanId || linkedPlan?.id
+                              )
+                            }
+                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-300 font-bold text-xs rounded-lg border border-slate-700 transition-all"
+                          >
+                            Practice Plan
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* PRINT ENGINE OUTPUT: Official Printable Mahopac 10U Season Schedule */}
+      <div className="hidden print:block bg-white text-black p-4">
+        <div className="border-b-2 border-black pb-3 mb-4 text-center">
+          <h1 className="font-black text-xl uppercase tracking-tight">
+            Mahopac 10U Youth Football &bull; 2026 Official Season Schedule
+          </h1>
+          <p className="text-xs text-slate-700 font-bold mt-1">
+            Head Coach: Danny &bull; Team Roster &bull; Practice &amp; Game Itinerary
+          </p>
+        </div>
+
+        <table className="w-full text-left text-[9pt] border-collapse border border-black">
+          <thead>
+            <tr className="bg-slate-200 border-b border-black font-black uppercase text-[8pt]">
+              <th className="p-1.5 border-r border-black">Week</th>
+              <th className="p-1.5 border-r border-black">Date &amp; Time</th>
+              <th className="p-1.5 border-r border-black">Type</th>
+              <th className="p-1.5 border-r border-black">Event / Opponent</th>
+              <th className="p-1.5 border-r border-black">Location / Field</th>
+              <th className="p-1.5 border-r border-black">Arrival</th>
+              <th className="p-1.5">Uniform</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedEvents.map((evt, idx) => {
+              const isGame = evt.type === 'game' || evt.type === 'tournament';
+              return (
+                <tr
+                  key={evt.id}
+                  className={`border-b border-black/60 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}`}
+                >
+                  <td className="p-1.5 border-r border-black font-bold whitespace-nowrap">
+                    {getWeekName(evt.week)}
+                  </td>
+                  <td className="p-1.5 border-r border-black font-bold whitespace-nowrap">
+                    {formatDateDisplay(evt.date)} @ {formatTimeDisplay(evt.startTime)}
+                  </td>
+                  <td className="p-1.5 border-r border-black uppercase font-black text-[7.5pt]">
+                    {evt.type}
+                  </td>
+                  <td className="p-1.5 border-r border-black font-black">
+                    {evt.title}
+                  </td>
+                  <td className="p-1.5 border-r border-black text-[8pt]">
+                    {evt.location}
+                  </td>
+                  <td className="p-1.5 border-r border-black whitespace-nowrap">
+                    {evt.arrivalMinutesBefore ? `${evt.arrivalMinutesBefore}m prior` : '—'}
+                  </td>
+                  <td className="p-1.5 text-[8pt]">
+                    {evt.uniform || '—'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* MODAL 1: ADD GAME MODAL */}
+      {isAddGameModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 max-w-xl w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black">
+                  🏈
+                </div>
+                <h3 className="font-black text-lg text-slate-100">Schedule New Game</h3>
+              </div>
+              <button
+                onClick={() => setIsAddGameModalOpen(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Opponent Name *</label>
+                  <input
+                    type="text"
+                    value={gameOpponent}
+                    onChange={(e) => setGameOpponent(e.target.value)}
+                    placeholder="e.g. Carmel Rams 10U"
+                    className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:border-amber-400 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Week Number *</label>
+                  <select
+                    value={gameWeek}
+                    onChange={(e) => setGameWeek(e.target.value)}
+                    className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:border-amber-400 focus:outline-none"
+                  >
+                    <optgroup label="⚡ Pre-Season">
+                      <option value="0">Pre-Season Wk 1 (Conditioning)</option>
+                      <option value="pre-2">Pre-Season Wk 2 (Pads & Scrimmage)</option>
+                    </optgroup>
+                    <optgroup label="🏈 Regular Season">
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map((w) => (
+                        <option key={w} value={String(w)}>
+                          Regular Season • Week {w}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="🏆 Post-Season">
+                      <option value="playoffs">Post-Season • Playoffs</option>
+                    </optgroup>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Game Date *</label>
+                  <input
+                    type="date"
+                    value={gameDate}
+                    onChange={(e) => setGameDate(e.target.value)}
+                    className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:border-amber-400 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Kickoff Time *</label>
+                  <input
+                    type="time"
+                    value={gameStartTime}
+                    onChange={(e) => setGameStartTime(e.target.value)}
+                    className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:border-amber-400 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Home / Away</label>
+                  <select
+                    value={gameLocationType}
+                    onChange={(e) =>
+                      setGameLocationType(e.target.value as 'home' | 'away' | 'neutral')
+                    }
+                    className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:border-amber-400 focus:outline-none"
+                  >
+                    <option value="home">Home</option>
+                    <option value="away">Away</option>
+                    <option value="neutral">Neutral</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Location &amp; Stadium Field *</label>
+                <input
+                  type="text"
+                  value={gameLocation}
+                  onChange={(e) => setGameLocation(e.target.value)}
+                  placeholder="e.g. Mahopac High School - Turf Stadium"
+                  className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:border-amber-400 focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Uniform Combo</label>
+                  <input
+                    type="text"
+                    value={gameUniform}
+                    onChange={(e) => setGameUniform(e.target.value)}
+                    placeholder="e.g. Gold Jerseys & White Pants"
+                    className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:border-amber-400 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Arrival Prior (Minutes)</label>
+                  <input
+                    type="number"
+                    value={gameArrivalMins}
+                    onChange={(e) => setGameArrivalMins(parseInt(e.target.value, 10) || 0)}
+                    className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:border-amber-400 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Gameplan Notes / Reminders</label>
+                <textarea
+                  value={gameNotes}
+                  onChange={(e) => setGameNotes(e.target.value)}
+                  rows={2}
+                  placeholder="e.g. Dynamic warmup 60 mins before kickoff. Focus on contain defense."
+                  className="w-full bg-slate-900 text-slate-100 font-medium p-2 rounded-xl border border-slate-700 focus:border-amber-400 focus:outline-none"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 p-2 bg-slate-900/80 rounded-xl border border-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoSyncScouting}
+                  onChange={(e) => setAutoSyncScouting(e.target.checked)}
+                  className="rounded text-amber-400"
+                />
+                <span className="text-slate-300 text-xs font-bold">
+                  🔗 Automatically sync to Week {gameWeek} Scouting Report &amp; Gameplan
+                </span>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-700">
+              <button
+                onClick={() => setIsAddGameModalOpen(false)}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveGame}
+                className="px-5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-md"
+              >
+                Save Game to Schedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: ADD PRACTICE MODAL */}
+      {isAddPracticeModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 max-w-xl w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black">
+                  📋
+                </div>
+                <h3 className="font-black text-lg text-slate-100">Schedule Practice</h3>
+              </div>
+              <button
+                onClick={() => setIsAddPracticeModalOpen(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Practice Title *</label>
+                <input
+                  type="text"
+                  value={practiceTitle}
+                  onChange={(e) => setPracticeTitle(e.target.value)}
+                  placeholder="e.g. Week 1 - Tuesday Inside Run & Full Pads"
+                  className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:border-indigo-400 focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Week Folder *</label>
+                  <select
+                    value={practiceWeek}
+                    onChange={(e) => setPracticeWeek(e.target.value)}
+                    className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:border-indigo-400 focus:outline-none"
+                  >
+                    <optgroup label="⚡ Pre-Season">
+                      <option value="0">Pre-Season Wk 1 (Conditioning)</option>
+                      <option value="pre-2">Pre-Season Wk 2 (Pads & Scrimmage)</option>
+                    </optgroup>
+                    <optgroup label="🏈 Regular Season">
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map((w) => (
+                        <option key={w} value={String(w)}>
+                          Regular Season • Week {w}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="🏆 Post-Season">
+                      <option value="playoffs">Post-Season • Playoffs</option>
+                    </optgroup>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Date *</label>
+                  <input
+                    type="date"
+                    value={practiceDate}
+                    onChange={(e) => setPracticeDate(e.target.value)}
+                    className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:border-indigo-400 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Time (Start - End)</label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="time"
+                      value={practiceStartTime}
+                      onChange={(e) => setPracticeStartTime(e.target.value)}
+                      className="w-1/2 bg-slate-900 text-slate-100 font-bold p-1.5 rounded-lg border border-slate-700 text-xs"
+                    />
+                    <span className="text-slate-500">-</span>
+                    <input
+                      type="time"
+                      value={practiceEndTime}
+                      onChange={(e) => setPracticeEndTime(e.target.value)}
+                      className="w-1/2 bg-slate-900 text-slate-100 font-bold p-1.5 rounded-lg border border-slate-700 text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Field Location</label>
+                <input
+                  type="text"
+                  value={practiceLocation}
+                  onChange={(e) => setPracticeLocation(e.target.value)}
+                  placeholder="e.g. Mahopac High School - Turf Field"
+                  className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:border-indigo-400 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Primary Focus / Goals</label>
+                <textarea
+                  value={practiceFocus}
+                  onChange={(e) => setPracticeFocus(e.target.value)}
+                  rows={2}
+                  placeholder="e.g. Tackle circuit, 24 dive execution, secondary cover 3 rotation."
+                  className="w-full bg-slate-900 text-slate-100 font-medium p-2 rounded-xl border border-slate-700 focus:border-indigo-400 focus:outline-none"
+                />
+              </div>
+
+              <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-700 space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoCreatePlan}
+                    onChange={(e) => setAutoCreatePlan(e.target.checked)}
+                    className="rounded text-indigo-500"
+                  />
+                  <span className="text-slate-200 text-xs font-bold">
+                    📝 Automatically generate structured Practice Plan in Practice Generator
+                  </span>
+                </label>
+
+                {autoCreatePlan && (
+                  <div className="pl-6">
+                    <label className="block text-[11px] text-slate-400 mb-1">Initial Template:</label>
+                    <select
+                      value={selectedTemplate}
+                      onChange={(e) => setSelectedTemplate(e.target.value)}
+                      className="w-full bg-slate-800 text-slate-100 text-xs p-1.5 rounded-lg border border-slate-600"
+                    >
+                      <option value="Offense & Defense Full Practice">
+                        Full Practice (Dynamic Warmup, Indy, Inside Run, Team Scrimmage)
+                      </option>
+                      <option value="Pre-Game Walkthrough">
+                        Pre-Game Walkthrough (Shells, Signals, Special Teams)
+                      </option>
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-700">
+              <button
+                onClick={() => setIsAddPracticeModalOpen(false)}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSavePractice}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md"
+              >
+                Save Practice to Schedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: CADENCE WIZARD (RECURRING PRACTICES & MULTI-WEEK WIZARD) */}
+      <PracticeWizardModal
+        isOpen={isCadenceWizardOpen}
+        onClose={() => setIsCadenceWizardOpen(false)}
+        practiceTemplates={practiceTemplates}
+        currentWeek={currentWeek}
+        onGenerate={(result) => {
+          if (onPracticeWizardGenerate) {
+            onPracticeWizardGenerate(result);
+          } else if (onBulkAddEvents) {
+            onBulkAddEvents(result.scheduleEvents);
+          }
+        }}
+      />
+
+      {/* MODAL 4: RECORD SCORE / RESULT MODAL */}
+      {scoreModalEvent && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-amber-400" />
+                <h3 className="font-black text-base text-slate-100">
+                  Record Result for {scoreModalEvent.title}
+                </h3>
+              </div>
+              <button
+                onClick={() => setScoreModalEvent(null)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-900 p-3 rounded-2xl border border-slate-700 text-center">
+                  <span className="block font-black text-amber-400 text-xs mb-1">MAHOPAC 10U</span>
+                  <input
+                    type="number"
+                    value={teamScore}
+                    onChange={(e) => setTeamScore(parseInt(e.target.value, 10) || 0)}
+                    className="w-full text-center text-2xl font-black bg-slate-800 text-white rounded-xl py-1 border border-slate-600 focus:outline-none"
+                  />
+                </div>
+
+                <div className="bg-slate-900 p-3 rounded-2xl border border-slate-700 text-center">
+                  <span className="block font-black text-slate-300 text-xs mb-1 truncate">
+                    {scoreModalEvent.opponent || 'OPPONENT'}
+                  </span>
+                  <input
+                    type="number"
+                    value={oppScore}
+                    onChange={(e) => setOppScore(parseInt(e.target.value, 10) || 0)}
+                    className="w-full text-center text-2xl font-black bg-slate-800 text-white rounded-xl py-1 border border-slate-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Post-Game Recap / Coaching Takeaways</label>
+                <textarea
+                  value={recapNotes}
+                  onChange={(e) => setRecapNotes(e.target.value)}
+                  rows={3}
+                  placeholder="e.g. Great line blocking on 24 dive. Defense held Carmel to 0 redzone conversions."
+                  className="w-full bg-slate-900 text-slate-100 font-medium p-2 rounded-xl border border-slate-700 focus:outline-none text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-700">
+              <button
+                onClick={() => setScoreModalEvent(null)}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveResult}
+                className="px-5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-md"
+              >
+                Save Result &amp; Update Record
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: EDIT EVENT MODAL */}
+      {editingEvent && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+              <h3 className="font-black text-base text-slate-100">Edit Scheduled Event</h3>
+              <button
+                onClick={() => setEditingEvent(null)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Title</label>
+                <input
+                  type="text"
+                  value={editingEvent.title}
+                  onChange={(e) => setEditingEvent({ ...editingEvent, title: e.target.value })}
+                  className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Date</label>
+                  <input
+                    type="date"
+                    value={editingEvent.date}
+                    onChange={(e) => setEditingEvent({ ...editingEvent, date: e.target.value })}
+                    className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Start Time</label>
+                  <input
+                    type="time"
+                    value={editingEvent.startTime}
+                    onChange={(e) => setEditingEvent({ ...editingEvent, startTime: e.target.value })}
+                    className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Location</label>
+                <input
+                  type="text"
+                  value={editingEvent.location}
+                  onChange={(e) => setEditingEvent({ ...editingEvent, location: e.target.value })}
+                  className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Focus / Notes</label>
+                <textarea
+                  value={editingEvent.focusOrNotes || ''}
+                  onChange={(e) => setEditingEvent({ ...editingEvent, focusOrNotes: e.target.value })}
+                  rows={2}
+                  className="w-full bg-slate-900 text-slate-100 font-medium p-2 rounded-xl border border-slate-700"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-700">
+              <button
+                onClick={() => setEditingEvent(null)}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  onUpdateEvent(editingEvent.id, editingEvent);
+                  setEditingEvent(null);
+                }}
+                className="px-5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

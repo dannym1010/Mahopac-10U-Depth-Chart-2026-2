@@ -10,6 +10,7 @@ import {
   Dumbbell,
   ClipboardList,
   Users,
+  Calendar,
 } from 'lucide-react';
 import { UnitType, UserRole } from '../types';
 
@@ -32,6 +33,8 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
   userRole,
 }) => {
   const tabs: TabItem[] = [
+    { id: 'schedule', label: '📅 Season Schedule', icon: Calendar },
+    { id: 'compliance', label: '⚡ Practice Hours & Compliance', icon: Zap },
     { id: 'offense', label: 'Offense', icon: Zap },
     { id: 'defense', label: 'Defense', icon: Shield },
     { id: 'st', label: 'Special Teams', icon: Target },
@@ -39,9 +42,9 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
     { id: 'scrimmage', label: 'Practice / Scrimmage', icon: Swords },
     { id: 'wristband', label: 'Wristband', icon: Watch },
     { id: 'scouting', label: 'Scouting', icon: FileSpreadsheet },
-    { id: 'guide', label: 'Playbooks & Guides', icon: BookOpen },
-    { id: 'drills', label: 'Drills Library', icon: Dumbbell },
     { id: 'practice', label: 'Practice Plan', icon: ClipboardList },
+    { id: 'drills', label: 'Drills Library', icon: Dumbbell },
+    { id: 'guide', label: 'Playbooks & Guides', icon: BookOpen },
     { id: 'users', label: 'Staff & Users', icon: Users, adminOnly: true },
   ];
 

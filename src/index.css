@@ -294,6 +294,8 @@ body {
     background-color: #ffffff !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .wristband-insert-print-box {
@@ -312,6 +314,40 @@ body {
     position: relative !important;
     display: flex !important;
     flex-direction: column !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .wristband-num-pill-yellow {
+    background-color: #facc15 !important;
+    color: #000000 !important;
+    font-weight: 900 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .wristband-num-pill-blue {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+    font-weight: 900 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .wristband-num-pill-neon-cyan {
+    background-color: #06b6d4 !important;
+    color: #000000 !important;
+    font-weight: 900 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .wristband-num-pill-black {
+    background-color: #0f172a !important;
+    color: #facc15 !important;
+    font-weight: 900 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .wristband-print-table {

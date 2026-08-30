@@ -19,6 +19,7 @@ import {
   ArrowDown,
   Check,
   UserPlus,
+  Sparkles,
 } from 'lucide-react';
 import {
   PracticePlan,
@@ -29,6 +30,7 @@ import {
   UserRole,
 } from '../types';
 import { formatTimeMinutes, parseTimeString } from '../services/storageService';
+import { PracticeWizardModal, PracticeWizardGeneratedResult } from './PracticeWizardModal';
 
 interface PracticePlanViewProps {
   practices: PracticePlan[];
@@ -69,6 +71,8 @@ interface PracticePlanViewProps {
   ) => void;
   onAddNewSavedCoach: (name: string) => void;
   onDeleteSavedCoach: (name: string) => void;
+  onNavigateToSchedule?: () => void;
+  onPracticeWizardGenerate?: (result: PracticeWizardGeneratedResult) => void;
 }
 
 export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
@@ -101,8 +105,11 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   onSelectDrillForStation,
   onAddNewSavedCoach,
   onDeleteSavedCoach,
+  onNavigateToSchedule,
+  onPracticeWizardGenerate,
 }) => {
   const [isTreeDropdownOpen, setIsTreeDropdownOpen] = useState(false);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [activeCoachPopup, setActiveCoachPopup] = useState<string | null>(null);
   const [collapsedTreeFolders, setCollapsedTreeFolders] = useState<
     Record<string, boolean>
@@ -260,6 +267,14 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
             {userRole === 'admin' && (
               <>
                 <button
+                  onClick={() => setIsWizardOpen(true)}
+                  className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all active:scale-95 border border-amber-400/40"
+                  title="Multi-Week & Multi-Day Practice Wizard"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-slate-950" />
+                  <span>Practice Wizard</span>
+                </button>
+                <button
                   onClick={onOpenNewPracticeModal}
                   className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all active:scale-95"
                 >
@@ -361,9 +376,21 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
               </button>
             )}
 
+            {onNavigateToSchedule && (
+              <button
+                type="button"
+                onClick={onNavigateToSchedule}
+                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+                title="View in Season Schedule"
+              >
+                <Calendar className="w-3.5 h-3.5 text-amber-400" />
+                <span>Season Schedule</span>
+              </button>
+            )}
+
             <button
               onClick={() => window.print()}
-              className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-100 font-bold text-xs rounded-xl border border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print Plan</span>
@@ -864,6 +891,19 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Practice Cadence & Multi-Week Wizard */}
+      <PracticeWizardModal
+        isOpen={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
+        practiceTemplates={practiceTemplates}
+        currentWeek={currentPlan?.weekFolder ? currentPlan.weekFolder.replace('Week ', '') : '1'}
+        onGenerate={(res) => {
+          if (onPracticeWizardGenerate) {
+            onPracticeWizardGenerate(res);
+          }
+        }}
+      />
     </div>
   );
 };
