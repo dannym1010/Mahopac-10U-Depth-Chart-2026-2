@@ -96,9 +96,17 @@ body {
   }
 
   .formation-card-header {
-    border-bottom: 1.5px solid #cbd5e1 !important;
-    padding-bottom: 4px !important;
-    margin-bottom: 6px !important;
+    border-bottom: 2px solid #0f172a !important;
+    padding-bottom: 5px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .formation-card-header h2 {
+    font-size: 16pt !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.03em !important;
+    color: #000000 !important;
+    text-transform: uppercase !important;
   }
 
   .formation-row-header {

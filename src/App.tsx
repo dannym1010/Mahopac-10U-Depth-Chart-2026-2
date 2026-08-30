@@ -160,6 +160,7 @@ export default function App() {
 
   // Debounced Cloud Sync Timeout
   const saveTimeoutRef = useRef<any>(null);
+  const initialCloudLoadDoneRef = useRef<boolean>(false);
 
   // Ensure current week object exists
   const ensureWeekExists = (week: string) => {
@@ -334,24 +335,48 @@ export default function App() {
             (doc: any) => {
               if (doc && doc.exists) {
                 const data = doc.data();
-                if (data.weeklyData) setWeeklyData(data.weeklyData);
-                if (data.defaultFormations)
+                if (data.weeklyData && Object.keys(data.weeklyData).length > 0) {
+                  setWeeklyData(data.weeklyData);
+                }
+                if (data.defaultFormations && Array.isArray(data.defaultFormations) && data.defaultFormations.length > 0) {
                   setDefaultFormations(data.defaultFormations);
-                if (data.practiceData) setPracticeData(data.practiceData);
-                if (data.practiceTemplates)
+                }
+                if (data.practiceData && Array.isArray(data.practiceData)) {
+                  setPracticeData(data.practiceData);
+                }
+                if (data.practiceTemplates) {
                   setPracticeTemplates(data.practiceTemplates);
-                if (data.cascadingDrills)
+                }
+                if (data.cascadingDrills) {
                   setCascadingDrills(data.cascadingDrills);
-                if (data.guideTree) setGuideTree(data.guideTree);
-                if (data.guideOrder) setGuideOrder(data.guideOrder);
-                if (data.savedCoaches) setSavedCoaches(data.savedCoaches);
-                if (data.staffList) setStaffList(data.staffList);
-                if (data.masterPlayLibrary)
+                }
+                if (data.guideTree) {
+                  setGuideTree(data.guideTree);
+                }
+                if (data.guideOrder) {
+                  setGuideOrder(data.guideOrder);
+                }
+                if (data.savedCoaches) {
+                  setSavedCoaches(data.savedCoaches);
+                }
+                if (data.staffList) {
+                  setStaffList(data.staffList);
+                }
+                if (data.masterPlayLibrary) {
                   setMasterPlayLibrary(data.masterPlayLibrary);
+                }
+                initialCloudLoadDoneRef.current = true;
+                setSyncStatus({ text: '✅ Live Cloud Synced', color: '#22c55e' });
+              } else {
+                // First time ever on this Firebase project - seed cloud with local data
+                initialCloudLoadDoneRef.current = true;
+                saveStateToStorage('all');
               }
             },
             (err: any) => {
               console.warn('Firestore subscription error:', err);
+              initialCloudLoadDoneRef.current = true;
+              setSyncStatus({ text: '⚠️ Cloud Sync Error (Check Rules)', color: '#f59e0b' });
             }
           );
 

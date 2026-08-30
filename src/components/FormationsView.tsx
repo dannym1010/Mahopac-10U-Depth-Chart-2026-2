@@ -205,12 +205,12 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
               }`}
             >
               {/* Formation Card Header */}
-              <div className="formation-card-header flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-slate-800/80 mb-4">
+              <div className="formation-card-header flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-slate-800/80 mb-4 print:pb-2 print:mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-black text-xs print:bg-black print:text-white print:border-black">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-black text-xs print:w-7 print:h-7 print:bg-black print:text-white print:border-black print:text-xs print:font-black print:rounded-md">
                     {unit === 'offense' ? 'OFF' : unit === 'defense' ? 'DEF' : unit === 'st' ? 'ST' : 'GRP'}
                   </div>
-                  <h2 className="font-black text-base md:text-lg text-slate-100 tracking-tight print:text-black print:text-sm">
+                  <h2 className="font-black text-base md:text-lg text-slate-100 tracking-tight print:text-black print:text-xl print:font-black print:tracking-wider">
                     {form.name}
                   </h2>
                 </div>
@@ -495,14 +495,14 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                     })}
 
                                     {(!depthChart[pos.id] || depthChart[pos.id].length === 0) && (
-                                      <div className="flex-1 flex items-center justify-center text-[10px] print:text-[8px] text-slate-500 print:text-slate-400 font-medium italic border border-dashed border-slate-800 print:border-slate-300 rounded-xl print:rounded-none p-2 print:p-0.5">
-                                        Open
+                                      <div className="flex-1 flex items-center justify-center text-[10px] text-slate-500 font-medium italic border border-dashed border-slate-800 rounded-xl print:rounded-none p-2 print:p-0.5 print:border-none">
+                                        <span className="print:hidden">Open</span>
                                       </div>
                                     )}
                                   </div>
                                 </div>
                               ) : (
-                                <div className="flex-1 flex items-center justify-center text-[10px] print:text-[8px] text-slate-600 print:text-slate-300 italic">
+                                <div className="flex-1 flex items-center justify-center text-[10px] text-slate-600 italic print:hidden">
                                   Empty
                                 </div>
                               )}
