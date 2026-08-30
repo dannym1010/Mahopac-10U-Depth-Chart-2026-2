@@ -60,12 +60,41 @@ export interface WristbandData {
   copiesPerPage?: number;
 }
 
+export interface CoachScoutingNote {
+  id: string;
+  coachEmail: string;
+  coachName?: string;
+  category?: string; // e.g. "Defense / Fronts", "Offense / Redzone", "Special Teams", "O-Line & Blocking", "QB Reads", "Adjustments", "General"
+  title: string;
+  content: string;
+  createdAt: number;
+  lastEdited: number;
+  lastEditedBy?: string;
+}
+
+export interface OpponentKeyPlayer {
+  id: string;
+  num: string;
+  name: string;
+  pos: string;
+  threatLevel: 'High' | 'Medium' | 'Low';
+  notes: string;
+}
+
 export interface ScoutingData {
   year?: string;
   week?: string;
   opponent?: string;
+  gameDate?: string;
+  gameLocation?: string;
   teamOverview?: string;
-  keyPlayers?: string;
+  offensiveTendencies?: string;
+  defensiveFronts?: string;
+  specialTeamsNotes?: string;
+  keysToVictory?: string[];
+  keyPlayersList?: OpponentKeyPlayer[];
+  keyPlayers?: string; // legacy fallback
+  coachNotes?: CoachScoutingNote[];
 }
 
 export interface WeekState {

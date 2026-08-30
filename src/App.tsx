@@ -190,8 +190,15 @@ export default function App() {
             year: '2026',
             week: `Week ${week}`,
             opponent: '',
+            gameDate: '',
+            gameLocation: '',
             teamOverview: '',
-            keyPlayers: '',
+            offensiveTendencies: '',
+            defensiveFronts: '',
+            specialTeamsNotes: '',
+            keysToVictory: [],
+            keyPlayersList: [],
+            coachNotes: [],
           },
         },
       };
@@ -2055,6 +2062,9 @@ export default function App() {
               <ScoutingView
                 scouting={currentWeekState.scouting || {}}
                 userRole={userRole}
+                currentUser={currentUser}
+                staffList={staffList}
+                savedCoaches={savedCoaches}
                 onUpdateScouting={(field, val) => {
                   setWeeklyData((prev) => ({
                     ...prev,
