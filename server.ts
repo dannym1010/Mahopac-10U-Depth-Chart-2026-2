@@ -14,35 +14,68 @@ async function startServer() {
   });
 
   // TeamSnap iCal proxy fetch to avoid CORS blocks
-  app.post('/api/teamsnap/fetch-ical', async (req, res) => {
+  app.all(['/api/teamsnap/fetch-ical'], async (req, res) => {
     try {
-      let { url } = req.body;
+      let url = req.method === 'POST' ? req.body?.url : req.query?.url;
       if (!url || typeof url !== 'string') {
         return res.status(400).json({ error: 'Missing calendar feed URL.' });
       }
 
-      // Normalize webcal:// to https://
-      url = url.trim();
-      if (url.startsWith('webcal://')) {
-        url = 'https://' + url.substring(9);
-      } else if (url.startsWith('http://')) {
-        url = 'https://' + url.substring(7);
+      // Clean & normalize URL
+      url = url.trim().replace(/^["']|["']$/g, '');
+      
+      let targetUrl = url;
+      if (targetUrl.startsWith('webcal://')) {
+        targetUrl = 'https://' + targetUrl.substring(9);
       }
 
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (FootballOperations/1.0)',
-          Accept: 'text/calendar, text/plain, */*',
-        },
-      });
+      // Candidate URLs to try (in order of preference)
+      const urlsToTry: string[] = [];
+      if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
+        urlsToTry.push(targetUrl);
+        if (targetUrl.startsWith('https://')) {
+          urlsToTry.push('http://' + targetUrl.substring(8));
+        } else if (targetUrl.startsWith('http://')) {
+          urlsToTry.push('https://' + targetUrl.substring(7));
+        }
+      } else {
+        urlsToTry.push('https://' + targetUrl);
+        urlsToTry.push('http://' + targetUrl);
+      }
 
-      if (!response.ok) {
-        return res.status(response.status).json({
-          error: `Failed to fetch from TeamSnap server (Status: ${response.status})`,
+      let icsContent = '';
+      let lastError: any = null;
+
+      for (const tryUrl of urlsToTry) {
+        try {
+          const response = await fetch(tryUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              Accept: 'text/calendar, text/plain, */*',
+            },
+            redirect: 'follow',
+          });
+
+          if (response.ok) {
+            const text = await response.text();
+            if (text && text.includes('BEGIN:VCALENDAR')) {
+              icsContent = text;
+              break;
+            }
+          } else {
+            lastError = new Error(`HTTP ${response.status} from ${tryUrl}`);
+          }
+        } catch (err: any) {
+          lastError = err;
+        }
+      }
+
+      if (!icsContent || !icsContent.includes('BEGIN:VCALENDAR')) {
+        return res.status(400).json({
+          error: `Could not retrieve a valid iCal feed. ${lastError ? lastError.message : 'Please check URL.'}`,
         });
       }
 
-      const icsContent = await response.text();
       return res.json({ success: true, icsContent });
     } catch (err: any) {
       console.error('Error fetching TeamSnap calendar:', err);

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Calendar,
   RefreshCw,
@@ -34,6 +34,7 @@ interface TeamSnapSyncModalProps {
   activeTeam: Team;
   existingEvents: ScheduleEvent[];
   onImportEvents: (newEvents: Omit<ScheduleEvent, 'id' | 'createdAt' | 'lastEdited'>[], replaceExisting?: boolean) => void;
+  onUpdateTeamCalendarUrl?: (teamId: string, url: string) => void;
 }
 
 type SyncTab = 'url' | 'file' | 'text';
@@ -44,16 +45,35 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
   activeTeam,
   existingEvents = [],
   onImportEvents,
+  onUpdateTeamCalendarUrl,
 }) => {
   const [activeTab, setActiveTab] = useState<SyncTab>('url');
   const [icalUrl, setIcalUrl] = useState<string>(() => {
+    if (activeTeam?.calendarUrl) return activeTeam.calendarUrl;
     try {
-      const saved = localStorage.getItem(`football_teamsnap_url_${activeTeam.id}`);
-      return saved || '';
-    } catch {
-      return '';
+      const saved = localStorage.getItem(`football_teamsnap_url_${activeTeam?.id}`);
+      if (saved) return saved;
+    } catch {}
+    if (activeTeam?.id === 'team_10u' || activeTeam?.id === 'team-10u' || activeTeam?.ageGroup === '10U' || activeTeam?.name?.includes('10U')) {
+      return 'http://ical-cdn.teamsnap.com/team_schedule/8a8fa840-7ecc-4756-8e56-cf0913c39beb.ics';
     }
+    return '';
   });
+
+  useEffect(() => {
+    let url = activeTeam?.calendarUrl || '';
+    if (!url) {
+      try {
+        url = localStorage.getItem(`football_teamsnap_url_${activeTeam?.id}`) || '';
+      } catch {}
+    }
+    if (!url && (activeTeam?.id === 'team_10u' || activeTeam?.id === 'team-10u' || activeTeam?.ageGroup === '10U' || activeTeam?.name?.includes('10U'))) {
+      url = 'http://ical-cdn.teamsnap.com/team_schedule/8a8fa840-7ecc-4756-8e56-cf0913c39beb.ics';
+    }
+    setIcalUrl(url);
+    setStatusMessage(null);
+    setSyncResult(null);
+  }, [activeTeam?.id, activeTeam?.calendarUrl]);
   const [pasteText, setPasteText] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
@@ -69,65 +89,103 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
   // Handle URL Fetch
   const handleFetchFromUrl = async () => {
     if (!icalUrl.trim()) {
-      setStatusMessage({ type: 'error', text: 'Please enter your TeamSnap iCal or WebCal feed URL.' });
+      setStatusMessage({ type: 'error', text: 'Please enter your TeamSnap iCal or WebCal feed URL for this team.' });
       return;
     }
 
     setIsLoading(true);
-    setStatusMessage({ type: 'info', text: 'Connecting to TeamSnap calendar feed...' });
+    setStatusMessage({ type: 'info', text: `Connecting to TeamSnap calendar feed for ${activeTeam.name}...` });
 
     try {
-      // Normalize webcal:// to https://
-      let cleanUrl = icalUrl.trim();
+      let rawUrl = icalUrl.trim().replace(/^["']|["']$/g, '');
+      let cleanUrl = rawUrl;
       if (cleanUrl.startsWith('webcal://')) {
         cleanUrl = 'https://' + cleanUrl.substring(9);
-      } else if (cleanUrl.startsWith('http://')) {
-        cleanUrl = 'https://' + cleanUrl.substring(7);
       }
 
-      // Save to localStorage for this team
+      // Save to localStorage and team object for this team
       try {
-        localStorage.setItem(`football_teamsnap_url_${activeTeam.id}`, cleanUrl);
+        localStorage.setItem(`football_teamsnap_url_${activeTeam.id}`, rawUrl);
       } catch {}
+      if (onUpdateTeamCalendarUrl) {
+        onUpdateTeamCalendarUrl(activeTeam.id, rawUrl);
+      }
 
       let icsContent = '';
+      let fetchError = '';
 
-      // Try server API first
+      // 1. Try server backend API first
       try {
         const res = await fetch('/api/teamsnap/fetch-ical', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: cleanUrl }),
+          body: JSON.stringify({ url: rawUrl }),
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.icsContent) {
+          if (data.icsContent && data.icsContent.includes('BEGIN:VCALENDAR')) {
             icsContent = data.icsContent;
           }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          fetchError = errData.error || `Server HTTP ${res.status}`;
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('Backend proxy fetch failed, attempting client fetch:', err);
+        fetchError = err?.message || 'Backend network error';
       }
 
-      // If backend was unavailable or returned empty, try direct / CORS proxy fetch
+      // 2. If backend failed, try direct fetch
       if (!icsContent) {
         try {
-          const directRes = await fetch(cleanUrl);
+          const directRes = await fetch(cleanUrl, { mode: 'cors' });
           if (directRes.ok) {
-            icsContent = await directRes.text();
+            const text = await directRes.text();
+            if (text.includes('BEGIN:VCALENDAR')) {
+              icsContent = text;
+            }
           }
-        } catch {
-          // Try corsproxy fallback
-          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(cleanUrl)}`;
-          const proxyRes = await fetch(proxyUrl);
+        } catch (e) {
+          console.warn('Direct client fetch failed, trying CORS proxies...', e);
+        }
+      }
+
+      // 3. If direct fetch failed, try allorigins proxy
+      if (!icsContent) {
+        try {
+          const allOriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`;
+          const proxyRes = await fetch(allOriginsUrl);
           if (proxyRes.ok) {
-            icsContent = await proxyRes.text();
+            const text = await proxyRes.text();
+            if (text.includes('BEGIN:VCALENDAR')) {
+              icsContent = text;
+            }
           }
+        } catch (e) {
+          console.warn('AllOrigins proxy fetch failed:', e);
+        }
+      }
+
+      // 4. Try corsproxy.io
+      if (!icsContent) {
+        try {
+          const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(cleanUrl)}`;
+          const proxyRes = await fetch(corsProxyUrl);
+          if (proxyRes.ok) {
+            const text = await proxyRes.text();
+            if (text.includes('BEGIN:VCALENDAR')) {
+              icsContent = text;
+            }
+          }
+        } catch (e) {
+          console.warn('CorsProxy.io fetch failed:', e);
         }
       }
 
       if (!icsContent || !icsContent.includes('BEGIN:VCALENDAR')) {
-        throw new Error('Could not retrieve valid iCal feed. Please verify the URL or try downloading the .ics file and uploading below.');
+        throw new Error(
+          `Could not retrieve valid calendar feed (${fetchError || 'Unable to access TeamSnap server'}). Please verify the URL or try downloading the .ics file and uploading directly.`
+        );
       }
 
       const parsed = parseTeamSnapICS(icsContent, activeTeam.id);
@@ -145,7 +203,7 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
 
       setStatusMessage({
         type: 'success',
-        text: `Successfully fetched ${parsed.totalParsed} events (${parsed.gamesCount} Games, ${parsed.practicesCount} Practices) from TeamSnap!`,
+        text: `Successfully fetched ${parsed.totalParsed} events (${parsed.gamesCount} Games, ${parsed.practicesCount} Practices) from TeamSnap (${parsed.teamName || activeTeam.name})!`,
       });
     } catch (err: any) {
       setStatusMessage({

@@ -23,6 +23,7 @@ export interface Team {
   season?: string; // e.g. "2026", "Fall 2026"
   color?: string; // e.g. "indigo", "amber", "emerald", "sky", "rose", "purple"
   headCoachName?: string;
+  calendarUrl?: string; // Team-specific TeamSnap / iCal schedule feed URL
   notes?: string;
 }
 

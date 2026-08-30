@@ -65,6 +65,7 @@ interface ScheduleViewProps {
   onSyncGameToWeeklyData?: (week: string, opponent: string, date: string, time: string, location: string) => void;
   onSyncPracticeToPlan?: (event: ScheduleEvent, templateName?: string) => string; // returns practicePlan id
   onImportTeamSnapEvents?: (newEvents: Omit<ScheduleEvent, 'id' | 'createdAt' | 'lastEdited'>[], replaceExisting?: boolean) => void;
+  onUpdateTeam?: (teamId: string, updates: Partial<Team>) => void;
 }
 
 type ViewMode = 'timeline' | 'month' | 'grid';
@@ -87,6 +88,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   onSyncGameToWeeklyData,
   onSyncPracticeToPlan,
   onImportTeamSnapEvents,
+  onUpdateTeam,
 }) => {
   const safeScheduleEvents = useMemo(() => scheduleEvents || [], [scheduleEvents]);
 
@@ -2216,6 +2218,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
           onClose={() => setIsTeamSnapSyncOpen(false)}
           activeTeam={activeTeam || { id: 'team-10u', name: '10U Youth Tackle', ageGroup: '10U', color: 'amber' }}
           existingEvents={safeScheduleEvents}
+          onUpdateTeamCalendarUrl={(tId, url) => {
+            if (onUpdateTeam) onUpdateTeam(tId, { calendarUrl: url });
+          }}
           onImportEvents={(newEvts, replaceExisting) => {
             if (onImportTeamSnapEvents) {
               onImportTeamSnapEvents(newEvts, replaceExisting);

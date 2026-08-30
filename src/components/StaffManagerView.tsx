@@ -67,6 +67,7 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
   const [newTeamAge, setNewTeamAge] = useState('10U');
   const [newTeamSeason, setNewTeamSeason] = useState('2026');
   const [newTeamColor, setNewTeamColor] = useState('indigo');
+  const [newTeamCalendarUrl, setNewTeamCalendarUrl] = useState('');
 
   // Add Staff Coach Modal State
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
@@ -101,9 +102,11 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
       season: newTeamSeason.trim() || '2026',
       color: newTeamColor,
       headCoachName: 'Head Coach',
+      calendarUrl: newTeamCalendarUrl.trim() || undefined,
     });
     setNewTeamName('');
     setNewTeamAge('10U');
+    setNewTeamCalendarUrl('');
     setShowAddTeamModal(false);
   };
 
@@ -115,6 +118,7 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
       ageGroup: editingTeam.ageGroup?.trim(),
       season: editingTeam.season?.trim(),
       color: editingTeam.color,
+      calendarUrl: editingTeam.calendarUrl?.trim() || undefined,
     });
     setEditingTeam(null);
   };
@@ -638,6 +642,22 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-300 mb-1">
+                  TeamSnap / iCal Feed URL (Optional)
+                </label>
+                <input
+                  type="url"
+                  value={newTeamCalendarUrl}
+                  onChange={(e) => setNewTeamCalendarUrl(e.target.value)}
+                  placeholder="http://ical-cdn.teamsnap.com/team_schedule/..."
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Each team can have its own separate TeamSnap calendar feed URL.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">
                   Badge Color Theme
                 </label>
                 <div className="flex items-center gap-3">
@@ -746,6 +766,24 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-indigo-500"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">
+                  TeamSnap / iCal Feed URL
+                </label>
+                <input
+                  type="url"
+                  value={editingTeam.calendarUrl || ''}
+                  onChange={(e) =>
+                    setEditingTeam({ ...editingTeam, calendarUrl: e.target.value })
+                  }
+                  placeholder="http://ical-cdn.teamsnap.com/team_schedule/..."
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Custom schedule feed for this team.
+                </p>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">

@@ -1000,11 +1000,17 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                                     </span>
                                   </label>
                                   <button
-                                    onClick={() => onDeleteSavedCoach(coachName)}
-                                    className="text-rose-400 hover:text-rose-300 p-0.5"
-                                    title="Delete Coach"
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (confirm(`Remove "${coachName}" from the team coach list?`)) {
+                                        onDeleteSavedCoach(coachName);
+                                      }
+                                    }}
+                                    className="text-slate-500 hover:text-rose-400 p-1 rounded-md transition-colors"
+                                    title={`Delete ${coachName} from team list`}
                                   >
-                                    <X className="w-3 h-3" />
+                                    <Trash2 className="w-3 h-3" />
                                   </button>
                                 </div>
                               );

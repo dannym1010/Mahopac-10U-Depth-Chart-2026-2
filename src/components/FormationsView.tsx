@@ -324,9 +324,9 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
 
                       {/* Formation Grid Row */}
                       <div
-                        className="formation-grid-row grid gap-2.5 p-3 bg-slate-900/60 border border-slate-700/80 rounded-2xl overflow-x-auto print:overflow-visible print:p-1.5 print:gap-1.5"
+                        className="formation-grid-row grid gap-2.5 p-3 bg-slate-900/60 border border-slate-700/80 rounded-2xl overflow-x-auto print:overflow-visible print:p-1.5 print:gap-1.5 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
                         style={{
-                          gridTemplateColumns: `repeat(${slotCount}, minmax(0, 1fr))`,
+                          gridTemplateColumns: `repeat(${slotCount}, minmax(115px, 1fr))`,
                         }}
                       >
                         {positionsList.map((pos, pIdx) => {

@@ -268,12 +268,14 @@ export default function App() {
   // Ensure current week object exists
   const ensureWeekExists = (week: string) => {
     setWeeklyData((prev) => {
-      if (prev[week] && prev[week].formations?.length) return prev;
+      if (prev[week] && prev[week].formations && prev[week].formations.length > 0) return prev;
 
       const templateForms =
         prev['0']?.formations && prev['0'].formations.length > 0
           ? prev['0'].formations
-          : defaultFormations;
+          : defaultFormations && defaultFormations.length > 0
+            ? defaultFormations
+            : INITIAL_DEFAULT_FORMATIONS;
 
       return {
         ...prev,
@@ -307,47 +309,48 @@ export default function App() {
 
   // Trigger Save to LocalStorage and Firestore (if available)
   const saveStateToStorage = (scope: string = 'all') => {
-    safeJSONSet('footballWeeklyData', weeklyData);
-    safeJSONSet('footballDefaultFormations', defaultFormations);
-    safeJSONSet('footballPracticeData', practiceData);
-    safeJSONSet('footballPracticeTemplates', practiceTemplates);
-    safeJSONSet('footballCascadingDrills', cascadingDrills);
-    safeJSONSet('footballPdfGuidesTree', guideTree);
-    safeJSONSet('footballPdfGuidesOrder', guideOrder);
-    safeJSONSet('footballSavedCoaches', savedCoaches);
-    safeJSONSet('footballTeamSavedCoaches', teamSavedCoaches);
-    safeJSONSet('footballTeamCoaches', staffList);
-    safeJSONSet('footballMasterPlays', masterPlayLibrary);
-    safeJSONSet('footballCollapsedFolders', collapsedFolders);
-    safeJSONSet('footballScheduleEvents', scheduleEvents);
-    safeJSONSet('footballRoster', roster);
-    safeJSONSet('footballTeams', teams);
-    safeJSONSet('footballSeasonConfig', seasonConfig);
-    safeJSONSet('footballAttendanceLogs', attendanceLogs);
+    const currentState = latestStateRef.current;
+    safeJSONSet('footballWeeklyData', currentState.weeklyData);
+    safeJSONSet('footballDefaultFormations', currentState.defaultFormations);
+    safeJSONSet('footballPracticeData', currentState.practiceData);
+    safeJSONSet('footballPracticeTemplates', currentState.practiceTemplates);
+    safeJSONSet('footballCascadingDrills', currentState.cascadingDrills);
+    safeJSONSet('footballPdfGuidesTree', currentState.guideTree);
+    safeJSONSet('footballPdfGuidesOrder', currentState.guideOrder);
+    safeJSONSet('footballSavedCoaches', currentState.savedCoaches);
+    safeJSONSet('footballTeamSavedCoaches', currentState.teamSavedCoaches);
+    safeJSONSet('footballTeamCoaches', currentState.staffList);
+    safeJSONSet('footballMasterPlays', currentState.masterPlayLibrary);
+    safeJSONSet('footballCollapsedFolders', currentState.collapsedFolders);
+    safeJSONSet('footballScheduleEvents', currentState.scheduleEvents);
+    safeJSONSet('footballRoster', currentState.roster);
+    safeJSONSet('footballTeams', currentState.teams);
+    safeJSONSet('footballSeasonConfig', currentState.seasonConfig);
+    safeJSONSet('footballAttendanceLogs', currentState.attendanceLogs);
 
     const { db } = getFirebaseServices();
     if (db && initialCloudLoadDoneRef.current) {
       const payload = {
-        weeklyData,
-        defaultFormations,
-        practiceData,
-        practiceTemplates,
-        cascadingDrills,
-        guideTree,
-        guideOrder,
-        savedCoaches,
-        teamSavedCoaches,
-        staffList,
-        masterPlayLibrary,
-        collapsedFolders,
-        scheduleEvents,
-        roster,
-        teams,
-        seasonConfig,
-        attendanceLogs,
+        weeklyData: currentState.weeklyData,
+        defaultFormations: currentState.defaultFormations,
+        practiceData: currentState.practiceData,
+        practiceTemplates: currentState.practiceTemplates,
+        cascadingDrills: currentState.cascadingDrills,
+        guideTree: currentState.guideTree,
+        guideOrder: currentState.guideOrder,
+        savedCoaches: currentState.savedCoaches,
+        teamSavedCoaches: currentState.teamSavedCoaches,
+        staffList: currentState.staffList,
+        masterPlayLibrary: currentState.masterPlayLibrary,
+        collapsedFolders: currentState.collapsedFolders,
+        scheduleEvents: currentState.scheduleEvents,
+        roster: currentState.roster,
+        teams: currentState.teams,
+        seasonConfig: currentState.seasonConfig,
+        attendanceLogs: currentState.attendanceLogs,
       };
 
-      const payloadJson = JSON.stringify(payload);
+      const payloadJson = safeJSONStringify(payload);
       if (payloadJson === lastSavedPayloadRef.current) {
         // No data change detected, skip Firestore set to prevent write loop
         return;
@@ -545,8 +548,18 @@ export default function App() {
                     data.roster && Array.isArray(data.roster)
                       ? data.roster
                       : latestStateRef.current.roster,
+                  teams:
+                    data.teams && Array.isArray(data.teams) && data.teams.length > 0
+                      ? data.teams
+                      : latestStateRef.current.teams,
+                  seasonConfig:
+                    data.seasonConfig || latestStateRef.current.seasonConfig,
+                  attendanceLogs:
+                    data.attendanceLogs && Array.isArray(data.attendanceLogs)
+                      ? data.attendanceLogs
+                      : latestStateRef.current.attendanceLogs,
                 };
-                const remotePayloadJson = JSON.stringify(remotePayload);
+                const remotePayloadJson = safeJSONStringify(remotePayload);
 
                 // If remote matches what we just sent or already have, do not reset state
                 if (remotePayloadJson === lastSavedPayloadRef.current) {
@@ -565,6 +578,7 @@ export default function App() {
 
                 if (data.weeklyData && Object.keys(data.weeklyData).length > 0) {
                   setWeeklyData(data.weeklyData);
+                  latestStateRef.current.weeklyData = data.weeklyData;
                 }
                 if (
                   data.defaultFormations &&
@@ -572,49 +586,61 @@ export default function App() {
                   data.defaultFormations.length > 0
                 ) {
                   setDefaultFormations(data.defaultFormations);
+                  latestStateRef.current.defaultFormations = data.defaultFormations;
                 }
                 if (data.practiceData && Array.isArray(data.practiceData)) {
                   setPracticeData(data.practiceData);
+                  latestStateRef.current.practiceData = data.practiceData;
                 }
                 if (data.practiceTemplates) {
                   setPracticeTemplates(data.practiceTemplates);
+                  latestStateRef.current.practiceTemplates = data.practiceTemplates;
                 }
                 if (data.cascadingDrills) {
                   setCascadingDrills(data.cascadingDrills);
+                  latestStateRef.current.cascadingDrills = data.cascadingDrills;
                 }
                 if (data.guideTree) {
                   setGuideTree(data.guideTree);
+                  latestStateRef.current.guideTree = data.guideTree;
                 }
                 if (data.guideOrder) {
                   setGuideOrder(data.guideOrder);
+                  latestStateRef.current.guideOrder = data.guideOrder;
                 }
-                if (data.savedCoaches) {
+                if (data.savedCoaches && Array.isArray(data.savedCoaches)) {
                   setSavedCoaches(data.savedCoaches);
+                  latestStateRef.current.savedCoaches = data.savedCoaches;
                 }
-                if (data.teamSavedCoaches) {
+                if (data.teamSavedCoaches && typeof data.teamSavedCoaches === 'object') {
                   setTeamSavedCoaches(data.teamSavedCoaches);
+                  latestStateRef.current.teamSavedCoaches = data.teamSavedCoaches;
                 }
-                if (data.staffList) {
+                if (data.staffList && Array.isArray(data.staffList)) {
                   setStaffList(data.staffList);
+                  latestStateRef.current.staffList = data.staffList;
                 }
                 if (data.masterPlayLibrary) {
                   setMasterPlayLibrary(data.masterPlayLibrary);
+                  latestStateRef.current.masterPlayLibrary = data.masterPlayLibrary;
                 }
                 if (data.collapsedFolders) {
                   setCollapsedFolders(data.collapsedFolders);
+                  latestStateRef.current.collapsedFolders = data.collapsedFolders;
                 }
                 if (
                   data.scheduleEvents &&
-                  Array.isArray(data.scheduleEvents) &&
-                  data.scheduleEvents.length > 0
+                  Array.isArray(data.scheduleEvents)
                 ) {
                   setScheduleEvents(data.scheduleEvents);
+                  latestStateRef.current.scheduleEvents = data.scheduleEvents;
                 }
                 if (
                   data.roster &&
                   Array.isArray(data.roster)
                 ) {
                   setRoster(data.roster);
+                  latestStateRef.current.roster = data.roster;
                 }
                 if (
                   data.teams &&
@@ -622,15 +648,18 @@ export default function App() {
                   data.teams.length > 0
                 ) {
                   setTeams(data.teams);
+                  latestStateRef.current.teams = data.teams;
                 }
                 if (data.seasonConfig) {
                   setSeasonConfig(data.seasonConfig);
+                  latestStateRef.current.seasonConfig = data.seasonConfig;
                 }
                 if (
                   data.attendanceLogs &&
                   Array.isArray(data.attendanceLogs)
                 ) {
                   setAttendanceLogs(data.attendanceLogs);
+                  latestStateRef.current.attendanceLogs = data.attendanceLogs;
                 }
                 initialCloudLoadDoneRef.current = true;
                 setSyncStatus({ text: '✅ Live Cloud Synced', color: '#22c55e' });
@@ -697,6 +726,7 @@ export default function App() {
     guideTree,
     guideOrder,
     savedCoaches,
+    teamSavedCoaches,
     staffList,
     masterPlayLibrary,
     collapsedFolders,
@@ -714,7 +744,14 @@ export default function App() {
     opponent: '',
   };
 
-  const currentFormations = currentWeekState.formations || defaultFormations;
+  const currentFormations =
+    (currentWeekState.formations && currentWeekState.formations.length > 0)
+      ? currentWeekState.formations
+      : (weeklyData['0']?.formations && weeklyData['0'].formations.length > 0)
+        ? weeklyData['0'].formations
+        : (defaultFormations && defaultFormations.length > 0)
+          ? defaultFormations
+          : INITIAL_DEFAULT_FORMATIONS;
   const currentDepthChart = currentWeekState.depthChart || {};
   const currentScrimmageChart = currentWeekState.scrimmageChart || {};
 
@@ -801,15 +838,18 @@ export default function App() {
       ...newTeamData,
       id: 'team_' + Date.now(),
     };
+    let updatedTeams: Team[] = [];
     setTeams((prev) => {
-      const updated = [...prev, newTeam];
-      safeJSONSet('footballTeams', updated);
-      return updated;
+      updatedTeams = [...prev, newTeam];
+      safeJSONSet('footballTeams', updatedTeams);
+      latestStateRef.current.teams = updatedTeams;
+      return updatedTeams;
     });
 
     // Seed default practice coaches for this new team
+    let updatedCoaches: Record<string, string[]> = {};
     setTeamSavedCoaches((prev) => {
-      const updated = {
+      updatedCoaches = {
         ...prev,
         [newTeam.id]: [
           newTeamData.headCoachName || 'Head Coach',
@@ -819,40 +859,74 @@ export default function App() {
           'Special Teams Coach',
         ],
       };
-      safeJSONSet('footballTeamSavedCoaches', updated);
-      return updated;
+      safeJSONSet('footballTeamSavedCoaches', updatedCoaches);
+      latestStateRef.current.teamSavedCoaches = updatedCoaches;
+      return updatedCoaches;
     });
 
     setActiveTeamId(newTeam.id);
     safeJSONSet('footballActiveTeamId', newTeam.id);
+
+    const { db } = getFirebaseServices();
+    if (db) {
+      db.collection('teamData')
+        .doc('depthChartData')
+        .set(
+          {
+            teams: updatedTeams,
+            teamSavedCoaches: updatedCoaches,
+            updatedAt: Date.now(),
+          },
+          { merge: true }
+        )
+        .catch((err: any) => console.warn('Firestore add team sync error:', err));
+    }
   };
 
   const handleUpdateTeam = (teamId: string, updated: Partial<Team>) => {
+    let updatedTeams: Team[] = [];
     setTeams((prev) => {
-      const updatedTeams = prev.map((t) => (t.id === teamId ? { ...t, ...updated } : t));
+      updatedTeams = prev.map((t) => (t.id === teamId ? { ...t, ...updated } : t));
       safeJSONSet('footballTeams', updatedTeams);
+      latestStateRef.current.teams = updatedTeams;
       return updatedTeams;
     });
+
+    const { db } = getFirebaseServices();
+    if (db) {
+      db.collection('teamData')
+        .doc('depthChartData')
+        .set(
+          {
+            teams: updatedTeams,
+            updatedAt: Date.now(),
+          },
+          { merge: true }
+        )
+        .catch((err: any) => console.warn('Firestore update team sync error:', err));
+    }
   };
 
   const handleDeleteTeam = (teamId: string) => {
+    let finalTeams: Team[] = [];
     setTeams((prev) => {
       const remaining = prev.filter((t) => t.id !== teamId);
-      const finalTeams =
+      finalTeams =
         remaining.length > 0
           ? remaining
           : [
               {
                 id: 'team_' + Date.now(),
-                name: 'New Football Team',
-                ageGroup: 'Youth',
+                name: '10U Youth Tackle',
+                ageGroup: '10U',
                 season: '2026 Season',
-                color: 'indigo',
+                color: 'amber',
                 headCoachName: 'Head Coach',
-                notes: 'Default program team',
+                notes: 'Primary program team',
               },
             ];
       safeJSONSet('footballTeams', finalTeams);
+      latestStateRef.current.teams = finalTeams;
 
       if (activeTeamId === teamId || !finalTeams.some((t) => t.id === activeTeamId)) {
         const nextId = finalTeams[0].id;
@@ -863,34 +937,66 @@ export default function App() {
     });
 
     // Clean up coach team assignments
+    let updatedStaff: StaffCoach[] = [];
     setStaffList((prev) => {
-      const updated = prev.map((coach) => {
+      updatedStaff = prev.map((coach) => {
         if (!coach.assignedTeamIds) return coach;
         return {
           ...coach,
           assignedTeamIds: coach.assignedTeamIds.filter((id) => id !== teamId),
         };
       });
-      safeJSONSet('footballTeamCoaches', updated);
-      return updated;
+      safeJSONSet('footballTeamCoaches', updatedStaff);
+      latestStateRef.current.staffList = updatedStaff;
+      return updatedStaff;
     });
 
     // Clean up per-team saved coaches
+    let updatedCoaches: Record<string, string[]> = {};
     setTeamSavedCoaches((prev) => {
       const copy = { ...prev };
       delete copy[teamId];
+      updatedCoaches = copy;
       safeJSONSet('footballTeamSavedCoaches', copy);
+      latestStateRef.current.teamSavedCoaches = copy;
       return copy;
     });
+
+    // Direct instant Firestore write to permanently delete the team from the cloud
+    const { db } = getFirebaseServices();
+    if (db) {
+      db.collection('teamData')
+        .doc('depthChartData')
+        .set(
+          {
+            teams: finalTeams,
+            staffList: updatedStaff,
+            teamSavedCoaches: updatedCoaches,
+            updatedAt: Date.now(),
+          },
+          { merge: true }
+        )
+        .catch((err: any) => console.warn('Firestore delete team sync error:', err));
+    }
   };
 
   const handleUpdateStaffAssignedTeams = (idx: number, teamIds: string[]) => {
+    let updated: StaffCoach[] = [];
     setStaffList((prev) => {
-      const updated = [...prev];
+      updated = [...prev];
       updated[idx] = { ...updated[idx], assignedTeamIds: teamIds };
       safeJSONSet('footballTeamCoaches', updated);
+      latestStateRef.current.staffList = updated;
       return updated;
     });
+
+    const { db } = getFirebaseServices();
+    if (db) {
+      db.collection('teamData')
+        .doc('depthChartData')
+        .set({ staffList: updated, updatedAt: Date.now() }, { merge: true })
+        .catch((err: any) => console.warn('Firestore staff update sync error:', err));
+    }
   };
 
   const handleAddStaffCoach = (
@@ -909,61 +1015,127 @@ export default function App() {
       status: 'Active',
       assignedTeamIds: assignedTeamIds && assignedTeamIds.length > 0 ? assignedTeamIds : [activeTeamId],
     };
+    let updatedStaff: StaffCoach[] = [];
     setStaffList((prev) => {
-      const updated = [...prev, newEntry];
-      safeJSONSet('footballTeamCoaches', updated);
-      return updated;
+      updatedStaff = [...prev, newEntry];
+      safeJSONSet('footballTeamCoaches', updatedStaff);
+      latestStateRef.current.staffList = updatedStaff;
+      return updatedStaff;
     });
+
+    const { db } = getFirebaseServices();
+    if (db) {
+      db.collection('teamData')
+        .doc('depthChartData')
+        .set({ staffList: updatedStaff, updatedAt: Date.now() }, { merge: true })
+        .catch((err: any) => console.warn('Firestore add staff sync error:', err));
+    }
   };
 
   const handleAddNewSavedCoach = (name: string, targetTeamId?: string) => {
     const tid = targetTeamId || activeTeamId;
+    let updatedTeamCoaches: Record<string, string[]> = {};
     setTeamSavedCoaches((prev) => {
       const currentList = prev[tid] || savedCoaches || DEFAULT_SAVED_COACHES;
       if (currentList.includes(name)) return prev;
-      const updated = {
+      updatedTeamCoaches = {
         ...prev,
         [tid]: [...currentList, name],
       };
-      safeJSONSet('footballTeamSavedCoaches', updated);
-      return updated;
+      safeJSONSet('footballTeamSavedCoaches', updatedTeamCoaches);
+      latestStateRef.current.teamSavedCoaches = updatedTeamCoaches;
+      return updatedTeamCoaches;
     });
+
+    let updatedSavedCoaches: string[] = [];
     setSavedCoaches((prev) => {
       if (prev.includes(name)) return prev;
-      const updated = [...prev, name];
-      safeJSONSet('footballSavedCoaches', updated);
-      return updated;
+      updatedSavedCoaches = [...prev, name];
+      safeJSONSet('footballSavedCoaches', updatedSavedCoaches);
+      latestStateRef.current.savedCoaches = updatedSavedCoaches;
+      return updatedSavedCoaches;
     });
+
+    const { db } = getFirebaseServices();
+    if (db) {
+      db.collection('teamData')
+        .doc('depthChartData')
+        .set(
+          {
+            teamSavedCoaches: latestStateRef.current.teamSavedCoaches,
+            savedCoaches: latestStateRef.current.savedCoaches,
+            updatedAt: Date.now(),
+          },
+          { merge: true }
+        )
+        .catch((err: any) => console.warn('Firestore add coach sync error:', err));
+    }
   };
 
   const handleDeleteSavedCoach = (name: string, targetTeamId?: string) => {
     const tid = targetTeamId || activeTeamId;
+    let updatedTeamCoaches: Record<string, string[]> = {};
     setTeamSavedCoaches((prev) => {
       const currentList = prev[tid] || savedCoaches || DEFAULT_SAVED_COACHES;
-      const updated = {
+      updatedTeamCoaches = {
         ...prev,
         [tid]: currentList.filter((c) => c !== name),
       };
-      safeJSONSet('footballTeamSavedCoaches', updated);
-      return updated;
+      safeJSONSet('footballTeamSavedCoaches', updatedTeamCoaches);
+      latestStateRef.current.teamSavedCoaches = updatedTeamCoaches;
+      return updatedTeamCoaches;
     });
+
+    let updatedSavedCoaches: string[] = [];
     setSavedCoaches((prev) => {
-      const updated = prev.filter((c) => c !== name);
-      safeJSONSet('footballSavedCoaches', updated);
-      return updated;
+      updatedSavedCoaches = prev.filter((c) => c !== name);
+      safeJSONSet('footballSavedCoaches', updatedSavedCoaches);
+      latestStateRef.current.savedCoaches = updatedSavedCoaches;
+      return updatedSavedCoaches;
     });
+
+    const { db } = getFirebaseServices();
+    if (db) {
+      db.collection('teamData')
+        .doc('depthChartData')
+        .set(
+          {
+            teamSavedCoaches: latestStateRef.current.teamSavedCoaches,
+            savedCoaches: latestStateRef.current.savedCoaches,
+            updatedAt: Date.now(),
+          },
+          { merge: true }
+        )
+        .catch((err: any) => console.warn('Firestore delete coach sync error:', err));
+    }
   };
 
   const handleCopyCoachesFromTeam = (sourceTeamId: string, targetTeamId: string) => {
     const sourceList = teamSavedCoaches[sourceTeamId] || savedCoaches || DEFAULT_SAVED_COACHES;
+    let updatedTeamCoaches: Record<string, string[]> = {};
     setTeamSavedCoaches((prev) => {
-      const updated = {
+      updatedTeamCoaches = {
         ...prev,
         [targetTeamId]: [...sourceList],
       };
-      safeJSONSet('footballTeamSavedCoaches', updated);
-      return updated;
+      safeJSONSet('footballTeamSavedCoaches', updatedTeamCoaches);
+      latestStateRef.current.teamSavedCoaches = updatedTeamCoaches;
+      return updatedTeamCoaches;
     });
+
+    const { db } = getFirebaseServices();
+    if (db) {
+      db.collection('teamData')
+        .doc('depthChartData')
+        .set(
+          {
+            teamSavedCoaches: updatedTeamCoaches,
+            updatedAt: Date.now(),
+          },
+          { merge: true }
+        )
+        .catch((err: any) => console.warn('Firestore copy coaches sync error:', err));
+    }
   };
 
   // Auto-select first formation if none selected
@@ -2796,9 +2968,13 @@ export default function App() {
             )}
 
             {/* 1. Formations View (Offense, Defense, Special Teams, Depth Chart Groups) */}
-            {['offense', 'defense', 'st', 'groups'].includes(activeUnit) && (
+            {['offense', 'defense', 'st', 'groups', 'depth_chart'].includes(activeUnit) && (
               <FormationsView
-                unit={activeUnit as 'offense' | 'defense' | 'st' | 'groups'}
+                unit={
+                  activeUnit === 'depth_chart'
+                    ? (depthSubUnit === 'scrimmage' ? 'offense' : (depthSubUnit || 'offense'))
+                    : (activeUnit as 'offense' | 'defense' | 'st' | 'groups')
+                }
                 formations={currentFormations}
                 depthChart={currentDepthChart}
                 selectedFormationId={selectedFormationId}
@@ -3260,6 +3436,7 @@ export default function App() {
                 onSyncPracticeToPlan={handleSyncPracticeToPlan}
                 onNavigateToWeek={handleNavigateToWeek}
                 onImportTeamSnapEvents={handleImportTeamSnapScheduleEvents}
+                onUpdateTeam={handleUpdateTeam}
               />
             )}
 

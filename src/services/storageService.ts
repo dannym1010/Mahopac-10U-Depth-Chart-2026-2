@@ -42,8 +42,15 @@ export function safeJSONStringify(data: any, space?: number): string {
       data,
       (_k, val) => {
         if (typeof val === 'object' && val !== null) {
-          if (typeof window !== 'undefined' && (val === window || (val as any).window === window)) return undefined;
+          if (
+            typeof window !== 'undefined' &&
+            (val === window || (val as any).window === window || val instanceof Event || val instanceof EventTarget)
+          ) {
+            return undefined;
+          }
           if (typeof Node !== 'undefined' && val instanceof Node) return undefined;
+          // Ignore React internal fiber or element references that may contain circular DOM nodes
+          if ((val as any).$$typeof || (val as any)._owner || (val as any)._store) return undefined;
           if (seen.has(val)) return undefined;
           seen.add(val);
         }
@@ -52,7 +59,7 @@ export function safeJSONStringify(data: any, space?: number): string {
       space
     );
   } catch (e) {
-    console.warn('safeJSONStringify error:', e);
+    console.warn('safeJSONStringify fallback caught error:', e);
     return '{}';
   }
 }
