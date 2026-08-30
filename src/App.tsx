@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Zap,
   Shield,
@@ -750,7 +750,7 @@ export default function App() {
       opponent: '',
     };
 
-  const currentFormations =
+  const rawFormations =
     (currentWeekState.formations && currentWeekState.formations.length > 0)
       ? currentWeekState.formations
       : (weeklyData[getScopedWeekKey(activeTeamId, '0')]?.formations && weeklyData[getScopedWeekKey(activeTeamId, '0')].formations.length > 0)
@@ -760,6 +760,20 @@ export default function App() {
           : (defaultFormations && defaultFormations.length > 0)
             ? defaultFormations
             : INITIAL_DEFAULT_FORMATIONS;
+
+  const currentFormations: FormationBoard[] = useMemo(() => {
+    return (rawFormations || [])
+      .filter((f): f is FormationBoard => Boolean(f && typeof f === 'object' && f.id))
+      .map((f) => ({
+        ...f,
+        rows: (f.rows || []).map((r, rIdx) => ({
+          ...r,
+          id: r.id || `row_${rIdx}`,
+          label: r.label || `Level ${rIdx + 1}`,
+          positions: (r.positions || []).filter(Boolean),
+        })),
+      }));
+  }, [rawFormations]);
   const currentDepthChart = currentWeekState.depthChart || {};
   const currentScrimmageChart = currentWeekState.scrimmageChart || {};
 

@@ -136,14 +136,14 @@ export const ScrimmageView: React.FC<ScrimmageViewProps> = ({
             </div>
 
             <div className="space-y-4 print:space-y-2">
-              {form.rows.map((row, rIdx) => {
-                const positionsList = row.positions || [];
-                const slotCount = positionsList.length || row.slotCount || 7;
+              {((form && Array.isArray(form.rows)) ? form.rows : []).map((row, rIdx) => {
+                const positionsList = (row && Array.isArray(row.positions)) ? row.positions : [];
+                const slotCount = positionsList.length || row?.slotCount || 7;
 
                 return (
-                  <div key={row.id || rIdx} className="space-y-1.5 print:space-y-1">
+                  <div key={row?.id || rIdx} className="space-y-1.5 print:space-y-1">
                     <div className="formation-row-header px-3 py-1.5 bg-slate-900/90 border border-slate-700 rounded-xl text-[10.5px] font-black text-slate-300 uppercase tracking-widest print:text-black">
-                      {row.label || `Level ${rIdx + 1}`} (Gold & Blue Rotation)
+                      {row?.label || `Level ${rIdx + 1}`} (Gold & Blue Rotation)
                     </div>
 
                     <div

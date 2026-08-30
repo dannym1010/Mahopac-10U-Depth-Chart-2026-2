@@ -361,12 +361,12 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
 
               {/* Rows inside Formation */}
               <div className="space-y-4 print:space-y-2">
-                {form.rows.map((row, rIdx) => {
-                  const positionsList = row.positions || [];
-                  const slotCount = positionsList.length || row.slotCount || 7;
+                {((form && Array.isArray(form.rows)) ? form.rows : []).map((row, rIdx) => {
+                  const positionsList = (row && Array.isArray(row.positions)) ? row.positions : [];
+                  const slotCount = positionsList.length || row?.slotCount || 7;
 
                   return (
-                    <div key={row.id || rIdx} className="space-y-1.5 print:space-y-1">
+                    <div key={row?.id || rIdx} className="space-y-1.5 print:space-y-1">
                       {/* Level/Row Header Bar */}
                       <div className="formation-row-header flex items-center justify-between px-3 py-1.5 bg-slate-900/90 border border-slate-700 rounded-xl">
                         <div
@@ -378,7 +378,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                             userRole === 'admin' ? 'cursor-pointer hover:text-indigo-300' : ''
                           }`}
                         >
-                          <span>{row.label || `Level ${rIdx + 1}`}</span>
+                          <span>{row?.label || `Level ${rIdx + 1}`}</span>
                           {userRole === 'admin' && (
                             <Edit2 className="w-2.5 h-2.5 opacity-60 print:hidden" />
                           )}

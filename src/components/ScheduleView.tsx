@@ -329,7 +329,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   // Get matching practice plan for an event
-  const getLinkedPracticePlan做到 = (evt: ScheduleEvent): PracticePlan | undefined => {
+  const getLinkedPracticePlan = (evt: ScheduleEvent): PracticePlan | undefined => {
     if (!evt || !practicePlans || !Array.isArray(practicePlans)) return undefined;
     if (evt.linkedPracticePlanId) {
       return practicePlans.find((p) => p && p.id === evt.linkedPracticePlanId);
@@ -344,7 +344,6 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             p.title.toLowerCase() === evt.title.toLowerCase()))
     );
   };
-  const getLinkedPracticePlan = getLinkedPracticePlan做到;
 
   // Handle Save Game
   const handleSaveGame = () => {
@@ -1472,8 +1471,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
           {/* Calendar Grid */}
           <div className="grid grid-cols-7 gap-1.5">
             {monthCalendarData.map((cell, idx) => {
-              const hasEvents = cell.events.length > 0;
-              const hasGame = cell.events.some((e) => e.type === 'game' || e.type === 'tournament');
+              const cellEvents = Array.isArray(cell?.events) ? cell.events : [];
+              const hasEvents = cellEvents.length > 0;
+              const hasGame = cellEvents.some((e) => e.type === 'game' || e.type === 'tournament');
 
               return (
                 <div
@@ -1502,14 +1502,14 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                     </span>
                     {hasEvents && (
                       <span className="text-[10px] text-slate-400 font-bold">
-                        {cell.events.length} {cell.events.length === 1 ? 'evt' : 'evts'}
+                        {cellEvents.length} {cellEvents.length === 1 ? 'evt' : 'evts'}
                       </span>
                     )}
                   </div>
 
                   {/* Day Events Badges */}
                   <div className="flex-1 space-y-1 overflow-y-auto no-scrollbar">
-                    {cell.events.map((evt) => {
+                    {cellEvents.map((evt) => {
                       const isGame = evt.type === 'game' || evt.type === 'tournament';
                       const isScrimmage = evt.type === 'scrimmage';
 

@@ -186,13 +186,13 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
 
           if (isScrimmageTab) {
             allForms
-              .filter((f) => f.unit === 'offense' || f.unit === 'defense')
+              .filter((f) => f && (f.unit === 'offense' || f.unit === 'defense'))
               .forEach((form) => {
-                form.rows.forEach((row) => {
-                  row.positions.forEach((pos) => {
+                (form.rows || []).forEach((row) => {
+                  (row.positions || []).forEach((pos) => {
                     if (pos && activeChart[pos.id]) {
-                      activeChart[pos.id].forEach((p, idx) => {
-                        if (String(p.num) === String(player.num)) {
+                      (activeChart[pos.id] || []).forEach((p, idx) => {
+                        if (p && String(p.num) === String(player.num)) {
                           placements.push({
                             posName: pos.name,
                             badgeClass:
@@ -210,14 +210,14 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
               });
           } else {
             const currentForm = allForms.find(
-              (f) => f.id === selectedFormationId && f.unit === activeUnit
+              (f) => f && f.id === selectedFormationId && f.unit === activeUnit
             );
             if (currentForm) {
-              currentForm.rows.forEach((row) => {
-                row.positions.forEach((pos) => {
+              (currentForm.rows || []).forEach((row) => {
+                (row.positions || []).forEach((pos) => {
                   if (pos && activeChart[pos.id]) {
-                    activeChart[pos.id].forEach((p, idx) => {
-                      if (String(p.num) === String(player.num)) {
+                    (activeChart[pos.id] || []).forEach((p, idx) => {
+                      if (p && String(p.num) === String(player.num)) {
                         placements.push({
                           posName: pos.name,
                           badgeClass:

@@ -126,11 +126,11 @@ export const Header: React.FC<HeaderProps> = ({
                   Active Team
                 </span>
                 <select
-                  value={activeTeamId || accessibleTeams[0]?.id}
+                  value={activeTeamId || (accessibleTeams && accessibleTeams[0]?.id) || ''}
                   onChange={(e) => onSelectTeam && onSelectTeam(e.target.value)}
                   className="bg-transparent font-black text-xs text-white focus:outline-none cursor-pointer pr-1 py-0.5"
                 >
-                  {accessibleTeams.map((t) => (
+                  {(accessibleTeams || []).map((t) => (
                     <option
                       key={t.id}
                       value={t.id}

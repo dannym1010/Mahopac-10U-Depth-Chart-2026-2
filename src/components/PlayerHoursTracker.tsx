@@ -587,10 +587,10 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
               const thisWeekHours = Number(player.weeklyHours?.[selectedWeekForLog] || 0);
 
               // Calculate player attendance count from attendanceLogs
-              const attendedCount = attendanceLogs.filter((log) =>
-                log.presentPlayerNums.includes(player.num)
+              const attendedCount = (attendanceLogs || []).filter((log) =>
+                Array.isArray(log?.presentPlayerNums) && log.presentPlayerNums.includes(player.num)
               ).length;
-              const totalLoggedPractices = attendanceLogs.length;
+              const totalLoggedPractices = (attendanceLogs || []).length;
               const attRate = totalLoggedPractices > 0 ? Math.round((attendedCount / totalLoggedPractices) * 100) : 100;
 
               return (
@@ -776,8 +776,10 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
           ) : (
             <div className="space-y-3">
               {attendanceLogs.map((log) => {
-                const presentCount = log.presentPlayerNums.length;
-                const absentCount = log.absentPlayerNums.length;
+                const presentArr = Array.isArray(log?.presentPlayerNums) ? log.presentPlayerNums : [];
+                const absentArr = Array.isArray(log?.absentPlayerNums) ? log.absentPlayerNums : [];
+                const presentCount = presentArr.length;
+                const absentCount = absentArr.length;
                 const total = presentCount + absentCount;
                 const pct = total > 0 ? Math.round((presentCount / total) * 100) : 100;
 
@@ -822,7 +824,7 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
                           </div>
                           {absentCount > 0 && (
                             <div className="text-[10px] text-rose-400 font-bold truncate max-w-xs">
-                              Absent: {log.absentPlayerNums.map((n) => `#${n}`).join(', ')}
+                              Absent: {absentArr.map((n) => `#${n}`).join(', ')}
                             </div>
                           )}
                         </div>
