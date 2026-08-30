@@ -1,4 +1,5 @@
 export type UnitType = 
+  | 'depth_chart'
   | 'offense' 
   | 'defense' 
   | 'st' 
@@ -15,6 +16,38 @@ export type UnitType =
 
 export type UserRole = 'admin' | 'assistant';
 
+export interface Team {
+  id: string;
+  name: string;
+  ageGroup?: string; // e.g. "10U", "12U", "8U", "Flag"
+  season?: string; // e.g. "2026", "Fall 2026"
+  color?: string; // e.g. "indigo", "amber", "emerald", "sky", "rose", "purple"
+  headCoachName?: string;
+  notes?: string;
+}
+
+export interface SeasonConfig {
+  preseasonWeeksCount: number; // e.g. 4 (first 4 weeks are preseason)
+  preseasonWeekKeys?: string[]; // e.g. ["0", "pre-2", "pre-3", "pre-4"] or ["1", "2", "3", "4"]
+  regularSeasonWeeksCount: number; // e.g. 8
+  customWeekLabels?: Record<string, string>;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  date: string;
+  week: string;
+  title: string;
+  sessionType: 'conditioning' | 'padded';
+  hours: number;
+  location?: string;
+  presentPlayerNums: string[];
+  absentPlayerNums: string[];
+  excusedPlayerNums?: string[];
+  notes?: string;
+  timestamp: number;
+}
+
 export type ScheduleEventType =
   | 'game'
   | 'practice'
@@ -25,11 +58,14 @@ export type ScheduleEventType =
 
 export interface ScheduleEvent {
   id: string;
+  teamId?: string; // Links event to a specific team
   type: ScheduleEventType;
   title: string;
   week: string; // e.g. "pre-1", "pre-2", "0", "1", "2", "3", "playoffs"
   date: string; // YYYY-MM-DD
   startTime: string; // e.g. "09:00" or "17:30"
+  time?: string; // alias for startTime
+  dayOfWeek?: string;
   endTime?: string; // e.g. "11:00" or "19:00"
   location: string; // e.g. "Mahopac High School - Turf Field"
   locationType?: 'home' | 'away' | 'neutral';
@@ -51,6 +87,7 @@ export interface ScheduleEvent {
 
 export interface RosterPlayer {
   id?: string;
+  teamId?: string; // Links player to a specific team
   num: string;
   firstName: string;
   lastName: string;
@@ -125,14 +162,25 @@ export function calculatePlayerCompliance(player: Partial<RosterPlayer>): Player
   };
 }
 
-export function formatWeekLabel(weekKey: string): string {
-  if (!weekKey) return 'Week 1';
+export function formatWeekLabel(weekKey: string, config?: SeasonConfig): string {
+  if (!weekKey) return 'Regular Season • Week 1';
   const clean = weekKey.toLowerCase().trim();
+  
+  if (config?.customWeekLabels && config.customWeekLabels[weekKey]) {
+    return config.customWeekLabels[weekKey];
+  }
+
   if (clean === '0' || clean === 'pre-1' || clean === 'pre1' || clean === 'preseason-1') {
-    return 'Preseason Wk 1 (Conditioning)';
+    return 'Pre-Season • Wk 1 (Conditioning)';
   }
   if (clean === 'pre-2' || clean === 'pre2' || clean === 'preseason-2') {
-    return 'Preseason Wk 2 (Pads & Scrimmage Prep)';
+    return 'Pre-Season • Wk 2 (Conditioning & Shells)';
+  }
+  if (clean === 'pre-3' || clean === 'pre3' || clean === 'preseason-3') {
+    return 'Pre-Season • Wk 3 (Pads & Fundamentals)';
+  }
+  if (clean === 'pre-4' || clean === 'pre4' || clean === 'preseason-4') {
+    return 'Pre-Season • Wk 4 (Pads & Scrimmage)';
   }
   if (clean === 'playoffs' || clean === 'playoff' || clean === 'post') {
     return 'Post-Season • Playoffs';
@@ -140,8 +188,12 @@ export function formatWeekLabel(weekKey: string): string {
   if (clean === 'championship') {
     return 'Super Bowl / Championship';
   }
-  const numeric = clean.replace(/\D/g, '');
-  if (numeric) {
+
+  const numeric = parseInt(clean.replace(/\D/g, ''), 10);
+  if (!isNaN(numeric)) {
+    if (clean.startsWith('pre')) {
+      return `Pre-Season • Wk ${numeric}`;
+    }
     return `Regular Season • Week ${numeric}`;
   }
   return `Week ${weekKey}`;
@@ -262,15 +314,19 @@ export interface PracticePeriod {
 
 export interface PracticePlan {
   id: string;
+  teamId?: string; // Links practice plan to a specific team
   year: string;
   weekFolder: string;
+  dayFolder?: string;
   title: string;
   date: string;
-  day: string;
-  startTime: string;
+  day?: string;
+  startTime?: string;
   endTime?: string;
-  lastEdited: number;
-  plan: PracticePeriod[];
+  location?: string;
+  lastEdited?: number;
+  plan?: PracticePeriod[];
+  periods?: PracticePeriod[];
 }
 
 export interface PracticeTemplate {
@@ -282,6 +338,7 @@ export interface StaffCoach {
   email: string;
   role: string;
   status: 'Active' | 'Pending';
+  assignedTeamIds?: string[]; // IDs of teams this coach has access to. If undefined or includes 'all', coach has access to all teams.
 }
 
 export interface PlaybookGuideTree {

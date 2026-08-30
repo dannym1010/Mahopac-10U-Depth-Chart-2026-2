@@ -277,41 +277,25 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
                 </div>
               </div>
 
-              {/* Badges for active positions or compliance dot */}
-              <div className="flex items-center gap-1 flex-wrap justify-end shrink-0">
-                {placements.length > 0 ? (
-                  placements.map((pl, pIdx) => (
+              {/* Badges for active positions */}
+              {placements.length > 0 && (
+                <div className="flex items-center gap-1 flex-wrap justify-end shrink-0">
+                  {placements.map((pl, pIdx) => (
                     <span
                       key={pIdx}
                       className={`text-[9px] px-1.5 py-0.5 rounded-md uppercase tracking-wider ${pl.badgeClass}`}
                     >
                       {pl.posName}
                     </span>
-                  ))
-                ) : (
-                  <div
-                    className="flex items-center gap-1"
-                    title={comp.statusText}
-                  >
-                    {comp.isScrimmageCleared ? (
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-xs" title="10h Cond + 10h Pads: Cleared for Scrimmage" />
-                    ) : comp.isPadsCleared ? (
-                      <span className="w-2 h-2 rounded-full bg-sky-400 shadow-xs" title="Pads Cleared" />
-                    ) : (
-                      <span className="w-2 h-2 rounded-full bg-amber-400 shadow-xs" title="Conditioning Only" />
-                    )}
-                    <span className="text-[9px] font-mono text-slate-400">
-                      {comp.totalHours.toFixed(0)}h
-                    </span>
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </li>
           );
         })}
         {filteredRoster.length === 0 && (
           <div className="text-center py-6 text-xs text-slate-400 font-medium">
-            No player found
+            {roster.length === 0 ? 'No players on roster yet. Click "+ Edit" to add players.' : 'No matching players found'}
           </div>
         )}
       </ul>

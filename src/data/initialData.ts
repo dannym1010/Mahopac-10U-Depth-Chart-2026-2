@@ -1,4 +1,5 @@
 import {
+  Team,
   RosterPlayer,
   FormationBoard,
   DrillFolder,
@@ -8,36 +9,59 @@ import {
   PlaybookGuideOrder,
   StaffCoach,
   ScheduleEvent,
+  SeasonConfig,
+  AttendanceRecord,
 } from '../types';
 
-export const MASTER_ROSTER: RosterPlayer[] = [
-  { num: "2", firstName: "Mohammed", lastName: "Ibrahim", primaryPosition: "RB", secondaryPosition: "CB", offensivePosition: "4 (RB)", defensivePosition: "LCB", conditioningHours: 10, paddedHours: 10, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "4", firstName: "Vincent", lastName: "Cambigianis", primaryPosition: "WR", secondaryPosition: "CB", offensivePosition: "X (WR)", defensivePosition: "RCB", conditioningHours: 10, paddedHours: 10, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "6", firstName: "Andrew", lastName: "Henderson", primaryPosition: "TE", secondaryPosition: "DE", offensivePosition: "Y1 (TE)", defensivePosition: "E9 (DE)", conditioningHours: 10, paddedHours: 10, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "7", firstName: "Jayden", lastName: "Silva", primaryPosition: "RB", secondaryPosition: "OLB", offensivePosition: "4 (RB)", defensivePosition: "S (OLB)", conditioningHours: 10, paddedHours: 10, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "8", firstName: "James", lastName: "Kilkenny", primaryPosition: "WR", secondaryPosition: "FS", offensivePosition: "Z (WR)", defensivePosition: "FS", conditioningHours: 10, paddedHours: 8.5, weeklyHours: { '0': 5, '1': 4.5, '2': 3 } },
-  { num: "10", firstName: "Luke", lastName: "Mancini", primaryPosition: "QB", secondaryPosition: "FS", offensivePosition: "1 (QB)", defensivePosition: "FS", conditioningHours: 10, paddedHours: 10, isCaptain: true, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "11", firstName: "Dorian", lastName: "Berish", primaryPosition: "WR", secondaryPosition: "CB", offensivePosition: "W (WR)", defensivePosition: "LCB", conditioningHours: 10, paddedHours: 10, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "12", firstName: "Richard", lastName: "Barry", primaryPosition: "WR", secondaryPosition: "SS", offensivePosition: "X (WR)", defensivePosition: "R (OLB)", conditioningHours: 10, paddedHours: 7.5, weeklyHours: { '0': 5, '1': 4.5, '2': 3 } },
-  { num: "13", firstName: "Landon", lastName: "Veto", primaryPosition: "RB", secondaryPosition: "MLB", offensivePosition: "4 (RB)", defensivePosition: "M (MLB)", conditioningHours: 10, paddedHours: 10, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "15", firstName: "Henry", lastName: "Swansen", primaryPosition: "TE", secondaryPosition: "DE", offensivePosition: "Y1 (TE)", defensivePosition: "E5 (DE)", conditioningHours: 10, paddedHours: 10, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "17", firstName: "David", lastName: "Dicob", primaryPosition: "OL", secondaryPosition: "DT", offensivePosition: "RG", defensivePosition: "T3 (DT)", conditioningHours: 10, paddedHours: 6.0, weeklyHours: { '0': 5, '1': 3.5, '2': 3 } },
-  { num: "19", firstName: "Paul", lastName: "Nardella", primaryPosition: "QB", secondaryPosition: "CB", offensivePosition: "1 (QB)", defensivePosition: "RCB", conditioningHours: 10, paddedHours: 10, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "20", firstName: "Jack", lastName: "Furfaro", primaryPosition: "WR", secondaryPosition: "FS", offensivePosition: "Z (WR)", defensivePosition: "FS", conditioningHours: 10, paddedHours: 10, isCaptain: true, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "21", firstName: "Nash", lastName: "Ward", primaryPosition: "RB", secondaryPosition: "OLB", offensivePosition: "4 (RB)", defensivePosition: "W (OLB)", conditioningHours: 10, paddedHours: 10, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "22", firstName: "Jaxson", lastName: "Pestone", primaryPosition: "WR", secondaryPosition: "CB", offensivePosition: "W (WR)", defensivePosition: "LCB", conditioningHours: 8.5, paddedHours: 0, weeklyHours: { '0': 4.5, '1': 4.0, '2': 0 } },
-  { num: "27", firstName: "Sean", lastName: "Lacerra", primaryPosition: "RB", secondaryPosition: "MLB", offensivePosition: "4 (RB)", defensivePosition: "M (MLB)", conditioningHours: 10, paddedHours: 10, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "33", firstName: "Michael", lastName: "Frascone", primaryPosition: "TE", secondaryPosition: "DE", offensivePosition: "Y1 (TE)", defensivePosition: "E9 (DE)", conditioningHours: 10, paddedHours: 10, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "34", firstName: "Eddie", lastName: "Flemming", primaryPosition: "FB", secondaryPosition: "DT", offensivePosition: "4 (RB)", defensivePosition: "T1 (DT)", conditioningHours: 10, paddedHours: 9.0, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "40", firstName: "Chris", lastName: "Sokol", primaryPosition: "FB", secondaryPosition: "MLB", offensivePosition: "4 (RB)", defensivePosition: "W (OLB)", conditioningHours: 10, paddedHours: 10, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "44", firstName: "Caden", lastName: "Jones", primaryPosition: "OL", secondaryPosition: "DT", offensivePosition: "RT", defensivePosition: "T3 (DT)", conditioningHours: 6.0, paddedHours: 0, weeklyHours: { '0': 3.0, '1': 3.0, '2': 0 } },
-  { num: "48", firstName: "Michael", lastName: "Sweeny", primaryPosition: "C", secondaryPosition: "DT", offensivePosition: "C", defensivePosition: "T1 (DT)", conditioningHours: 10, paddedHours: 10, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "50", firstName: "Colin", lastName: "Convery", primaryPosition: "C", secondaryPosition: "DT", offensivePosition: "C", defensivePosition: "T1 (DT)", conditioningHours: 10, paddedHours: 10, isCaptain: true, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "52", firstName: "John", lastName: "Piqueras", primaryPosition: "RG", secondaryPosition: "DT", offensivePosition: "RG", defensivePosition: "T3 (DT)", conditioningHours: 10, paddedHours: 10, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "56", firstName: "Ryan", lastName: "Russell", primaryPosition: "LT", secondaryPosition: "DE", offensivePosition: "LT", defensivePosition: "E5 (DE)", conditioningHours: 10, paddedHours: 10, isCaptain: true, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } },
-  { num: "66", firstName: "Luca", lastName: "Mucciacciaro", primaryPosition: "LG", secondaryPosition: "DT", offensivePosition: "LG", defensivePosition: "T1 (DT)", conditioningHours: 10, paddedHours: 8.0, weeklyHours: { '0': 5, '1': 4.5, '2': 3.5 } },
-  { num: "99", firstName: "Conrad", lastName: "Crean", primaryPosition: "RT", secondaryPosition: "DT", offensivePosition: "RT", defensivePosition: "T3 (DT)", conditioningHours: 10, paddedHours: 10, weeklyHours: { '0': 5, '1': 4.5, '2': 4.5 } }
+export const DEFAULT_TEAMS: Team[] = [
+  {
+    id: 'team_9u',
+    name: '9U Youth Tackle',
+    ageGroup: '9U',
+    season: '2026 Season',
+    color: 'sky',
+    headCoachName: 'Head Coach',
+    notes: 'Official 9U youth tackle football division',
+  },
+  {
+    id: 'team_10u',
+    name: '10U Youth Tackle',
+    ageGroup: '10U',
+    season: '2026 Season',
+    color: 'indigo',
+    headCoachName: 'Head Coach',
+    notes: 'Official 10U tackle football division',
+  },
+  {
+    id: 'team_12u',
+    name: '12U Senior Tackle',
+    ageGroup: '12U',
+    season: '2026 Season',
+    color: 'amber',
+    headCoachName: 'Head Coach',
+    notes: 'Senior youth tackle division',
+  },
+  {
+    id: 'team_8u',
+    name: '8U Rookie / Flag',
+    ageGroup: '8U',
+    season: '2026 Season',
+    color: 'emerald',
+    headCoachName: 'Head Coach',
+    notes: 'Developmental rookie program',
+  },
+  {
+    id: 'team_6u',
+    name: '6U Flag Football',
+    ageGroup: '6U',
+    season: '2026 Season',
+    color: 'purple',
+    headCoachName: 'Head Coach',
+    notes: 'Introductory flag division',
+  },
 ];
+
+export const MASTER_ROSTER: RosterPlayer[] = [];
 
 export const INITIAL_DEFAULT_FORMATIONS: FormationBoard[] = [
   {
@@ -326,7 +350,7 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "Team Stretch & Dynamic Warm-Up",
           desc: "Dynamic stretching, knee tucks, bounding, calisthenics",
-          coach: "Coach Danny",
+          coach: "Head Coach",
           focus: "Flexibility, energy & focus"
         }
       ]
@@ -339,7 +363,7 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "Agility Ladder & Footwork Circuit",
           desc: "Quick feet, shuffle, 5-yard sprints",
-          coach: "Coach Mike",
+          coach: "Conditioning Coach",
           focus: "Speed & foot placement"
         }
       ]
@@ -352,13 +376,13 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "QB / RB Mesh & Pass Routes",
           desc: "Hand-off timing, quick slant & out routes",
-          coach: "Coach Danny",
+          coach: "Offensive Coach",
           focus: "Ball security & timing"
         },
         {
           name: "OL Drive & Reach Blocking",
           desc: "Pad leverage, gap steps, punch technique",
-          coach: "Coach John",
+          coach: "Line Coach",
           focus: "First 6-inch step & pad level"
         }
       ]
@@ -371,13 +395,13 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "DL Shed & Pursuit Angles",
           desc: "Get-off, rip/swim moves, bag tackle",
-          coach: "Coach Dave",
+          coach: "Defensive Line Coach",
           focus: "Attack blocker, maintain gap"
         },
         {
           name: "LB / DB Zone Drops & Tackling",
           desc: "Cover-2 / Cover-3 pass drops & pursuit alleys",
-          coach: "Coach Mike",
+          coach: "Defensive Backs Coach",
           focus: "Eyes on QB, break on throw"
         }
       ]
@@ -403,7 +427,7 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "Team 11-on-11 Scrimmage / Script Install",
           desc: "Live script install vs scout defense, two-minute drill",
-          coach: "Head Coach Danny",
+          coach: "Head Coach",
           focus: "Huddle speed, pre-snap alignment & execution"
         }
       ]
@@ -418,7 +442,7 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "Chalk Talk & Script Review",
           desc: "Whiteboard walk-through of weekly opponent tendencies",
-          coach: "Coach Danny",
+          coach: "Head Coach",
           focus: "Mental assignments & checks"
         }
       ]
@@ -431,7 +455,7 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "Light Stretch & Footwork",
           desc: "No pads dynamic warm-up and foam rolling",
-          coach: "Coach Mike",
+          coach: "Conditioning Coach",
           focus: "Mobility & recovery"
         }
       ]
@@ -444,7 +468,7 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "Offensive Walkthrough vs Air",
           desc: "Slow speed install, motion timing, cadence calls",
-          coach: "Coach Danny",
+          coach: "Offensive Coach",
           focus: "Zero false starts, clean mesh"
         }
       ]
@@ -457,7 +481,7 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "Defensive Alignment Walkthrough",
           desc: "Gap fits, motion adjustment, secondary rotation",
-          coach: "Coach John",
+          coach: "Defensive Coach",
           focus: "Proper pre-snap communication"
         }
       ]
@@ -495,17 +519,40 @@ export const DEFAULT_GUIDES_ORDER: PlaybookGuideOrder = {
 };
 
 export const DEFAULT_SAVED_COACHES: string[] = [
-  "Coach Danny",
-  "Coach Mike",
-  "Coach John",
-  "Coach Dave",
-  "Coach Tony",
-  "Coach Steve"
+  "Head Coach",
+  "Offensive Coordinator",
+  "Defensive Coordinator",
+  "Line Coach",
+  "Special Teams Coach"
 ];
 
+export const DEFAULT_SAVED_COACHES_BY_TEAM: Record<string, string[]> = {
+  team_10u: [
+    "Head Coach",
+    "Offensive Coordinator",
+    "Defensive Coordinator",
+    "Line Coach",
+    "Special Teams Coach",
+  ],
+  team_12u: [
+    "Head Coach",
+    "Offensive Coordinator",
+    "Defensive Coordinator",
+    "Line Coach",
+    "Special Teams Coach",
+  ],
+  team_8u: [
+    "Head Coach",
+    "Offensive Coordinator",
+    "Defensive Coordinator",
+    "Skill Coach",
+  ],
+};
+
 export const DEFAULT_TEAM_COACHES: StaffCoach[] = [
-  { email: "dannym1010@gmail.com", role: "Head Coach (Admin)", status: "Active" },
-  { email: "coachmike@mahopacfootball.org", role: "Assistant Coach", status: "Active" }
+  { email: "dannym1010@gmail.com", role: "Master Super Admin", status: "Active", assignedTeamIds: ["all"] },
+  { email: "coach.johnson@example.com", role: "Head Coach (Admin)", status: "Active", assignedTeamIds: ["team_10u"] },
+  { email: "coach.davis@example.com", role: "Assistant Coach", status: "Active", assignedTeamIds: ["team_10u"] },
 ];
 
 export const MASTER_PLAY_LIBRARY: string[] = [
@@ -531,7 +578,7 @@ export const DEFAULT_SCHEDULE_EVENTS: ScheduleEvent[] = [
     date: "2026-08-25",
     startTime: "17:30",
     endTime: "19:00",
-    location: "Mahopac High School - Track Field",
+    location: "Crane Road",
     locationType: "home",
     arrivalMinutesBefore: 15,
     focusOrNotes: "Helmets & Cleats. Conditioning, stance & starts, 11-person defensive alignments.",
@@ -546,7 +593,7 @@ export const DEFAULT_SCHEDULE_EVENTS: ScheduleEvent[] = [
     date: "2026-08-27",
     startTime: "17:30",
     endTime: "19:00",
-    location: "Mahopac High School - Turf Field",
+    location: "Crane Road",
     locationType: "home",
     arrivalMinutesBefore: 15,
     focusOrNotes: "Full Pads. Hawk tackling circuit, pursuit drill, goal-line stance.",
@@ -561,7 +608,7 @@ export const DEFAULT_SCHEDULE_EVENTS: ScheduleEvent[] = [
     date: "2026-08-29",
     startTime: "10:00",
     endTime: "12:00",
-    location: "Mahopac High School - Turf Stadium",
+    location: "Mahopac High School",
     locationType: "home",
     opponent: "Carmel Rams 10U",
     uniform: "Gold Practice Jerseys & White Pants",
@@ -578,7 +625,7 @@ export const DEFAULT_SCHEDULE_EVENTS: ScheduleEvent[] = [
     date: "2026-09-01",
     startTime: "17:30",
     endTime: "19:00",
-    location: "Mahopac High School - Turf Field",
+    location: "Crane Road",
     locationType: "home",
     arrivalMinutesBefore: 15,
     focusOrNotes: "Focus on 24 Dive, 25 Trap, and DL gap penetration keys.",
@@ -593,7 +640,7 @@ export const DEFAULT_SCHEDULE_EVENTS: ScheduleEvent[] = [
     date: "2026-09-03",
     startTime: "17:30",
     endTime: "19:00",
-    location: "Mahopac High School - Turf Field",
+    location: "Crane Road",
     locationType: "home",
     arrivalMinutesBefore: 15,
     focusOrNotes: "Shells. Wristband speed test, kickoff coverage, field goal block.",
@@ -625,7 +672,7 @@ export const DEFAULT_SCHEDULE_EVENTS: ScheduleEvent[] = [
     date: "2026-09-08",
     startTime: "17:30",
     endTime: "19:00",
-    location: "Mahopac High School - Turf Field",
+    location: "Crane Road",
     locationType: "home",
     arrivalMinutesBefore: 15,
     focusOrNotes: "Full Pads. Contain drills against buck sweep & dive options.",
@@ -640,7 +687,7 @@ export const DEFAULT_SCHEDULE_EVENTS: ScheduleEvent[] = [
     date: "2026-09-10",
     startTime: "17:30",
     endTime: "19:00",
-    location: "Mahopac High School - Turf Field",
+    location: "Crane Road",
     locationType: "home",
     arrivalMinutesBefore: 15,
     focusOrNotes: "Goal line offense, tight formations, 2-minute drill hurry up.",
@@ -655,7 +702,7 @@ export const DEFAULT_SCHEDULE_EVENTS: ScheduleEvent[] = [
     date: "2026-09-12",
     startTime: "11:30",
     endTime: "13:30",
-    location: "Mahopac High School - Turf Stadium",
+    location: "Mahopac High School",
     locationType: "home",
     opponent: "Somers Tuskers 10U",
     uniform: "Gold Home Jerseys & Gold Socks",
@@ -672,7 +719,7 @@ export const DEFAULT_SCHEDULE_EVENTS: ScheduleEvent[] = [
     date: "2026-09-15",
     startTime: "17:30",
     endTime: "19:00",
-    location: "Mahopac High School - Turf Field",
+    location: "Crane Road",
     locationType: "home",
     arrivalMinutesBefore: 15,
     focusOrNotes: "Secondary zone coverage, A-gap blitz pickup by running backs.",
@@ -687,7 +734,7 @@ export const DEFAULT_SCHEDULE_EVENTS: ScheduleEvent[] = [
     date: "2026-09-17",
     startTime: "17:30",
     endTime: "19:00",
-    location: "Mahopac High School - Turf Field",
+    location: "Crane Road",
     locationType: "home",
     arrivalMinutesBefore: 15,
     focusOrNotes: "Wristband calling rhythm, clock management, victory formation.",
@@ -719,7 +766,7 @@ export const DEFAULT_SCHEDULE_EVENTS: ScheduleEvent[] = [
     date: "2026-09-26",
     startTime: "13:00",
     endTime: "15:00",
-    location: "Mahopac High School - Turf Stadium",
+    location: "Mahopac High School",
     locationType: "home",
     opponent: "Brewster Bears 10U",
     uniform: "Gold Home Jerseys & Gold Helmets",
@@ -753,7 +800,7 @@ export const DEFAULT_SCHEDULE_EVENTS: ScheduleEvent[] = [
     date: "2026-10-10",
     startTime: "11:30",
     endTime: "13:30",
-    location: "Mahopac High School - Turf Stadium",
+    location: "Mahopac High School",
     locationType: "home",
     opponent: "Lakeland Hornets 10U",
     uniform: "Gold Home Jerseys",
@@ -797,5 +844,406 @@ export const DEFAULT_SCHEDULE_EVENTS: ScheduleEvent[] = [
     lastEdited: 1726300000000,
   }
 ];
+
+export const DEFAULT_SEASON_CONFIG: SeasonConfig = {
+  preseasonWeeksCount: 4,
+  preseasonWeekKeys: ['0', 'pre-1', 'pre-2', 'pre-3', 'pre-4'],
+  regularSeasonWeeksCount: 8,
+  customWeekLabels: {
+    '0': 'Pre-Season • Wk 1 (Conditioning)',
+    'pre-1': 'Pre-Season • Wk 1 (Conditioning)',
+    'pre-2': 'Pre-Season • Wk 2 (Conditioning & Shells)',
+    'pre-3': 'Pre-Season • Wk 3 (Pads & Fundamentals)',
+    'pre-4': 'Pre-Season • Wk 4 (Pads & Scrimmage)',
+    '1': 'Regular Season • Week 1',
+    '2': 'Regular Season • Week 2',
+    '3': 'Regular Season • Week 3',
+    '4': 'Regular Season • Week 4',
+    '5': 'Regular Season • Week 5',
+    '6': 'Regular Season • Week 6',
+    '7': 'Regular Season • Week 7',
+    '8': 'Regular Season • Week 8',
+    'playoffs': 'Post-Season • Playoffs',
+    'championship': 'Championship / Bowl Game',
+  }
+};
+
+export const DEFAULT_ATTENDANCE_LOGS: AttendanceRecord[] = [
+  {
+    id: "att_pre_1",
+    date: "2026-08-25",
+    week: "0",
+    title: "Preseason Conditioning Practice #1",
+    sessionType: "conditioning",
+    hours: 1.5,
+    location: "Main Field",
+    presentPlayerNums: [],
+    absentPlayerNums: [],
+    notes: "Mandatory Heat & Acclimatization conditioning. Helmets, tees & shorts only.",
+    timestamp: 1724600000000,
+  }
+];
+
+export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
+  {
+    id: "p_pre_1",
+    year: "2026",
+    weekFolder: "Preseason Wk 1",
+    dayFolder: "Tuesday 8/25",
+    date: "2026-08-25",
+    title: "Preseason Conditioning & Stance Starts #1",
+    location: "Main Field",
+    periods: [
+      {
+        time: 10,
+        category: "📋 General",
+        format: "static",
+        stations: [
+          {
+            name: "Team Dynamic Warm-Up & Stretches",
+            desc: "High knees, butt kicks, carioca, ankle mobility, team cheer.",
+            coach: "Head Coach",
+            focus: "Energy, team cadence, flexibility"
+          }
+        ]
+      },
+      {
+        time: 20,
+        category: "⚡ (Warm-up, Agility and Conditioning)",
+        format: "static",
+        stations: [
+          {
+            name: "Agility Ladder & 5-10-5 Pro Shuttle",
+            desc: "2-in-2-out, icky shuffle, quick deceleration and change of direction.",
+            coach: "Offensive Coach",
+            focus: "Low center of gravity, light fast feet"
+          }
+        ]
+      },
+      {
+        time: 20,
+        category: "🏈 Offense",
+        format: "rotating",
+        stations: [
+          {
+            name: "QB & RB Snap / Mesh Exchange",
+            desc: "Under center snap mechanics, 3-step drop, secure mesh handoff.",
+            coach: "Head Coach",
+            focus: "Zero fumbles, secure top elbow pocket"
+          },
+          {
+            name: "OL Stance, Get-Off & 6-Inch Power Step",
+            desc: "3-point stance alignment, first 6-inch drive step into sled.",
+            coach: "Line Coach",
+            focus: "Wide base, low pads, thumbs up punch"
+          }
+        ]
+      },
+      {
+        time: 20,
+        category: "🛡️ Defense",
+        format: "rotating",
+        stations: [
+          {
+            name: "DL Stance & First Step Get-Off",
+            desc: "Explode on ball movement, strike bag with inside hands, maintain gap integrity.",
+            coach: "Defensive Coach",
+            focus: "Eyes on ball, explosive hips"
+          },
+          {
+            name: "LB / DB Stance & Lateral Shuffle",
+            desc: "Athletic breakdown stance, downhill plant, mirror ball movement.",
+            coach: "Special Teams Coach",
+            focus: "Square shoulders, avoid crossing feet"
+          }
+        ]
+      },
+      {
+        time: 20,
+        category: "💥 Tackling",
+        format: "static",
+        stations: [
+          {
+            name: "Heads-Up / Seahawk Leverage Form Circuit",
+            desc: "Breakdown -> Buzz feet -> Near foot strike -> Wrap & squeeze dummy to ground.",
+            coach: "Defensive Coach",
+            focus: "Safety first: head out of the tackle, eyes up"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "p_pre_2",
+    year: "2026",
+    weekFolder: "Preseason Wk 1",
+    dayFolder: "Thursday 8/27",
+    date: "2026-08-27",
+    title: "Pursuit Angles & Base Offensive Install",
+    location: "Main Field",
+    periods: [
+      {
+        time: 10,
+        category: "📋 General",
+        format: "static",
+        stations: [
+          {
+            name: "Team Dynamic Warm-Up",
+            desc: "Progressive running, leg swings, arm circles, team break.",
+            coach: "Head Coach",
+            focus: "Focus and tempo"
+          }
+        ]
+      },
+      {
+        time: 25,
+        category: "🏈 Offense",
+        format: "rotating",
+        stations: [
+          {
+            name: "Inside Zone / 24 Dive Timing",
+            desc: "FB kick-out block, RB patience and cut off guard's hip.",
+            coach: "Head Coach",
+            focus: "Hitting the designated hole with speed"
+          },
+          {
+            name: "Pass Protection & Footwork",
+            desc: "Kick slide, punch timing, post-foot plant.",
+            coach: "Line Coach",
+            focus: "Balance and posture"
+          }
+        ]
+      },
+      {
+        time: 25,
+        category: "🛡️ Defense",
+        format: "rotating",
+        stations: [
+          {
+            name: "Defense Pursuit Drill (Alley Runs)",
+            desc: "All 11 players break on ball flight, take proper outside/inside pursuit lanes.",
+            coach: "Defensive Coach",
+            focus: "Containment and relentless hustle"
+          }
+        ]
+      },
+      {
+        time: 30,
+        category: "📋 General",
+        format: "static",
+        stations: [
+          {
+            name: "Team Offense 11-on-Air Script Review",
+            desc: "Run 10 core plays on air with cadence, shift motions, and huddle break.",
+            coach: "Head Coach",
+            focus: "Zero pre-snap penalties, crisp execution"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "p_pre_3",
+    year: "2026",
+    weekFolder: "Preseason Wk 2",
+    dayFolder: "Tuesday 9/01",
+    date: "2026-09-01",
+    title: "Shells & Fundamentals / Redzone Prep",
+    location: "Main Field",
+    periods: [
+      {
+        time: 15,
+        category: "⚡ (Warm-up, Agility and Conditioning)",
+        format: "static",
+        stations: [
+          {
+            name: "Dynamic Stretch & Foot Fire",
+            desc: "Fast feet reaction drill on whistle.",
+            coach: "Offensive Coach",
+            focus: "Reaction time"
+          }
+        ]
+      },
+      {
+        time: 30,
+        category: "🏈 Offense",
+        format: "rotating",
+        stations: [
+          {
+            name: "Sweep 28 Right & Reach Blocks",
+            desc: "PST reach block, guard seal, RB accelerate to sideline numbers.",
+            coach: "Head Coach",
+            focus: "Edge speed"
+          },
+          {
+            name: "WR Stalk Blocking & Routes",
+            desc: "Mirror DB, mirror hips, drive block on whistle.",
+            coach: "Special Teams Coach",
+            focus: "Effort without holding"
+          }
+        ]
+      },
+      {
+        time: 30,
+        category: "🛡️ Defense",
+        format: "rotating",
+        stations: [
+          {
+            name: "Cover 2 & Cover 3 Zone Drops",
+            desc: "DBs backpedal to deep third/half, rally on thrown football.",
+            coach: "Defensive Coach",
+            focus: "Eye on QB, break on release"
+          }
+        ]
+      },
+      {
+        time: 15,
+        category: "🎯 Special Teams",
+        format: "static",
+        stations: [
+          {
+            name: "Kickoff & Kickoff Return Alignment",
+            desc: "Lanes coverage, avoid wedge block, safety touchback protocol.",
+            coach: "Special Teams Coach",
+            focus: "Stay in designated running lane"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "p_pre_4",
+    year: "2026",
+    weekFolder: "Preseason Wk 2",
+    dayFolder: "Thursday 9/03",
+    date: "2026-09-03",
+    title: "Full Padded Scrimmage Dress Rehearsal",
+    location: "Main Field",
+    periods: [
+      {
+        time: 15,
+        category: "⚡ (Warm-up, Agility and Conditioning)",
+        format: "static",
+        stations: [
+          {
+            name: "Team Warmup & Calisthenics",
+            desc: "Full pre-game warm-up progression.",
+            coach: "Head Coach",
+            focus: "Game day tempo"
+          }
+        ]
+      },
+      {
+        time: 25,
+        category: "🏈 Offense",
+        format: "static",
+        stations: [
+          {
+            name: "Goal Line & Short Yardage Package",
+            desc: "I-Formation Heavy, Power 36, Wedge 0.",
+            coach: "Head Coach",
+            focus: "Low pad level, push the pile"
+          }
+        ]
+      },
+      {
+        time: 25,
+        category: "🛡️ Defense",
+        format: "static",
+        stations: [
+          {
+            name: "Goal Line Stand & Blitz Package",
+            desc: "A-gap blitz, pinch tackles, prevent push.",
+            coach: "Defensive Coach",
+            focus: "Penetration and secure tackle"
+          }
+        ]
+      },
+      {
+        time: 25,
+        category: "⚔️ Practice / Scrimmage",
+        format: "static",
+        stations: [
+          {
+            name: "Live 11-on-11 Controlled Scrimmage",
+            desc: "Offense vs Defense 15-play situational scrimmage with referee whistle.",
+            coach: "All Coaches",
+            focus: "Game speed execution and player rotations"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "p_w1_1",
+    year: "2026",
+    weekFolder: "Week 1",
+    dayFolder: "Tuesday 9/08",
+    date: "2026-09-08",
+    title: "Week 1 Game Plan & Execution",
+    location: "Main Field",
+    periods: [
+      {
+        time: 15,
+        category: "📋 General",
+        format: "static",
+        stations: [
+          {
+            name: "Chalk Talk & Defensive Scouting",
+            desc: "Review opponent 5-3 defense and blitz tendencies.",
+            coach: "Head Coach",
+            focus: "Blocking assignments"
+          }
+        ]
+      },
+      {
+        time: 30,
+        category: "🏈 Offense",
+        format: "rotating",
+        stations: [
+          {
+            name: "Counter 21 Reverse & Bootleg Pass Install",
+            desc: "Misdirection footwork, tight end drag route.",
+            coach: "Head Coach",
+            focus: "Sell the fake run"
+          },
+          {
+            name: "OL Trap Block Technique",
+            desc: "Backside guard pull, trap 3-tech defensive tackle.",
+            coach: "Line Coach",
+            focus: "Tight pull line, head in hole"
+          }
+        ]
+      },
+      {
+        time: 30,
+        category: "🛡️ Defense",
+        format: "rotating",
+        stations: [
+          {
+            name: "Defending the Wing-T / Sweep",
+            desc: "Force outside run back inside, linebackers scrape downhill.",
+            coach: "Defensive Coach",
+            focus: "Set edge firmly"
+          }
+        ]
+      },
+      {
+        time: 15,
+        category: "🎯 Special Teams",
+        format: "static",
+        stations: [
+          {
+            name: "Punt & Punt Protection Team",
+            desc: "Shield punt wall, long snap consistency, 40-yard sprint gunners.",
+            coach: "Special Teams Coach",
+            focus: "Zero blocked punts, fair catch awareness"
+          }
+        ]
+      }
+    ]
+  }
+];
+
 
 

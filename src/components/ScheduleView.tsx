@@ -19,6 +19,8 @@ import {
   ExternalLink,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Edit2,
   Trash2,
   AlertCircle,
@@ -32,6 +34,7 @@ import {
   CheckCircle2,
   X,
   SlidersHorizontal,
+  RefreshCw,
 } from 'lucide-react';
 import {
   ScheduleEvent,
@@ -40,8 +43,10 @@ import {
   WeekState,
   UserRole,
   PracticePeriod,
+  Team,
 } from '../types';
 import { PracticeWizardModal, PracticeWizardGeneratedResult } from './PracticeWizardModal';
+import { TeamSnapSyncModal } from './TeamSnapSyncModal';
 
 interface ScheduleViewProps {
   scheduleEvents: ScheduleEvent[];
@@ -49,6 +54,7 @@ interface ScheduleViewProps {
   weeklyData: Record<string, WeekState>;
   currentWeek: string;
   userRole: UserRole;
+  activeTeam?: Team;
   practiceTemplates?: Record<string, PracticePeriod[]>;
   onAddEvent: (event: Omit<ScheduleEvent, 'id' | 'createdAt' | 'lastEdited'>) => void;
   onUpdateEvent: (id: string, updates: Partial<ScheduleEvent>) => void;
@@ -58,6 +64,7 @@ interface ScheduleViewProps {
   onNavigateToWeek: (week: string, unit: 'scouting' | 'practice' | 'wristband' | 'groups', practiceId?: string) => void;
   onSyncGameToWeeklyData?: (week: string, opponent: string, date: string, time: string, location: string) => void;
   onSyncPracticeToPlan?: (event: ScheduleEvent, templateName?: string) => string; // returns practicePlan id
+  onImportTeamSnapEvents?: (newEvents: Omit<ScheduleEvent, 'id' | 'createdAt' | 'lastEdited'>[], replaceExisting?: boolean) => void;
 }
 
 type ViewMode = 'timeline' | 'month' | 'grid';
@@ -69,6 +76,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   weeklyData = {},
   currentWeek,
   userRole,
+  activeTeam,
   practiceTemplates = {},
   onAddEvent,
   onUpdateEvent,
@@ -78,12 +86,14 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   onNavigateToWeek,
   onSyncGameToWeeklyData,
   onSyncPracticeToPlan,
+  onImportTeamSnapEvents,
 }) => {
   const safeScheduleEvents = useMemo(() => scheduleEvents || [], [scheduleEvents]);
 
   const [viewMode, setViewMode] = useState<ViewMode>('timeline');
   const [typeFilter, setTypeFilter] = useState<FilterType>('all');
   const [weekFilter, setWeekFilter] = useState<string>('all');
+  const [phaseFilter, setPhaseFilter] = useState<'all' | 'pre' | 'regular' | 'playoffs'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [copied, setCopied] = useState(false);
 
@@ -94,6 +104,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   const [isAddGameModalOpen, setIsAddGameModalOpen] = useState(false);
   const [isAddPracticeModalOpen, setIsAddPracticeModalOpen] = useState(false);
   const [isCadenceWizardOpen, setIsCadenceWizardOpen] = useState(false);
+  const [isTeamSnapSyncOpen, setIsTeamSnapSyncOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
   const [scoreModalEvent, setScoreModalEvent] = useState<ScheduleEvent | null>(null);
 
@@ -103,9 +114,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   const [gameDate, setGameDate] = useState('2026-09-05');
   const [gameStartTime, setGameStartTime] = useState('10:00');
   const [gameEndTime, setGameEndTime] = useState('12:00');
-  const [gameLocation, setGameLocation] = useState('Carmel High School Athletic Stadium');
-  const [gameLocationType, setGameLocationType] = useState<'home' | 'away' | 'neutral'>('away');
-  const [gameUniform, setGameUniform] = useState('Gold Jerseys & White Pants');
+  const [gameLocation, setGameLocation] = useState('Mahopac High School');
+  const [gameLocationType, setGameLocationType] = useState<'home' | 'away' | 'neutral'>('home');
+  const [gameUniform, setGameUniform] = useState('Gold Home Jerseys & Gold Socks');
   const [gameArrivalMins, setGameArrivalMins] = useState(60);
   const [gameNotes, setGameNotes] = useState('');
   const [autoSyncScouting, setAutoSyncScouting] = useState(true);
@@ -116,7 +127,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   const [practiceDate, setPracticeDate] = useState('2026-09-01');
   const [practiceStartTime, setPracticeStartTime] = useState('17:30');
   const [practiceEndTime, setPracticeEndTime] = useState('19:00');
-  const [practiceLocation, setPracticeLocation] = useState('Mahopac High School - Turf Field');
+  const [practiceLocation, setPracticeLocation] = useState('Crane Road');
   const [practiceFocus, setPracticeFocus] = useState('');
   const [autoCreatePlan, setAutoCreatePlan] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState('Offense & Defense Full Practice');
@@ -134,7 +145,54 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   });
   const [cadenceStartTime, setCadenceStartTime] = useState('17:30');
   const [cadenceEndTime, setCadenceEndTime] = useState('19:00');
-  const [cadenceLocation, setCadenceLocation] = useState('Mahopac High School - Turf Field');
+  const [cadenceLocation, setCadenceLocation] = useState('Crane Road');
+
+  // Collapsed / Expanded state for timeline weeks: past and future weeks minimized, only current week expanded by default
+  const [expandedWeeks, setExpandedWeeks] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    if (currentWeek) {
+      initial[String(currentWeek)] = true;
+    }
+    return initial;
+  });
+
+  const isWeekExpanded = (weekKey: string) => {
+    if (weekKey in expandedWeeks) {
+      return expandedWeeks[weekKey];
+    }
+    return String(weekKey) === String(currentWeek);
+  };
+
+  const toggleWeekExpanded = (weekKey: string) => {
+    setExpandedWeeks((prev) => ({
+      ...prev,
+      [weekKey]: !isWeekExpanded(weekKey),
+    }));
+  };
+
+  const expandAllWeeks = (allWeekKeys: string[]) => {
+    const all: Record<string, boolean> = {};
+    allWeekKeys.forEach((wk) => {
+      all[wk] = true;
+    });
+    setExpandedWeeks(all);
+  };
+
+  const minimizeAllWeeks = (allWeekKeys: string[]) => {
+    const none: Record<string, boolean> = {};
+    allWeekKeys.forEach((wk) => {
+      none[wk] = false;
+    });
+    setExpandedWeeks(none);
+  };
+
+  const collapseNonCurrentWeeks = (allWeekKeys: string[]) => {
+    const initial: Record<string, boolean> = {};
+    allWeekKeys.forEach((wk) => {
+      initial[wk] = String(wk) === String(currentWeek);
+    });
+    setExpandedWeeks(initial);
+  };
 
   // Sort events chronologically
   const sortedEvents = useMemo(() => {
@@ -154,6 +212,16 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         if (typeFilter === 'practice' && event.type !== 'practice' && event.type !== 'walkthrough') return false;
         if (typeFilter === 'scrimmage' && event.type !== 'scrimmage') return false;
         if (typeFilter === 'meeting' && event.type !== 'meeting') return false;
+      }
+
+      // Phase Filter
+      if (phaseFilter !== 'all') {
+        const isPre = event.week.startsWith('pre') || event.week === '0';
+        const isPlayoffs = event.week === 'playoffs' || event.week === 'championship' || event.week === 'post';
+        const isRegular = !isPre && !isPlayoffs;
+        if (phaseFilter === 'pre' && !isPre) return false;
+        if (phaseFilter === 'regular' && !isRegular) return false;
+        if (phaseFilter === 'playoffs' && !isPlayoffs) return false;
       }
 
       // Week Filter
@@ -176,7 +244,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 
       return true;
     });
-  }, [sortedEvents, typeFilter, weekFilter, searchQuery]);
+  }, [sortedEvents, typeFilter, weekFilter, phaseFilter, searchQuery]);
 
   // Group events by Week for timeline view
   const eventsByWeek = useMemo(() => {
@@ -543,7 +611,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="font-black text-base md:text-lg text-slate-100 tracking-tight">
-                  Mahopac 10U Season Schedule &amp; Games
+                  {activeTeam ? activeTeam.name : 'Mahopac Football'} Season Schedule &amp; Games
                 </h2>
                 {stats.record && (
                   <span className="px-2.5 py-0.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black rounded-lg">
@@ -590,6 +658,15 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                   <span className="hidden sm:inline">Practice Wizard</span>
+                </button>
+
+                <button
+                  onClick={() => setIsTeamSnapSyncOpen(true)}
+                  className="px-3.5 py-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 text-white font-black text-xs rounded-xl border border-orange-400/40 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+                  title="Import / Sync Schedule directly from TeamSnap (iCal feed, CSV, or text)"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-white" />
+                  <span>Sync TeamSnap</span>
                 </button>
               </>
             )}
@@ -685,36 +762,95 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             ))}
           </div>
 
-          {/* Week Filter & Quick Search */}
-          <div className="flex items-center gap-2">
+          {/* Season Phase Pills & Week Filter & Quick Search */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Season Phase Selector */}
+            <div className="flex items-center gap-1 bg-slate-900/90 p-0.5 rounded-xl border border-slate-700">
+              <button
+                onClick={() => {
+                  setPhaseFilter('all');
+                  setWeekFilter('all');
+                }}
+                className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                  phaseFilter === 'all'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => {
+                  setPhaseFilter('pre');
+                  setWeekFilter('all');
+                }}
+                className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                  phaseFilter === 'pre'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                ⚡ Pre
+              </button>
+              <button
+                onClick={() => {
+                  setPhaseFilter('regular');
+                  setWeekFilter('all');
+                }}
+                className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                  phaseFilter === 'regular'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                🏈 Reg
+              </button>
+              <button
+                onClick={() => {
+                  setPhaseFilter('playoffs');
+                  setWeekFilter('all');
+                }}
+                className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                  phaseFilter === 'playoffs'
+                    ? 'bg-amber-500 text-slate-950'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                🏆 Playoff
+              </button>
+            </div>
+
             <select
               value={weekFilter}
               onChange={(e) => setWeekFilter(e.target.value)}
               className="bg-slate-900 text-slate-200 font-bold text-xs px-2.5 py-1.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 shrink-0"
             >
               <option value="all">All Weeks</option>
-              <optgroup label="⚡ Pre-Season">
+              <optgroup label="⚡ Pre-Season Weeks">
                 <option value="0">Pre-Season Wk 1 (Conditioning)</option>
-                <option value="pre-2">Pre-Season Wk 2 (Pads & Scrimmage)</option>
+                <option value="pre-2">Pre-Season Wk 2 (Conditioning &amp; Shells)</option>
+                <option value="pre-3">Pre-Season Wk 3 (Pads &amp; Fundamentals)</option>
+                <option value="pre-4">Pre-Season Wk 4 (Pads &amp; Scrimmage)</option>
               </optgroup>
-              <optgroup label="🏈 Regular Season">
+              <optgroup label="🏈 Regular Season Weeks">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((w) => (
                   <option key={w} value={String(w)}>
                     Regular Season • Week {w}
                   </option>
                 ))}
               </optgroup>
-              <optgroup label="🏆 Post-Season">
+              <optgroup label="🏆 Post-Season / Playoffs">
                 <option value="playoffs">Post-Season • Playoffs</option>
+                <option value="championship">Championship Game</option>
               </optgroup>
             </select>
 
-            <div className="relative flex-1">
+            <div className="relative flex-1 min-w-[140px]">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search games, fields, notes..."
+                placeholder="Search events, notes..."
                 className="w-full bg-slate-900 text-slate-100 font-medium text-xs pl-7 pr-3 py-1.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
               />
               <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2 top-2" />
@@ -814,7 +950,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 
       {/* VIEW 1: WEEKLY AGENDA / TIMELINE VIEW */}
       {viewMode === 'timeline' && (
-        <div className="space-y-6 print:hidden">
+        <div className="space-y-4 print:hidden">
           {Object.keys(eventsByWeek).length === 0 ? (
             <div className="bg-slate-800/90 rounded-3xl border border-slate-700/80 p-12 text-center text-slate-400">
               <CalendarIcon className="w-12 h-12 text-slate-600 mx-auto mb-3" />
@@ -824,280 +960,426 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
               </p>
             </div>
           ) : (
-            (Object.entries(eventsByWeek) as [string, ScheduleEvent[]][]).map(([weekKey, events]) => {
-              const weekGames = events.filter((e) => e.type === 'game' || e.type === 'tournament');
-              const weekPractices = events.filter((e) => e.type === 'practice' || e.type === 'walkthrough');
-              const weekScrimmages = events.filter((e) => e.type === 'scrimmage');
-              const mainGame = weekGames[0];
-              const weekOpponent = mainGame?.opponent || weeklyData[weekKey]?.opponent || 'Opponent TBD';
+            <>
+              {/* Timeline Week Visibility Controls */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 p-3 px-4 rounded-2xl border border-slate-700/60 text-xs shadow-md">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-300">Default View:</span>
+                  <span className="px-2.5 py-1 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 rounded-lg font-black text-xs flex items-center gap-1.5">
+                    <span>🎯 {getWeekName(currentWeek)} Active</span>
+                  </span>
+                  <span className="text-slate-400 hidden sm:inline text-[11px]">
+                    (Past &amp; future weeks minimized)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => collapseNonCurrentWeeks(Object.keys(eventsByWeek))}
+                    className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg border border-slate-700 font-bold transition-all text-xs flex items-center gap-1 shadow-xs"
+                    title="Minimize all past and future weeks, keep only current week open"
+                  >
+                    <span>🎯 Current Week Only</span>
+                  </button>
+                  <button
+                    onClick={() => expandAllWeeks(Object.keys(eventsByWeek))}
+                    className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 font-bold transition-all text-xs"
+                    title="Expand all weeks"
+                  >
+                    Expand All
+                  </button>
+                  <button
+                    onClick={() => minimizeAllWeeks(Object.keys(eventsByWeek))}
+                    className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 font-bold transition-all text-xs"
+                    title="Minimize all weeks"
+                  >
+                    Minimize All
+                  </button>
+                </div>
+              </div>
 
-              return (
-                <div
-                  key={weekKey}
-                  className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl overflow-hidden"
-                >
-                  {/* Week Header Banner */}
-                  <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 px-5 py-3.5 border-b border-slate-700/80 flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className="px-3 py-1 bg-indigo-600 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-xs">
-                        {getWeekName(weekKey)}
-                      </span>
-                      {mainGame ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-black text-slate-100">
-                            vs {weekOpponent}
+              {/* Weeks List */}
+              <div className="space-y-4">
+                {(Object.entries(eventsByWeek) as [string, ScheduleEvent[]][]).map(([weekKey, events]) => {
+                  const isExpanded = isWeekExpanded(weekKey);
+                  const isCurrent = String(weekKey) === String(currentWeek);
+                  const currWkNum = parseInt(currentWeek, 10) || 1;
+                  const wkNum = parseInt(weekKey, 10);
+                  const isPast = !isNaN(wkNum) && wkNum < currWkNum;
+                  const isFuture = !isNaN(wkNum) && wkNum > currWkNum;
+
+                  const weekGames = events.filter((e) => e.type === 'game' || e.type === 'tournament');
+                  const weekPractices = events.filter((e) => e.type === 'practice' || e.type === 'walkthrough');
+                  const weekScrimmages = events.filter((e) => e.type === 'scrimmage');
+                  const mainGame = weekGames[0];
+                  const weekOpponent = mainGame?.opponent || weeklyData[weekKey]?.opponent || 'Opponent TBD';
+
+                  return (
+                    <div
+                      key={weekKey}
+                      className={`bg-slate-800/95 backdrop-blur-md rounded-3xl border shadow-xl overflow-hidden transition-all duration-200 ${
+                        isCurrent
+                          ? 'border-indigo-500/70 ring-1 ring-indigo-500/30'
+                          : 'border-slate-700/80 hover:border-slate-600'
+                      }`}
+                    >
+                      {/* Week Header Banner (Clickable to toggle minimize / expand) */}
+                      <div
+                        onClick={() => toggleWeekExpanded(weekKey)}
+                        className={`px-5 py-3.5 border-b border-slate-700/80 flex flex-wrap items-center justify-between gap-3 cursor-pointer select-none transition-colors ${
+                          isCurrent
+                            ? 'bg-gradient-to-r from-indigo-950/60 via-slate-900 to-slate-900 hover:from-indigo-950/80'
+                            : 'bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 hover:bg-slate-850'
+                        }`}
+                      >
+                        <div className="flex items-center flex-wrap gap-2.5">
+                          <span
+                            className={`px-3 py-1 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-xs ${
+                              isCurrent ? 'bg-indigo-600' : 'bg-slate-700'
+                            }`}
+                          >
+                            {getWeekName(weekKey)}
                           </span>
-                          <span className="text-xs text-slate-400">
-                            &bull; {formatDateDisplay(mainGame.date)} @ {formatTimeDisplay(mainGame.startTime)}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-xs font-bold text-slate-400">
-                          {events.length} Scheduled Event{events.length > 1 ? 's' : ''}
-                        </span>
-                      )}
-                    </div>
 
-                    {/* Week-level Quick Translation Links */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onNavigateToWeek(weekKey, 'scouting')}
-                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all"
-                        title="Open weekly scouting report and coaching keys"
-                      >
-                        <FileSpreadsheet className="w-3 h-3 text-amber-400" />
-                        <span>Scouting</span>
-                      </button>
+                          {/* Status Badge */}
+                          {isCurrent && (
+                            <span className="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-lg text-[11px] font-black uppercase tracking-wider flex items-center gap-1">
+                              <span>🎯 Current Week</span>
+                            </span>
+                          )}
+                          {isPast && (
+                            <span className="px-2 py-0.5 bg-slate-700/50 text-slate-400 border border-slate-600/40 rounded-lg text-[10.5px] font-bold uppercase tracking-wider">
+                              Past Week
+                            </span>
+                          )}
+                          {isFuture && (
+                            <span className="px-2 py-0.5 bg-indigo-950/50 text-indigo-300 border border-indigo-500/30 rounded-lg text-[10.5px] font-bold uppercase tracking-wider">
+                              Upcoming
+                            </span>
+                          )}
 
-                      <button
-                        onClick={() => onNavigateToWeek(weekKey, 'practice')}
-                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all"
-                        title="Open practice plans for this week"
-                      >
-                        <ClipboardList className="w-3 h-3 text-indigo-400" />
-                        <span>Practices</span>
-                      </button>
-
-                      <button
-                        onClick={() => onNavigateToWeek(weekKey, 'wristband')}
-                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all"
-                        title="Open wristband call sheet"
-                      >
-                        <span>Wristband</span>
-                      </button>
-
-                      <button
-                        onClick={() => onNavigateToWeek(weekKey, 'groups')}
-                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all"
-                        title="Open weekly depth chart"
-                      >
-                        <span>Depth Chart</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Event Cards Grid for this week */}
-                  <div className="p-4 md:p-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {events.map((evt) => {
-                      const isGame = evt.type === 'game' || evt.type === 'tournament';
-                      const isScrimmage = evt.type === 'scrimmage';
-                      const isPractice = evt.type === 'practice' || evt.type === 'walkthrough';
-                      const linkedPlan = getLinkedPracticePlan(evt);
-
-                      return (
-                        <div
-                          key={evt.id}
-                          className={`rounded-2xl p-4 border transition-all flex flex-col justify-between ${
-                            isGame
-                              ? 'bg-slate-900/90 border-amber-500/40 shadow-lg shadow-amber-500/5 hover:border-amber-400'
-                              : isScrimmage
-                              ? 'bg-slate-900/80 border-purple-500/40 hover:border-purple-400'
-                              : 'bg-slate-900/70 border-slate-700/80 hover:border-slate-600'
-                          }`}
-                        >
-                          <div>
-                            {/* Card Top Pill & Actions */}
-                            <div className="flex items-center justify-between gap-2 mb-2">
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={`px-2 py-0.5 text-[10px] font-black uppercase rounded-md tracking-wider ${
-                                    isGame
-                                      ? 'bg-amber-400 text-slate-950 font-black'
-                                      : isScrimmage
-                                      ? 'bg-purple-600 text-white font-bold'
-                                      : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                                  }`}
-                                >
-                                  {isGame ? '🏈 GAME' : isScrimmage ? '⚔️ SCRIMMAGE' : '📋 PRACTICE'}
+                          {/* Main Game or Event Summary Preview */}
+                          {mainGame ? (
+                            <div className="flex items-center flex-wrap gap-2 ml-1">
+                              <span className="text-sm font-black text-slate-100">
+                                vs {weekOpponent}
+                              </span>
+                              <span className="text-xs text-slate-400">
+                                &bull; {formatDateDisplay(mainGame.date)} @ {formatTimeDisplay(mainGame.startTime)}
+                              </span>
+                              {mainGame.location && (
+                                <span className="text-xs text-slate-400 hidden md:inline">
+                                  &bull; 📍 {mainGame.location}
                                 </span>
-
-                                {evt.locationType && (
-                                  <span
-                                    className={`px-1.5 py-0.2 text-[9px] font-black uppercase rounded ${
-                                      evt.locationType === 'home'
-                                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                        : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                                    }`}
-                                  >
-                                    {evt.locationType}
-                                  </span>
-                                )}
-
-                                {evt.result?.outcome && (
-                                  <span
-                                    className={`px-2 py-0.5 text-[10px] font-black rounded-md ${
-                                      evt.result.outcome === 'W'
-                                        ? 'bg-emerald-500 text-slate-950'
-                                        : evt.result.outcome === 'L'
-                                        ? 'bg-rose-500 text-white'
-                                        : 'bg-amber-500 text-slate-950'
-                                    }`}
-                                  >
-                                    FINAL: {evt.result.outcome} ({evt.result.teamScore} - {evt.result.opponentScore})
-                                  </span>
-                                )}
-                              </div>
-
-                              {/* Admin Edit / Delete / Result Actions */}
-                              {userRole === 'admin' && (
-                                <div className="flex items-center gap-1 text-slate-400">
-                                  {isGame && (
-                                    <button
-                                      onClick={() => {
-                                        setScoreModalEvent(evt);
-                                        setTeamScore(evt.result?.teamScore || 0);
-                                        setOppScore(evt.result?.opponentScore || 0);
-                                        setRecapNotes(evt.result?.recapNotes || '');
-                                      }}
-                                      className="p-1 hover:text-amber-300 text-[10px] font-bold flex items-center gap-0.5 bg-slate-800 px-2 py-0.5 rounded border border-slate-700"
-                                      title="Record game final score and recap"
-                                    >
-                                      <Trophy className="w-3 h-3 text-amber-400" />
-                                      <span>Score</span>
-                                    </button>
-                                  )}
-                                  <button
-                                    onClick={() => {
-                                      setEditingEvent(evt);
-                                    }}
-                                    className="p-1 hover:text-slate-200"
-                                    title="Edit event details"
-                                  >
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      if (confirm(`Delete "${evt.title}" from schedule?`)) {
-                                        onDeleteEvent(evt.id);
-                                      }
-                                    }}
-                                    className="p-1 hover:text-rose-400"
-                                    title="Delete event"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
                               )}
                             </div>
+                          ) : (
+                            <span className="text-xs font-bold text-slate-400 ml-1">
+                              {events.length} Scheduled Event{events.length > 1 ? 's' : ''}
+                            </span>
+                          )}
 
-                            {/* Title & Timing */}
-                            <h4 className="font-extrabold text-sm md:text-base text-slate-100 mb-1">
-                              {evt.title}
-                            </h4>
-
-                            <div className="space-y-1 text-xs text-slate-300">
-                              <div className="flex items-center gap-2 font-bold text-amber-300">
-                                <CalendarIcon className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                <span>
-                                  {formatDateDisplay(evt.date)} &bull; {formatTimeDisplay(evt.startTime)}
-                                  {evt.endTime ? ` - ${formatTimeDisplay(evt.endTime)}` : ''}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center gap-2 text-slate-300">
-                                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                <span className="truncate">{evt.location}</span>
-                              </div>
-
-                              {evt.arrivalMinutesBefore && (
-                                <div className="flex items-center gap-2 text-slate-400 text-[11px]">
-                                  <Clock className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                                  <span>
-                                    Arrival:{' '}
-                                    <strong className="text-slate-200">
-                                      {evt.arrivalMinutesBefore} mins prior
-                                    </strong>
-                                  </span>
-                                </div>
-                              )}
-
-                              {evt.uniform && (
-                                <div className="flex items-center gap-2 text-slate-300 text-[11px]">
-                                  <Shirt className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                  <span>
-                                    Uniform: <strong className="text-slate-200">{evt.uniform}</strong>
-                                  </span>
-                                </div>
-                              )}
-
-                              {evt.focusOrNotes && (
-                                <p className="text-[11px] text-slate-400 mt-2 bg-slate-950/60 p-2 rounded-xl border border-slate-800 leading-snug">
-                                  {evt.focusOrNotes}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Direct Action Jumpers (Translate directly to Scouting / Practice Plan) */}
-                          <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2 text-xs">
-                            {isGame ? (
-                              <>
-                                <button
-                                  onClick={() => onNavigateToWeek(evt.week, 'scouting')}
-                                  className="flex-1 px-3 py-1.5 bg-indigo-600/90 hover:bg-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs"
-                                >
-                                  <FileSpreadsheet className="w-3.5 h-3.5" />
-                                  <span>Open Scouting Report</span>
-                                </button>
-                                <button
-                                  onClick={() => onNavigateToWeek(evt.week, 'wristband')}
-                                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold rounded-xl border border-slate-700 transition-all"
-                                >
-                                  <span>Wristband</span>
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() => {
-                                    if (linkedPlan) {
-                                      onNavigateToWeek(evt.week, 'practice', linkedPlan.id);
-                                    } else if (onSyncPracticeToPlan) {
-                                      const planId = onSyncPracticeToPlan(evt);
-                                      onNavigateToWeek(evt.week, 'practice', planId);
-                                    } else {
-                                      onNavigateToWeek(evt.week, 'practice');
-                                    }
-                                  }}
-                                  className="flex-1 px-3 py-1.5 bg-indigo-600/80 hover:bg-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs"
-                                >
-                                  <ClipboardList className="w-3.5 h-3.5" />
-                                  <span>
-                                    {linkedPlan
-                                      ? `Open Practice Plan (${linkedPlan.plan.length} Periods)`
-                                      : 'Create & Open Practice Plan'}
-                                  </span>
-                                </button>
-                              </>
+                          {/* Event counts badge */}
+                          <div className="flex items-center gap-1.5 ml-1 text-[11px] text-slate-400">
+                            {weekGames.length > 0 && (
+                              <span className="px-1.5 py-0.5 bg-amber-500/15 text-amber-300 rounded border border-amber-500/20 font-bold">
+                                {weekGames.length} Game{weekGames.length > 1 ? 's' : ''}
+                              </span>
+                            )}
+                            {weekPractices.length > 0 && (
+                              <span className="px-1.5 py-0.5 bg-indigo-500/15 text-indigo-300 rounded border border-indigo-500/20 font-bold">
+                                {weekPractices.length} Practice{weekPractices.length > 1 ? 's' : ''}
+                              </span>
+                            )}
+                            {weekScrimmages.length > 0 && (
+                              <span className="px-1.5 py-0.5 bg-purple-500/15 text-purple-300 rounded border border-purple-500/20 font-bold">
+                                {weekScrimmages.length} Scrimmage{weekScrimmages.length > 1 ? 's' : ''}
+                              </span>
                             )}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })
+
+                        {/* Week-level Quick Translation Links & Collapse Toggle */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNavigateToWeek(weekKey, 'scouting');
+                            }}
+                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all"
+                            title="Open weekly scouting report and coaching keys"
+                          >
+                            <FileSpreadsheet className="w-3 h-3 text-amber-400" />
+                            <span>Scouting</span>
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNavigateToWeek(weekKey, 'practice');
+                            }}
+                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all"
+                            title="Open practice plans for this week"
+                          >
+                            <ClipboardList className="w-3 h-3 text-indigo-400" />
+                            <span>Practices</span>
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNavigateToWeek(weekKey, 'wristband');
+                            }}
+                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all hidden sm:flex"
+                            title="Open wristband call sheet"
+                          >
+                            <span>Wristband</span>
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNavigateToWeek(weekKey, 'groups');
+                            }}
+                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all hidden sm:flex"
+                            title="Open weekly depth chart"
+                          >
+                            <span>Depth Chart</span>
+                          </button>
+
+                          {/* Toggle Expand / Minimize Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleWeekExpanded(weekKey);
+                            }}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-xs ${
+                              isExpanded
+                                ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                                : 'bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white border border-indigo-500/40'
+                            }`}
+                            title={isExpanded ? 'Minimize week' : 'Expand week details'}
+                          >
+                            {isExpanded ? (
+                              <>
+                                <ChevronUp className="w-3.5 h-3.5 text-slate-300" />
+                                <span>Minimize</span>
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="w-3.5 h-3.5 text-indigo-300" />
+                                <span>Expand ({events.length})</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Event Cards Grid for this week (Visible only when expanded) */}
+                      {isExpanded && (
+                        <div className="p-4 md:p-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {events.map((evt) => {
+                            const isGame = evt.type === 'game' || evt.type === 'tournament';
+                            const isScrimmage = evt.type === 'scrimmage';
+                            const isPractice = evt.type === 'practice' || evt.type === 'walkthrough';
+                            const linkedPlan = getLinkedPracticePlan(evt);
+
+                            return (
+                              <div
+                                key={evt.id}
+                                className={`rounded-2xl p-4 border transition-all flex flex-col justify-between ${
+                                  isGame
+                                    ? 'bg-slate-900/90 border-amber-500/40 shadow-lg shadow-amber-500/5 hover:border-amber-400'
+                                    : isScrimmage
+                                    ? 'bg-slate-900/80 border-purple-500/40 hover:border-purple-400'
+                                    : 'bg-slate-900/70 border-slate-700/80 hover:border-slate-600'
+                                }`}
+                              >
+                                <div>
+                                  {/* Card Top Pill & Actions */}
+                                  <div className="flex items-center justify-between gap-2 mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className={`px-2 py-0.5 text-[10px] font-black uppercase rounded-md tracking-wider ${
+                                          isGame
+                                            ? 'bg-amber-400 text-slate-950 font-black'
+                                            : isScrimmage
+                                            ? 'bg-purple-600 text-white font-bold'
+                                            : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                                        }`}
+                                      >
+                                        {isGame ? '🏈 GAME' : isScrimmage ? '⚔️ SCRIMMAGE' : '📋 PRACTICE'}
+                                      </span>
+
+                                      {evt.locationType && (
+                                        <span
+                                          className={`px-1.5 py-0.2 text-[9px] font-black uppercase rounded ${
+                                            evt.locationType === 'home'
+                                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                              : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                          }`}
+                                        >
+                                          {evt.locationType}
+                                        </span>
+                                      )}
+
+                                      {evt.result?.outcome && (
+                                        <span
+                                          className={`px-2 py-0.5 text-[10px] font-black rounded-md ${
+                                            evt.result.outcome === 'W'
+                                              ? 'bg-emerald-500 text-slate-950'
+                                              : evt.result.outcome === 'L'
+                                              ? 'bg-rose-500 text-white'
+                                              : 'bg-amber-500 text-slate-950'
+                                          }`}
+                                        >
+                                          FINAL: {evt.result.outcome} ({evt.result.teamScore} - {evt.result.opponentScore})
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Admin Edit / Delete / Result Actions */}
+                                    {userRole === 'admin' && (
+                                      <div className="flex items-center gap-1 text-slate-400">
+                                        {isGame && (
+                                          <button
+                                            onClick={() => {
+                                              setScoreModalEvent(evt);
+                                              setTeamScore(evt.result?.teamScore || 0);
+                                              setOppScore(evt.result?.opponentScore || 0);
+                                              setRecapNotes(evt.result?.recapNotes || '');
+                                            }}
+                                            className="p-1 hover:text-amber-300 text-[10px] font-bold flex items-center gap-0.5 bg-slate-800 px-2 py-0.5 rounded border border-slate-700"
+                                            title="Record game final score and recap"
+                                          >
+                                            <Trophy className="w-3 h-3 text-amber-400" />
+                                            <span>Score</span>
+                                          </button>
+                                        )}
+                                        <button
+                                          onClick={() => {
+                                            setEditingEvent(evt);
+                                          }}
+                                          className="p-1 hover:text-slate-200"
+                                          title="Edit event details"
+                                        >
+                                          <Edit2 className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            if (confirm(`Delete "${evt.title}" from schedule?`)) {
+                                              onDeleteEvent(evt.id);
+                                            }
+                                          }}
+                                          className="p-1 hover:text-rose-400"
+                                          title="Delete event"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Title & Timing */}
+                                  <h4 className="font-extrabold text-sm md:text-base text-slate-100 mb-1">
+                                    {evt.title}
+                                  </h4>
+
+                                  <div className="space-y-1 text-xs text-slate-300">
+                                    <div className="flex items-center gap-2 font-bold text-amber-300">
+                                      <CalendarIcon className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                      <span>
+                                        {formatDateDisplay(evt.date)} &bull; {formatTimeDisplay(evt.startTime)}
+                                        {evt.endTime ? ` - ${formatTimeDisplay(evt.endTime)}` : ''}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 text-slate-300">
+                                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                      <span className="truncate">{evt.location}</span>
+                                    </div>
+
+                                    {evt.arrivalMinutesBefore && (
+                                      <div className="flex items-center gap-2 text-slate-400 text-[11px]">
+                                        <Clock className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                                        <span>
+                                          Arrival:{' '}
+                                          <strong className="text-slate-200">
+                                            {evt.arrivalMinutesBefore} mins prior
+                                          </strong>
+                                        </span>
+                                      </div>
+                                    )}
+
+                                    {evt.uniform && (
+                                      <div className="flex items-center gap-2 text-slate-300 text-[11px]">
+                                        <Shirt className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                        <span>
+                                          Uniform: <strong className="text-slate-200">{evt.uniform}</strong>
+                                        </span>
+                                      </div>
+                                    )}
+
+                                    {evt.focusOrNotes && (
+                                      <p className="text-[11px] text-slate-400 mt-2 bg-slate-950/60 p-2 rounded-xl border border-slate-800 leading-snug">
+                                        {evt.focusOrNotes}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Direct Action Jumpers (Translate directly to Scouting / Practice Plan) */}
+                                <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2 text-xs">
+                                  {isGame ? (
+                                    <>
+                                      <button
+                                        onClick={() => onNavigateToWeek(evt.week, 'scouting')}
+                                        className="flex-1 px-3 py-1.5 bg-indigo-600/90 hover:bg-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs"
+                                      >
+                                        <FileSpreadsheet className="w-3.5 h-3.5" />
+                                        <span>Open Scouting Report</span>
+                                      </button>
+                                      <button
+                                        onClick={() => onNavigateToWeek(evt.week, 'wristband')}
+                                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold rounded-xl border border-slate-700 transition-all"
+                                      >
+                                        <span>Wristband</span>
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button
+                                        onClick={() => {
+                                          if (linkedPlan) {
+                                            onNavigateToWeek(evt.week, 'practice', linkedPlan.id);
+                                          } else if (onSyncPracticeToPlan) {
+                                            const planId = onSyncPracticeToPlan(evt);
+                                            onNavigateToWeek(evt.week, 'practice', planId);
+                                          } else {
+                                            onNavigateToWeek(evt.week, 'practice');
+                                          }
+                                        }}
+                                        className="flex-1 px-3 py-1.5 bg-indigo-600/80 hover:bg-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs"
+                                      >
+                                        <ClipboardList className="w-3.5 h-3.5" />
+                                        <span>
+                                          {linkedPlan
+                                            ? `Open Practice Plan (${linkedPlan.plan.length} Periods)`
+                                            : 'Create & Open Practice Plan'}
+                                        </span>
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -1369,7 +1651,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             Mahopac 10U Youth Football &bull; 2026 Official Season Schedule
           </h1>
           <p className="text-xs text-slate-700 font-bold mt-1">
-            Head Coach: Danny &bull; Team Roster &bull; Practice &amp; Game Itinerary
+            Official Team Roster &bull; Practice &amp; Game Itinerary
           </p>
         </div>
 
@@ -1683,7 +1965,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                   type="text"
                   value={practiceLocation}
                   onChange={(e) => setPracticeLocation(e.target.value)}
-                  placeholder="e.g. Mahopac High School - Turf Field"
+                  placeholder="e.g. Crane Road"
                   className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:border-indigo-400 focus:outline-none"
                 />
               </div>
@@ -1925,6 +2207,24 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* TeamSnap Sync Modal */}
+      {isTeamSnapSyncOpen && (
+        <TeamSnapSyncModal
+          isOpen={isTeamSnapSyncOpen}
+          onClose={() => setIsTeamSnapSyncOpen(false)}
+          activeTeam={activeTeam || { id: 'team-10u', name: '10U Youth Tackle', ageGroup: '10U', color: 'amber' }}
+          existingEvents={safeScheduleEvents}
+          onImportEvents={(newEvts, replaceExisting) => {
+            if (onImportTeamSnapEvents) {
+              onImportTeamSnapEvents(newEvts, replaceExisting);
+            } else if (onBulkAddEvents) {
+              onBulkAddEvents(newEvts);
+            }
+            setIsTeamSnapSyncOpen(false);
+          }}
+        />
       )}
     </div>
   );

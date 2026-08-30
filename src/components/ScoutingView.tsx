@@ -65,9 +65,9 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
   // Current user email & power admin check
   const currentEmail = (currentUser?.email || '').toLowerCase().trim();
   const isPowerAdmin =
-    currentEmail === 'dannym1010@gmail.com' ||
     userRole === 'admin' ||
-    currentEmail.includes('admin');
+    currentEmail.includes('admin') ||
+    staffList.some((s) => s.email.toLowerCase() === currentEmail && s.role.toLowerCase().includes('head coach'));
 
   // Filter state for coach notes
   const [selectedCoachFilter, setSelectedCoachFilter] = useState<string>('all');
@@ -79,10 +79,10 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
   const [newNoteTitle, setNewNoteTitle] = useState('');
   const [newNoteContent, setNewNoteContent] = useState('');
   const [newNoteCoachEmail, setNewNoteCoachEmail] = useState(
-    currentEmail || 'dannym1010@gmail.com'
+    currentEmail || (staffList[0]?.email || 'coach@example.com')
   );
   const [newNoteCoachName, setNewNoteCoachName] = useState(
-    currentUser?.displayName || (isPowerAdmin ? 'Coach Danny (Head Coach)' : 'Assistant Coach')
+    currentUser?.displayName || (isPowerAdmin ? 'Head Coach' : 'Assistant Coach')
   );
 
   // Editing Note State
@@ -109,7 +109,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
 
   // Helper to determine if current user can edit a given note
   const canEditNote = (note: CoachScoutingNote): boolean => {
-    if (isPowerAdmin) return true; // dannym1010@gmail.com and Admin can edit everything
+    if (isPowerAdmin) return true; // Admin and Head Coach can edit everything
     if (!currentEmail) return false;
     return note.coachEmail?.toLowerCase().trim() === currentEmail;
   };
@@ -159,8 +159,8 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
     if (!newNoteTitle.trim() && !newNoteContent.trim()) return;
     const newNote: CoachScoutingNote = {
       id: 'cn_' + Date.now(),
-      coachEmail: newNoteCoachEmail.trim() || currentEmail || 'dannym1010@gmail.com',
-      coachName: newNoteCoachName.trim() || (isPowerAdmin ? 'Coach Danny' : 'Coach'),
+      coachEmail: newNoteCoachEmail.trim() || currentEmail || 'coach@example.com',
+      coachName: newNoteCoachName.trim() || (isPowerAdmin ? 'Head Coach' : 'Coach'),
       category: newNoteCategory,
       title: newNoteTitle.trim() || `${newNoteCategory} Plan`,
       content: newNoteContent.trim(),
@@ -199,7 +199,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
     const note = coachNotes.find((n) => n.id === noteId);
     if (!note) return;
     if (!canEditNote(note)) {
-      alert('You do not have permission to delete this section. Only the author or Master Admin (Danny) can delete it.');
+      alert('You do not have permission to delete this section. Only the author or Head Coach / Admin can delete it.');
       return;
     }
     if (confirm(`Delete coach section "${note.title}"?`)) {
@@ -274,7 +274,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
                 {isPowerAdmin ? (
                   <span className="px-2 py-0.5 bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[10.5px] font-black rounded-lg flex items-center gap-1">
                     <Award className="w-3 h-3 text-rose-400" />
-                    <span>Power Admin (Danny M)</span>
+                    <span>Head Coach / Admin</span>
                   </span>
                 ) : (
                   <span className="px-2 py-0.5 bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-[10.5px] font-black rounded-lg flex items-center gap-1">
@@ -793,7 +793,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-300 font-medium">
-                Each coach has their own dedicated section. Power Admin (Danny) has full authority over all sections.
+                Each coach has their own dedicated section. Head Coaches &amp; Admins have full authority over all sections.
               </p>
             </div>
           </div>
@@ -896,7 +896,6 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
                     }}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-indigo-400"
                   >
-                    <option value="dannym1010@gmail.com">Coach Danny (Head Coach)</option>
                     {staffList.map((s, idx) => (
                       <option key={idx} value={s.email}>
                         {s.email} ({s.role || 'Staff'})

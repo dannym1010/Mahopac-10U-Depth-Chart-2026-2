@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
+  Zap,
+  Shield,
+  Target,
+  Users,
+  Swords,
+  ClipboardList,
+} from 'lucide-react';
+import {
   UnitType,
   UserRole,
   RosterPlayer,
@@ -16,6 +24,9 @@ import {
   DrillItem,
   ScoutingData,
   ScheduleEvent,
+  SeasonConfig,
+  AttendanceRecord,
+  Team,
 } from './types';
 import {
   MASTER_ROSTER,
@@ -25,9 +36,14 @@ import {
   DEFAULT_GUIDES_TREE,
   DEFAULT_GUIDES_ORDER,
   DEFAULT_SAVED_COACHES,
+  DEFAULT_SAVED_COACHES_BY_TEAM,
   DEFAULT_TEAM_COACHES,
   MASTER_PLAY_LIBRARY,
   DEFAULT_SCHEDULE_EVENTS,
+  DEFAULT_SEASON_CONFIG,
+  DEFAULT_ATTENDANCE_LOGS,
+  DEFAULT_INITIAL_PRACTICES,
+  DEFAULT_TEAMS,
 } from './data/initialData';
 import {
   safeJSONParse,
@@ -71,9 +87,13 @@ export default function App() {
   const [defaultFormations, setDefaultFormations] = useState<FormationBoard[]>(
     () => safeJSONParse('footballDefaultFormations', INITIAL_DEFAULT_FORMATIONS)
   );
-  const [practiceData, setPracticeData] = useState<PracticePlan[]>(() =>
-    safeJSONParse('footballPracticeData', [])
-  );
+  const [practiceData, setPracticeData] = useState<PracticePlan[]>(() => {
+    const saved = safeJSONParse('footballPracticeData', null);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      return saved;
+    }
+    return DEFAULT_INITIAL_PRACTICES;
+  });
   const [practiceTemplates, setPracticeTemplates] = useState<
     Record<string, PracticePeriod[]>
   >(() =>
@@ -91,6 +111,9 @@ export default function App() {
   const [savedCoaches, setSavedCoaches] = useState<string[]>(() =>
     safeJSONParse('footballSavedCoaches', DEFAULT_SAVED_COACHES)
   );
+  const [teamSavedCoaches, setTeamSavedCoaches] = useState<Record<string, string[]>>(() =>
+    safeJSONParse('footballTeamSavedCoaches', DEFAULT_SAVED_COACHES_BY_TEAM)
+  );
   const [staffList, setStaffList] = useState<StaffCoach[]>(() =>
     safeJSONParse('footballTeamCoaches', DEFAULT_TEAM_COACHES)
   );
@@ -100,6 +123,12 @@ export default function App() {
   const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>(() =>
     safeJSONParse('footballScheduleEvents', DEFAULT_SCHEDULE_EVENTS)
   );
+  const [seasonConfig, setSeasonConfig] = useState<SeasonConfig>(() =>
+    safeJSONParse('footballSeasonConfig', DEFAULT_SEASON_CONFIG)
+  );
+  const [attendanceLogs, setAttendanceLogs] = useState<AttendanceRecord[]>(() =>
+    safeJSONParse('footballAttendanceLogs', DEFAULT_ATTENDANCE_LOGS)
+  );
   const [roster, setRoster] = useState<RosterPlayer[]>(() => {
     const saved = safeJSONParse('footballRoster', null);
     if (saved && Array.isArray(saved) && saved.length > 0) {
@@ -107,6 +136,12 @@ export default function App() {
     }
     return MASTER_ROSTER;
   });
+  const [teams, setTeams] = useState<Team[]>(() =>
+    safeJSONParse('footballTeams', DEFAULT_TEAMS)
+  );
+  const [activeTeamId, setActiveTeamId] = useState<string>(() =>
+    safeJSONParse('footballActiveTeamId', DEFAULT_TEAMS[0]?.id || 'team_10u')
+  );
 
   // App Navigation & Session States
   const [currentWeek, setCurrentWeek] = useState<string>(() =>
@@ -115,6 +150,9 @@ export default function App() {
   const [activeUnit, setActiveUnit] = useState<UnitType>(() =>
     safeJSONParse('footballActiveUnit', 'offense')
   );
+  const [depthSubUnit, setDepthSubUnit] = useState<
+    'offense' | 'defense' | 'st' | 'groups' | 'scrimmage'
+  >('offense');
   const [selectedFormationId, setSelectedFormationId] = useState<string | null>(
     null
   );
@@ -194,11 +232,15 @@ export default function App() {
     guideTree,
     guideOrder,
     savedCoaches,
+    teamSavedCoaches,
     staffList,
     masterPlayLibrary,
     collapsedFolders,
     scheduleEvents,
     roster,
+    teams,
+    seasonConfig,
+    attendanceLogs,
   });
 
   useEffect(() => {
@@ -211,11 +253,15 @@ export default function App() {
       guideTree,
       guideOrder,
       savedCoaches,
+      teamSavedCoaches,
       staffList,
       masterPlayLibrary,
       collapsedFolders,
       scheduleEvents,
       roster,
+      teams,
+      seasonConfig,
+      attendanceLogs,
     };
   });
 
@@ -269,11 +315,15 @@ export default function App() {
     safeJSONSet('footballPdfGuidesTree', guideTree);
     safeJSONSet('footballPdfGuidesOrder', guideOrder);
     safeJSONSet('footballSavedCoaches', savedCoaches);
+    safeJSONSet('footballTeamSavedCoaches', teamSavedCoaches);
     safeJSONSet('footballTeamCoaches', staffList);
     safeJSONSet('footballMasterPlays', masterPlayLibrary);
     safeJSONSet('footballCollapsedFolders', collapsedFolders);
     safeJSONSet('footballScheduleEvents', scheduleEvents);
     safeJSONSet('footballRoster', roster);
+    safeJSONSet('footballTeams', teams);
+    safeJSONSet('footballSeasonConfig', seasonConfig);
+    safeJSONSet('footballAttendanceLogs', attendanceLogs);
 
     const { db } = getFirebaseServices();
     if (db && initialCloudLoadDoneRef.current) {
@@ -286,11 +336,15 @@ export default function App() {
         guideTree,
         guideOrder,
         savedCoaches,
+        teamSavedCoaches,
         staffList,
         masterPlayLibrary,
         collapsedFolders,
         scheduleEvents,
         roster,
+        teams,
+        seasonConfig,
+        attendanceLogs,
       };
 
       const payloadJson = JSON.stringify(payload);
@@ -362,20 +416,43 @@ export default function App() {
 
           // Check if coach is approved or master admin
           const cleanEmail = (user.email || '').toLowerCase().trim();
-          const isMaster = cleanEmail === 'dannym1010@gmail.com';
+          const isDannySuperAdmin = cleanEmail.includes('dannym1010') || cleanEmail === 'dannym1010@gmail.com';
           
           setStaffList((prevStaff) => {
-            const exists = prevStaff.some(
+            const isFirstUser = prevStaff.length === 0;
+            const existingIdx = prevStaff.findIndex(
               (c) => c.email.toLowerCase().trim() === cleanEmail
             );
-            if (!exists && cleanEmail) {
+            if (isDannySuperAdmin) {
+              if (existingIdx !== -1) {
+                const copy = [...prevStaff];
+                copy[existingIdx] = {
+                  ...copy[existingIdx],
+                  role: 'Master Super Admin',
+                  status: 'Active',
+                  assignedTeamIds: ['all'],
+                };
+                return copy;
+              } else {
+                return [
+                  {
+                    email: cleanEmail,
+                    role: 'Master Super Admin',
+                    status: 'Active',
+                    assignedTeamIds: ['all'],
+                  },
+                  ...prevStaff,
+                ];
+              }
+            } else if (existingIdx === -1 && cleanEmail) {
+              const isMaster = isFirstUser || cleanEmail.includes('admin');
               const newEntry: StaffCoach = {
                 email: cleanEmail,
-                role: isMaster ? 'Head Coach / Admin' : 'Assistant Coach',
+                role: isMaster ? 'Head Coach (Admin)' : 'Assistant Coach',
                 status: isMaster ? 'Active' : 'Pending',
+                assignedTeamIds: [activeTeamId || 'team_10u'],
               };
               const updatedStaff = [...prevStaff, newEntry];
-              // Save to Firestore
               if (db) {
                 db.collection('teamData').doc('depthChartData').set(
                   { staffList: updatedStaff },
@@ -390,10 +467,11 @@ export default function App() {
           const coachEntry = staffList.find(
             (c) => c.email.toLowerCase().trim() === cleanEmail
           );
+          const isMaster = isDannySuperAdmin || cleanEmail.includes('admin') || coachEntry?.role?.toLowerCase().includes('head coach');
 
-          if (isMaster || coachEntry?.status === 'Active') {
+          if (isDannySuperAdmin || isMaster || coachEntry?.status === 'Active' || staffList.length <= 1) {
             setIsPendingApproval(false);
-            const isHead = isMaster || coachEntry?.role?.includes('Admin');
+            const isHead = isDannySuperAdmin || isMaster || coachEntry?.role?.includes('Admin');
             setUserRole(isHead ? 'admin' : 'assistant');
             setSyncStatus({ text: '✅ Live Cloud Synced', color: '#22c55e' });
           } else {
@@ -449,6 +527,8 @@ export default function App() {
                     data.guideOrder || latestStateRef.current.guideOrder,
                   savedCoaches:
                     data.savedCoaches || latestStateRef.current.savedCoaches,
+                  teamSavedCoaches:
+                    data.teamSavedCoaches || latestStateRef.current.teamSavedCoaches,
                   staffList:
                     data.staffList || latestStateRef.current.staffList,
                   masterPlayLibrary:
@@ -511,6 +591,9 @@ export default function App() {
                 if (data.savedCoaches) {
                   setSavedCoaches(data.savedCoaches);
                 }
+                if (data.teamSavedCoaches) {
+                  setTeamSavedCoaches(data.teamSavedCoaches);
+                }
                 if (data.staffList) {
                   setStaffList(data.staffList);
                 }
@@ -529,10 +612,25 @@ export default function App() {
                 }
                 if (
                   data.roster &&
-                  Array.isArray(data.roster) &&
-                  data.roster.length > 0
+                  Array.isArray(data.roster)
                 ) {
                   setRoster(data.roster);
+                }
+                if (
+                  data.teams &&
+                  Array.isArray(data.teams) &&
+                  data.teams.length > 0
+                ) {
+                  setTeams(data.teams);
+                }
+                if (data.seasonConfig) {
+                  setSeasonConfig(data.seasonConfig);
+                }
+                if (
+                  data.attendanceLogs &&
+                  Array.isArray(data.attendanceLogs)
+                ) {
+                  setAttendanceLogs(data.attendanceLogs);
                 }
                 initialCloudLoadDoneRef.current = true;
                 setSyncStatus({ text: '✅ Live Cloud Synced', color: '#22c55e' });
@@ -604,6 +702,9 @@ export default function App() {
     collapsedFolders,
     scheduleEvents,
     roster,
+    teams,
+    seasonConfig,
+    attendanceLogs,
   ]);
 
   const currentWeekState: WeekState = weeklyData[currentWeek] || {
@@ -616,6 +717,254 @@ export default function App() {
   const currentFormations = currentWeekState.formations || defaultFormations;
   const currentDepthChart = currentWeekState.depthChart || {};
   const currentScrimmageChart = currentWeekState.scrimmageChart || {};
+
+  // Team Access Control & Data Filtering
+  const currentUserCoach = staffList.find(
+    (c) => c.email.toLowerCase().trim() === (currentUser?.email || '').toLowerCase().trim()
+  );
+
+  const isMasterSuperAdminUser = (email?: string) => {
+    if (!email) return false;
+    const clean = email.toLowerCase().trim();
+    return clean.includes('dannym1010') || clean === 'dannym1010@gmail.com';
+  };
+
+  const accessibleTeams = React.useMemo(() => {
+    // dannym1010 (Master Super Admin) ALWAYS has full access to ALL teams unconditionally
+    if (isMasterSuperAdminUser(currentUser?.email)) {
+      return teams;
+    }
+
+    // For all other Head Coaches and Assistant Coaches, strictly check allowed assignedTeamIds
+    if (currentUserCoach) {
+      const assigned = currentUserCoach.assignedTeamIds;
+      if (assigned && assigned.length > 0) {
+        if (assigned.includes('all')) return teams;
+        const permitted = teams.filter((t) => assigned.includes(t.id));
+        if (permitted.length > 0) return permitted;
+      }
+    }
+
+    return teams.slice(0, 1);
+  }, [teams, currentUserCoach, currentUser]);
+
+  // Active Team Saved Practice Coaches (Per-Team Roster)
+  const activeTeamSavedCoaches = React.useMemo(() => {
+    if (teamSavedCoaches[activeTeamId] && teamSavedCoaches[activeTeamId].length > 0) {
+      return teamSavedCoaches[activeTeamId];
+    }
+    return savedCoaches || DEFAULT_SAVED_COACHES;
+  }, [teamSavedCoaches, activeTeamId, savedCoaches]);
+
+  // Ensure activeTeamId is within accessible teams
+  useEffect(() => {
+    if (accessibleTeams.length > 0 && !accessibleTeams.some((t) => t.id === activeTeamId)) {
+      const fallback = accessibleTeams[0].id;
+      setActiveTeamId(fallback);
+      safeJSONSet('footballActiveTeamId', fallback);
+    }
+  }, [accessibleTeams, activeTeamId]);
+
+  const currentActiveTeam = React.useMemo(() => {
+    return (
+      teams.find((t) => t.id === activeTeamId) ||
+      accessibleTeams[0] ||
+      teams[0] || { id: 'team-10u', name: '10U Youth Tackle', ageGroup: '10U', color: 'amber' }
+    );
+  }, [teams, accessibleTeams, activeTeamId]);
+
+  // Filter roster, schedule events, and practice plans by active team (strictly isolated)
+  const activeTeamRoster = React.useMemo(() => {
+    return roster.filter((p) => {
+      if (p.teamId) return p.teamId === activeTeamId;
+      return activeTeamId === 'team-10u';
+    });
+  }, [roster, activeTeamId]);
+
+  const activeTeamScheduleEvents = React.useMemo(() => {
+    return scheduleEvents.filter((e) => {
+      if (e.teamId) return e.teamId === activeTeamId;
+      return activeTeamId === 'team-10u';
+    });
+  }, [scheduleEvents, activeTeamId]);
+
+  const activeTeamPracticeData = React.useMemo(() => {
+    return practiceData.filter((p) => {
+      if (p.teamId) return p.teamId === activeTeamId;
+      return activeTeamId === 'team-10u';
+    });
+  }, [practiceData, activeTeamId]);
+
+  // Team CRUD handlers
+  const handleAddTeam = (newTeamData: Omit<Team, 'id'>) => {
+    const newTeam: Team = {
+      ...newTeamData,
+      id: 'team_' + Date.now(),
+    };
+    setTeams((prev) => {
+      const updated = [...prev, newTeam];
+      safeJSONSet('footballTeams', updated);
+      return updated;
+    });
+
+    // Seed default practice coaches for this new team
+    setTeamSavedCoaches((prev) => {
+      const updated = {
+        ...prev,
+        [newTeam.id]: [
+          newTeamData.headCoachName || 'Head Coach',
+          'Offensive Coordinator',
+          'Defensive Coordinator',
+          'Line Coach',
+          'Special Teams Coach',
+        ],
+      };
+      safeJSONSet('footballTeamSavedCoaches', updated);
+      return updated;
+    });
+
+    setActiveTeamId(newTeam.id);
+    safeJSONSet('footballActiveTeamId', newTeam.id);
+  };
+
+  const handleUpdateTeam = (teamId: string, updated: Partial<Team>) => {
+    setTeams((prev) => {
+      const updatedTeams = prev.map((t) => (t.id === teamId ? { ...t, ...updated } : t));
+      safeJSONSet('footballTeams', updatedTeams);
+      return updatedTeams;
+    });
+  };
+
+  const handleDeleteTeam = (teamId: string) => {
+    setTeams((prev) => {
+      const remaining = prev.filter((t) => t.id !== teamId);
+      const finalTeams =
+        remaining.length > 0
+          ? remaining
+          : [
+              {
+                id: 'team_' + Date.now(),
+                name: 'New Football Team',
+                ageGroup: 'Youth',
+                season: '2026 Season',
+                color: 'indigo',
+                headCoachName: 'Head Coach',
+                notes: 'Default program team',
+              },
+            ];
+      safeJSONSet('footballTeams', finalTeams);
+
+      if (activeTeamId === teamId || !finalTeams.some((t) => t.id === activeTeamId)) {
+        const nextId = finalTeams[0].id;
+        setActiveTeamId(nextId);
+        safeJSONSet('footballActiveTeamId', nextId);
+      }
+      return finalTeams;
+    });
+
+    // Clean up coach team assignments
+    setStaffList((prev) => {
+      const updated = prev.map((coach) => {
+        if (!coach.assignedTeamIds) return coach;
+        return {
+          ...coach,
+          assignedTeamIds: coach.assignedTeamIds.filter((id) => id !== teamId),
+        };
+      });
+      safeJSONSet('footballTeamCoaches', updated);
+      return updated;
+    });
+
+    // Clean up per-team saved coaches
+    setTeamSavedCoaches((prev) => {
+      const copy = { ...prev };
+      delete copy[teamId];
+      safeJSONSet('footballTeamSavedCoaches', copy);
+      return copy;
+    });
+  };
+
+  const handleUpdateStaffAssignedTeams = (idx: number, teamIds: string[]) => {
+    setStaffList((prev) => {
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], assignedTeamIds: teamIds };
+      safeJSONSet('footballTeamCoaches', updated);
+      return updated;
+    });
+  };
+
+  const handleAddStaffCoach = (
+    email: string,
+    role: string = 'Assistant Coach',
+    assignedTeamIds: string[] = [activeTeamId]
+  ) => {
+    const cleanEmail = email.toLowerCase().trim();
+    if (staffList.some((c) => c.email.toLowerCase().trim() === cleanEmail)) {
+      alert('Coach email already in staff list.');
+      return;
+    }
+    const newEntry: StaffCoach = {
+      email: cleanEmail,
+      role: role || 'Assistant Coach',
+      status: 'Active',
+      assignedTeamIds: assignedTeamIds && assignedTeamIds.length > 0 ? assignedTeamIds : [activeTeamId],
+    };
+    setStaffList((prev) => {
+      const updated = [...prev, newEntry];
+      safeJSONSet('footballTeamCoaches', updated);
+      return updated;
+    });
+  };
+
+  const handleAddNewSavedCoach = (name: string, targetTeamId?: string) => {
+    const tid = targetTeamId || activeTeamId;
+    setTeamSavedCoaches((prev) => {
+      const currentList = prev[tid] || savedCoaches || DEFAULT_SAVED_COACHES;
+      if (currentList.includes(name)) return prev;
+      const updated = {
+        ...prev,
+        [tid]: [...currentList, name],
+      };
+      safeJSONSet('footballTeamSavedCoaches', updated);
+      return updated;
+    });
+    setSavedCoaches((prev) => {
+      if (prev.includes(name)) return prev;
+      const updated = [...prev, name];
+      safeJSONSet('footballSavedCoaches', updated);
+      return updated;
+    });
+  };
+
+  const handleDeleteSavedCoach = (name: string, targetTeamId?: string) => {
+    const tid = targetTeamId || activeTeamId;
+    setTeamSavedCoaches((prev) => {
+      const currentList = prev[tid] || savedCoaches || DEFAULT_SAVED_COACHES;
+      const updated = {
+        ...prev,
+        [tid]: currentList.filter((c) => c !== name),
+      };
+      safeJSONSet('footballTeamSavedCoaches', updated);
+      return updated;
+    });
+    setSavedCoaches((prev) => {
+      const updated = prev.filter((c) => c !== name);
+      safeJSONSet('footballSavedCoaches', updated);
+      return updated;
+    });
+  };
+
+  const handleCopyCoachesFromTeam = (sourceTeamId: string, targetTeamId: string) => {
+    const sourceList = teamSavedCoaches[sourceTeamId] || savedCoaches || DEFAULT_SAVED_COACHES;
+    setTeamSavedCoaches((prev) => {
+      const updated = {
+        ...prev,
+        [targetTeamId]: [...sourceList],
+      };
+      safeJSONSet('footballTeamSavedCoaches', updated);
+      return updated;
+    });
+  };
 
   // Auto-select first formation if none selected
   useEffect(() => {
@@ -1159,6 +1508,7 @@ export default function App() {
 
     const newPrac: PracticePlan = {
       id: `prac_${Date.now()}`,
+      teamId: activeTeamId,
       year: '2026',
       weekFolder: `Week ${currentWeek}`,
       title: title.trim(),
@@ -1198,6 +1548,37 @@ export default function App() {
           : p
       )
     );
+  };
+
+  const handleQuickCreatePlanFromSchedule = (evt: ScheduleEvent) => {
+    const newPrac: PracticePlan = {
+      id: `prac_sched_${evt.id}_${Date.now()}`,
+      teamId: evt.teamId || activeTeamId,
+      year: '2026',
+      weekFolder: `Week ${evt.week}`,
+      title: evt.title || `Practice - ${evt.date}`,
+      date: evt.date,
+      day: evt.dayOfWeek || 'Wednesday',
+      startTime: evt.time || '17:30',
+      lastEdited: Date.now(),
+      plan: deepClone(DEFAULT_PRACTICE_TEMPLATES['Standard Practice'] || []),
+    };
+
+    setPracticeData((prev) => {
+      const next = [...prev, newPrac];
+      safeJSONSet('footballPracticeData', next);
+      return next;
+    });
+    setCurrentPracticeId(newPrac.id);
+    setActiveUnit('practice');
+  };
+
+  const handleUpdatePlayerInRoster = (updatedPlayer: RosterPlayer) => {
+    setRoster((prev) => {
+      const next = prev.map((p) => (p.id === updatedPlayer.id ? updatedPlayer : p));
+      safeJSONSet('footballRoster', next);
+      return next;
+    });
   };
 
   const handleAutoNumberPractices = () => {
@@ -1285,7 +1666,7 @@ export default function App() {
                   {
                     name: 'New Station',
                     desc: 'Drill details...',
-                    coach: 'Coach Danny',
+                    coach: 'Coach',
                     focus: 'Effort & technique',
                   },
                 ],
@@ -2023,18 +2404,18 @@ export default function App() {
     let weekKey = '1';
     let oppName = '';
     let gameDateTime = '';
-    let location = 'Mahopac High School Turf';
+    let location = 'Mahopac High School';
 
     if (typeof eventOrWeek === 'object') {
       weekKey = eventOrWeek.week || '1';
       oppName = eventOrWeek.opponent || eventOrWeek.title;
       gameDateTime = `${eventOrWeek.date} @ ${eventOrWeek.startTime || '10:00 AM'}`;
-      location = eventOrWeek.location || 'Mahopac High School Turf';
+      location = eventOrWeek.location || 'Mahopac High School';
     } else {
       weekKey = eventOrWeek || '1';
       oppName = opponentName || '';
       gameDateTime = `${dateStr || ''} @ ${timeStr || '10:00 AM'}`.trim();
-      location = locationStr || 'Mahopac High School Turf';
+      location = locationStr || 'Mahopac High School';
     }
 
     ensureWeekExists(weekKey);
@@ -2115,6 +2496,7 @@ export default function App() {
 
     const newPlan: PracticePlan = {
       id: newPracticeId,
+      teamId: event.teamId || activeTeamId,
       year: '2026',
       weekFolder: `Week ${event.week}`,
       title: event.title,
@@ -2140,12 +2522,17 @@ export default function App() {
     const newId = 'evt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
     const newEvent: ScheduleEvent = {
       ...eventData,
+      teamId: eventData.teamId || activeTeamId,
       id: newId,
       createdAt: Date.now(),
       lastEdited: Date.now(),
     };
 
-    setScheduleEvents((prev) => [...prev, newEvent]);
+    setScheduleEvents((prev) => {
+      const updated = [...prev, newEvent];
+      safeJSONSet('footballScheduleEvents', updated);
+      return updated;
+    });
 
     if (newEvent.type === 'game') {
       handleSyncGameToWeeklyData(newEvent);
@@ -2156,8 +2543,8 @@ export default function App() {
     id: string,
     updates: Partial<ScheduleEvent>
   ) => {
-    setScheduleEvents((prev) =>
-      prev.map((ev) => {
+    setScheduleEvents((prev) => {
+      const updatedList = prev.map((ev) => {
         if (ev.id === id) {
           const updated = { ...ev, ...updates, lastEdited: Date.now() };
           if (updated.type === 'game') {
@@ -2166,12 +2553,18 @@ export default function App() {
           return updated;
         }
         return ev;
-      })
-    );
+      });
+      safeJSONSet('footballScheduleEvents', updatedList);
+      return updatedList;
+    });
   };
 
   const handleDeleteScheduleEvent = (id: string) => {
-    setScheduleEvents((prev) => prev.filter((ev) => ev.id !== id));
+    setScheduleEvents((prev) => {
+      const updated = prev.filter((ev) => ev.id !== id);
+      safeJSONSet('footballScheduleEvents', updated);
+      return updated;
+    });
   };
 
   const handleBulkAddScheduleEvents = (
@@ -2179,25 +2572,63 @@ export default function App() {
   ) => {
     const created: ScheduleEvent[] = eventsList.map((e, idx) => ({
       ...e,
+      teamId: e.teamId || activeTeamId,
       id: `evt_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
       createdAt: Date.now(),
       lastEdited: Date.now(),
     }));
 
-    setScheduleEvents((prev) => [...prev, ...created]);
+    setScheduleEvents((prev) => {
+      const updated = [...prev, ...created];
+      safeJSONSet('footballScheduleEvents', updated);
+      return updated;
+    });
+  };
+
+  const handleImportTeamSnapScheduleEvents = (
+    newEvents: Omit<ScheduleEvent, 'id' | 'createdAt' | 'lastEdited'>[],
+    replaceExisting?: boolean
+  ) => {
+    const created: ScheduleEvent[] = newEvents.map((e, idx) => ({
+      ...e,
+      teamId: e.teamId || activeTeamId,
+      id: `evt_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
+      createdAt: Date.now(),
+      lastEdited: Date.now(),
+    }));
+
+    setScheduleEvents((prev) => {
+      let nextEvents: ScheduleEvent[];
+      if (replaceExisting) {
+        // Replace only active team's schedule
+        nextEvents = [
+          ...prev.filter((ev) => (ev.teamId || 'team-10u') !== activeTeamId),
+          ...created,
+        ];
+      } else {
+        nextEvents = [...prev, ...created];
+      }
+      safeJSONSet('footballScheduleEvents', nextEvents);
+      return nextEvents;
+    });
   };
 
   const handlePracticeWizardGenerate = (result: PracticeWizardGeneratedResult) => {
     if (result.practicePlans && result.practicePlans.length > 0) {
-      setPracticeData((prev) => [...prev, ...result.practicePlans]);
-      if (result.practicePlans[0]?.id) {
-        setCurrentPracticeId(result.practicePlans[0].id);
+      const taggedPlans = result.practicePlans.map((p) => ({
+        ...p,
+        teamId: p.teamId || activeTeamId,
+      }));
+      setPracticeData((prev) => [...prev, ...taggedPlans]);
+      if (taggedPlans[0]?.id) {
+        setCurrentPracticeId(taggedPlans[0].id);
       }
     }
 
     if (result.scheduleEvents && result.scheduleEvents.length > 0) {
       const created: ScheduleEvent[] = result.scheduleEvents.map((e, idx) => ({
         ...e,
+        teamId: e.teamId || activeTeamId,
         id: `evt_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
         createdAt: Date.now(),
         lastEdited: Date.now(),
@@ -2270,7 +2701,7 @@ export default function App() {
             },
           }));
         }}
-        userEmail={currentUser?.email || 'Head Coach Danny'}
+        userEmail={currentUser?.email || 'Head Coach'}
         userRole={userRole}
         onRoleChange={setUserRole}
         syncStatus={syncStatus}
@@ -2292,13 +2723,30 @@ export default function App() {
         onImportClick={() => setIsImportModalOpen(true)}
         onResetData={handleResetData}
         onOpenCopyWeekModal={() => setIsCopyWeekModalOpen(true)}
+        seasonConfig={seasonConfig}
+        teams={teams}
+        activeTeamId={activeTeamId}
+        onSelectTeam={setActiveTeamId}
+        userAssignedTeamIds={currentUserCoach?.assignedTeamIds}
+        onOpenManageTeams={() => setActiveUnit('users')}
       />
 
       {/* Sticky Unit Navigation Tabs */}
       <NavigationTabs
         activeUnit={activeUnit}
-        onSelectUnit={setActiveUnit}
+        onSelectUnit={(unit) => {
+          if (unit === 'depth_chart') {
+            setActiveUnit(depthSubUnit || 'offense');
+          } else {
+            setActiveUnit(unit);
+          }
+        }}
         userRole={userRole}
+        depthSubUnit={depthSubUnit}
+        onSelectDepthSubUnit={(sub) => {
+          setDepthSubUnit(sub);
+          setActiveUnit(sub);
+        }}
       />
 
       {/* Main Layout Area */}
@@ -2306,6 +2754,47 @@ export default function App() {
         <div className="flex flex-col lg:flex-row gap-6 items-start">
           {/* Main Board / Panel Column */}
           <div className="flex-1 min-w-0 w-full">
+            {/* Depth Chart Sub-Navigation Bar */}
+            {['offense', 'defense', 'st', 'groups', 'scrimmage', 'depth_chart'].includes(
+              activeUnit
+            ) && (
+              <div className="mb-4 bg-slate-900/90 border border-slate-700/80 rounded-2xl p-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar shadow-md">
+                <span className="px-3 py-1 text-[11px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5 shrink-0">
+                  <ClipboardList className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Depth Chart:</span>
+                </span>
+                {[
+                  { id: 'offense', label: 'Offense', icon: Zap },
+                  { id: 'defense', label: 'Defense', icon: Shield },
+                  { id: 'st', label: 'Special Teams', icon: Target },
+                  { id: 'groups', label: 'Position Groups', icon: Users },
+                  { id: 'scrimmage', label: 'Practice / Scrimmage', icon: Swords },
+                ].map((sub) => {
+                  const Icon = sub.icon;
+                  const isActive =
+                    activeUnit === sub.id ||
+                    (activeUnit === 'depth_chart' && depthSubUnit === sub.id);
+                  return (
+                    <button
+                      key={sub.id}
+                      onClick={() => {
+                        setDepthSubUnit(sub.id as any);
+                        setActiveUnit(sub.id as any);
+                      }}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                        isActive
+                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400/40'
+                          : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{sub.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {/* 1. Formations View (Offense, Defense, Special Teams, Depth Chart Groups) */}
             {['offense', 'defense', 'st', 'groups'].includes(activeUnit) && (
               <FormationsView
@@ -2653,13 +3142,15 @@ export default function App() {
             {/* 7. Practice Plan Generator */}
             {activeUnit === 'practice' && (
               <PracticePlanView
-                practices={practiceData}
+                practices={activeTeamPracticeData.length > 0 ? activeTeamPracticeData : practiceData}
                 currentPracticeId={currentPracticeId}
                 practiceTemplates={practiceTemplates}
                 cascadingDrills={cascadingDrills}
-                savedCoaches={savedCoaches}
+                savedCoaches={activeTeamSavedCoaches}
                 printFontSize={printFontSize}
                 userRole={userRole}
+                scheduleEvents={activeTeamScheduleEvents}
+                onQuickCreateFromSchedule={handleQuickCreatePlanFromSchedule}
                 onSelectPractice={setCurrentPracticeId}
                 onOpenNewPracticeModal={handleOpenNewPracticeModal}
                 onEditPracticeDetails={handleEditPracticeDetails}
@@ -2683,14 +3174,8 @@ export default function App() {
                 onRemoveStationFromPeriod={handleRemoveStationFromPeriod}
                 onUpdateStation={handleUpdateStation}
                 onSelectDrillForStation={handleSelectDrillForStation}
-                onAddNewSavedCoach={(name) => {
-                  if (!savedCoaches.includes(name)) {
-                    setSavedCoaches((prev) => [...prev, name].sort());
-                  }
-                }}
-                onDeleteSavedCoach={(name) => {
-                  setSavedCoaches((prev) => prev.filter((c) => c !== name));
-                }}
+                onAddNewSavedCoach={(name) => handleAddNewSavedCoach(name, activeTeamId)}
+                onDeleteSavedCoach={(name) => handleDeleteSavedCoach(name, activeTeamId)}
                 onNavigateToSchedule={() => setActiveUnit('schedule')}
                 onPracticeWizardGenerate={handlePracticeWizardGenerate}
               />
@@ -2700,26 +3185,21 @@ export default function App() {
             {activeUnit === 'users' && userRole === 'admin' && (
               <StaffManagerView
                 staffList={staffList}
-                savedCoaches={savedCoaches}
+                savedCoaches={activeTeamSavedCoaches}
+                teamSavedCoaches={teamSavedCoaches}
                 userRole={userRole}
-                onAddStaffCoach={(email) => {
-                  if (
-                    staffList.some(
-                      (c) => c.email.toLowerCase() === email.toLowerCase()
-                    )
-                  ) {
-                    alert('Coach email already in staff list.');
-                    return;
-                  }
-                  setStaffList((prev) => [
-                    ...prev,
-                    { email, role: 'Assistant Coach', status: 'Active' },
-                  ]);
-                }}
+                teams={teams}
+                activeTeamId={activeTeamId}
+                onSelectTeam={setActiveTeamId}
+                onAddTeam={handleAddTeam}
+                onUpdateTeam={handleUpdateTeam}
+                onDeleteTeam={handleDeleteTeam}
+                onAddStaffCoach={handleAddStaffCoach}
                 onUpdateStaffRole={(idx, role) => {
                   setStaffList((prev) => {
                     const updated = [...prev];
                     updated[idx] = { ...updated[idx], role };
+                    safeJSONSet('footballTeamCoaches', updated);
                     return updated;
                   });
                 }}
@@ -2733,38 +3213,41 @@ export default function App() {
                           ? 'Pending'
                           : 'Active',
                     };
+                    safeJSONSet('footballTeamCoaches', updated);
                     return updated;
                   });
                 }}
                 onRemoveStaffCoach={(idx) => {
+                  const targetCoach = staffList[idx];
                   if (
-                    staffList[idx].email.toLowerCase() ===
-                    'dannym1010@gmail.com'
+                    idx === 0 &&
+                    targetCoach.role.toLowerCase().includes('head coach')
                   ) {
-                    alert('Cannot remove Master Admin.');
+                    alert('Cannot remove the primary Head Coach / Master Admin.');
                     return;
                   }
-                  if (confirm(`Remove ${staffList[idx].email}?`)) {
-                    setStaffList((prev) => prev.filter((_, i) => i !== idx));
+                  if (confirm(`Remove ${targetCoach.email}?`)) {
+                    setStaffList((prev) => {
+                      const updated = prev.filter((_, i) => i !== idx);
+                      safeJSONSet('footballTeamCoaches', updated);
+                      return updated;
+                    });
                   }
                 }}
-                onAddNewSavedCoach={(name) => {
-                  if (!savedCoaches.includes(name)) {
-                    setSavedCoaches((prev) => [...prev, name].sort());
-                  }
-                }}
-                onDeleteSavedCoach={(name) => {
-                  setSavedCoaches((prev) => prev.filter((c) => c !== name));
-                }}
+                onUpdateStaffAssignedTeams={handleUpdateStaffAssignedTeams}
+                onAddNewSavedCoach={handleAddNewSavedCoach}
+                onDeleteSavedCoach={handleDeleteSavedCoach}
+                onCopyCoachesFromTeam={handleCopyCoachesFromTeam}
               />
             )}
 
             {/* 9. Season Schedule & Games Hub */}
             {activeUnit === 'schedule' && (
               <ScheduleView
-                scheduleEvents={scheduleEvents}
+                scheduleEvents={activeTeamScheduleEvents}
                 userRole={userRole}
                 currentWeek={currentWeek}
+                activeTeam={currentActiveTeam}
                 practicePlans={practiceData}
                 weeklyData={weeklyData}
                 practiceTemplates={practiceTemplates}
@@ -2776,16 +3259,51 @@ export default function App() {
                 onSyncGameToWeeklyData={handleSyncGameToWeeklyData}
                 onSyncPracticeToPlan={handleSyncPracticeToPlan}
                 onNavigateToWeek={handleNavigateToWeek}
+                onImportTeamSnapEvents={handleImportTeamSnapScheduleEvents}
+              />
+            )}
+
+            {/* 10. Practice Hours & Acclimatization Compliance */}
+            {activeUnit === 'compliance' && (
+              <PlayerHoursTracker
+                roster={activeTeamRoster}
+                userRole={userRole}
+                currentWeek={currentWeek}
+                scheduleEvents={activeTeamScheduleEvents}
+                seasonConfig={seasonConfig}
+                attendanceLogs={attendanceLogs}
+                onUpdatePlayer={handleUpdatePlayerInRoster}
+                onUpdateRoster={(newRoster) => {
+                  setRoster(newRoster);
+                  safeJSONSet('footballRoster', newRoster);
+                }}
+                onOpenAddPlayerModal={() => {
+                  setEditingPlayerForModal(null);
+                  setIsRosterModalOpen(true);
+                }}
+                onOpenEditPlayerModal={(player) => {
+                  setEditingPlayerForModal(player);
+                  setIsRosterModalOpen(true);
+                }}
+                onOpenRosterManager={() => setIsRosterModalOpen(true)}
+                onUpdateSeasonConfig={(cfg) => {
+                  setSeasonConfig(cfg);
+                  safeJSONSet('footballSeasonConfig', cfg);
+                }}
+                onUpdateAttendanceLogs={(logs) => {
+                  setAttendanceLogs(logs);
+                  safeJSONSet('footballAttendanceLogs', logs);
+                }}
               />
             )}
           </div>
 
           {/* Master Roster Sidebar (Shown on Depth Charts, Scrimmage, Wristband) */}
-          {!['drills', 'scouting', 'guide', 'practice', 'users', 'schedule'].includes(
+          {!['drills', 'scouting', 'guide', 'practice', 'users', 'schedule', 'compliance'].includes(
             activeUnit
           ) && (
             <RosterSidebar
-              roster={MASTER_ROSTER}
+              roster={activeTeamRoster}
               searchTerm={rosterSearchTerm}
               onSearchChange={setRosterSearchTerm}
               activeUnit={activeUnit}
@@ -2798,6 +3316,11 @@ export default function App() {
               onDragStartPlayer={handleDragStartRosterPlayer}
               onDragStartPlay={(e, play) => {
                 e.dataTransfer.setData('text/plain', play);
+              }}
+              onOpenRosterManager={() => setIsRosterModalOpen(true)}
+              onSelectPlayerForEdit={(p) => {
+                setEditingPlayerForModal(p);
+                setIsRosterModalOpen(true);
               }}
             />
           )}
@@ -2942,6 +3465,24 @@ export default function App() {
         onClose={() => setIsImportModalOpen(false)}
         onSelectFile={() => fileInputRef.current?.click()}
         onPasteImport={handlePasteImport}
+      />
+
+      <RosterManagerModal
+        isOpen={isRosterModalOpen}
+        onClose={() => {
+          setIsRosterModalOpen(false);
+          setEditingPlayerForModal(null);
+        }}
+        roster={roster}
+        onUpdateRoster={(newRoster) => {
+          setRoster(newRoster);
+          safeJSONSet('footballRoster', newRoster);
+        }}
+        userRole={userRole}
+        editingPlayer={editingPlayerForModal}
+        onClearEditingPlayer={() => setEditingPlayerForModal(null)}
+        teams={teams}
+        activeTeamId={activeTeamId}
       />
     </div>
   );

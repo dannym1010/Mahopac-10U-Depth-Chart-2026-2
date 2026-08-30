@@ -25,11 +25,17 @@ import {
   Check,
   X,
   Users,
+  Settings,
+  ClipboardCheck,
+  History,
+  FileCheck,
 } from 'lucide-react';
 import {
   RosterPlayer,
   UserRole,
   ScheduleEvent,
+  SeasonConfig,
+  AttendanceRecord,
   formatWeekLabel,
   calculatePlayerCompliance,
   CONDITIONING_HOURS_REQUIRED,
@@ -41,11 +47,15 @@ interface PlayerHoursTrackerProps {
   userRole: UserRole;
   currentWeek: string;
   scheduleEvents?: ScheduleEvent[];
+  seasonConfig?: SeasonConfig;
+  attendanceLogs?: AttendanceRecord[];
   onUpdatePlayer: (updatedPlayer: RosterPlayer) => void;
   onUpdateRoster: (updatedRoster: RosterPlayer[]) => void;
   onOpenAddPlayerModal: () => void;
   onOpenEditPlayerModal: (player: RosterPlayer) => void;
   onOpenRosterManager: () => void;
+  onUpdateSeasonConfig?: (config: SeasonConfig) => void;
+  onUpdateAttendanceLogs?: (logs: AttendanceRecord[]) => void;
 }
 
 export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
@@ -53,29 +63,76 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
   userRole,
   currentWeek,
   scheduleEvents = [],
+  seasonConfig,
+  attendanceLogs = [],
   onUpdatePlayer,
   onUpdateRoster,
   onOpenAddPlayerModal,
   onOpenEditPlayerModal,
   onOpenRosterManager,
+  onUpdateSeasonConfig,
+  onUpdateAttendanceLogs,
 }) => {
+  const [activeTab, setActiveTab] = useState<'roster_hours' | 'attendance_log'>('roster_hours');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'needs_conditioning' | 'needs_pads' | 'fully_cleared'>('all');
   const [selectedWeekForLog, setSelectedWeekForLog] = useState<string>(currentWeek || '0');
   const [showLogAttendanceModal, setShowLogAttendanceModal] = useState(false);
-  const [selectedPlayerForAdjust, setSelectedPlayerForAdjust] = useState<RosterPlayer | null>(null);
+  const [showSeasonConfigModal, setShowSeasonConfigModal] = useState(false);
 
   // Form state for Quick Attendance Logger
   const [logSessionType, setLogSessionType] = useState<'conditioning' | 'padded'>('conditioning');
   const [logSessionHours, setLogSessionHours] = useState<number>(1.5);
-  const [logSessionTitle, setLogSessionTitle] = useState<string>('Preseason Conditioning Practice');
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<Record<string, boolean>>(() => {
-    const init: Record<string, boolean> = {};
+  const [logSessionDate, setLogSessionDate] = useState<string>(
+    new Date().toISOString().split('T')[0]
+  );
+  const [logSessionTitle, setLogSessionTitle] = useState<string>('Preseason Practice');
+  const [logSessionLocation, setLogSessionLocation] = useState<string>('Crane Road');
+  const [logSessionNotes, setLogSessionNotes] = useState<string>('');
+  const [selectedScheduleEventId, setSelectedScheduleEventId] = useState<string>('');
+
+  const [playerAttendanceStatus, setPlayerAttendanceStatus] = useState<
+    Record<string, 'present' | 'absent' | 'excused'>
+  >(() => {
+    const init: Record<string, 'present' | 'absent' | 'excused'> = {};
     roster.forEach((p) => {
-      init[p.num] = true; // All present by default
+      init[p.num] = 'present';
     });
     return init;
   });
+
+  // Preseason Configuration form state
+  const [editPreseasonCount, setEditPreseasonCount] = useState<number>(
+    seasonConfig?.preseasonWeeksCount ?? 4
+  );
+
+  // When opening attendance modal, reset attendance state
+  const handleOpenAttendanceModal = () => {
+    const init: Record<string, 'present' | 'absent' | 'excused'> = {};
+    roster.forEach((p) => {
+      init[p.num] = 'present';
+    });
+    setPlayerAttendanceStatus(init);
+    setShowLogAttendanceModal(true);
+  };
+
+  // Sync scheduled practice selection into modal
+  const handleSelectScheduleEvent = (eventId: string) => {
+    setSelectedScheduleEventId(eventId);
+    const evt = scheduleEvents.find((e) => e.id === eventId);
+    if (evt) {
+      setLogSessionTitle(evt.title);
+      setLogSessionDate(evt.date);
+      setLogSessionLocation(evt.location || 'Crane Road');
+      setSelectedWeekForLog(evt.week || '0');
+      // If event title has "Conditioning", set to conditioning, else if padded
+      if (evt.title.toLowerCase().includes('cond') || evt.week === '0') {
+        setLogSessionType('conditioning');
+      } else {
+        setLogSessionType('padded');
+      }
+    }
+  };
 
   // Calculate high-level compliance metrics
   const complianceStats = useMemo(() => {
@@ -111,8 +168,9 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
       totalConditioningHoursLogged: totalConditioningHoursLogged.toFixed(1),
       totalPaddedHoursLogged: totalPaddedHoursLogged.toFixed(1),
       totalHours: (totalConditioningHoursLogged + totalPaddedHoursLogged).toFixed(1),
+      totalSessionsCount: attendanceLogs.length,
     };
-  }, [roster]);
+  }, [roster, attendanceLogs]);
 
   // Filtered Players
   const filteredRoster = useMemo(() => {
@@ -163,15 +221,27 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
     onUpdatePlayer(updatedPlayer);
   };
 
-  // Submit bulk attendance session
+  // Submit Roll Call & Credit Hours
   const handleSubmitAttendanceSession = () => {
     if (userRole !== 'admin') return;
     const hoursToAdd = Number(logSessionHours);
     if (hoursToAdd <= 0) return;
 
+    const presentNums: string[] = [];
+    const absentNums: string[] = [];
+    const excusedNums: string[] = [];
+
+    roster.forEach((p) => {
+      const stat = playerAttendanceStatus[p.num] || 'present';
+      if (stat === 'present') presentNums.push(p.num);
+      else if (stat === 'absent') absentNums.push(p.num);
+      else if (stat === 'excused') excusedNums.push(p.num);
+    });
+
+    // 1. Update Roster hours for present players
     const updatedRoster = roster.map((player) => {
-      if (!selectedPlayerIds[player.num]) {
-        return player; // absent
+      if (playerAttendanceStatus[player.num] !== 'present') {
+        return player;
       }
 
       const currentCond = Number(player.conditioningHours || 0);
@@ -199,7 +269,70 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
     });
 
     onUpdateRoster(updatedRoster);
+
+    // 2. Create and append Attendance Record
+    const newRecord: AttendanceRecord = {
+      id: `att_${Date.now()}`,
+      date: logSessionDate,
+      week: selectedWeekForLog,
+      title: logSessionTitle || 'Practice Session',
+      sessionType: logSessionType,
+      hours: hoursToAdd,
+      location: logSessionLocation,
+      presentPlayerNums: presentNums,
+      absentPlayerNums: absentNums,
+      excusedPlayerNums: excusedNums,
+      notes: logSessionNotes,
+      timestamp: Date.now(),
+    };
+
+    if (onUpdateAttendanceLogs) {
+      onUpdateAttendanceLogs([newRecord, ...attendanceLogs]);
+    }
+
     setShowLogAttendanceModal(false);
+  };
+
+  // Delete an attendance log entry
+  const handleDeleteAttendanceLog = (recordId: string) => {
+    if (userRole !== 'admin') return;
+    if (window.confirm('Are you sure you want to remove this attendance record from history?')) {
+      if (onUpdateAttendanceLogs) {
+        onUpdateAttendanceLogs(attendanceLogs.filter((r) => r.id !== recordId));
+      }
+    }
+  };
+
+  // Save Preseason Configuration
+  const handleSaveSeasonConfig = () => {
+    if (userRole !== 'admin' || !onUpdateSeasonConfig) return;
+    const newCount = Math.max(1, Math.min(10, editPreseasonCount));
+    
+    // Auto-generate week labels based on preseason count
+    const customLabels: Record<string, string> = {
+      '0': 'Preseason Wk 1 (Conditioning)',
+      'pre-1': 'Preseason Wk 1 (Conditioning)',
+      'pre-2': 'Preseason Wk 2 (Conditioning & Shells)',
+      'pre-3': 'Preseason Wk 3 (Pads & Fundamentals)',
+      'pre-4': 'Preseason Wk 4 (Pads & Scrimmage)',
+    };
+
+    for (let i = 1; i <= newCount; i++) {
+      customLabels[String(i)] = `Preseason Wk ${i} (${i <= 2 ? 'Conditioning' : 'Padded & Scrimmage'})`;
+    }
+    for (let i = newCount + 1; i <= newCount + 8; i++) {
+      customLabels[String(i)] = `Regular Season • Week ${i - newCount}`;
+    }
+
+    const updatedConfig: SeasonConfig = {
+      preseasonWeeksCount: newCount,
+      regularSeasonWeeksCount: 8,
+      preseasonWeekKeys: ['0', 'pre-2', 'pre-3', 'pre-4', '1', '2', '3', '4'].slice(0, newCount + 2),
+      customWeekLabels: customLabels,
+    };
+
+    onUpdateSeasonConfig(updatedConfig);
+    setShowSeasonConfigModal(false);
   };
 
   // Print compliance summary
@@ -222,12 +355,15 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
               <span className="px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-black uppercase tracking-wider rounded-full">
                 MAHOPAC 10U
               </span>
+              <span className="px-3 py-1 bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold rounded-full">
+                {seasonConfig?.preseasonWeeksCount ?? 4} Weeks Preseason
+              </span>
             </div>
             <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-100 tracking-tight flex items-center gap-2">
-              <span>⚡ Player Practice Hours & Acclimatization Tracker</span>
+              <span>⚡ Practice Hours, Attendance & Acclimatization</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 font-medium max-w-3xl mt-1.5 leading-relaxed">
-              Enforces youth safety requirements: <strong className="text-amber-300">10 Hours Conditioning</strong> required before wearing full pads, then <strong className="text-sky-300">10 Hours in Pads</strong> required before participating in scrimmages or live games.
+              Track roll call, attendance records, and NY youth acclimatization rules: <strong className="text-amber-300">10 Hours Conditioning</strong> required before wearing full pads, then <strong className="text-sky-300">10 Hours in Pads</strong> required before participating in scrimmages or live games.
             </p>
           </div>
 
@@ -236,18 +372,31 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
             {userRole === 'admin' && (
               <>
                 <button
-                  onClick={() => setShowLogAttendanceModal(true)}
+                  onClick={handleOpenAttendanceModal}
                   className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-2xl flex items-center gap-2 shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
                 >
-                  <Zap className="w-4 h-4 text-slate-950 fill-slate-950" />
-                  <span>Log Practice Hours</span>
+                  <ClipboardCheck className="w-4 h-4 text-slate-950" />
+                  <span>Take Practice Attendance</span>
                 </button>
+
+                <button
+                  onClick={() => {
+                    setEditPreseasonCount(seasonConfig?.preseasonWeeksCount ?? 4);
+                    setShowSeasonConfigModal(true);
+                  }}
+                  className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-750 text-amber-300 font-bold text-xs rounded-2xl flex items-center gap-2 border border-slate-700 active:scale-95 transition-all"
+                  title="Configure Pre-Season & Acclimatization Weeks"
+                >
+                  <Settings className="w-4 h-4 text-amber-400" />
+                  <span>Preseason Settings</span>
+                </button>
+
                 <button
                   onClick={onOpenRosterManager}
-                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-2xl flex items-center gap-2 shadow-lg shadow-indigo-600/20 active:scale-95 transition-all border border-indigo-400/30"
+                  className="px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-2xl flex items-center gap-2 shadow-lg shadow-indigo-600/20 active:scale-95 transition-all border border-indigo-400/30"
                 >
                   <UserPlus className="w-4 h-4" />
-                  <span>Manage Roster</span>
+                  <span>Roster</span>
                 </button>
               </>
             )}
@@ -282,9 +431,9 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
             </div>
             <div className="mt-1 flex items-baseline gap-2">
               <span className="text-2xl font-black text-sky-400">{complianceStats.padsClearedCount}</span>
-              <span className="text-xs text-slate-400 font-semibold">kids</span>
+              <span className="text-xs text-slate-400 font-semibold">athletes</span>
             </div>
-            <p className="text-[10px] text-slate-400 mt-1">Can wear pads; working to 10h padded</p>
+            <p className="text-[10px] text-slate-400 mt-1">Wearing pads; working to 10h padded</p>
           </div>
 
           <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-3.5 shadow-inner">
@@ -294,51 +443,67 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
             </div>
             <div className="mt-1 flex items-baseline gap-2">
               <span className="text-2xl font-black text-amber-400">{complianceStats.conditioningOnlyCount}</span>
-              <span className="text-xs text-slate-400 font-semibold">kids</span>
+              <span className="text-xs text-slate-400 font-semibold">athletes</span>
             </div>
             <p className="text-[10px] text-slate-400 mt-1">Helmets only; needs 10h conditioning</p>
           </div>
 
           <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-3.5 shadow-inner">
             <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold uppercase tracking-wider">
-              <span>Total Practice Hours</span>
-              <Clock className="w-4 h-4 text-indigo-400" />
+              <span>Practice Logs</span>
+              <History className="w-4 h-4 text-indigo-400" />
             </div>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-indigo-300">{complianceStats.totalHours}</span>
-              <span className="text-xs text-slate-400 font-semibold">hrs</span>
+              <span className="text-2xl font-black text-indigo-300">{complianceStats.totalSessionsCount}</span>
+              <span className="text-xs text-slate-400 font-semibold">sessions logged</span>
             </div>
             <p className="text-[10px] text-slate-400 mt-1">{complianceStats.totalConditioningHoursLogged}h cond + {complianceStats.totalPaddedHoursLogged}h pads</p>
           </div>
         </div>
       </div>
 
-      {/* Rules Information Ribbon */}
-      <div className="bg-indigo-950/40 border border-indigo-800/40 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs text-indigo-200">
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0 text-indigo-300 mt-0.5">
-            <Info className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="font-bold text-slate-100 block text-xs">Acclimatization Rules Checklist:</span>
-            <span className="text-[11px] text-slate-300 leading-tight">
-              1. <strong>Conditioning Phase (10 hrs):</strong> Helmets, t-shirts & shorts only. No pads or contact.<br/>
-              2. <strong>Padded Phase (10 hrs):</strong> Full gear & shells allowed. Must complete 10 logged padded hours before live game or scrimmage.
-            </span>
-          </div>
+      {/* Main View Mode Selector (Roster Compliance vs Attendance Roll Call History) */}
+      <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-2">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('roster_hours')}
+            className={`px-4 py-2 rounded-2xl text-xs font-black flex items-center gap-2 transition-all ${
+              activeTab === 'roster_hours'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Player Compliance Cards</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('attendance_log')}
+            className={`px-4 py-2 rounded-2xl text-xs font-black flex items-center gap-2 transition-all ${
+              activeTab === 'attendance_log'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+            }`}
+          >
+            <History className="w-4 h-4" />
+            <span>Attendance Log History ({attendanceLogs.length})</span>
+          </button>
         </div>
 
         {/* Selected Week Filter */}
-        <div className="flex items-center gap-2 self-start md:self-auto bg-slate-900/90 border border-slate-700 px-3 py-1.5 rounded-xl text-xs">
+        <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700 px-3 py-1.5 rounded-xl text-xs">
           <Calendar className="w-3.5 h-3.5 text-amber-400" />
-          <span className="font-bold text-slate-300 text-[11px]">Active Week:</span>
+          <span className="font-bold text-slate-300 text-[11px]">Season Week:</span>
           <select
             value={selectedWeekForLog}
             onChange={(e) => setSelectedWeekForLog(e.target.value)}
             className="bg-slate-800 border border-slate-600 rounded-lg px-2 py-1 text-xs font-bold text-amber-400 focus:outline-none cursor-pointer"
           >
             <option value="0">Preseason Wk 1 (Conditioning)</option>
-            <option value="pre-2">Preseason Wk 2 (Pads & Scrimmage)</option>
+            <option value="pre-2">Preseason Wk 2 (Conditioning & Shells)</option>
+            <option value="pre-3">Preseason Wk 3 (Pads & Fundamentals)</option>
+            <option value="pre-4">Preseason Wk 4 (Pads & Scrimmage)</option>
             {[1, 2, 3, 4, 5, 6, 7, 8].map((w) => (
               <option key={w} value={String(w)}>
                 Regular Season • Week {w}
@@ -348,338 +513,423 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        {/* Search */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search player name, jersey #, position..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-900/90 border border-slate-700 rounded-2xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-400 shadow-inner"
-          />
-        </div>
+      {/* VIEW 1: Player Hours Compliance Grid */}
+      {activeTab === 'roster_hours' && (
+        <div className="space-y-5">
+          {/* Filter and Search Bar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            {/* Search */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search player name, jersey #, position..."
+                className="w-full pl-9 pr-4 py-2 bg-slate-900/90 border border-slate-700 rounded-2xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-400 shadow-inner"
+              />
+            </div>
 
-        {/* Status Filter Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-          <button
-            onClick={() => setStatusFilter('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              statusFilter === 'all'
-                ? 'bg-slate-700 text-white border border-slate-600 shadow-xs'
-                : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border border-slate-800'
-            }`}
-          >
-            All ({roster.length})
-          </button>
-          <button
-            onClick={() => setStatusFilter('needs_conditioning')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
-              statusFilter === 'needs_conditioning'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-xs'
-                : 'bg-slate-900/80 text-slate-400 hover:text-amber-400 border border-slate-800'
-            }`}
-          >
-            <Zap className="w-3 h-3 text-amber-400" />
-            <span>Needs Conditioning ({complianceStats.conditioningOnlyCount})</span>
-          </button>
-          <button
-            onClick={() => setStatusFilter('needs_pads')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
-              statusFilter === 'needs_pads'
-                ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 shadow-xs'
-                : 'bg-slate-900/80 text-slate-400 hover:text-sky-400 border border-slate-800'
-            }`}
-          >
-            <Shield className="w-3 h-3 text-sky-400" />
-            <span>Needs Padded Hours ({complianceStats.padsClearedCount})</span>
-          </button>
-          <button
-            onClick={() => setStatusFilter('fully_cleared')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
-              statusFilter === 'fully_cleared'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-xs'
-                : 'bg-slate-900/80 text-slate-400 hover:text-emerald-400 border border-slate-800'
-            }`}
-          >
-            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-            <span>Fully Cleared ({complianceStats.fullyClearedCount})</span>
-          </button>
-        </div>
-      </div>
+            {/* Status Filter Tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+              <button
+                onClick={() => setStatusFilter('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  statusFilter === 'all'
+                    ? 'bg-slate-700 text-white border border-slate-600 shadow-xs'
+                    : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border border-slate-800'
+                }`}
+              >
+                All ({roster.length})
+              </button>
+              <button
+                onClick={() => setStatusFilter('needs_conditioning')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+                  statusFilter === 'needs_conditioning'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-xs'
+                    : 'bg-slate-900/80 text-slate-400 hover:text-amber-400 border border-slate-800'
+                }`}
+              >
+                <Zap className="w-3 h-3 text-amber-400" />
+                <span>Needs Conditioning ({complianceStats.conditioningOnlyCount})</span>
+              </button>
+              <button
+                onClick={() => setStatusFilter('needs_pads')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+                  statusFilter === 'needs_pads'
+                    ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 shadow-xs'
+                    : 'bg-slate-900/80 text-slate-400 hover:text-sky-400 border border-slate-800'
+                }`}
+              >
+                <Shield className="w-3 h-3 text-sky-400" />
+                <span>Needs Padded Hours ({complianceStats.padsClearedCount})</span>
+              </button>
+              <button
+                onClick={() => setStatusFilter('fully_cleared')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+                  statusFilter === 'fully_cleared'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-xs'
+                    : 'bg-slate-900/80 text-slate-400 hover:text-emerald-400 border border-slate-800'
+                }`}
+              >
+                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                <span>Fully Cleared ({complianceStats.fullyClearedCount})</span>
+              </button>
+            </div>
+          </div>
 
-      {/* Player Cards Compliance Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filteredRoster.map((player) => {
-          const comp = calculatePlayerCompliance(player);
-          const condProgress = Math.min(100, (comp.conditioningHours / CONDITIONING_HOURS_REQUIRED) * 100);
-          const padProgress = Math.min(100, (comp.paddedHours / PADDED_HOURS_REQUIRED) * 100);
-          const thisWeekHours = Number(player.weeklyHours?.[selectedWeekForLog] || 0);
+          {/* Player Cards Compliance Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filteredRoster.map((player) => {
+              const comp = calculatePlayerCompliance(player);
+              const condProgress = Math.min(100, (comp.conditioningHours / CONDITIONING_HOURS_REQUIRED) * 100);
+              const padProgress = Math.min(100, (comp.paddedHours / PADDED_HOURS_REQUIRED) * 100);
+              const thisWeekHours = Number(player.weeklyHours?.[selectedWeekForLog] || 0);
 
-          return (
-            <div
-              key={player.num}
-              className={`bg-slate-900/90 border rounded-3xl p-4.5 shadow-lg flex flex-col justify-between gap-3 transition-all hover:border-slate-600 ${
-                comp.isScrimmageCleared
-                  ? 'border-emerald-500/30 ring-1 ring-emerald-500/10'
-                  : comp.isPadsCleared
-                  ? 'border-sky-500/30'
-                  : 'border-amber-500/40'
-              }`}
-            >
-              {/* Card Header: Jersey, Name, Positions & Status */}
-              <div>
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center font-mono font-black text-indigo-300 text-sm shadow-inner shrink-0">
-                      #{player.num}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <h3 className="font-black text-sm text-slate-100 uppercase tracking-tight truncate">
-                          {player.firstName} {player.lastName}
-                        </h3>
-                        {player.isCaptain && (
-                          <span className="px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 text-[9px] font-black uppercase">
-                            C
-                          </span>
-                        )}
+              // Calculate player attendance count from attendanceLogs
+              const attendedCount = attendanceLogs.filter((log) =>
+                log.presentPlayerNums.includes(player.num)
+              ).length;
+              const totalLoggedPractices = attendanceLogs.length;
+              const attRate = totalLoggedPractices > 0 ? Math.round((attendedCount / totalLoggedPractices) * 100) : 100;
+
+              return (
+                <div
+                  key={player.num}
+                  className={`bg-slate-900/90 border rounded-3xl p-4.5 shadow-lg flex flex-col justify-between gap-3 transition-all hover:border-slate-600 ${
+                    comp.isScrimmageCleared
+                      ? 'border-emerald-500/30 ring-1 ring-emerald-500/10'
+                      : comp.isPadsCleared
+                      ? 'border-sky-500/30'
+                      : 'border-amber-500/40'
+                  }`}
+                >
+                  {/* Card Header */}
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center font-mono font-black text-indigo-300 text-sm shadow-inner shrink-0">
+                          #{player.num}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="font-black text-sm text-slate-100 uppercase tracking-tight truncate">
+                              {player.firstName} {player.lastName}
+                            </h3>
+                            {player.isCaptain && (
+                              <span className="px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 text-[9px] font-black uppercase">
+                                C
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                            {player.primaryPosition && (
+                              <span className="px-2 py-0.5 rounded-md bg-slate-800 text-indigo-300 border border-indigo-500/30 text-[10px] font-black uppercase">
+                                OFF: {player.primaryPosition}
+                              </span>
+                            )}
+                            {player.secondaryPosition && (
+                              <span className="px-2 py-0.5 rounded-md bg-slate-800 text-amber-300 border border-amber-500/30 text-[10px] font-black uppercase">
+                                DEF: {player.secondaryPosition}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                        {player.primaryPosition && (
-                          <span className="px-2 py-0.5 rounded-md bg-slate-800 text-indigo-300 border border-indigo-500/30 text-[10px] font-black uppercase">
-                            OFF: {player.primaryPosition}
-                          </span>
-                        )}
-                        {player.secondaryPosition && (
-                          <span className="px-2 py-0.5 rounded-md bg-slate-800 text-amber-300 border border-amber-500/30 text-[10px] font-black uppercase">
-                            DEF: {player.secondaryPosition}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
 
-                  {userRole === 'admin' && (
-                    <button
-                      onClick={() => onOpenEditPlayerModal(player)}
-                      className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
-                      title="Edit player information"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Status Badge */}
-                <div className="mb-3">
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border ${comp.badgeColor}`}>
-                    {comp.isScrimmageCleared ? (
-                      <>
-                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                        <span>Scrimmage &amp; Game Cleared</span>
-                      </>
-                    ) : comp.isPadsCleared ? (
-                      <>
-                        <Shield className="w-3 h-3 text-sky-400" />
-                        <span>Pads Cleared ({comp.paddedRemaining.toFixed(1)}h to Scrimmage)</span>
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="w-3 h-3 text-amber-400" />
-                        <span>Conditioning Only ({comp.conditioningRemaining.toFixed(1)}h to Pads)</span>
-                      </>
-                    )}
-                  </span>
-                </div>
-
-                {/* Progress Bar 1: Conditioning Hours (Target 10h) */}
-                <div className="space-y-1 mb-2.5 bg-slate-950/60 border border-slate-800/80 p-2.5 rounded-2xl">
-                  <div className="flex items-center justify-between text-[11px] font-bold">
-                    <div className="flex items-center gap-1.5 text-amber-300">
-                      <Zap className="w-3 h-3" />
-                      <span>1. Conditioning Practice</span>
-                    </div>
-                    <span className="font-mono text-slate-200">
-                      {comp.conditioningHours.toFixed(1)} / 10.0 hrs
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-300 ${
-                        comp.isConditioningCleared ? 'bg-emerald-400' : 'bg-amber-400'
-                      }`}
-                      style={{ width: `${condProgress}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-[9px] text-slate-400 font-medium">
-                    <span>Target: 10 hrs</span>
-                    <span>
-                      {comp.isConditioningCleared
-                        ? '✅ Pads Cleared'
-                        : `${comp.conditioningRemaining.toFixed(1)} hrs remaining`}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Progress Bar 2: Padded Practice Hours (Target 10h) */}
-                <div className="space-y-1 bg-slate-950/60 border border-slate-800/80 p-2.5 rounded-2xl">
-                  <div className="flex items-center justify-between text-[11px] font-bold">
-                    <div className="flex items-center gap-1.5 text-sky-300">
-                      <Shield className="w-3 h-3" />
-                      <span>2. Padded Practice (Full Gear)</span>
-                    </div>
-                    <span className="font-mono text-slate-200">
-                      {comp.paddedHours.toFixed(1)} / 10.0 hrs
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-300 ${
-                        comp.isScrimmageCleared ? 'bg-emerald-400' : 'bg-sky-400'
-                      }`}
-                      style={{ width: `${padProgress}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-[9px] text-slate-400 font-medium">
-                    <span>Target: 10 hrs in pads</span>
-                    <span>
-                      {comp.isScrimmageCleared
-                        ? '✅ Scrimmage Cleared'
-                        : `${comp.paddedRemaining.toFixed(1)} hrs remaining`}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card Footer: Weekly Hours & Quick Adjustment Controls */}
-              <div className="pt-2 border-t border-slate-800 flex flex-col gap-2">
-                <div className="flex items-center justify-between text-[10px] font-bold text-slate-300">
-                  <span>
-                    Logged for {formatWeekLabel(selectedWeekForLog).split(' ')[0]}:{' '}
-                    <strong className="text-indigo-300">{thisWeekHours.toFixed(1)} hrs</strong>
-                  </span>
-                  <span>
-                    Total: <strong className="text-amber-300">{comp.totalHours.toFixed(1)} hrs</strong>
-                  </span>
-                </div>
-
-                {userRole === 'admin' && (
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {/* Conditioning Quick Adjust */}
-                    <div className="flex items-center gap-1 bg-slate-800/90 border border-slate-700 rounded-xl p-1 justify-between">
-                      <span className="text-[9px] font-black text-amber-400 pl-1 uppercase">Cond</span>
-                      <div className="flex items-center gap-0.5">
+                      {userRole === 'admin' && (
                         <button
-                          onClick={() => handleQuickAdjustHours(player, 'conditioning', -0.5)}
-                          className="w-5 h-5 bg-slate-900 hover:bg-slate-700 rounded-md text-slate-300 hover:text-white flex items-center justify-center text-[10px] font-bold transition-all"
-                          title="-0.5 hr conditioning"
+                          onClick={() => onOpenEditPlayerModal(player)}
+                          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
+                          title="Edit player information"
                         >
-                          -
+                          <Edit3 className="w-3.5 h-3.5" />
                         </button>
+                      )}
+                    </div>
+
+                    {/* Status Badge & Attendance Rate */}
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border ${comp.badgeColor}`}>
+                        {comp.isScrimmageCleared ? (
+                          <>
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                            <span>Scrimmage Cleared</span>
+                          </>
+                        ) : comp.isPadsCleared ? (
+                          <>
+                            <Shield className="w-3 h-3 text-sky-400" />
+                            <span>Pads Cleared ({comp.paddedRemaining.toFixed(1)}h left)</span>
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="w-3 h-3 text-amber-400" />
+                            <span>Conditioning ({comp.conditioningRemaining.toFixed(1)}h left)</span>
+                          </>
+                        )}
+                      </span>
+
+                      <span className="text-[10px] font-mono font-bold text-slate-400 px-2 py-0.5 rounded-lg bg-slate-800 border border-slate-700">
+                        Att: {attRate}% ({attendedCount}/{totalLoggedPractices || 0})
+                      </span>
+                    </div>
+
+                    {/* Progress Bar 1: Conditioning Hours (Target 10h) */}
+                    <div className="space-y-1 mb-2.5 bg-slate-950/60 border border-slate-800/80 p-2.5 rounded-2xl">
+                      <div className="flex items-center justify-between text-[11px] font-bold">
+                        <span className="flex items-center gap-1 text-amber-300">
+                          <Zap className="w-3 h-3 text-amber-400" />
+                          <span>Conditioning (Tee &amp; Shorts)</span>
+                        </span>
+                        <span className="text-slate-200 font-mono">
+                          {comp.conditioningHours.toFixed(1)} / {CONDITIONING_HOURS_REQUIRED} hrs
+                        </span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-300 rounded-full"
+                          style={{ width: `${condProgress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Progress Bar 2: Padded Hours (Target 10h) */}
+                    <div className="space-y-1 bg-slate-950/60 border border-slate-800/80 p-2.5 rounded-2xl">
+                      <div className="flex items-center justify-between text-[11px] font-bold">
+                        <span className="flex items-center gap-1 text-sky-300">
+                          <Shield className="w-3 h-3 text-sky-400" />
+                          <span>Padded Contact Practice</span>
+                        </span>
+                        <span className="text-slate-200 font-mono">
+                          {comp.paddedHours.toFixed(1)} / {PADDED_HOURS_REQUIRED} hrs
+                        </span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-sky-500 to-indigo-500 transition-all duration-300 rounded-full"
+                          style={{ width: `${padProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Admin Adjustments */}
+                  {userRole === 'admin' && (
+                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] font-bold text-slate-400 mr-1">Adjust:</span>
                         <button
                           onClick={() => handleQuickAdjustHours(player, 'conditioning', 0.5)}
-                          className="w-5 h-5 bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 rounded-md flex items-center justify-center text-[10px] font-bold transition-all"
-                          title="+0.5 hr conditioning"
+                          className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 border border-amber-500/30 font-mono font-bold"
+                          title="Add 0.5h conditioning"
                         >
-                          +
-                        </button>
-                        <button
-                          onClick={() => handleQuickAdjustHours(player, 'conditioning', 1.0)}
-                          className="px-1 py-0.5 bg-amber-500/30 hover:bg-amber-500/50 text-amber-300 rounded-md text-[9px] font-bold transition-all"
-                          title="+1.0 hr conditioning"
-                        >
-                          +1h
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Padded Quick Adjust */}
-                    <div className="flex items-center gap-1 bg-slate-800/90 border border-slate-700 rounded-xl p-1 justify-between">
-                      <span className="text-[9px] font-black text-sky-400 pl-1 uppercase">Pads</span>
-                      <div className="flex items-center gap-0.5">
-                        <button
-                          onClick={() => handleQuickAdjustHours(player, 'padded', -0.5)}
-                          className="w-5 h-5 bg-slate-900 hover:bg-slate-700 rounded-md text-slate-300 hover:text-white flex items-center justify-center text-[10px] font-bold transition-all"
-                          title="-0.5 hr padded"
-                        >
-                          -
+                          +0.5h Cond
                         </button>
                         <button
                           onClick={() => handleQuickAdjustHours(player, 'padded', 0.5)}
-                          className="w-5 h-5 bg-sky-500/20 hover:bg-sky-500/40 text-sky-300 rounded-md flex items-center justify-center text-[10px] font-bold transition-all"
-                          title="+0.5 hr padded"
+                          className="px-2 py-0.5 rounded-lg bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 border border-sky-500/30 font-mono font-bold"
+                          title="Add 0.5h padded"
                         >
-                          +
-                        </button>
-                        <button
-                          onClick={() => handleQuickAdjustHours(player, 'padded', 1.0)}
-                          className="px-1 py-0.5 bg-sky-500/30 hover:bg-sky-500/50 text-sky-300 rounded-md text-[9px] font-bold transition-all"
-                          title="+1.0 hr padded"
-                        >
-                          +1h
+                          +0.5h Pads
                         </button>
                       </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
 
-      {filteredRoster.length === 0 && (
-        <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-10 text-center text-slate-400 font-medium">
-          <Users className="w-8 h-8 mx-auto text-slate-500 mb-2" />
-          <p className="text-sm font-bold text-slate-300">No players match the selected filter</p>
-          <p className="text-xs text-slate-500 mt-1">Try resetting search query or status filter</p>
+                      <span className="text-[10px] font-mono text-slate-500">
+                        Wk {selectedWeekForLog}: {thisWeekHours.toFixed(1)}h
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {/* QUICK ATTENDANCE & HOURS LOGGER MODAL */}
+      {/* VIEW 2: Attendance Roll Call History Log */}
+      {activeTab === 'attendance_log' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-black text-slate-100">Practice Roll Call History</h2>
+              <p className="text-xs text-slate-400">Chronological audit log of completed practices and roster attendance</p>
+            </div>
+            {userRole === 'admin' && (
+              <button
+                onClick={handleOpenAttendanceModal}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Log New Roll Call</span>
+              </button>
+            )}
+          </div>
+
+          {attendanceLogs.length === 0 ? (
+            <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-3xl space-y-3">
+              <ClipboardCheck className="w-10 h-10 text-slate-600 mx-auto" />
+              <div className="font-bold text-slate-300 text-sm">No Attendance Records Yet</div>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Click "Take Practice Attendance" to record roll call for today's practice and credit acclimatization hours to all present players.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {attendanceLogs.map((log) => {
+                const presentCount = log.presentPlayerNums.length;
+                const absentCount = log.absentPlayerNums.length;
+                const total = presentCount + absentCount;
+                const pct = total > 0 ? Math.round((presentCount / total) * 100) : 100;
+
+                return (
+                  <div
+                    key={log.id}
+                    className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 shadow-md transition-all hover:border-slate-600"
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="px-2.5 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-black uppercase">
+                            {formatWeekLabel(log.week, seasonConfig)}
+                          </span>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase ${
+                              log.sessionType === 'conditioning'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                : 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                            }`}
+                          >
+                            {log.sessionType === 'conditioning' ? '⚡ Conditioning' : '🛡️ Full Pads'}
+                          </span>
+                          <span className="text-xs font-mono text-slate-400 font-bold">
+                            {log.date} • {log.hours} Hours
+                          </span>
+                        </div>
+                        <h3 className="font-black text-slate-100 text-sm">{log.title}</h3>
+                        {log.location && (
+                          <div className="text-xs text-slate-400 mt-0.5">📍 {log.location}</div>
+                        )}
+                        {log.notes && (
+                          <p className="text-xs text-slate-300 mt-1 italic">"{log.notes}"</p>
+                        )}
+                      </div>
+
+                      {/* Attendance Stats & Actions */}
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <div className="font-mono font-black text-sm text-emerald-400">
+                            {presentCount} Present / {absentCount} Absent ({pct}%)
+                          </div>
+                          {absentCount > 0 && (
+                            <div className="text-[10px] text-rose-400 font-bold truncate max-w-xs">
+                              Absent: {log.absentPlayerNums.map((n) => `#${n}`).join(', ')}
+                            </div>
+                          )}
+                        </div>
+
+                        {userRole === 'admin' && (
+                          <button
+                            onClick={() => handleDeleteAttendanceLog(log.id)}
+                            className="p-2 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-xl transition-colors"
+                            title="Delete this attendance record"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* MODAL 1: Take Practice Attendance / Roll Call */}
       {showLogAttendanceModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-slate-100 animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="p-5 border-b border-slate-800 bg-slate-850 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-850">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-inner">
-                  <Zap className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <ClipboardCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-slate-100">
-                    Log Practice Attendance &amp; Practice Hours
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Bulk credit hours to all attending players in 1 click
-                  </p>
+                  <h3 className="font-black text-slate-100 text-base">Practice Roll Call &amp; Hours Credit</h3>
+                  <p className="text-xs text-slate-400">Mark who attended and credit mandated compliance hours</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowLogAttendanceModal(false)}
-                className="text-slate-400 hover:text-slate-100 p-2 rounded-xl hover:bg-slate-800 transition-colors"
+                className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-5 overflow-y-auto space-y-4 text-xs">
-              {/* Practice Type / Gear Selection */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-200 uppercase tracking-wider text-[10px]">
-                  Practice Gear / Session Type:
+            <div className="p-5 overflow-y-auto space-y-4 max-h-[60vh]">
+              {/* Optional Schedule Event Quick Pick */}
+              {scheduleEvents.filter((e) => e.type === 'practice' || e.type === 'scrimmage').length > 0 && (
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1 text-[11px]">
+                    Auto-Fill From Scheduled Practice Event (Optional):
+                  </label>
+                  <select
+                    value={selectedScheduleEventId}
+                    onChange={(e) => handleSelectScheduleEvent(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 focus:outline-none focus:border-amber-400 cursor-pointer"
+                  >
+                    <option value="">-- Choose Scheduled Practice --</option>
+                    {scheduleEvents
+                      .filter((e) => e.type === 'practice' || e.type === 'scrimmage')
+                      .map((evt) => (
+                        <option key={evt.id} value={evt.id}>
+                          {evt.date} • {evt.title} ({evt.location || 'Crane Road'})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Title & Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1 text-[11px]">
+                    Practice Title / Description:
+                  </label>
+                  <input
+                    type="text"
+                    value={logSessionTitle}
+                    onChange={(e) => setLogSessionTitle(e.target.value)}
+                    placeholder="e.g. Preseason Conditioning Practice"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1 text-[11px]">
+                    Date:
+                  </label>
+                  <input
+                    type="date"
+                    value={logSessionDate}
+                    onChange={(e) => setLogSessionDate(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+              </div>
+
+              {/* Session Type Picker */}
+              <div>
+                <label className="block font-bold text-slate-300 mb-1.5 text-[11px]">
+                  Select Acclimatization Category:
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => {
-                      setLogSessionType('conditioning');
-                      setLogSessionTitle('Preseason Conditioning (Helmets Only)');
-                    }}
+                    onClick={() => setLogSessionType('conditioning')}
                     className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition-all ${
                       logSessionType === 'conditioning'
                         ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-lg shadow-amber-500/10'
@@ -688,19 +938,16 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
                   >
                     <Zap className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
                     <div>
-                      <div className="font-black text-xs">⚡ Conditioning / Helmets</div>
+                      <div className="font-black text-xs">⚡ Conditioning (Helmets / Shorts)</div>
                       <div className="text-[10px] text-slate-300 mt-0.5">
-                        Counts toward 10h Conditioning requirement before pads
+                        Counts toward 10h Conditioning requirement
                       </div>
                     </div>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setLogSessionType('padded');
-                      setLogSessionTitle('Full Padded Practice (Contact)');
-                    }}
+                    onClick={() => setLogSessionType('padded')}
                     className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition-all ${
                       logSessionType === 'padded'
                         ? 'bg-sky-500/20 border-sky-500 text-sky-300 shadow-lg shadow-sky-500/10'
@@ -739,7 +986,7 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
 
                 <div>
                   <label className="block font-bold text-slate-300 mb-1 text-[11px]">
-                    Assign to Week:
+                    Assign to Season Week:
                   </label>
                   <select
                     value={selectedWeekForLog}
@@ -747,7 +994,9 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-amber-400 focus:outline-none focus:border-amber-400 cursor-pointer"
                   >
                     <option value="0">Preseason Wk 1 (Conditioning)</option>
-                    <option value="pre-2">Preseason Wk 2 (Pads & Scrimmage)</option>
+                    <option value="pre-2">Preseason Wk 2 (Conditioning & Shells)</option>
+                    <option value="pre-3">Preseason Wk 3 (Pads & Fundamentals)</option>
+                    <option value="pre-4">Preseason Wk 4 (Pads & Scrimmage)</option>
                     {[1, 2, 3, 4, 5, 6, 7, 8].map((w) => (
                       <option key={w} value={String(w)}>
                         Regular Season • Week {w}
@@ -757,72 +1006,106 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
                 </div>
               </div>
 
-              {/* Player Checkboxes with Select All / Deselect All */}
+              {/* Player Checkboxes with Present / Absent / Excused */}
               <div className="space-y-2 pt-2 border-t border-slate-800">
                 <div className="flex items-center justify-between">
                   <label className="font-bold text-slate-200 text-xs">
-                    Attending Players ({Object.values(selectedPlayerIds).filter(Boolean).length} / {roster.length} Present):
+                    Player Roll Call ({Object.values(playerAttendanceStatus).filter((s) => s === 'present').length} / {roster.length} Present):
                   </label>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => {
-                        const all: Record<string, boolean> = {};
-                        roster.forEach((p) => (all[p.num] = true));
-                        setSelectedPlayerIds(all);
+                        const all: Record<string, 'present' | 'absent' | 'excused'> = {};
+                        roster.forEach((p) => (all[p.num] = 'present'));
+                        setPlayerAttendanceStatus(all);
                       }}
                       className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 underline"
                     >
-                      Select All
+                      All Present
                     </button>
                     <span className="text-slate-600">•</span>
                     <button
                       type="button"
-                      onClick={() => setSelectedPlayerIds({})}
-                      className="text-[10px] font-bold text-slate-400 hover:text-slate-300 underline"
+                      onClick={() => {
+                        const all: Record<string, 'present' | 'absent' | 'excused'> = {};
+                        roster.forEach((p) => (all[p.num] = 'absent'));
+                        setPlayerAttendanceStatus(all);
+                      }}
+                      className="text-[10px] font-bold text-rose-400 hover:text-rose-300 underline"
                     >
-                      Deselect All
+                      All Absent
                     </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-56 overflow-y-auto p-2 bg-slate-950/60 border border-slate-800 rounded-2xl no-scrollbar">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto p-2 bg-slate-950/60 border border-slate-800 rounded-2xl no-scrollbar">
                   {roster.map((player) => {
-                    const isSelected = !!selectedPlayerIds[player.num];
+                    const status = playerAttendanceStatus[player.num] || 'present';
+
                     return (
-                      <label
+                      <div
                         key={player.num}
-                        className={`flex items-center gap-2 p-2 rounded-xl border cursor-pointer select-none transition-all ${
-                          isSelected
-                            ? 'bg-slate-800 border-indigo-500/50 text-slate-100'
-                            : 'bg-slate-900/60 border-slate-800 text-slate-500'
+                        className={`flex items-center justify-between p-2 rounded-xl border transition-all ${
+                          status === 'present'
+                            ? 'bg-slate-800/90 border-indigo-500/40 text-slate-100'
+                            : status === 'excused'
+                            ? 'bg-amber-950/30 border-amber-600/40 text-amber-200'
+                            : 'bg-slate-900/60 border-slate-800 text-slate-500 opacity-60'
                         }`}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => {
-                            setSelectedPlayerIds((prev) => ({
-                              ...prev,
-                              [player.num]: e.target.checked,
-                            }));
-                          }}
-                          className="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                        />
-                        <span className="font-mono font-bold text-indigo-400 text-[10px]">
-                          #{player.num}
-                        </span>
-                        <span className="font-bold text-[11px] truncate">
-                          {player.lastName || player.firstName}
-                        </span>
-                      </label>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-mono font-black text-indigo-400 text-xs">
+                            #{player.num}
+                          </span>
+                          <span className="font-bold text-xs truncate">
+                            {player.firstName} {player.lastName}
+                          </span>
+                        </div>
+
+                        {/* Status Toggle Buttons */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPlayerAttendanceStatus((prev) => ({
+                                ...prev,
+                                [player.num]: 'present',
+                              }))
+                            }
+                            className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                              status === 'present'
+                                ? 'bg-emerald-500 text-slate-950 font-black shadow-xs'
+                                : 'bg-slate-900 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            Present
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPlayerAttendanceStatus((prev) => ({
+                                ...prev,
+                                [player.num]: 'absent',
+                              }))
+                            }
+                            className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                              status === 'absent'
+                                ? 'bg-rose-500 text-white font-black shadow-xs'
+                                : 'bg-slate-900 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            Absent
+                          </button>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
               </div>
             </div>
 
-            {/* Modal Footer */}
+            {/* Footer */}
             <div className="p-4 border-t border-slate-800 bg-slate-850 flex items-center justify-end gap-2">
               <button
                 type="button"
@@ -837,7 +1120,94 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
                 className="px-5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 shadow-md active:scale-95"
               >
                 <Check className="w-4 h-4" />
-                <span>Credit {logSessionHours} hrs to {Object.values(selectedPlayerIds).filter(Boolean).length} Players</span>
+                <span>Save Roll Call &amp; Credit {logSessionHours} hrs to {Object.values(playerAttendanceStatus).filter((s) => s === 'present').length} Players</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: Preseason Weeks Configuration */}
+      {showSeasonConfigModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-850">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-400">
+                  <Settings className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-100 text-base">Configure Pre-Season Duration</h3>
+                  <p className="text-xs text-slate-400">Set how many weeks are considered pre-season acclimatization</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSeasonConfigModal(false)}
+                className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block font-bold text-slate-200 text-xs mb-1.5">
+                  Number of Pre-Season Weeks (This year: 4 weeks):
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[1, 2, 3, 4, 5, 6].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setEditPreseasonCount(num)}
+                      className={`p-3 rounded-2xl border text-center font-bold text-xs transition-all ${
+                        editPreseasonCount === num
+                          ? 'bg-amber-500 text-slate-950 border-amber-400 font-black shadow-lg shadow-amber-500/20 scale-105'
+                          : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-750'
+                      }`}
+                    >
+                      {num} {num === 1 ? 'Week' : 'Weeks'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Preview */}
+              <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-2">
+                <div className="text-[11px] font-black uppercase text-amber-400 tracking-wider">
+                  Season Structure Preview:
+                </div>
+                <div className="space-y-1 text-xs text-slate-300">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    <span><strong>Pre-Season (Weeks 1 – {editPreseasonCount}):</strong> Conditioning &amp; Scrimmage Acclimatization</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-indigo-400" />
+                    <span><strong>Regular Season:</strong> Weeks {editPreseasonCount + 1}+</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-800 bg-slate-850 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowSeasonConfigModal(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveSeasonConfig}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+              >
+                <Check className="w-4 h-4" />
+                <span>Save Season Settings</span>
               </button>
             </div>
           </div>

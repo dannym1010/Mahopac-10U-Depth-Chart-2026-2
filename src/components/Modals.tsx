@@ -60,7 +60,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               Approval Pending
             </h2>
             <p className="text-xs text-slate-300 font-medium mt-1 leading-relaxed">
-              Your coach account (<strong className="text-indigo-400">{pendingEmail}</strong>) has been registered and is awaiting approval from Head Coach Danny (Admin).
+              Your coach account (<strong className="text-indigo-400">{pendingEmail}</strong>) has been registered and is awaiting approval from the Head Coach or Admin.
             </p>
           </div>
           <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[11px] text-amber-300 font-semibold">

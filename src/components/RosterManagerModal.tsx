@@ -13,8 +13,9 @@ import {
   Search,
   AlertTriangle,
   Sparkles,
+  Users,
 } from 'lucide-react';
-import { RosterPlayer, UserRole } from '../types';
+import { RosterPlayer, UserRole, Team } from '../types';
 import { MASTER_ROSTER } from '../data/initialData';
 
 interface RosterManagerModalProps {
@@ -25,6 +26,8 @@ interface RosterManagerModalProps {
   userRole: UserRole;
   editingPlayer?: RosterPlayer | null;
   onClearEditingPlayer?: () => void;
+  teams?: Team[];
+  activeTeamId?: string;
 }
 
 const COMMON_POSITIONS = [
@@ -43,15 +46,19 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
   userRole,
   editingPlayer: initialEditingPlayer,
   onClearEditingPlayer,
+  teams = [],
+  activeTeamId,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'list' | 'add' | 'csv'>('list');
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>('all');
 
   // Form State for Add / Edit
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [num, setNum] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [assignedTeamId, setAssignedTeamId] = useState<string>(activeTeamId || (teams[0]?.id || ''));
   const [primaryPos, setPrimaryPos] = useState('RB');
   const [secondaryPos, setSecondaryPos] = useState('CB');
   const [offensivePos, setOffensivePos] = useState('');
@@ -80,6 +87,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     setNum('');
     setFirstName('');
     setLastName('');
+    setAssignedTeamId(activeTeamId || (teams[0]?.id || ''));
     setPrimaryPos('RB');
     setSecondaryPos('CB');
     setOffensivePos('');
@@ -97,12 +105,13 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     setNum(player.num);
     setFirstName(player.firstName);
     setLastName(player.lastName);
+    setAssignedTeamId(player.teamId || activeTeamId || (teams[0]?.id || ''));
     setPrimaryPos(player.primaryPosition || 'RB');
     setSecondaryPos(player.secondaryPosition || 'CB');
     setOffensivePos(player.offensivePosition || '');
     setDefensivePos(player.defensivePosition || '');
-    setConditioningHours(Number(player.conditioningHours || 0));
-    setPaddedHours(Number(player.paddedHours || 0));
+    setConditioningHours(Number(player.conditioningHours || 10));
+    setPaddedHours(Number(player.paddedHours || 10));
     setIsCaptain(!!player.isCaptain);
     setNotes(player.notes || '');
     setFormError('');
@@ -126,12 +135,15 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
       return;
     }
 
-    // Check duplicate jersey number if adding or changing
+    // Check duplicate jersey number if adding or changing within same team
     const duplicate = roster.some(
-      (p, i) => p.num === cleanNum && i !== editingIndex
+      (p, i) =>
+        p.num === cleanNum &&
+        i !== editingIndex &&
+        (!assignedTeamId || !p.teamId || p.teamId === assignedTeamId)
     );
     if (duplicate) {
-      setFormError(`Jersey #${cleanNum} is already assigned to another player.`);
+      setFormError(`Jersey #${cleanNum} is already assigned to another player on this team.`);
       return;
     }
 
@@ -139,12 +151,13 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
       num: cleanNum,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
+      teamId: assignedTeamId || undefined,
       primaryPosition: primaryPos,
       secondaryPosition: secondaryPos,
       offensivePosition: offensivePos.trim() || primaryPos,
       defensivePosition: defensivePos.trim() || secondaryPos,
-      conditioningHours: Number(conditioningHours) || 0,
-      paddedHours: Number(paddedHours) || 0,
+      conditioningHours: Number(conditioningHours) || 10,
+      paddedHours: Number(paddedHours) || 10,
       isCaptain,
       notes: notes.trim(),
     };
@@ -175,13 +188,13 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     onUpdateRoster(updated);
   };
 
-  const handleResetToDefaultRoster = () => {
+  const handleClearRoster = () => {
     if (
       window.confirm(
-        'Reset to the official 26-man Mahopac 10U roster with all assigned positions and compliance data?'
+        'Are you sure you want to clear all players from the active roster?'
       )
     ) {
-      onUpdateRoster([...MASTER_ROSTER]);
+      onUpdateRoster([]);
     }
   };
 
@@ -206,6 +219,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
               num: rawNum,
               firstName: fName,
               lastName: lName,
+              teamId: assignedTeamId || activeTeamId || undefined,
               primaryPosition: pPos,
               secondaryPosition: sPos,
               conditioningHours: 10,
@@ -230,13 +244,15 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
 
   // CSV Export
   const handleExportCSV = () => {
-    const header = 'Jersey,FirstName,LastName,PrimaryPos,SecondaryPos,ConditioningHours,PaddedHours\n';
+    const header = 'Jersey,FirstName,LastName,Team,PrimaryPos,SecondaryPos\n';
     const rows = roster
       .map(
-        (p) =>
-          `${p.num},"${p.firstName}","${p.lastName}","${p.primaryPosition || ''}","${
+        (p) => {
+          const teamName = teams.find((t) => t.id === p.teamId)?.name || 'Default';
+          return `${p.num},"${p.firstName}","${p.lastName}","${teamName}","${p.primaryPosition || ''}","${
             p.secondaryPosition || ''
-          }",${p.conditioningHours || 0},${p.paddedHours || 0}`
+          }"`;
+        }
       )
       .join('\n');
 
@@ -244,13 +260,17 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `Mahopac_10U_Roster_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Team_Roster_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const filteredRoster = roster.filter((p) => {
+    if (selectedTeamFilter !== 'all') {
+      if (p.teamId && p.teamId !== selectedTeamFilter) return false;
+      if (!p.teamId && selectedTeamFilter !== teams[0]?.id) return false;
+    }
     const term = searchTerm.toLowerCase().trim();
     if (!term) return true;
     return (
@@ -275,11 +295,11 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
               <h3 className="text-base font-black text-slate-100 flex items-center gap-2">
                 <span>Roster &amp; Player Management</span>
                 <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-black uppercase">
-                  {roster.length} Players
+                  {roster.length} Total Players
                 </span>
               </h3>
               <p className="text-xs text-slate-400">
-                User-editable roster with custom positions, jersey numbers, and practice hours
+                User-editable roster with multi-team assignment, custom positions, jersey numbers, and practice hours
               </p>
             </div>
           </div>
@@ -295,9 +315,9 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Navigation Sub-Tabs */}
-        <div className="px-5 py-2.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+        {/* Modal Navigation Sub-Tabs & Team Filter */}
+        <div className="px-5 py-2.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setActiveTab('list')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
@@ -336,14 +356,33 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
             )}
           </div>
 
-          {userRole === 'admin' && activeTab === 'list' && (
+          {/* Team Filter Dropdown for list tab */}
+          {activeTab === 'list' && teams.length > 1 && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="text-[10px] font-black uppercase text-slate-400">Team:</span>
+              <select
+                value={selectedTeamFilter}
+                onChange={(e) => setSelectedTeamFilter(e.target.value)}
+                className="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2 py-1 font-bold focus:outline-none"
+              >
+                <option value="all">All Teams ({roster.length})</option>
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {userRole === 'admin' && activeTab === 'list' && roster.length > 0 && (
             <button
-              onClick={handleResetToDefaultRoster}
+              onClick={handleClearRoster}
               className="text-[11px] font-bold text-rose-400 hover:text-rose-300 flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-rose-950/40 border border-rose-900/30 transition-all"
-              title="Reset roster to default 26 players"
+              title="Clear all players from roster"
             >
               <RotateCcw className="w-3 h-3" />
-              <span>Reset to Mahopac Defaults</span>
+              <span>Clear Roster</span>
             </button>
           )}
         </div>
@@ -383,22 +422,18 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                     <tr className="border-b border-slate-800 bg-slate-850 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
                       <th className="py-2.5 px-3">#</th>
                       <th className="py-2.5 px-3">Player Name</th>
+                      <th className="py-2.5 px-3">Team</th>
                       <th className="py-2.5 px-3">Offense Pos</th>
                       <th className="py-2.5 px-3">Defense Pos</th>
-                      <th className="py-2.5 px-3">Conditioning</th>
-                      <th className="py-2.5 px-3">Padded</th>
+                      <th className="py-2.5 px-3">Notes</th>
                       <th className="py-2.5 px-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-850">
                     {filteredRoster.map((player, idx) => {
-                      const condH = Number(player.conditioningHours || 0);
-                      const padH = Number(player.paddedHours || 0);
-                      const isPadsCleared = condH >= 10;
-                      const isScrimmageCleared = isPadsCleared && padH >= 10;
-
+                      const playerTeam = teams.find((t) => t.id === player.teamId);
                       return (
-                        <tr key={player.num} className="hover:bg-slate-850/60 transition-colors">
+                        <tr key={`${player.num}-${idx}`} className="hover:bg-slate-850/60 transition-colors">
                           <td className="py-2.5 px-3 font-mono font-black text-indigo-400">
                             #{player.num}
                           </td>
@@ -413,6 +448,11 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                             </div>
                           </td>
                           <td className="py-2.5 px-3">
+                            <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold">
+                              {playerTeam ? (playerTeam.ageGroup || playerTeam.name) : 'Assigned'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3">
                             <span className="px-2 py-0.5 rounded-md bg-slate-800 text-indigo-300 border border-indigo-500/30 font-black text-[10px]">
                               {player.primaryPosition || 'ATH'}
                             </span>
@@ -422,15 +462,8 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                               {player.secondaryPosition || 'ATH'}
                             </span>
                           </td>
-                          <td className="py-2.5 px-3 font-mono">
-                            <span className={isPadsCleared ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
-                              {condH.toFixed(1)} / 10h
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 font-mono">
-                            <span className={isScrimmageCleared ? 'text-emerald-400 font-bold' : 'text-sky-400 font-bold'}>
-                              {padH.toFixed(1)} / 10h
-                            </span>
+                          <td className="py-2.5 px-3 text-slate-400 max-w-[200px] truncate">
+                            {player.notes || '—'}
                           </td>
                           <td className="py-2.5 px-3 text-right">
                             <div className="flex items-center justify-end gap-1">
@@ -487,6 +520,26 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                   </div>
                 )}
 
+                {/* Team Selection */}
+                {teams.length > 0 && (
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-300 mb-1">
+                      Assigned Team / Division *
+                    </label>
+                    <select
+                      value={assignedTeamId}
+                      onChange={(e) => setAssignedTeamId(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-indigo-500"
+                    >
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} ({t.ageGroup || 'Youth'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 {/* Jersey & Name */}
                 <div className="grid grid-cols-3 gap-3">
                   <div>
@@ -511,7 +564,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                       type="text"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="Luke"
+                      placeholder="Alex"
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-indigo-500"
                       required
                     />
@@ -525,7 +578,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                       type="text"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      placeholder="Mancini"
+                      placeholder="Smith"
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-indigo-500"
                     />
                   </div>
@@ -568,43 +621,6 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                   </div>
                 </div>
 
-                {/* Acclimatization Practice Hours */}
-                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800">
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-amber-300 mb-1 flex items-center gap-1">
-                      <Zap className="w-3 h-3" />
-                      <span>Conditioning Hours (Target: 10h)</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      max="100"
-                      value={conditioningHours}
-                      onChange={(e) => setConditioningHours(parseFloat(e.target.value) || 0)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-amber-400 focus:outline-none focus:border-amber-400"
-                    />
-                    <span className="text-[10px] text-slate-400">Needs 10h to wear full pads</span>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-sky-300 mb-1 flex items-center gap-1">
-                      <Shield className="w-3 h-3" />
-                      <span>Padded Hours (Target: 10h)</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      max="100"
-                      value={paddedHours}
-                      onChange={(e) => setPaddedHours(parseFloat(e.target.value) || 0)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-sky-300 focus:outline-none focus:border-sky-400"
-                    />
-                    <span className="text-[10px] text-slate-400">Needs 10h to play scrimmage</span>
-                  </div>
-                </div>
-
                 {/* Captain toggle & Notes */}
                 <div className="space-y-3 pt-2 border-t border-slate-800">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -625,7 +641,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                       type="text"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Coaching notes, medical reminders..."
+                      placeholder="Coaching notes, position preferences..."
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
                     />
                   </div>
@@ -667,7 +683,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                   rows={6}
                   value={csvText}
                   onChange={(e) => setCsvText(e.target.value)}
-                  placeholder={`10, Luke, Mancini, QB, FS\n2, Mohammed, Ibrahim, RB, CB\n56, Ryan, Russell, LT, DE`}
+                  placeholder={`10, Alex, Smith, QB, FS\n2, Jordan, Taylor, RB, CB\n56, Sam, Johnson, LT, DE`}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 font-mono text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
                 />
                 <button
@@ -686,3 +702,4 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     </div>
   );
 };
+
