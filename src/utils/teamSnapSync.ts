@@ -190,46 +190,109 @@ function transformIcsEvent(raw: Record<string, string>): ParsedTeamSnapEvent | n
   // Determine event type
   const lowerSum = summary.toLowerCase();
   const lowerDesc = description.toLowerCase();
+  const rawCategories = (raw.CATEGORIES || '').toLowerCase();
+  const rawTypeHeader = (raw['X-TEAMSNAP-EVENT-TYPE'] || raw['X-TEAMSNAP-TYPE'] || '').toLowerCase();
 
   let type: ScheduleEventType = 'practice';
   let opponent: string | undefined = undefined;
   let locationType: 'home' | 'away' | 'neutral' = 'home';
 
-  if (lowerSum.includes('scrimmage') || lowerDesc.includes('scrimmage')) {
+  // 1. Explicit categories or header
+  if (
+    rawCategories.includes('game') ||
+    rawCategories.includes('match') ||
+    rawTypeHeader.includes('game') ||
+    rawTypeHeader.includes('match')
+  ) {
+    type = 'game';
+  } else if (rawCategories.includes('scrimmage') || rawTypeHeader.includes('scrimmage')) {
     type = 'scrimmage';
-  } else if (
+  } else if (rawCategories.includes('meeting') || rawTypeHeader.includes('meeting')) {
+    type = 'meeting';
+  }
+  // 2. Scrimmage indicators in title/description
+  else if (lowerSum.includes('scrimmage') || lowerDesc.includes('scrimmage')) {
+    type = 'scrimmage';
+  }
+  // 3. Meeting / Film / Social
+  else if (
+    lowerSum.includes('meeting') ||
+    lowerSum.includes('film session') ||
+    lowerSum.includes('banquet') ||
+    lowerSum.includes('parent mtg') ||
+    lowerSum.includes('team photo') ||
+    lowerDesc.includes('event type: meeting')
+  ) {
+    type = 'meeting';
+  }
+  // 4. Walkthrough
+  else if (lowerSum.includes('walkthrough') || lowerSum.includes('walk-through')) {
+    type = 'walkthrough';
+  }
+  // 5. Game indicators in summary or description
+  else if (
     lowerSum.includes('game') ||
     lowerSum.includes('vs.') ||
     lowerSum.includes('vs ') ||
+    lowerSum.includes(' v. ') ||
+    lowerSum.includes(' v ') ||
     lowerSum.includes(' @ ') ||
     lowerSum.startsWith('@') ||
+    lowerSum.includes(' at ') ||
+    lowerSum.startsWith('at ') ||
     lowerSum.includes('tournament') ||
     lowerSum.includes('bowl') ||
-    lowerSum.includes('playoff')
+    lowerSum.includes('playoff') ||
+    lowerSum.includes('championship') ||
+    lowerSum.includes('jamboree') ||
+    lowerSum.includes('kickoff') ||
+    lowerSum.includes('matchup') ||
+    lowerDesc.includes('event type: game') ||
+    lowerDesc.includes('type: game') ||
+    lowerDesc.includes('opponent:') ||
+    lowerDesc.includes('opponent :') ||
+    lowerDesc.includes('vs.') ||
+    lowerDesc.includes(' vs ') ||
+    lowerDesc.includes('kickoff at') ||
+    lowerDesc.includes('kick off') ||
+    lowerDesc.includes('home vs') ||
+    lowerDesc.includes('away vs')
   ) {
     type = 'game';
-  } else if (lowerSum.includes('meeting') || lowerSum.includes('film') || lowerSum.includes('banquet')) {
-    type = 'meeting';
-  } else if (lowerSum.includes('walkthrough')) {
-    type = 'walkthrough';
   } else {
     type = 'practice';
   }
 
-  // Parse Opponent & Location Type from summary
+  // Parse Opponent & Location Type from summary and description
   if (type === 'game' || type === 'scrimmage') {
     if (summary.includes(' vs. ') || summary.includes(' vs ')) {
       locationType = 'home';
       const parts = summary.split(/ vs\.? /i);
       opponent = parts[1]?.trim();
+    } else if (summary.includes(' v. ') || summary.includes(' v ')) {
+      locationType = 'home';
+      const parts = summary.split(/ v\.? /i);
+      opponent = parts[1]?.trim();
     } else if (summary.includes(' @ ') || summary.startsWith('@')) {
       locationType = 'away';
       const parts = summary.split(/ @ /i);
       opponent = parts.length > 1 ? parts[1]?.trim() : summary.replace(/^@\s*/, '').trim();
-    } else if (summary.toLowerCase().startsWith('game:') || summary.toLowerCase().startsWith('game -')) {
-      opponent = summary.replace(/^game[:\-]\s*/i, '').trim();
+    } else if (summary.includes(' at ') || summary.toLowerCase().startsWith('at ')) {
+      locationType = 'away';
+      const parts = summary.split(/ at /i);
+      opponent = parts.length > 1 ? parts[1]?.trim() : summary.replace(/^at\s+/i, '').trim();
+    } else if (summary.toLowerCase().startsWith('game:') || summary.toLowerCase().startsWith('game -') || summary.toLowerCase().startsWith('game #')) {
+      opponent = summary.replace(/^game(?:\s*#\d+)?[:\-]\s*/i, '').trim();
     } else {
       opponent = summary;
+    }
+
+    // Try extracting opponent from description if not clean
+    if (!opponent || opponent.toLowerCase().includes('game') || opponent.toLowerCase().includes('10u')) {
+      const oppMatch = description.match(/opponent:\s*([^\n\r,]+)/i) || description.match(/vs\.?\s*([A-Za-z0-9\s]+)/i);
+      if (oppMatch && oppMatch[1]) {
+        opponent = oppMatch[1].trim();
+      }
     }
   }
 

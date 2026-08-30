@@ -737,21 +737,29 @@ export default function App() {
     attendanceLogs,
   ]);
 
-  const currentWeekState: WeekState = weeklyData[currentWeek] || {
-    formations: defaultFormations,
-    depthChart: {},
-    scrimmageChart: {},
-    opponent: '',
-  };
+  // Helper to compute team-scoped week key
+  const getScopedWeekKey = (teamId: string, week: string) => `${teamId}__week_${week}`;
+
+  const currentScopedWeekKey = getScopedWeekKey(activeTeamId, currentWeek);
+  const currentWeekState: WeekState =
+    weeklyData[currentScopedWeekKey] ||
+    weeklyData[currentWeek] || {
+      formations: defaultFormations,
+      depthChart: {},
+      scrimmageChart: {},
+      opponent: '',
+    };
 
   const currentFormations =
     (currentWeekState.formations && currentWeekState.formations.length > 0)
       ? currentWeekState.formations
-      : (weeklyData['0']?.formations && weeklyData['0'].formations.length > 0)
-        ? weeklyData['0'].formations
-        : (defaultFormations && defaultFormations.length > 0)
-          ? defaultFormations
-          : INITIAL_DEFAULT_FORMATIONS;
+      : (weeklyData[getScopedWeekKey(activeTeamId, '0')]?.formations && weeklyData[getScopedWeekKey(activeTeamId, '0')].formations.length > 0)
+        ? weeklyData[getScopedWeekKey(activeTeamId, '0')].formations
+        : (weeklyData['0']?.formations && weeklyData['0'].formations.length > 0)
+          ? weeklyData['0'].formations
+          : (defaultFormations && defaultFormations.length > 0)
+            ? defaultFormations
+            : INITIAL_DEFAULT_FORMATIONS;
   const currentDepthChart = currentWeekState.depthChart || {};
   const currentScrimmageChart = currentWeekState.scrimmageChart || {};
 
@@ -1156,8 +1164,13 @@ export default function App() {
     newFormations: FormationBoard[],
     syncToDefaults = false
   ) => {
+    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
     setWeeklyData((prev) => ({
       ...prev,
+      [scopedKey]: {
+        ...(prev[scopedKey] || prev[currentWeek] || {}),
+        formations: newFormations,
+      },
       [currentWeek]: {
         ...prev[currentWeek],
         formations: newFormations,
@@ -1172,8 +1185,13 @@ export default function App() {
   const updateCurrentWeekDepthChart = (
     newDepthChart: Record<string, PlacedPlayer[]>
   ) => {
+    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
     setWeeklyData((prev) => ({
       ...prev,
+      [scopedKey]: {
+        ...(prev[scopedKey] || prev[currentWeek] || {}),
+        depthChart: newDepthChart,
+      },
       [currentWeek]: {
         ...prev[currentWeek],
         depthChart: newDepthChart,
@@ -1185,13 +1203,40 @@ export default function App() {
   const updateCurrentWeekScrimmageChart = (
     newScrimChart: Record<string, PlacedPlayer[]>
   ) => {
+    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
     setWeeklyData((prev) => ({
       ...prev,
+      [scopedKey]: {
+        ...(prev[scopedKey] || prev[currentWeek] || {}),
+        scrimmageChart: newScrimChart,
+      },
       [currentWeek]: {
         ...prev[currentWeek],
         scrimmageChart: newScrimChart,
       },
     }));
+  };
+
+  // Helper to copy formations from another team into active team
+  const handleCopyFormationsFromTeam = (sourceTeamId: string) => {
+    if (userRole !== 'admin') return;
+    const sourceScopedKey = getScopedWeekKey(sourceTeamId, currentWeek);
+    const sourceState = weeklyData[sourceScopedKey] || weeklyData[sourceTeamId] || weeklyData[currentWeek];
+    const sourceFormations = sourceState?.formations || defaultFormations;
+    if (!sourceFormations || sourceFormations.length === 0) {
+      alert('Selected source team has no formations available to copy.');
+      return;
+    }
+    const targetScopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+    const clonedFormations = deepClone(sourceFormations);
+    setWeeklyData((prev) => ({
+      ...prev,
+      [targetScopedKey]: {
+        ...(prev[targetScopedKey] || prev[currentWeek] || {}),
+        formations: clonedFormations,
+      },
+    }));
+    alert(`Successfully cloned ${clonedFormations.length} formations to ${currentActiveTeam.name}!`);
   };
 
   /* =========================================================================
@@ -2541,7 +2586,10 @@ export default function App() {
     ensureWeekExists(srcWeek);
     ensureWeekExists(targetWeek);
 
-    const src = weeklyData[srcWeek] || {
+    const srcScopedKey = getScopedWeekKey(activeTeamId, srcWeek);
+    const targetScopedKey = getScopedWeekKey(activeTeamId, targetWeek);
+
+    const src = weeklyData[srcScopedKey] || weeklyData[srcWeek] || {
       formations: defaultFormations,
       depthChart: {},
       scrimmageChart: {},
@@ -2549,6 +2597,12 @@ export default function App() {
 
     setWeeklyData((prev) => ({
       ...prev,
+      [targetScopedKey]: {
+        ...(prev[targetScopedKey] || prev[targetWeek]),
+        formations: deepClone(src.formations || defaultFormations),
+        depthChart: deepClone(src.depthChart || {}),
+        scrimmageChart: deepClone(src.scrimmageChart || {}),
+      },
       [targetWeek]: {
         ...prev[targetWeek],
         formations: deepClone(src.formations || defaultFormations),
@@ -2980,6 +3034,9 @@ export default function App() {
                 selectedFormationId={selectedFormationId}
                 onSelectFormation={setSelectedFormationId}
                 userRole={userRole}
+                activeTeam={currentActiveTeam}
+                teams={teams}
+                onCopyFormationsFromTeam={handleCopyFormationsFromTeam}
                 onAddFormation={handleAddFormation}
                 onMoveFormation={handleMoveFormation}
                 onDuplicateFormation={handleDuplicateFormation}
@@ -3012,6 +3069,7 @@ export default function App() {
                 scrimmageChart={currentScrimmageChart}
                 scrimmageFilters={scrimmageFilters}
                 userRole={userRole}
+                activeTeam={currentActiveTeam}
                 onOpenScrimmageFilterModal={() =>
                   setIsScrimmageFilterOpen(true)
                 }

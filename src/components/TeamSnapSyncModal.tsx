@@ -18,8 +18,9 @@ import {
   Layers,
   Download,
   Check,
+  Edit2,
 } from 'lucide-react';
-import { ScheduleEvent, Team } from '../types';
+import { ScheduleEvent, Team, ScheduleEventType } from '../types';
 import {
   parseTeamSnapICS,
   parseTeamSnapCSV,
@@ -320,6 +321,44 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
     }));
   };
 
+  // Modify individual parsed event in preview
+  const handleUpdateParsedEvent = (idx: number, updates: Partial<ParsedTeamSnapEvent>) => {
+    if (!syncResult) return;
+    const updatedEvents = [...syncResult.events];
+    const current = updatedEvents[idx];
+    const updated: ParsedTeamSnapEvent = {
+      ...current,
+      ...updates,
+    };
+
+    // If type switched to game and opponent was empty, infer from title
+    if (updates.type === 'game' && !updated.opponent) {
+      if (updated.title.includes(' vs ') || updated.title.includes(' vs. ')) {
+        updated.opponent = updated.title.split(/ vs\.? /i)[1]?.trim();
+      } else if (updated.title.includes(' @ ') || updated.title.startsWith('@')) {
+        updated.opponent = updated.title.replace(/^@\s*/, '').trim();
+      } else {
+        updated.opponent = updated.title;
+      }
+    }
+
+    updatedEvents[idx] = updated;
+
+    const gamesCount = updatedEvents.filter((e) => e.type === 'game' || e.type === 'tournament').length;
+    const practicesCount = updatedEvents.filter((e) => e.type === 'practice' || e.type === 'walkthrough').length;
+    const scrimmagesCount = updatedEvents.filter((e) => e.type === 'scrimmage').length;
+    const meetingsCount = updatedEvents.filter((e) => e.type === 'meeting').length;
+
+    setSyncResult({
+      ...syncResult,
+      events: updatedEvents,
+      gamesCount,
+      practicesCount,
+      scrimmagesCount,
+      meetingsCount,
+    });
+  };
+
   // Execute Import
   const handleExecuteImport = () => {
     if (!syncResult || syncResult.events.length === 0) return;
@@ -572,7 +611,7 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
               </div>
 
               {/* Event list */}
-              <div className="max-h-72 overflow-y-auto border border-slate-800 rounded-2xl bg-slate-950/40 divide-y divide-slate-800/80">
+              <div className="max-h-80 overflow-y-auto border border-slate-800 rounded-2xl bg-slate-950/40 divide-y divide-slate-800/80">
                 {syncResult.events.map((evt, idx) => {
                   const eventKey = evt.id || String(idx);
                   const isSelected = !!selectedEventIds[eventKey];
@@ -580,40 +619,90 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
                   return (
                     <div
                       key={eventKey}
-                      onClick={() => toggleEventSelected(eventKey)}
-                      className={`p-3 flex items-center justify-between gap-3 text-xs cursor-pointer transition-colors ${
-                        isSelected ? 'bg-slate-800/40 hover:bg-slate-800/70' : 'opacity-40 hover:opacity-70'
+                      className={`p-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs transition-colors ${
+                        isSelected ? 'bg-slate-800/40 hover:bg-slate-800/60' : 'opacity-40 hover:opacity-70'
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          onChange={() => {}} // Handled by row click
-                          className="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                          onChange={() => toggleEventSelected(eventKey)}
+                          className="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer mt-1"
                         />
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1 space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${
+                            {/* Type Selector Dropdown */}
+                            <select
+                              value={evt.type}
+                              onChange={(e) =>
+                                handleUpdateParsedEvent(idx, {
+                                  type: e.target.value as ScheduleEventType,
+                                })
+                              }
+                              onClick={(e) => e.stopPropagation()}
+                              className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-400 ${
                                 evt.type === 'game'
-                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-black'
                                   : evt.type === 'scrimmage'
-                                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-bold'
                                   : evt.type === 'meeting'
-                                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
-                                  : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                                  : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40 font-bold'
                               }`}
                             >
-                              {evt.type}
-                            </span>
-                            <span className="font-bold text-white truncate">{evt.title}</span>
-                            <span className="text-[10px] text-slate-400 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800">
-                              Week {evt.week}
-                            </span>
+                              <option value="game" className="bg-slate-900 text-amber-300 font-black">
+                                🎮 Game
+                              </option>
+                              <option value="practice" className="bg-slate-900 text-indigo-300 font-bold">
+                                🏈 Practice
+                              </option>
+                              <option value="scrimmage" className="bg-slate-900 text-rose-300 font-bold">
+                                ⚔️ Scrimmage
+                              </option>
+                              <option value="meeting" className="bg-slate-900 text-purple-300">
+                                📋 Meeting
+                              </option>
+                              <option value="walkthrough" className="bg-slate-900 text-cyan-300">
+                                🚶 Walkthrough
+                              </option>
+                            </select>
+
+                            {/* Week Selector Dropdown */}
+                            <select
+                              value={evt.week}
+                              onChange={(e) =>
+                                handleUpdateParsedEvent(idx, { week: e.target.value })
+                              }
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[10px] text-slate-300 bg-slate-900 border border-slate-700 px-1.5 py-0.5 rounded cursor-pointer focus:outline-none focus:border-indigo-500"
+                            >
+                              <option value="pre-1">Pre-Season</option>
+                              <option value="1">Week 1</option>
+                              <option value="2">Week 2</option>
+                              <option value="3">Week 3</option>
+                              <option value="4">Week 4</option>
+                              <option value="5">Week 5</option>
+                              <option value="6">Week 6</option>
+                              <option value="7">Week 7</option>
+                              <option value="8">Week 8</option>
+                              <option value="playoffs">Playoffs</option>
+                              <option value="championship">Championship</option>
+                            </select>
+
+                            {/* Editable Title */}
+                            <input
+                              type="text"
+                              value={evt.title}
+                              onChange={(e) =>
+                                handleUpdateParsedEvent(idx, { title: e.target.value })
+                              }
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-bold text-white bg-slate-900/90 border border-slate-700/80 rounded px-2 py-0.5 text-xs flex-1 min-w-[180px] focus:outline-none focus:border-indigo-500"
+                            />
                           </div>
 
-                          <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-1 flex-wrap">
+                          <div className="flex items-center gap-3 text-[11px] text-slate-400 flex-wrap">
                             <span className="flex items-center gap-1 text-slate-300 font-medium">
                               <Calendar className="w-3 h-3 text-indigo-400" />
                               {evt.date} @ {evt.startTime}
@@ -622,6 +711,11 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
                               <MapPin className="w-3 h-3 text-slate-500" />
                               {evt.location}
                             </span>
+                            {evt.opponent && evt.type === 'game' && (
+                              <span className="text-amber-300 font-bold">
+                                🆚 Opponent: {evt.opponent} ({evt.locationType})
+                              </span>
+                            )}
                             {evt.uniform && (
                               <span className="text-amber-300/90 font-medium">
                                 🎽 {evt.uniform}
@@ -629,6 +723,35 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
                             )}
                           </div>
                         </div>
+                      </div>
+
+                      {/* Quick Type Switch Button */}
+                      <div className="flex items-center gap-1 shrink-0 self-end md:self-center">
+                        {evt.type !== 'game' ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUpdateParsedEvent(idx, { type: 'game' });
+                            }}
+                            className="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg text-[10px] font-bold transition-all"
+                            title="Switch this event to Game"
+                          >
+                            Set as Game 🎮
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUpdateParsedEvent(idx, { type: 'practice' });
+                            }}
+                            className="px-2 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 rounded-lg text-[10px] font-bold transition-all"
+                            title="Switch this event to Practice"
+                          >
+                            Set as Practice 🏈
+                          </button>
+                        )}
                       </div>
                     </div>
                   );

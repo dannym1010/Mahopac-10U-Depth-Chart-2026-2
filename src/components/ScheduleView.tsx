@@ -329,16 +329,22 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   // Get matching practice plan for an event
-  const getLinkedPracticePlan = (evt: ScheduleEvent): PracticePlan | undefined => {
+  const getLinkedPracticePlan做到 = (evt: ScheduleEvent): PracticePlan | undefined => {
+    if (!evt || !practicePlans || !Array.isArray(practicePlans)) return undefined;
     if (evt.linkedPracticePlanId) {
-      return practicePlans.find((p) => p.id === evt.linkedPracticePlanId);
+      return practicePlans.find((p) => p && p.id === evt.linkedPracticePlanId);
     }
     return practicePlans.find(
       (p) =>
-        p.date === evt.date ||
-        (p.weekFolder === `Week ${evt.week}` && p.title.toLowerCase() === evt.title.toLowerCase())
+        p &&
+        (p.date === evt.date ||
+          (p.weekFolder === `Week ${evt.week}` &&
+            p.title &&
+            evt.title &&
+            p.title.toLowerCase() === evt.title.toLowerCase()))
     );
   };
+  const getLinkedPracticePlan = getLinkedPracticePlan做到;
 
   // Handle Save Game
   const handleSaveGame = () => {
@@ -1239,9 +1245,29 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                                       )}
                                     </div>
 
-                                    {/* Admin Edit / Delete / Result Actions */}
+                                    {/* Admin Edit / Delete / Result / Fast Switch Actions */}
                                     {userRole === 'admin' && (
                                       <div className="flex items-center gap-1 text-slate-400">
+                                        {/* Fast Type Toggle */}
+                                        <button
+                                          onClick={() => {
+                                            const newType: ScheduleEventType = isGame ? 'practice' : 'game';
+                                            const updates: Partial<ScheduleEvent> = { type: newType };
+                                            if (newType === 'game' && !evt.opponent) {
+                                              updates.opponent = evt.title.replace(/^(practice|game)\s*[:-]?\s*/i, '').trim() || 'Opponent';
+                                            }
+                                            onUpdateEvent(evt.id, updates);
+                                          }}
+                                          className={`p-1 text-[10px] font-bold flex items-center gap-1 px-2 py-0.5 rounded border transition-all ${
+                                            isGame
+                                              ? 'bg-indigo-950/80 text-indigo-300 border-indigo-700/60 hover:bg-indigo-900'
+                                              : 'bg-amber-950/80 text-amber-300 border-amber-700/60 hover:bg-amber-900'
+                                          }`}
+                                          title={isGame ? 'Change event type to Practice' : 'Change event type to Game'}
+                                        >
+                                          <span>{isGame ? 'To Practice 🏈' : 'To Game 🎮'}</span>
+                                        </button>
+
                                         {isGame && (
                                           <button
                                             onClick={() => {
@@ -1365,7 +1391,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                                         <ClipboardList className="w-3.5 h-3.5" />
                                         <span>
                                           {linkedPlan
-                                            ? `Open Practice Plan (${linkedPlan.plan.length} Periods)`
+                                            ? `Open Practice Plan (${linkedPlan.plan?.length || 0} Periods)`
                                             : 'Create & Open Practice Plan'}
                                         </span>
                                       </button>
@@ -1608,34 +1634,59 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                           )
                         ) : linkedPlan ? (
                           <span className="text-indigo-300 text-[11px] font-bold">
-                            ✅ Plan ({linkedPlan.plan.length} periods)
+                            ✅ Plan ({linkedPlan.plan?.length || 0} periods)
                           </span>
                         ) : (
                           <span className="text-slate-500 italic">No plan yet</span>
                         )}
                       </td>
                       <td className="p-3 text-right whitespace-nowrap">
-                        {isGame ? (
-                          <button
-                            onClick={() => onNavigateToWeek(evt.week, 'scouting')}
-                            className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition-all"
-                          >
-                            Scouting
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() =>
-                              onNavigateToWeek(
-                                evt.week,
-                                'practice',
-                                evt.linkedPracticePlanId || linkedPlan?.id
-                              )
-                            }
-                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-300 font-bold text-xs rounded-lg border border-slate-700 transition-all"
-                          >
-                            Practice Plan
-                          </button>
-                        )}
+                        <div className="flex items-center justify-end gap-1.5">
+                          {isGame ? (
+                            <button
+                              onClick={() => onNavigateToWeek(evt.week, 'scouting')}
+                              className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition-all"
+                            >
+                              Scouting
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                onNavigateToWeek(
+                                  evt.week,
+                                  'practice',
+                                  evt.linkedPracticePlanId || linkedPlan?.id
+                                )
+                              }
+                              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-300 font-bold text-xs rounded-lg border border-slate-700 transition-all"
+                            >
+                              Practice Plan
+                            </button>
+                          )}
+
+                          {userRole === 'admin' && (
+                            <>
+                              <button
+                                onClick={() => setEditingEvent(evt)}
+                                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition-colors"
+                                title="Edit event"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Delete "${evt.title}" from schedule?`)) {
+                                    onDeleteEvent(evt.id);
+                                  }
+                                }}
+                                className="p-1.5 bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 rounded-lg border border-slate-700 transition-colors"
+                                title="Delete event"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -2125,37 +2176,144 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 
       {/* MODAL 5: EDIT EVENT MODAL */}
       {editingEvent && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-700 pb-3">
-              <h3 className="font-black text-base text-slate-100">Edit Scheduled Event</h3>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-300">
+                  <Edit2 className="w-4 h-4" />
+                </div>
+                <h3 className="font-black text-base text-slate-100">Edit Scheduled Event</h3>
+              </div>
               <button
                 onClick={() => setEditingEvent(null)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-700/50"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
+            <div className="space-y-3.5 text-xs">
+              {/* Event Type Selector */}
               <div>
-                <label className="block font-bold text-slate-300 mb-1">Title</label>
-                <input
-                  type="text"
-                  value={editingEvent.title}
-                  onChange={(e) => setEditingEvent({ ...editingEvent, title: e.target.value })}
-                  className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700"
-                />
+                <label className="block font-black text-slate-300 uppercase tracking-wider text-[10px] mb-1.5">
+                  Event Classification
+                </label>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                  {[
+                    { type: 'game' as ScheduleEventType, label: 'Game 🎮', color: 'amber' },
+                    { type: 'practice' as ScheduleEventType, label: 'Practice 🏈', color: 'indigo' },
+                    { type: 'scrimmage' as ScheduleEventType, label: 'Scrimmage ⚔️', color: 'rose' },
+                    { type: 'meeting' as ScheduleEventType, label: 'Meeting 📋', color: 'purple' },
+                    { type: 'walkthrough' as ScheduleEventType, label: 'Walkthru 🚶', color: 'cyan' },
+                  ].map((btn) => {
+                    const isSelected = editingEvent.type === btn.type;
+                    return (
+                      <button
+                        key={btn.type}
+                        type="button"
+                        onClick={() => {
+                          const updates: Partial<ScheduleEvent> = { type: btn.type };
+                          if (btn.type === 'game' && !editingEvent.opponent) {
+                            updates.opponent = editingEvent.title.replace(/^(practice|game)\s*[:-]?\s*/i, '').trim() || 'Opponent';
+                            if (!editingEvent.locationType) updates.locationType = 'home';
+                          }
+                          setEditingEvent({ ...editingEvent, ...updates });
+                        }}
+                        className={`py-1.5 px-2 rounded-xl font-black text-[11px] border transition-all text-center ${
+                          isSelected
+                            ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-sm ring-2 ring-amber-400/20'
+                            : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border-slate-700 hover:border-slate-600'
+                        }`}
+                      >
+                        {btn.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Title & Week */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="block font-bold text-slate-300 mb-1">Event Title</label>
+                  <input
+                    type="text"
+                    value={editingEvent.title}
+                    onChange={(e) => setEditingEvent({ ...editingEvent, title: e.target.value })}
+                    className="w-full bg-slate-900 text-slate-100 font-bold p-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Season Week</label>
+                  <select
+                    value={editingEvent.week}
+                    onChange={(e) => setEditingEvent({ ...editingEvent, week: e.target.value })}
+                    className="w-full bg-slate-900 text-slate-100 font-bold p-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
+                  >
+                    <option value="pre-1">Pre-Season 1</option>
+                    <option value="pre-2">Pre-Season 2</option>
+                    <option value="1">Week 1</option>
+                    <option value="2">Week 2</option>
+                    <option value="3">Week 3</option>
+                    <option value="4">Week 4</option>
+                    <option value="5">Week 5</option>
+                    <option value="6">Week 6</option>
+                    <option value="7">Week 7</option>
+                    <option value="8">Week 8</option>
+                    <option value="playoffs">Playoffs</option>
+                    <option value="championship">Championship</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Opponent & Location Type if Game or Scrimmage */}
+              {(editingEvent.type === 'game' || editingEvent.type === 'scrimmage') && (
+                <div className="grid grid-cols-3 gap-3 p-3 bg-slate-900/60 rounded-2xl border border-slate-700/60">
+                  <div className="col-span-2">
+                    <label className="block font-bold text-amber-300 mb-1">Opponent Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Carmel Rams 10U"
+                      value={editingEvent.opponent || ''}
+                      onChange={(e) =>
+                        setEditingEvent({
+                          ...editingEvent,
+                          opponent: e.target.value,
+                        })
+                      }
+                      className="w-full bg-slate-950 text-amber-200 font-black p-2 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Venue</label>
+                    <select
+                      value={editingEvent.locationType || 'home'}
+                      onChange={(e) =>
+                        setEditingEvent({
+                          ...editingEvent,
+                          locationType: e.target.value as 'home' | 'away' | 'neutral',
+                        })
+                      }
+                      className="w-full bg-slate-950 text-slate-200 font-bold p-2 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
+                    >
+                      <option value="home">Home 🏠</option>
+                      <option value="away">Away 🚌</option>
+                      <option value="neutral">Neutral 🏟️</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Date & Start/End Time */}
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block font-bold text-slate-300 mb-1">Date</label>
                   <input
                     type="date"
                     value={editingEvent.date}
                     onChange={(e) => setEditingEvent({ ...editingEvent, date: e.target.value })}
-                    className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700"
+                    className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
                   />
                 </div>
                 <div>
@@ -2164,19 +2322,65 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                     type="time"
                     value={editingEvent.startTime}
                     onChange={(e) => setEditingEvent({ ...editingEvent, startTime: e.target.value })}
-                    className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700"
+                    className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">End Time</label>
+                  <input
+                    type="time"
+                    value={editingEvent.endTime || ''}
+                    onChange={(e) => setEditingEvent({ ...editingEvent, endTime: e.target.value })}
+                    className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
                   />
                 </div>
               </div>
 
+              {/* Location & Uniform */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Location / Field</label>
+                  <input
+                    type="text"
+                    value={editingEvent.location}
+                    onChange={(e) => setEditingEvent({ ...editingEvent, location: e.target.value })}
+                    className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Uniform / Attire</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Gold Home Jerseys"
+                    value={editingEvent.uniform || ''}
+                    onChange={(e) => setEditingEvent({ ...editingEvent, uniform: e.target.value })}
+                    className="w-full bg-slate-900 text-slate-100 font-medium p-2 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+              </div>
+
+              {/* Arrival Time */}
               <div>
-                <label className="block font-bold text-slate-300 mb-1">Location</label>
-                <input
-                  type="text"
-                  value={editingEvent.location}
-                  onChange={(e) => setEditingEvent({ ...editingEvent, location: e.target.value })}
-                  className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700"
-                />
+                <label className="block font-bold text-slate-300 mb-1">Arrival Minutes Before Event</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="180"
+                    step="5"
+                    value={editingEvent.arrivalMinutesBefore || 15}
+                    onChange={(e) =>
+                      setEditingEvent({
+                        ...editingEvent,
+                        arrivalMinutesBefore: parseInt(e.target.value, 10) || 15,
+                      })
+                    }
+                    className="w-24 bg-slate-900 text-slate-100 font-black p-2 rounded-xl border border-slate-700 text-center focus:outline-none focus:border-amber-400"
+                  />
+                  <span className="text-slate-400 text-xs font-medium">
+                    minutes before scheduled kickoff/start time
+                  </span>
+                </div>
               </div>
 
               <div>
@@ -2185,7 +2389,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                   value={editingEvent.focusOrNotes || ''}
                   onChange={(e) => setEditingEvent({ ...editingEvent, focusOrNotes: e.target.value })}
                   rows={2}
-                  className="w-full bg-slate-900 text-slate-100 font-medium p-2 rounded-xl border border-slate-700"
+                  placeholder="e.g. Bring extra water, install redzone packages."
+                  className="w-full bg-slate-900 text-slate-100 font-medium p-2 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
                 />
               </div>
             </div>
@@ -2202,7 +2407,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                   onUpdateEvent(editingEvent.id, editingEvent);
                   setEditingEvent(null);
                 }}
-                className="px-5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl"
+                className="px-5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-md"
               >
                 Save Changes
               </button>

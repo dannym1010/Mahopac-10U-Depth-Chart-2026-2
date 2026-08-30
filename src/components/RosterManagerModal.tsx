@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Sparkles,
   Users,
+  Copy,
 } from 'lucide-react';
 import { RosterPlayer, UserRole, Team } from '../types';
 import { MASTER_ROSTER } from '../data/initialData';
@@ -50,8 +51,8 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
   activeTeamId,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'list' | 'add' | 'csv'>('list');
-  const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'list' | 'add' | 'csv' | 'copy'>('list');
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>(activeTeamId || 'all');
 
   // Form State for Add / Edit
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -70,10 +71,22 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
   const [csvText, setCsvText] = useState('');
   const [formError, setFormError] = useState('');
 
+  // Copy Team Roster State
+  const [copySourceTeamId, setCopySourceTeamId] = useState<string>(teams[0]?.id || '');
+  const [copyTargetTeamId, setCopyTargetTeamId] = useState<string>(activeTeamId || (teams[1]?.id || ''));
+
+  // Sync selected team filter if activeTeamId changes
+  React.useEffect(() => {
+    if (activeTeamId) {
+      setSelectedTeamFilter(activeTeamId);
+      setAssignedTeamId(activeTeamId);
+    }
+  }, [activeTeamId]);
+
   // Handle opening directly in edit mode if editingPlayer prop is provided
   React.useEffect(() => {
     if (initialEditingPlayer) {
-      const idx = roster.findIndex((p) => p.num === initialEditingPlayer.num);
+      const idx = roster.findIndex((p) => p.num === initialEditingPlayer.num && (!initialEditingPlayer.teamId || p.teamId === initialEditingPlayer.teamId));
       if (idx >= 0) {
         startEditPlayer(initialEditingPlayer, idx);
       }
@@ -87,7 +100,8 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     setNum('');
     setFirstName('');
     setLastName('');
-    setAssignedTeamId(activeTeamId || (teams[0]?.id || ''));
+    const targetTeam = selectedTeamFilter !== 'all' ? selectedTeamFilter : activeTeamId || (teams[0]?.id || '');
+    setAssignedTeamId(targetTeam);
     setPrimaryPos('RB');
     setSecondaryPos('CB');
     setOffensivePos('');
@@ -140,10 +154,11 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
       (p, i) =>
         p.num === cleanNum &&
         i !== editingIndex &&
-        (!assignedTeamId || !p.teamId || p.teamId === assignedTeamId)
+        (p.teamId === assignedTeamId || (!p.teamId && assignedTeamId === (teams[0]?.id || 'team_10u')))
     );
     if (duplicate) {
-      setFormError(`Jersey #${cleanNum} is already assigned to another player on this team.`);
+      const targetTeamName = teams.find((t) => t.id === assignedTeamId)?.name || 'this team';
+      setFormError(`Jersey #${cleanNum} is already assigned on ${targetTeamName}.`);
       return;
     }
 
@@ -163,7 +178,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     };
 
     let updated: RosterPlayer[];
-    if (editingIndex !== null && editingIndex >= 0) {
+    if (editingIndex !== null && editingIndex >= 0 && editingIndex < roster.length) {
       updated = [...roster];
       updated[editingIndex] = {
         ...updated[editingIndex],
@@ -171,31 +186,87 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
       };
     } else {
       updated = [...roster, newPlayer];
-      // Sort roster by jersey number
-      updated.sort((a, b) => parseInt(a.num, 10) - parseInt(b.num, 10));
     }
+
+    // Sort roster by jersey number
+    updated.sort((a, b) => parseInt(a.num, 10) - parseInt(b.num, 10));
 
     onUpdateRoster(updated);
     if (onClearEditingPlayer) onClearEditingPlayer();
     setActiveTab('list');
   };
 
-  const handleDeletePlayer = (numToDelete: string) => {
-    if (!window.confirm(`Are you sure you want to remove #${numToDelete} from the roster?`)) {
+  const handleDeletePlayer = (playerToDelete: RosterPlayer) => {
+    const teamName = teams.find((t) => t.id === playerToDelete.teamId)?.name || 'this team';
+    if (!window.confirm(`Are you sure you want to remove #${playerToDelete.num} ${playerToDelete.firstName} ${playerToDelete.lastName} from ${teamName}?`)) {
       return;
     }
-    const updated = roster.filter((p) => p.num !== numToDelete);
+    const updated = roster.filter(
+      (p) => !(p.num === playerToDelete.num && (p.teamId === playerToDelete.teamId || (!p.teamId && !playerToDelete.teamId)))
+    );
     onUpdateRoster(updated);
   };
 
   const handleClearRoster = () => {
+    if (selectedTeamFilter !== 'all') {
+      const targetTeam = teams.find((t) => t.id === selectedTeamFilter);
+      const teamName = targetTeam ? targetTeam.name : selectedTeamFilter;
+      if (
+        window.confirm(
+          `Are you sure you want to clear all players for ${teamName}? Players on other teams will remain intact.`
+        )
+      ) {
+        const updated = roster.filter((p) => (p.teamId || teams[0]?.id) !== selectedTeamFilter);
+        onUpdateRoster(updated);
+      }
+    } else {
+      if (
+        window.confirm(
+          'Are you sure you want to clear ALL players across ALL teams in the entire program?'
+        )
+      ) {
+        onUpdateRoster([]);
+      }
+    }
+  };
+
+  // Copy Roster from One Team to Another
+  const handleExecuteCopyRoster = () => {
+    if (!copySourceTeamId || !copyTargetTeamId) return;
+    if (copySourceTeamId === copyTargetTeamId) {
+      alert('Please select two different teams to copy between.');
+      return;
+    }
+    const sourcePlayers = roster.filter((p) => (p.teamId || teams[0]?.id) === copySourceTeamId);
+    if (sourcePlayers.length === 0) {
+      alert('Source team has no players to copy.');
+      return;
+    }
+
+    const sourceTeam = teams.find((t) => t.id === copySourceTeamId);
+    const targetTeam = teams.find((t) => t.id === copyTargetTeamId);
+
     if (
-      window.confirm(
-        'Are you sure you want to clear all players from the active roster?'
+      !window.confirm(
+        `Copy ${sourcePlayers.length} players from ${sourceTeam?.name || 'Source'} into ${targetTeam?.name || 'Target'}?`
       )
     ) {
-      onUpdateRoster([]);
+      return;
     }
+
+    // Keep other teams' players and non-duplicate target players
+    const otherPlayers = roster.filter((p) => (p.teamId || teams[0]?.id) !== copyTargetTeamId);
+    const clonedPlayers: RosterPlayer[] = sourcePlayers.map((p) => ({
+      ...p,
+      teamId: copyTargetTeamId,
+    }));
+
+    const updated = [...otherPlayers, ...clonedPlayers];
+    updated.sort((a, b) => parseInt(a.num, 10) - parseInt(b.num, 10));
+    onUpdateRoster(updated);
+    setSelectedTeamFilter(copyTargetTeamId);
+    setActiveTab('list');
+    alert(`Successfully copied ${clonedPlayers.length} players to ${targetTeam?.name}!`);
   };
 
   // CSV Import Parser
@@ -203,6 +274,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     if (!csvText.trim()) return;
     try {
       const lines = csvText.trim().split('\n');
+      const targetTeamId = assignedTeamId || (selectedTeamFilter !== 'all' ? selectedTeamFilter : activeTeamId || teams[0]?.id);
       const imported: RosterPlayer[] = [];
 
       lines.forEach((line) => {
@@ -219,7 +291,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
               num: rawNum,
               firstName: fName,
               lastName: lName,
-              teamId: assignedTeamId || activeTeamId || undefined,
+              teamId: targetTeamId,
               primaryPosition: pPos,
               secondaryPosition: sPos,
               conditioningHours: 10,
@@ -230,8 +302,12 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
       });
 
       if (imported.length > 0) {
-        onUpdateRoster(imported);
-        alert(`Successfully imported ${imported.length} players!`);
+        // Keep players belonging to other teams
+        const otherTeamsPlayers = roster.filter((p) => (p.teamId || teams[0]?.id) !== targetTeamId);
+        const updated = [...otherTeamsPlayers, ...imported];
+        updated.sort((a, b) => parseInt(a.num, 10) - parseInt(b.num, 10));
+        onUpdateRoster(updated);
+        alert(`Successfully imported ${imported.length} players to ${teams.find((t) => t.id === targetTeamId)?.name || 'the team'}!`);
         setActiveTab('list');
         setCsvText('');
       } else {
@@ -245,7 +321,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
   // CSV Export
   const handleExportCSV = () => {
     const header = 'Jersey,FirstName,LastName,Team,PrimaryPos,SecondaryPos\n';
-    const rows = roster
+    const rows = filteredRoster
       .map(
         (p) => {
           const teamName = teams.find((t) => t.id === p.teamId)?.name || 'Default';
@@ -260,7 +336,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `Team_Roster_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Roster_${selectedTeamFilter !== 'all' ? selectedTeamFilter : 'All_Teams'}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -268,8 +344,18 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
 
   const filteredRoster = roster.filter((p) => {
     if (selectedTeamFilter !== 'all') {
-      if (p.teamId && p.teamId !== selectedTeamFilter) return false;
-      if (!p.teamId && selectedTeamFilter !== teams[0]?.id) return false;
+      const pTeam = p.teamId || teams[0]?.id || 'team_10u';
+      if (pTeam !== selectedTeamFilter) {
+        // Handle team-10u vs team_10u alias
+        if (
+          (pTeam === 'team_10u' || pTeam === 'team-10u') &&
+          (selectedTeamFilter === 'team_10u' || selectedTeamFilter === 'team-10u')
+        ) {
+          // match
+        } else {
+          return false;
+        }
+      }
     }
     const term = searchTerm.toLowerCase().trim();
     if (!term) return true;
@@ -352,6 +438,19 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                   <Upload className="w-3.5 h-3.5" />
                   <span>CSV Import / Export</span>
                 </button>
+                {teams.length > 1 && (
+                  <button
+                    onClick={() => setActiveTab('copy')}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                      activeTab === 'copy'
+                        ? 'bg-indigo-600 text-white shadow-md'
+                        : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Users className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Copy Between Teams</span>
+                  </button>
+                )}
               </>
             )}
           </div>
@@ -359,18 +458,24 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
           {/* Team Filter Dropdown for list tab */}
           {activeTab === 'list' && teams.length > 1 && (
             <div className="flex items-center gap-1.5 text-xs">
-              <span className="text-[10px] font-black uppercase text-slate-400">Team:</span>
+              <span className="text-[10px] font-black uppercase text-indigo-300 font-mono">Team View:</span>
               <select
                 value={selectedTeamFilter}
                 onChange={(e) => setSelectedTeamFilter(e.target.value)}
-                className="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2 py-1 font-bold focus:outline-none"
+                className="bg-slate-800 border border-indigo-500/40 text-slate-100 text-xs rounded-lg px-2.5 py-1 font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
               >
-                <option value="all">All Teams ({roster.length})</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
+                <option value="all">All Teams ({roster.length} players)</option>
+                {teams.map((t) => {
+                  const count = roster.filter((p) => {
+                    const pTeam = p.teamId || teams[0]?.id || 'team_10u';
+                    return pTeam === t.id || ((pTeam === 'team_10u' || pTeam === 'team-10u') && (t.id === 'team_10u' || t.id === 'team-10u'));
+                  }).length;
+                  return (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({count} players)
+                    </option>
+                  );
+                })}
               </select>
             </div>
           )}
@@ -477,7 +582,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                                     <Edit2 className="w-3.5 h-3.5" />
                                   </button>
                                   <button
-                                    onClick={() => handleDeletePlayer(player.num)}
+                                    onClick={() => handleDeletePlayer(player)}
                                     className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-all"
                                     title="Delete player"
                                   >
@@ -672,7 +777,30 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
           {activeTab === 'csv' && (
             <div className="space-y-4 max-w-xl mx-auto">
               <div className="bg-slate-850 p-4 rounded-2xl border border-slate-800 space-y-3">
-                <h4 className="font-black text-sm text-slate-100">Bulk Import via CSV / Text</h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="font-black text-sm text-slate-100">Bulk Import via CSV / Text</h4>
+                  <span className="text-[10px] font-bold text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full border border-indigo-500/30">
+                    Target: {teams.find((t) => t.id === assignedTeamId)?.name || 'Active Team'}
+                  </span>
+                </div>
+                {teams.length > 1 && (
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                      Import Into Team:
+                    </label>
+                    <select
+                      value={assignedTeamId}
+                      onChange={(e) => setAssignedTeamId(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+                    >
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} ({t.ageGroup || 'Youth'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <p className="text-xs text-slate-400">
                   Paste roster data. Format per line: <br/>
                   <code className="text-indigo-300 font-mono text-[11px]">
@@ -689,11 +817,98 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                 <button
                   type="button"
                   onClick={handleImportCSV}
-                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2"
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Upload className="w-4 h-4" />
                   <span>Parse &amp; Import Roster</span>
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: COPY PLAYERS BETWEEN TEAMS */}
+          {activeTab === 'copy' && (
+            <div className="space-y-4 max-w-xl mx-auto">
+              <div className="bg-slate-850 p-5 rounded-2xl border border-slate-800 space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+                  <Users className="w-5 h-5 text-indigo-400" />
+                  <div>
+                    <h4 className="font-black text-sm text-slate-100">Clone Roster Across Teams</h4>
+                    <p className="text-xs text-slate-400">
+                      Quickly copy player profiles from one team to another (e.g. duplicating from 10U into 12U or a tournament squad).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
+                      Source Team (Copy From):
+                    </label>
+                    <select
+                      value={copySourceTeamId}
+                      onChange={(e) => setCopySourceTeamId(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+                    >
+                      {teams.map((t) => {
+                        const count = roster.filter((p) => (p.teamId || teams[0]?.id) === t.id).length;
+                        return (
+                          <option key={t.id} value={t.id}>
+                            {t.name} ({count} players)
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
+                      Target Team (Paste Into):
+                    </label>
+                    <select
+                      value={copyTargetTeamId}
+                      onChange={(e) => setCopyTargetTeamId(e.target.value)}
+                      className="w-full bg-slate-900 border border-indigo-500/50 rounded-xl px-3 py-2 text-xs font-bold text-indigo-200 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                    >
+                      {teams.map((t) => {
+                        const count = roster.filter((p) => (p.teamId || teams[0]?.id) === t.id).length;
+                        return (
+                          <option key={t.id} value={t.id}>
+                            {t.name} (currently {count} players)
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-1">
+                  <p className="font-bold text-slate-200 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                    How this works:
+                  </p>
+                  <p className="text-[11px] text-slate-400 pl-3">
+                    All players from the source team will be cloned into the target team with the same jersey numbers, names, and position assignments. Existing players on other teams remain untouched.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('list')}
+                    className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExecuteCopyRoster}
+                    className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                  >
+                    <Copy className="w-4 h-4" />
+                    <span>Copy Players to Target Team</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}

@@ -14,6 +14,7 @@ import {
   X,
   Shield,
   Zap,
+  Check,
 } from 'lucide-react';
 import {
   FormationBoard,
@@ -22,6 +23,7 @@ import {
   PlacedPlayer,
   UserRole,
   UnitType,
+  Team,
 } from '../types';
 
 interface FormationsViewProps {
@@ -31,6 +33,9 @@ interface FormationsViewProps {
   selectedFormationId: string | null;
   onSelectFormation: (formId: string) => void;
   userRole: UserRole;
+  activeTeam?: Team;
+  teams?: Team[];
+  onCopyFormationsFromTeam?: (sourceTeamId: string) => void;
   onAddFormation: (unit: 'offense' | 'defense' | 'st' | 'groups') => void;
   onMoveFormation: (formId: string, direction: number) => void;
   onDuplicateFormation: (formId: string) => void;
@@ -79,6 +84,9 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
   selectedFormationId,
   onSelectFormation,
   userRole,
+  activeTeam,
+  teams = [],
+  onCopyFormationsFromTeam,
   onAddFormation,
   onMoveFormation,
   onDuplicateFormation,
@@ -103,6 +111,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
   const [filterViewId, setFilterViewId] = useState<string>('ALL');
   const [dragOverPosId, setDragOverPosId] = useState<string | null>(null);
   const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null);
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  const [copySourceTeamId, setCopySourceTeamId] = useState(teams.find((t) => t.id !== activeTeam?.id)?.id || teams[0]?.id || '');
 
   const unitFormations = formations.filter((f) => f && f.unit === unit);
   const displayedFormations =
@@ -110,21 +120,43 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
       ? unitFormations
       : unitFormations.filter((f) => f.id === filterViewId);
 
+  const teamDisplayName = activeTeam ? `${activeTeam.name} ${activeTeam.ageGroup ? `(${activeTeam.ageGroup})` : ''}` : 'Football Program';
+
   return (
     <div className="space-y-6">
       {/* Top Action & Filter Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-800/95 backdrop-blur-md p-4 rounded-3xl border border-slate-700/80 shadow-xl print:hidden">
         <div className="flex items-center gap-2.5 flex-wrap">
+          {activeTeam && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/90 rounded-xl border border-indigo-500/30 text-xs">
+              <span className="text-[10px] font-black uppercase text-indigo-400 font-mono">Team Playbook:</span>
+              <span className="font-bold text-white">{activeTeam.name}</span>
+            </div>
+          )}
+
           {userRole === 'admin' && (
-            <button
-              onClick={() => onAddFormation(unit)}
-              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/20 border border-indigo-500/30 flex items-center gap-1.5 transition-all active:scale-95"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>
-                Add {unit === 'offense' ? 'Offensive' : unit === 'defense' ? 'Defensive' : unit === 'st' ? 'Special Teams' : 'Depth Chart'} Formation
-              </span>
-            </button>
+            <>
+              <button
+                onClick={() => onAddFormation(unit)}
+                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/20 border border-indigo-500/30 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>
+                  Add {unit === 'offense' ? 'Offensive' : unit === 'defense' ? 'Defensive' : unit === 'st' ? 'Special Teams' : 'Depth Chart'} Formation
+                </span>
+              </button>
+
+              {teams.length > 1 && onCopyFormationsFromTeam && (
+                <button
+                  onClick={() => setShowCopyModal(true)}
+                  className="px-3 py-2 bg-slate-900 hover:bg-slate-750 text-indigo-300 font-bold text-xs rounded-xl border border-indigo-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
+                  title="Copy formations from another team's playbook"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Clone from Team...</span>
+                </button>
+              )}
+            </>
           )}
 
           {/* On-screen view filter */}
@@ -149,14 +181,14 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => window.print()}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-100 font-bold text-xs rounded-xl border border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+            className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-100 font-bold text-xs rounded-xl border border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5 text-indigo-400" />
             <span>Print All</span>
           </button>
           <button
             onClick={() => onOpenSelectivePrintModal(unit)}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+            className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Selective Print</span>
@@ -164,10 +196,72 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
         </div>
       </div>
 
+      {/* Clone Formations Modal */}
+      {showCopyModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-5 text-slate-100 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Copy className="w-5 h-5 text-indigo-400" />
+                <h3 className="font-black text-sm text-slate-100">Clone Formations from Team</h3>
+              </div>
+              <button
+                onClick={() => setShowCopyModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300">
+              Copy all offensive, defensive, and special teams formations from another team into <strong className="text-indigo-300">{activeTeam?.name || 'this team'}</strong>.
+            </p>
+
+            <div>
+              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
+                Source Team:
+              </label>
+              <select
+                value={copySourceTeamId}
+                onChange={(e) => setCopySourceTeamId(e.target.value)}
+                className="w-full bg-slate-850 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+              >
+                {teams.filter((t) => t.id !== activeTeam?.id).map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.ageGroup || 'Youth'})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowCopyModal(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (onCopyFormationsFromTeam && copySourceTeamId) {
+                    onCopyFormationsFromTeam(copySourceTeamId);
+                    setShowCopyModal(false);
+                  }
+                }}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg flex items-center gap-1.5 cursor-pointer"
+              >
+                <Check className="w-4 h-4" />
+                <span>Clone Formations</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Printable Sheet Title Header (Shown only on Print) */}
       <div className="hidden print:block mb-2 border-b-2 border-black pb-1.5 text-center">
         <h1 className="font-black text-sm uppercase text-black tracking-wider">
-          Mahopac 10U Football &bull; {unit === 'offense' ? 'Offensive' : unit === 'defense' ? 'Defensive' : unit === 'st' ? 'Special Teams' : 'Depth Chart'} Formation Sheets
+          {teamDisplayName} &bull; {unit === 'offense' ? 'Offensive' : unit === 'defense' ? 'Defensive' : unit === 'st' ? 'Special Teams' : 'Depth Chart'} Formation Sheets
         </h1>
         <p className="text-[10px] font-bold text-black mt-0.5">
           High-Visibility Sideline Depth Chart &bull; Starters (ST) &bull; 2nd String (D2) &bull; 3rd String (D3) &bull; 4th+ String (D4+)

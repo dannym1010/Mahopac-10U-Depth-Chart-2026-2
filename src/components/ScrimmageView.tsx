@@ -4,6 +4,7 @@ import {
   FormationBoard,
   PlacedPlayer,
   UserRole,
+  Team,
 } from '../types';
 
 interface ScrimmageViewProps {
@@ -11,6 +12,7 @@ interface ScrimmageViewProps {
   scrimmageChart: Record<string, PlacedPlayer[]>;
   scrimmageFilters: string[] | null;
   userRole: UserRole;
+  activeTeam?: Team;
   onOpenScrimmageFilterModal: () => void;
   onOpenScrimmagePrintModal: () => void;
   onDropPlayerOnScrimmageCard: (
@@ -32,6 +34,7 @@ export const ScrimmageView: React.FC<ScrimmageViewProps> = ({
   scrimmageChart,
   scrimmageFilters,
   userRole,
+  activeTeam,
   onOpenScrimmageFilterModal,
   onOpenScrimmagePrintModal,
   onDropPlayerOnScrimmageCard,
@@ -46,6 +49,8 @@ export const ScrimmageView: React.FC<ScrimmageViewProps> = ({
   const activeForms = allRelevantForms.filter(
     (f) => !scrimmageFilters || scrimmageFilters.includes(f.id)
   );
+
+  const teamDisplayName = activeTeam ? `${activeTeam.name} ${activeTeam.ageGroup ? `(${activeTeam.ageGroup})` : ''}` : 'Football Program';
 
   return (
     <div className="space-y-6">
@@ -86,7 +91,7 @@ export const ScrimmageView: React.FC<ScrimmageViewProps> = ({
       {/* Printable Sheet Title Header (Shown only on Print) */}
       <div className="hidden print:block mb-2 border-b-2 border-black pb-1.5 text-center">
         <h1 className="font-black text-sm uppercase text-black tracking-wider">
-          Mahopac 10U Football &bull; Practice / Scrimmage Rotation Sheet
+          {teamDisplayName} &bull; Practice / Scrimmage Rotation Sheet
         </h1>
         <p className="text-[10px] font-bold text-black mt-0.5">
           Gold Group (Primary) &bull; Blue Group (Rotational Subs)
