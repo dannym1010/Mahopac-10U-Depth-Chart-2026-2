@@ -54,8 +54,10 @@ export interface WristbandColumn {
 }
 
 export interface WristbandData {
-  rows: number;
-  columns: WristbandColumn[];
+  title?: string;
+  rows?: number;
+  columns?: WristbandColumn[];
+  copiesPerPage?: number;
 }
 
 export interface ScoutingData {

@@ -46,7 +46,7 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
   ];
 
   return (
-    <div className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-[108px] z-30 shadow-lg print:hidden">
+    <div className="bg-slate-800/95 backdrop-blur-md border-b border-slate-700/80 sticky top-[108px] z-30 shadow-md print:hidden">
       <div className="max-w-[1700px] mx-auto px-4 py-2.5 flex gap-2 overflow-x-auto no-scrollbar items-center">
         {tabs
           .filter((tab) => !tab.adminOnly || userRole === 'admin')
@@ -60,12 +60,12 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black tracking-tight whitespace-nowrap transition-all select-none border active:scale-95 ${
                   isActive
                     ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-600/30 border-indigo-500/50 ring-1 ring-white/10'
-                    : 'bg-slate-950/60 hover:bg-slate-800/80 text-slate-400 hover:text-slate-200 border-slate-800 hover:border-slate-700'
+                    : 'bg-slate-900/80 hover:bg-slate-700/80 text-slate-300 hover:text-white border-slate-700/80 hover:border-slate-600'
                 }`}
               >
                 <Icon
                   className={`w-3.5 h-3.5 ${
-                    isActive ? 'text-white' : 'text-slate-400'
+                    isActive ? 'text-white' : 'text-slate-300'
                   }`}
                 />
                 <span>{tab.label}</span>

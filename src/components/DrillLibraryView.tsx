@@ -108,7 +108,7 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
     return (
       <div
         key={pathKey}
-        className="border border-slate-800 rounded-3xl bg-slate-900/90 backdrop-blur-md shadow-xl overflow-hidden transition-all mb-4"
+        className="border border-slate-700/80 rounded-3xl bg-slate-800/95 backdrop-blur-md shadow-xl overflow-hidden transition-all mb-4"
         style={{ marginLeft: depth > 0 ? `${depth * 16}px` : 0 }}
       >
         {/* Folder Header */}
@@ -142,8 +142,8 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
             isDragOver
               ? 'bg-indigo-950/80 border-indigo-500 ring-2 ring-indigo-500/50'
               : isCollapsed
-              ? 'bg-slate-950/60 hover:bg-slate-950/90 border-slate-800/60'
-              : 'bg-slate-950/90 hover:bg-slate-950 border-slate-800'
+              ? 'bg-slate-900/60 hover:bg-slate-900 border-slate-700/60'
+              : 'bg-slate-900/90 hover:bg-slate-900 border-slate-700'
           }`}
         >
           <div className="flex items-center gap-3 min-w-0">
@@ -337,17 +337,17 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
   return (
     <div className="space-y-5">
       {/* Top Action Toolbar */}
-      <div className="bg-slate-900/90 backdrop-blur-md rounded-3xl border border-slate-800 shadow-xl p-4 md:p-5 print:hidden">
+      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-4 md:p-5 print:hidden">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center font-black shadow-inner">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 flex items-center justify-center font-black shadow-inner">
               <Dumbbell className="w-5 h-5" />
             </div>
             <div>
               <h2 className="font-black text-base md:text-lg text-slate-100 tracking-tight">
                 Master Drill Library &amp; Install Database
               </h2>
-              <p className="text-xs text-slate-400 font-medium">
+              <p className="text-xs text-slate-300 font-medium">
                 Organized by category, agility circuits, positional skills, tackling form &amp; install scripts
               </p>
             </div>
@@ -356,28 +356,28 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={onExportCSV}
-              className="px-3 py-1.5 bg-slate-950 hover:bg-slate-800 text-emerald-300 border border-slate-800 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-emerald-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
             >
               <Download className="w-3.5 h-3.5 text-emerald-400" />
               <span>CSV Export</span>
             </button>
             <button
               onClick={onImportCSVClick}
-              className="px-3 py-1.5 bg-slate-950 hover:bg-slate-800 text-emerald-300 border border-slate-800 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-emerald-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
             >
               <Upload className="w-3.5 h-3.5 text-emerald-400" />
               <span>CSV Import</span>
             </button>
             <button
               onClick={onExportJSON}
-              className="px-3 py-1.5 bg-slate-950 hover:bg-slate-800 text-indigo-300 border border-slate-800 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-indigo-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
             >
               <Download className="w-3.5 h-3.5 text-indigo-400" />
               <span>JSON</span>
             </button>
             <button
               onClick={onImportJSONClick}
-              className="px-3 py-1.5 bg-slate-950 hover:bg-slate-800 text-sky-300 border border-slate-800 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-sky-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
             >
               <Upload className="w-3.5 h-3.5 text-sky-400" />
               <span>JSON</span>
@@ -393,7 +393,7 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
               <>
                 <button
                   onClick={onResetDefaults}
-                  className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-xl transition-all border border-slate-800"
+                  className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded-xl transition-all border border-slate-700"
                   title="Reset to default drills"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />

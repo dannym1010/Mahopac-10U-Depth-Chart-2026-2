@@ -1818,7 +1818,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] print:bg-white print:text-black flex flex-col font-sans text-slate-100 selection:bg-indigo-600 selection:text-white">
+    <div className="min-h-screen bg-[#0f172a] print:bg-white print:text-black flex flex-col font-sans text-slate-100 selection:bg-indigo-600 selection:text-white">
       {/* Hidden File Inputs for Import */}
       <input
         type="file"
@@ -1949,49 +1949,95 @@ export default function App() {
               <WristbandView
                 wristbandData={
                   currentWeekState.wristbandData || {
-                    rows: 10,
-                    columns: [{ color: 'blue', plays: [] }],
+                    title: 'MAHOPAC 10U • PLAY CALLING INSERT',
+                    rows: 16,
+                    columns: [
+                      { color: 'yellow', plays: [] },
+                      { color: 'blue', plays: [] },
+                    ],
                   }
                 }
                 userRole={userRole}
-                onAddRow={() => {
+                masterPlayLibrary={masterPlayLibrary}
+                onUpdateTitle={(title) => {
                   const wb = currentWeekState.wristbandData || {
-                    rows: 10,
-                    columns: [{ color: 'blue', plays: [] }],
+                    rows: 16,
+                    columns: [
+                      { color: 'yellow', plays: [] },
+                      { color: 'blue', plays: [] },
+                    ],
                   };
                   setWeeklyData((prev) => ({
                     ...prev,
                     [currentWeek]: {
                       ...prev[currentWeek],
-                      wristbandData: { ...wb, rows: wb.rows + 1 },
+                      wristbandData: { ...wb, title },
                     },
                   }));
                 }}
-                onRemoveRow={() => {
+                onClearPlays={() => {
                   const wb = currentWeekState.wristbandData || {
-                    rows: 10,
-                    columns: [{ color: 'blue', plays: [] }],
+                    rows: 16,
+                    columns: [
+                      { color: 'yellow', plays: [] },
+                      { color: 'blue', plays: [] },
+                    ],
                   };
-                  if (wb.rows > 1) {
-                    setWeeklyData((prev) => ({
-                      ...prev,
-                      [currentWeek]: {
-                        ...prev[currentWeek],
-                        wristbandData: { ...wb, rows: wb.rows - 1 },
+                  setWeeklyData((prev) => ({
+                    ...prev,
+                    [currentWeek]: {
+                      ...prev[currentWeek],
+                      wristbandData: {
+                        ...wb,
+                        columns: [
+                          { color: 'yellow', plays: Array(16).fill({ text: '' }) },
+                          { color: 'blue', plays: Array(16).fill({ text: '' }) },
+                        ],
                       },
-                    }));
-                  }
+                    },
+                  }));
+                }}
+                onBulkFillPlays={(plays) => {
+                  const wb = currentWeekState.wristbandData || {
+                    rows: 16,
+                    columns: [
+                      { color: 'yellow', plays: [] },
+                      { color: 'blue', plays: [] },
+                    ],
+                  };
+                  const yellowPlays = plays.slice(0, 16).map((p) => ({ text: p }));
+                  const bluePlays = plays.slice(16, 32).map((p) => ({ text: p }));
+                  setWeeklyData((prev) => ({
+                    ...prev,
+                    [currentWeek]: {
+                      ...prev[currentWeek],
+                      wristbandData: {
+                        ...wb,
+                        columns: [
+                          { color: 'yellow', plays: yellowPlays },
+                          { color: 'blue', plays: bluePlays },
+                        ],
+                      },
+                    },
+                  }));
                 }}
                 onUpdatePlay={(colIdx, rowIdx, text) => {
                   const wb = currentWeekState.wristbandData || {
-                    rows: 10,
-                    columns: [{ color: 'blue', plays: [] }],
+                    rows: 16,
+                    columns: [
+                      { color: 'yellow', plays: [] },
+                      { color: 'blue', plays: [] },
+                    ],
                   };
-                  const cols = [...wb.columns];
-                  if (!cols[colIdx]) cols[colIdx] = { color: 'blue', plays: [] };
-                  const plays = [...cols[colIdx].plays];
+                  const cols = [...(wb.columns || [])];
+                  if (!cols[0]) cols[0] = { color: 'yellow', plays: [] };
+                  if (!cols[1]) cols[1] = { color: 'blue', plays: [] };
+
+                  const targetCol = { ...cols[colIdx] };
+                  const plays = [...(targetCol.plays || [])];
                   plays[rowIdx] = { text };
-                  cols[colIdx] = { ...cols[colIdx], plays };
+                  targetCol.plays = plays;
+                  cols[colIdx] = targetCol;
 
                   setWeeklyData((prev) => ({
                     ...prev,

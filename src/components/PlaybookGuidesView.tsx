@@ -62,17 +62,17 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
   return (
     <div className="space-y-5">
       {/* Top Header Card */}
-      <div className="bg-slate-900/90 backdrop-blur-md rounded-3xl border border-slate-800 shadow-xl p-5 print:hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800/80 mb-4">
+      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 print:hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-700/80 mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-black shadow-inner">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 flex items-center justify-center font-black shadow-inner">
               <BookOpen className="w-5 h-5" />
             </div>
             <div>
               <h2 className="font-black text-base md:text-lg text-slate-100 tracking-tight">
-                Playbooks & Positional Install Guides
+                Playbooks &amp; Positional Install Guides
               </h2>
-              <p className="text-xs text-slate-400 font-medium">
+              <p className="text-xs text-slate-300 font-medium">
                 Browse team installation packets, wristband diagrams, and individual position group manuals
               </p>
             </div>
@@ -82,7 +82,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsOrganizeModalOpen(true)}
-                className="px-3.5 py-2 bg-slate-950 hover:bg-slate-800 text-slate-200 font-bold text-xs rounded-xl border border-slate-800 flex items-center gap-1.5 transition-all active:scale-95"
+                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95"
               >
                 <Settings className="w-3.5 h-3.5 text-indigo-400" />
                 <span>Organize Tabs</span>
@@ -116,7 +116,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                 className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all select-none border ${
                   isActive
                     ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-md'
-                    : 'bg-slate-950/80 hover:bg-slate-800 text-slate-300 border-slate-800'
+                    : 'bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-200 border-slate-700'
                 }`}
               >
                 {mainCat}
@@ -126,7 +126,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
         </div>
 
         {/* Level 2: Sub-Tabs Ribbon */}
-        <div className="flex items-center gap-1.5 overflow-x-auto p-2 bg-slate-950/80 border border-slate-800 rounded-2xl no-scrollbar">
+        <div className="flex items-center gap-1.5 overflow-x-auto p-2 bg-slate-900/90 border border-slate-700 rounded-2xl no-scrollbar">
           {currentSubTabs.map((subTab) => {
             const isActive = subTab === activeSub;
             return (
@@ -136,7 +136,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all select-none border ${
                   isActive
                     ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                    : 'bg-slate-900/90 hover:bg-slate-800 text-slate-400 border-slate-800'
+                    : 'bg-slate-800 hover:bg-slate-750 text-slate-300 border-slate-700'
                 }`}
               >
                 {subTab}
@@ -144,25 +144,25 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
             );
           })}
           {currentSubTabs.length === 0 && (
-            <span className="text-xs text-slate-500 p-1">No sub-tabs found.</span>
+            <span className="text-xs text-slate-400 p-1">No sub-tabs found.</span>
           )}
         </div>
       </div>
 
       {/* Document Area */}
-      <div className="bg-slate-900/90 backdrop-blur-md rounded-3xl border border-slate-800 shadow-xl p-5 space-y-4">
+      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 space-y-4">
         {/* Document Action Banner */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 p-3.5 rounded-2xl border border-slate-700">
           <div className="flex items-center gap-2.5">
             <FileText className="w-4 h-4 text-indigo-400" />
-            <span className="font-black text-xs text-slate-300">
+            <span className="font-black text-xs text-slate-200">
               Active Section: <span className="text-amber-300">{activeMain} &gt; {activeSub}</span>
             </span>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             {userRole === 'admin' && (
-              <label className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-sm transition-colors">
+              <label className="px-3.5 py-2 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-sm transition-colors">
                 <Upload className="w-3.5 h-3.5 text-indigo-400" />
                 <span>Upload PDF / DOC</span>
                 <input
@@ -180,7 +180,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
             {currentDocUrl && (
               <button
                 onClick={() => setIsFullScreenModalOpen(true)}
-                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-amber-300 text-xs font-bold rounded-xl border border-slate-800 flex items-center gap-1.5 shadow-sm transition-all"
+                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-750 text-amber-300 text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1.5 shadow-sm transition-all"
               >
                 <Maximize className="w-3.5 h-3.5" />
                 <span>Fullscreen View</span>
@@ -190,7 +190,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
         </div>
 
         {/* Document Frame / Viewer */}
-        <div className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl overflow-hidden min-h-[600px] flex flex-col">
+        <div className="w-full bg-slate-900/90 border border-slate-700 rounded-2xl overflow-hidden min-h-[600px] flex flex-col">
           {currentDocUrl ? (
             <iframe
               src={currentDocUrl}

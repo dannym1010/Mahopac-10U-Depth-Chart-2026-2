@@ -38,29 +38,29 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
     );
 
     return (
-      <div className="w-full lg:w-72 bg-slate-900/90 backdrop-blur-md rounded-3xl border border-slate-800 shadow-xl p-4 sticky top-[170px] flex flex-col max-h-[calc(100vh-190px)] print:hidden">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
+      <div className="w-full lg:w-72 bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-4 sticky top-[170px] flex flex-col max-h-[calc(100vh-190px)] print:hidden">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-700/80 mb-3">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+            <div className="w-7 h-7 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300">
               <BookOpen className="w-4 h-4" />
             </div>
             <h2 className="font-black text-sm text-slate-100 tracking-tight">
               Play Library
             </h2>
           </div>
-          <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+          <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
             {filteredPlays.length} Plays
           </span>
         </div>
 
         <div className="relative mb-3">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
           <input
             type="text"
             value={playSearchTerm}
             onChange={(e) => onPlaySearchChange(e.target.value)}
             placeholder="Search plays..."
-            className="w-full pl-8 pr-3 py-1.5 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full pl-8 pr-3 py-1.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
 
@@ -70,14 +70,14 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
               key={idx}
               draggable={userRole === 'admin'}
               onDragStart={(e) => onDragStartPlay && onDragStartPlay(e, play)}
-              className="px-3 py-2 bg-slate-950/60 hover:bg-indigo-950/40 border border-slate-800/80 hover:border-indigo-500/50 rounded-xl text-xs font-bold text-slate-200 flex items-center justify-between cursor-grab active:cursor-grabbing transition-all select-none group"
+              className="px-3 py-2 bg-slate-900/80 hover:bg-slate-750 hover:bg-slate-700 border border-slate-700/80 hover:border-indigo-400/50 rounded-xl text-xs font-bold text-slate-200 flex items-center justify-between cursor-grab active:cursor-grabbing transition-all select-none group"
             >
               <span className="truncate">{play}</span>
-              <GripVertical className="w-3.5 h-3.5 text-slate-600 group-hover:text-indigo-400 transition-colors" />
+              <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-300 transition-colors" />
             </li>
           ))}
           {filteredPlays.length === 0 && (
-            <div className="text-center py-6 text-xs text-slate-500 font-medium">
+            <div className="text-center py-6 text-xs text-slate-400 font-medium">
               No plays found
             </div>
           )}
@@ -102,24 +102,24 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
     : currentWeekState.depthChart || {};
 
   return (
-    <div className="w-full lg:w-80 bg-slate-900/90 backdrop-blur-md rounded-3xl border border-slate-800 shadow-xl p-4 sticky top-[170px] flex flex-col max-h-[calc(100vh-190px)] print:hidden">
+    <div className="w-full lg:w-80 bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-4 sticky top-[170px] flex flex-col max-h-[calc(100vh-190px)] print:hidden">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-2">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-700/80 mb-2">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+          <div className="w-7 h-7 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300">
             <UserCheck className="w-4 h-4" />
           </div>
           <h2 className="font-black text-sm text-slate-100 tracking-tight">
             Master Roster
           </h2>
         </div>
-        <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-slate-950 text-slate-300 border border-slate-800">
+        <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-slate-900 text-slate-200 border border-slate-700">
           {roster.length} Players
         </span>
       </div>
 
       <div className="mb-2">
-        <p className="text-[10px] text-slate-400 font-medium leading-tight">
+        <p className="text-[10px] text-slate-300 font-medium leading-tight">
           {isScrimmageTab
             ? 'Drag to assign Gold / Blue scrimmage rotations'
             : 'Click any formation card to inspect active assignments'}
@@ -128,13 +128,13 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
 
       {/* Search Box */}
       <div className="relative mb-3">
-        <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+        <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
         <input
           type="text"
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search name or jersey #..."
-          className="w-full pl-8 pr-3 py-1.5 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+          className="w-full pl-8 pr-3 py-1.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
         />
       </div>
 
@@ -159,7 +159,9 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
                             badgeClass:
                               idx === 0
                                 ? 'bg-amber-400 text-slate-950 font-black border border-amber-500 shadow-xs'
-                                : 'bg-blue-700 text-white font-black border border-blue-500 shadow-xs',
+                                : idx === 1
+                                ? 'bg-blue-700 text-white font-black border border-blue-500 shadow-xs'
+                                : 'bg-white text-slate-900 font-black border border-slate-300 shadow-xs',
                           });
                         }
                       });
@@ -181,10 +183,12 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
                           posName: pos.name,
                           badgeClass:
                             idx === 0
-                              ? 'bg-slate-950 text-indigo-300 border border-indigo-500/40 font-black'
+                              ? 'bg-slate-900 text-indigo-300 border border-indigo-500/40 font-black'
                               : idx === 1
                               ? 'bg-amber-400 text-slate-950 border border-amber-500 font-black'
-                              : 'bg-blue-700 text-white border border-blue-500 font-black',
+                              : idx === 2
+                              ? 'bg-blue-700 text-white border border-blue-500 font-black'
+                              : 'bg-white text-slate-900 border border-slate-300 font-black',
                         });
                       }
                     });
@@ -199,15 +203,15 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
               key={player.num}
               draggable={userRole === 'admin'}
               onDragStart={(e) => onDragStartPlayer(e, player)}
-              className={`p-2.5 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800/80 hover:border-indigo-500/50 rounded-xl flex items-center justify-between text-xs transition-all select-none ${
+              className={`p-2.5 bg-slate-900/80 hover:bg-slate-750 hover:bg-slate-700/90 border border-slate-700/80 hover:border-indigo-400/50 rounded-xl flex items-center justify-between text-xs transition-all select-none ${
                 userRole === 'admin' ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0">
-                <span className="font-black text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 rounded-lg px-2 py-0.5 text-[11px] min-w-[28px] text-center font-mono">
+                <span className="font-black text-indigo-300 bg-indigo-500/20 border border-indigo-500/30 rounded-lg px-2 py-0.5 text-[11px] min-w-[28px] text-center font-mono">
                   #{player.num}
                 </span>
-                <span className="font-bold text-slate-200 uppercase tracking-tight text-[11px] truncate">
+                <span className="font-bold text-slate-100 uppercase tracking-tight text-[11px] truncate">
                   {player.firstName} {player.lastName}
                 </span>
               </div>
@@ -227,7 +231,7 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
           );
         })}
         {filteredRoster.length === 0 && (
-          <div className="text-center py-6 text-xs text-slate-500 font-medium">
+          <div className="text-center py-6 text-xs text-slate-400 font-medium">
             No player found
           </div>
         )}

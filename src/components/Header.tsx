@@ -51,9 +51,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCopyWeekModal,
 }) => {
   return (
-    <header className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800/90 text-slate-100 shadow-xl sticky top-0 z-40">
+    <header className="bg-slate-850/95 bg-slate-800/95 backdrop-blur-md border-b border-slate-700/80 text-slate-100 shadow-xl sticky top-0 z-40">
       {/* Top Banner Bar */}
-      <div className="max-w-[1700px] mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80">
+      <div className="max-w-[1700px] mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/70">
         
         {/* Brand / Title Bento Block */}
         <div className="flex items-center gap-3">
@@ -62,14 +62,14 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-black text-base md:text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
+              <h1 className="font-black text-base md:text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent">
                 Mahopac 10U Operations Manager
               </h1>
-              <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-xs">
+              <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shadow-xs">
                 10U YOUTH
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block font-medium">
+            <p className="text-[11px] text-slate-300 hidden sm:block font-medium">
               Live Depth Charts, Custom Formations, Playbooks & Multi-Station Practice Itinerary
             </p>
           </div>
@@ -78,7 +78,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Sync Status & User Profile Actions */}
         <div className="flex items-center gap-2.5 flex-wrap">
           {/* Sync status badge */}
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-950/80 border border-slate-800 text-[11px] font-medium text-slate-300 shadow-inner">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/90 border border-slate-700 text-[11px] font-medium text-slate-200 shadow-inner">
             <span
               className="w-2 h-2 rounded-full animate-pulse"
               style={{ backgroundColor: syncStatus.color || '#10b981' }}
@@ -87,15 +87,15 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* User Role Switcher Bento Chip */}
-          <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-800 px-2.5 py-1 rounded-xl shadow-inner">
+          <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700 px-2.5 py-1 rounded-xl shadow-inner">
             <UserCheck className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="text-xs font-bold text-slate-300 truncate max-w-[120px] md:max-w-[160px]">
+            <span className="text-xs font-bold text-slate-200 truncate max-w-[120px] md:max-w-[160px]">
               {userEmail}
             </span>
             <select
               value={userRole}
               onChange={(e) => onRoleChange(e.target.value as UserRole)}
-              className="bg-slate-900 border border-slate-700/80 rounded-lg px-2 py-0.5 text-[11px] font-bold text-amber-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+              className="bg-slate-800 border border-slate-600 rounded-lg px-2 py-0.5 text-[11px] font-bold text-amber-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
             >
               <option value="admin">Head Coach (Admin)</option>
               <option value="assistant">Assistant Coach</option>
@@ -116,7 +116,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onToggleFullScreen}
               title="Toggle Fullscreen"
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800 rounded-xl transition-all active:scale-95"
+              className="p-2 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 rounded-xl transition-all active:scale-95"
             >
               <Maximize className="w-4 h-4" />
             </button>
@@ -125,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={onExportData}
                   title="Download Data Backup (.json)"
-                  className="px-2.5 py-1.5 text-xs font-bold text-slate-300 hover:text-white bg-slate-950/80 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-xl flex items-center gap-1.5 transition-all shadow-xs active:scale-95"
+                  className="px-2.5 py-1.5 text-xs font-bold text-slate-200 hover:text-white bg-slate-900/90 hover:bg-slate-750 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-xl flex items-center gap-1.5 transition-all shadow-xs active:scale-95"
                 >
                   <Download className="w-3.5 h-3.5 text-emerald-400" />
                   <span className="hidden lg:inline">Backup</span>
@@ -133,7 +133,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={onImportClick}
                   title="Import Backup (.json)"
-                  className="px-2.5 py-1.5 text-xs font-bold text-slate-300 hover:text-white bg-slate-950/80 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-xl flex items-center gap-1.5 transition-all shadow-xs active:scale-95"
+                  className="px-2.5 py-1.5 text-xs font-bold text-slate-200 hover:text-white bg-slate-900/90 hover:bg-slate-750 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-xl flex items-center gap-1.5 transition-all shadow-xs active:scale-95"
                 >
                   <Upload className="w-3.5 h-3.5 text-cyan-400" />
                   <span className="hidden lg:inline">Import</span>
@@ -150,7 +150,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onSignOut}
               title="Sign Out / Switch"
-              className="p-2 text-slate-400 hover:text-amber-400 hover:bg-slate-800 border border-slate-800 rounded-xl transition-all active:scale-95"
+              className="p-2 text-slate-300 hover:text-amber-400 hover:bg-slate-700 border border-slate-700 rounded-xl transition-all active:scale-95"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -159,18 +159,18 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Week Selector & Game Opponent Bar */}
-      <div className="max-w-[1700px] mx-auto px-4 py-2 bg-slate-950/80 backdrop-blur-sm flex flex-wrap items-center justify-between gap-3 text-xs border-b border-slate-800/50">
+      <div className="max-w-[1700px] mx-auto px-4 py-2.5 bg-slate-800/90 backdrop-blur-sm flex flex-wrap items-center justify-between gap-3 text-xs border-b border-slate-700/70">
         <div className="flex items-center gap-4 flex-wrap">
           {/* Game Week Dropdown Bento */}
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 text-slate-400 font-black uppercase tracking-widest text-[10px]">
+            <div className="flex items-center gap-1.5 text-slate-300 font-black uppercase tracking-widest text-[10px]">
               <Calendar className="w-3.5 h-3.5 text-indigo-400" />
               <span>Game Week:</span>
             </div>
             <select
               value={currentWeek}
               onChange={(e) => onWeekChange(e.target.value)}
-              className="bg-slate-900 border border-slate-800 text-slate-100 font-bold px-3 py-1.5 rounded-xl text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none cursor-pointer"
+              className="bg-slate-900 border border-slate-700 text-slate-100 font-bold px-3 py-1.5 rounded-xl text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none cursor-pointer"
             >
               {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((wk) => (
                 <option key={wk} value={String(wk)}>
@@ -182,7 +182,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Opponent Input */}
           <div className="flex items-center gap-2">
-            <span className="text-slate-400 font-black uppercase tracking-widest text-[10px]">
+            <span className="text-slate-300 font-black uppercase tracking-widest text-[10px]">
               Opponent / Note:
             </span>
             <input
@@ -191,7 +191,7 @@ export const Header: React.FC<HeaderProps> = ({
               onChange={(e) => onOpponentChange(e.target.value)}
               placeholder="e.g. vs. Somers / Homecoming"
               disabled={userRole !== 'admin'}
-              className="bg-slate-900 border border-slate-800 text-slate-100 px-3 py-1.5 rounded-xl text-xs placeholder:text-slate-500 w-52 md:w-64 focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+              className="bg-slate-900 border border-slate-700 text-slate-100 px-3 py-1.5 rounded-xl text-xs placeholder:text-slate-400 w-52 md:w-64 focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
             />
           </div>
         </div>

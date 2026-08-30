@@ -50,16 +50,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   if (isPendingApproval) {
     return (
-      <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-        <div className="bg-slate-900/95 rounded-3xl max-w-md w-full p-8 shadow-2xl text-center space-y-4 border border-slate-800">
-          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto shadow-inner">
+      <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="bg-slate-800/95 rounded-3xl max-w-md w-full p-8 shadow-2xl text-center space-y-4 border border-slate-700/80">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/30 text-amber-300 flex items-center justify-center mx-auto shadow-inner">
             <Clock className="w-8 h-8 animate-spin" style={{ animationDuration: '4s' }} />
           </div>
           <div>
             <h2 className="text-xl font-black text-slate-100 tracking-tight">
               Approval Pending
             </h2>
-            <p className="text-xs text-slate-400 font-medium mt-1 leading-relaxed">
+            <p className="text-xs text-slate-300 font-medium mt-1 leading-relaxed">
               Your coach account (<strong className="text-indigo-400">{pendingEmail}</strong>) has been registered and is awaiting approval from Head Coach Danny (Admin).
             </p>
           </div>
@@ -68,7 +68,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
           <button
             onClick={onSignOut}
-            className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all"
+            className="w-full py-2.5 bg-slate-900 hover:bg-slate-750 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all border border-slate-700"
           >
             <LogOut className="w-4 h-4" />
             <span>Sign Out / Switch Account</span>
@@ -92,8 +92,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-slate-900/95 rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-800 space-y-5">
+    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-slate-800/95 rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-700/80 space-y-5">
         {/* Header */}
         <div className="text-center space-y-1">
           <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center mx-auto shadow-md mb-2">
@@ -102,13 +102,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <h2 className="text-xl font-black text-slate-100 tracking-tight">
             Coach Portal Access
           </h2>
-          <p className="text-xs text-slate-400 font-medium">
+          <p className="text-xs text-slate-300 font-medium">
             Sign in to sync youth depth charts, playbooks, and practice plans.
           </p>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex bg-slate-950 p-1 rounded-2xl border border-slate-800">
+        <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-700">
           <button
             type="button"
             onClick={() => {
@@ -184,7 +184,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 setLoading(false);
               }
             }}
-            className="w-full py-2.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95"
+            className="w-full py-2.5 bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-200 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95"
           >
             <svg width="18" height="18" viewBox="0 0 24 24">
               <path
@@ -221,7 +221,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   setLoading(false);
                 }
               }}
-              className="w-full py-1.5 bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/70 text-slate-400 hover:text-slate-200 font-semibold text-[11px] rounded-lg transition-all text-center"
+              className="w-full py-1.5 bg-slate-900/60 hover:bg-slate-750/80 border border-slate-750/70 text-slate-300 hover:text-slate-100 font-semibold text-[11px] rounded-lg transition-all text-center"
             >
               🔄 Alternative: Sign in with Google (Redirect Mode)
             </button>
@@ -240,10 +240,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </a>
         </div>
 
-        <div className="flex items-center gap-2 text-slate-500 text-[10.5px] font-black uppercase tracking-wider">
-          <div className="flex-1 border-b border-slate-800" />
+        <div className="flex items-center gap-2 text-slate-400 text-[10.5px] font-black uppercase tracking-wider">
+          <div className="flex-1 border-b border-slate-700" />
           <span>OR WITH EMAIL</span>
-          <div className="flex-1 border-b border-slate-800" />
+          <div className="flex-1 border-b border-slate-700" />
         </div>
 
         {/* Form */}
@@ -255,7 +255,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Coach Email Address"
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
@@ -266,7 +266,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
@@ -286,7 +286,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
         </form>
 
-        <div className="pt-2 border-t border-slate-800 text-center">
+        <div className="pt-2 border-t border-slate-700 text-center">
           <button
             type="button"
             onClick={onBypassLogin}
@@ -324,9 +324,9 @@ export const CopyWeekModal: React.FC<CopyWeekModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-slate-900/95 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-800">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-slate-800/95 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-700/80">
+        <div className="flex items-center justify-between border-b border-slate-700 pb-3">
           <div className="flex items-center gap-2">
             <Copy className="w-4 h-4 text-indigo-400" />
             <h3 className="font-black text-base text-slate-100">
@@ -346,7 +346,7 @@ export const CopyWeekModal: React.FC<CopyWeekModalProps> = ({
             <select
               value={srcWeek}
               onChange={(e) => setSrcWeek(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 focus:outline-none"
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 focus:outline-none"
             >
               {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((wk) => (
                 <option key={wk} value={String(wk)}>
@@ -363,7 +363,7 @@ export const CopyWeekModal: React.FC<CopyWeekModalProps> = ({
             <select
               value={targetWeek}
               onChange={(e) => setTargetWeek(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 focus:outline-none"
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 focus:outline-none"
             >
               {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((wk) => (
                 <option key={wk} value={String(wk)}>
@@ -381,10 +381,10 @@ export const CopyWeekModal: React.FC<CopyWeekModalProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-700">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-slate-300 font-bold text-xs rounded-xl border border-slate-800"
+            className="px-4 py-2 bg-slate-900 hover:bg-slate-750 text-slate-300 font-bold text-xs rounded-xl border border-slate-700"
           >
             Cancel
           </button>
@@ -409,7 +409,7 @@ export const CopyWeekModal: React.FC<CopyWeekModalProps> = ({
 
 /* =========================================================================
    3. SELECTIVE PRINT MODAL
-   ========================================================= */
+   ========================================================================= */
 interface SelectivePrintModalProps {
   isOpen: boolean;
   unit: 'offense' | 'defense' | 'st' | 'groups';
@@ -438,9 +438,9 @@ export const SelectivePrintModal: React.FC<SelectivePrintModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-slate-900/95 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-800">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-slate-800/95 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-700/80">
+        <div className="flex items-center justify-between border-b border-slate-700 pb-3">
           <div className="flex items-center gap-2">
             <Printer className="w-4 h-4 text-indigo-400" />
             <h3 className="font-black text-base text-slate-100">
@@ -455,25 +455,25 @@ export const SelectivePrintModal: React.FC<SelectivePrintModalProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={() => toggleSelectAll(true)}
-            className="px-3 py-1 bg-slate-950 hover:bg-slate-800 text-slate-200 font-bold text-xs rounded-xl border border-slate-800"
+            className="px-3 py-1 bg-slate-900 hover:bg-slate-750 text-slate-200 font-bold text-xs rounded-xl border border-slate-700"
           >
             Select All
           </button>
           <button
             onClick={() => toggleSelectAll(false)}
-            className="px-3 py-1 bg-slate-950 hover:bg-slate-800 text-slate-200 font-bold text-xs rounded-xl border border-slate-800"
+            className="px-3 py-1 bg-slate-900 hover:bg-slate-750 text-slate-200 font-bold text-xs rounded-xl border border-slate-700"
           >
             Clear All
           </button>
         </div>
 
-        <div className="space-y-2 max-h-60 overflow-y-auto border border-slate-800 p-3 rounded-2xl bg-slate-950/80">
+        <div className="space-y-2 max-h-60 overflow-y-auto border border-slate-700 p-3 rounded-2xl bg-slate-900/90">
           {unitFormations.map((f) => {
             const isChecked = selectedIds.includes(f.id);
             return (
               <label
                 key={f.id}
-                className="flex items-center gap-2.5 p-2.5 bg-slate-900 rounded-xl border border-slate-800/80 text-xs font-bold text-slate-200 cursor-pointer hover:border-slate-700 transition-colors"
+                className="flex items-center gap-2.5 p-2.5 bg-slate-800 rounded-xl border border-slate-700 text-xs font-bold text-slate-200 cursor-pointer hover:border-slate-600 transition-colors"
               >
                 <input
                   type="checkbox"
@@ -490,10 +490,10 @@ export const SelectivePrintModal: React.FC<SelectivePrintModalProps> = ({
           })}
         </div>
 
-        <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-700">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-slate-300 font-bold text-xs rounded-xl border border-slate-800"
+            className="px-4 py-2 bg-slate-900 hover:bg-slate-750 text-slate-300 font-bold text-xs rounded-xl border border-slate-700"
           >
             Cancel
           </button>
@@ -541,9 +541,9 @@ export const ScrimmageFilterModal: React.FC<ScrimmageFilterModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-slate-900/95 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-800">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-slate-800/95 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-700/80">
+        <div className="flex items-center justify-between border-b border-slate-700 pb-3">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-indigo-400" />
             <h3 className="font-black text-base text-slate-100">
@@ -555,13 +555,13 @@ export const ScrimmageFilterModal: React.FC<ScrimmageFilterModalProps> = ({
           </button>
         </div>
 
-        <div className="space-y-2 max-h-60 overflow-y-auto border border-slate-800 p-3 rounded-2xl bg-slate-950/80">
+        <div className="space-y-2 max-h-60 overflow-y-auto border border-slate-700 p-3 rounded-2xl bg-slate-900/90">
           {relevantForms.map((f) => {
             const isChecked = selectedIds.includes(f.id);
             return (
               <label
                 key={f.id}
-                className="flex items-center gap-2.5 p-2.5 bg-slate-900 rounded-xl border border-slate-800/80 text-xs font-bold text-slate-200 cursor-pointer hover:border-slate-700 transition-colors"
+                className="flex items-center gap-2.5 p-2.5 bg-slate-800 rounded-xl border border-slate-700 text-xs font-bold text-slate-200 cursor-pointer hover:border-slate-600 transition-colors"
               >
                 <input
                   type="checkbox"
@@ -580,10 +580,10 @@ export const ScrimmageFilterModal: React.FC<ScrimmageFilterModalProps> = ({
           })}
         </div>
 
-        <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-700">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-slate-300 font-bold text-xs rounded-xl border border-slate-800"
+            className="px-4 py-2 bg-slate-900 hover:bg-slate-750 text-slate-300 font-bold text-xs rounded-xl border border-slate-700"
           >
             Cancel
           </button>
@@ -623,9 +623,9 @@ export const TemplatesManagerModal: React.FC<TemplatesManagerModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-slate-900/95 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-800">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-slate-800/95 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-700/80">
+        <div className="flex items-center justify-between border-b border-slate-700 pb-3">
           <div className="flex items-center gap-2">
             <Settings className="w-4 h-4 text-indigo-400" />
             <h3 className="font-black text-base text-slate-100">
@@ -637,11 +637,11 @@ export const TemplatesManagerModal: React.FC<TemplatesManagerModalProps> = ({
           </button>
         </div>
 
-        <div className="space-y-2 max-h-60 overflow-y-auto border border-slate-800 p-3 rounded-2xl bg-slate-950/80">
+        <div className="space-y-2 max-h-60 overflow-y-auto border border-slate-700 p-3 rounded-2xl bg-slate-900/90">
           {Object.keys(templates).map((name) => (
             <div
               key={name}
-              className="flex items-center justify-between p-2.5 bg-slate-900 rounded-xl border border-slate-800/80 text-xs font-bold text-slate-200"
+              className="flex items-center justify-between p-2.5 bg-slate-800 rounded-xl border border-slate-700 text-xs font-bold text-slate-200"
             >
               <span>{name}</span>
               <div className="flex items-center gap-1.5">
@@ -652,7 +652,7 @@ export const TemplatesManagerModal: React.FC<TemplatesManagerModalProps> = ({
                       onRenameTemplate(name, newName.trim());
                     }
                   }}
-                  className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 rounded-lg text-slate-300 text-[11px] border border-slate-800"
+                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-750 rounded-lg text-slate-300 text-[11px] border border-slate-700"
                 >
                   Rename
                 </button>
@@ -668,16 +668,16 @@ export const TemplatesManagerModal: React.FC<TemplatesManagerModalProps> = ({
             </div>
           ))}
           {Object.keys(templates).length === 0 && (
-            <div className="text-center py-6 text-xs text-slate-500 italic">
+            <div className="text-center py-6 text-xs text-slate-400 italic">
               No templates saved.
             </div>
           )}
         </div>
 
-        <div className="flex justify-end pt-3 border-t border-slate-800">
+        <div className="flex justify-end pt-3 border-t border-slate-700">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-slate-200 font-bold text-xs rounded-xl border border-slate-800"
+            className="px-4 py-2 bg-slate-900 hover:bg-slate-750 text-slate-200 font-bold text-xs rounded-xl border border-slate-700"
           >
             Done
           </button>
@@ -725,8 +725,8 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+      <div className="bg-slate-800/95 border border-slate-700/80 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-700 pb-3">
           <h3 className="font-black text-base text-slate-100 flex items-center gap-2">
             Import / Restore Playbook Backup
           </h3>
@@ -743,13 +743,13 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
                 onClose();
                 onSelectFile();
               }}
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition-all shadow-md"
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition-all shadow-md active:scale-95"
             >
               Browse & Upload .JSON File
             </button>
           </div>
 
-          <div className="border-t border-slate-800/80 pt-3">
+          <div className="border-t border-slate-700 pt-3">
             <label className="font-bold text-slate-200 block mb-1">Option 2: Paste Backup JSON</label>
             <textarea
               value={pastedText}
@@ -759,13 +759,13 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
               }}
               placeholder='Paste JSON backup code here (e.g. {"weeklyData": ...})...'
               rows={6}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] font-mono text-slate-200 focus:outline-none focus:border-indigo-500"
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-[11px] font-mono text-slate-200 focus:outline-none focus:border-indigo-500"
             />
             {error && <div className="text-rose-400 font-bold mt-1 text-[11px]">{error}</div>}
             <div className="flex justify-end gap-2 mt-2">
               <button
                 onClick={handleApplyPaste}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all shadow-md"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all shadow-md active:scale-95"
               >
                 Restore Pasted Backup
               </button>

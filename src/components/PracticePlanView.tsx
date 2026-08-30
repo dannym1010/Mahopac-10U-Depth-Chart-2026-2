@@ -150,8 +150,8 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   return (
     <div className="space-y-5">
       {/* Top Action & Navigation Bar */}
-      <div className="bg-slate-900/90 backdrop-blur-md rounded-3xl border border-slate-800 shadow-xl p-5 print:hidden space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800/80">
+      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 print:hidden space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-700/80">
           
           {/* Practice Tree Selector Dropdown */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -159,7 +159,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsTreeDropdownOpen(!isTreeDropdownOpen)}
-                className="px-4 py-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-bold text-slate-100 flex items-center gap-2 shadow-sm transition-all active:scale-95"
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold text-slate-100 flex items-center gap-2 shadow-sm transition-all active:scale-95"
               >
                 <FileText className="w-3.5 h-3.5 text-indigo-400" />
                 <span>
@@ -172,7 +172,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
 
               {/* Hierarchical Dropdown Popup */}
               {isTreeDropdownOpen && (
-                <div className="absolute left-0 top-full mt-2 w-72 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2.5 z-50 max-h-80 overflow-y-auto backdrop-blur-md">
+                <div className="absolute left-0 top-full mt-2 w-72 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl p-2.5 z-50 max-h-80 overflow-y-auto backdrop-blur-md">
                   {Object.keys(practiceTree).map((yr) => {
                     const yrKey = `yr_${yr}`;
                     const isYrCollapsed = collapsedTreeFolders[yrKey];
@@ -186,7 +186,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                               [yrKey]: !isYrCollapsed,
                             })
                           }
-                          className="px-2.5 py-1.5 text-xs font-black text-indigo-300 flex items-center gap-1.5 cursor-pointer hover:bg-slate-800 rounded-xl select-none"
+                          className="px-2.5 py-1.5 text-xs font-black text-indigo-300 flex items-center gap-1.5 cursor-pointer hover:bg-slate-700 rounded-xl select-none"
                         >
                           {isYrCollapsed ? (
                             <Folder className="w-3.5 h-3.5 text-amber-400" />
@@ -197,7 +197,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                         </div>
 
                         {!isYrCollapsed && (
-                          <div className="pl-3 space-y-1 mt-1 border-l border-slate-800 ml-3">
+                          <div className="pl-3 space-y-1 mt-1 border-l border-slate-700 ml-3">
                             {Object.keys(practiceTree[yr]).map((wk) => {
                               const wkKey = `wk_${yr}_${wk}`;
                               const isWkCollapsed = collapsedTreeFolders[wkKey];
@@ -211,7 +211,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                                         [wkKey]: !isWkCollapsed,
                                       })
                                     }
-                                    className="px-2 py-1 text-[11.5px] font-bold text-slate-300 flex items-center gap-1.5 cursor-pointer hover:bg-slate-800 rounded-lg select-none"
+                                    className="px-2 py-1 text-[11.5px] font-bold text-slate-200 flex items-center gap-1.5 cursor-pointer hover:bg-slate-700 rounded-lg select-none"
                                   >
                                     {isWkCollapsed ? (
                                       <Folder className="w-3 h-3 text-amber-400" />
@@ -232,12 +232,12 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                                           }}
                                           className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors ${
                                             p.id === currentPracticeId
-                                              ? 'bg-indigo-950/80 text-indigo-200 border border-indigo-500/30 font-black'
-                                              : 'hover:bg-slate-800 text-slate-400 hover:text-slate-200'
+                                              ? 'bg-indigo-950/80 text-indigo-200 border border-indigo-500/40 font-black'
+                                              : 'hover:bg-slate-700 text-slate-300 hover:text-slate-100'
                                           }`}
                                         >
                                           <span>{p.title}</span>
-                                          <span className="text-[10px] text-slate-500 font-mono">
+                                          <span className="text-[10px] text-slate-400 font-mono">
                                             {p.date}
                                           </span>
                                         </button>
@@ -269,7 +269,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 <button
                   onClick={onEditPracticeDetails}
                   title="Edit Date, Day, Year, Week title"
-                  className="px-3 py-2 bg-slate-950 hover:bg-slate-800 text-slate-200 font-bold text-xs rounded-xl border border-slate-800 flex items-center gap-1 transition-all"
+                  className="px-3 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1 transition-all"
                 >
                   <Edit className="w-3.5 h-3.5 text-indigo-400" />
                   <span>Details</span>
@@ -277,7 +277,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 <button
                   onClick={onAutoNumberPractices}
                   title="Auto-number practice days sequentially"
-                  className="px-3 py-2 bg-slate-950 hover:bg-slate-800 text-sky-300 font-bold text-xs rounded-xl border border-slate-800 flex items-center gap-1 transition-all"
+                  className="px-3 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-sky-300 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1 transition-all"
                 >
                   <Hash className="w-3.5 h-3.5 text-sky-400" />
                   <span>Auto #</span>
@@ -296,8 +296,8 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
           {/* Templates & Print Controls */}
           <div className="flex items-center gap-2 flex-wrap">
             {userRole === 'admin' && (
-              <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-xl">
-                <span className="text-[11px] font-black uppercase text-slate-400">
+              <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 px-2.5 py-1 rounded-xl">
+                <span className="text-[11px] font-black uppercase text-slate-300">
                   Template:
                 </span>
                 <select
@@ -308,7 +308,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                       e.target.value = '';
                     }
                   }}
-                  className="bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-200 rounded-lg px-2 py-1 focus:outline-none"
+                  className="bg-slate-800 border border-slate-600 text-xs font-semibold text-slate-200 rounded-lg px-2 py-1 focus:outline-none"
                 >
                   <option value="">-- Apply --</option>
                   {Object.keys(practiceTemplates).map((name) => (
@@ -335,12 +335,12 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
             )}
 
             {/* Print font size */}
-            <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-xl">
-              <span className="text-[11px] font-black uppercase text-slate-400">Font:</span>
+            <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 px-2.5 py-1 rounded-xl">
+              <span className="text-[11px] font-black uppercase text-slate-300">Font:</span>
               <select
                 value={printFontSize}
                 onChange={(e) => onUpdatePrintFontSize(e.target.value)}
-                className="bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-200 rounded-lg px-1.5 py-1 focus:outline-none cursor-pointer"
+                className="bg-slate-800 border border-slate-600 text-xs font-semibold text-slate-200 rounded-lg px-1.5 py-1 focus:outline-none cursor-pointer"
               >
                 <option value="9">9px (Tight)</option>
                 <option value="10">10px (Default)</option>
@@ -363,7 +363,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
 
             <button
               onClick={() => window.print()}
-              className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-amber-300 font-bold text-xs rounded-xl border border-slate-800 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print Plan</span>
@@ -373,7 +373,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
 
         {/* Practice Meta Bar */}
         {currentPlan && (
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800 text-xs font-semibold text-slate-300">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-slate-900/90 p-3.5 rounded-2xl border border-slate-700 text-xs font-semibold text-slate-200">
             <div>
               <span className="text-[10px] uppercase font-black tracking-widest text-slate-400 block mb-1">
                 Year
@@ -383,7 +383,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 value={currentPlan.year || '2026'}
                 disabled={userRole !== 'admin'}
                 onChange={(e) => onUpdateMeta('year', e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 font-bold text-slate-100 disabled:bg-transparent disabled:border-transparent"
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 font-bold text-slate-100 disabled:bg-transparent disabled:border-transparent"
               />
             </div>
 
@@ -396,7 +396,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 value={currentPlan.weekFolder || 'Week 1'}
                 disabled={userRole !== 'admin'}
                 onChange={(e) => onUpdateMeta('weekFolder', e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 font-bold text-slate-100 disabled:bg-transparent disabled:border-transparent"
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 font-bold text-slate-100 disabled:bg-transparent disabled:border-transparent"
               />
             </div>
 
@@ -409,7 +409,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 value={currentPlan.date || ''}
                 disabled={userRole !== 'admin'}
                 onChange={(e) => onUpdateMeta('date', e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 font-bold text-slate-100 disabled:bg-transparent disabled:border-transparent"
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 font-bold text-slate-100 disabled:bg-transparent disabled:border-transparent"
               />
             </div>
 
@@ -421,7 +421,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 value={currentPlan.day || 'Wednesday'}
                 disabled={userRole !== 'admin'}
                 onChange={(e) => onUpdateMeta('day', e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 font-bold text-slate-100 disabled:bg-transparent disabled:border-transparent"
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 font-bold text-slate-100 disabled:bg-transparent disabled:border-transparent"
               >
                 <option value="Monday">Monday</option>
                 <option value="Tuesday">Tuesday</option>
@@ -442,7 +442,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 value={currentPlan.startTime || '17:05'}
                 disabled={userRole !== 'admin'}
                 onChange={(e) => onUpdateMeta('startTime', e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 font-bold text-slate-100 disabled:bg-transparent disabled:border-transparent"
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 font-bold text-slate-100 disabled:bg-transparent disabled:border-transparent"
               />
             </div>
           </div>
@@ -460,10 +460,10 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
       </div>
 
       {/* Main Practice Schedule Table */}
-      <div className="bg-slate-900/90 backdrop-blur-md rounded-3xl border border-slate-800 shadow-xl overflow-hidden">
+      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl overflow-hidden">
         <table className="w-full border-collapse practice-table text-xs">
           <thead>
-            <tr className="bg-slate-950 text-slate-300 font-black uppercase text-[11px] border-b border-slate-800">
+            <tr className="bg-slate-900 text-slate-200 font-black uppercase text-[11px] border-b border-slate-700">
               <th className="py-3 px-3 text-left w-24 sm:w-28 print:w-[14%]">Time / Period</th>
               <th className="py-3 px-3 text-left w-32 sm:w-36 print:w-[16%]">Category / Format</th>
               <th className="py-3 px-3.5 text-left print:w-[42%]">Stations / Drills</th>
@@ -512,15 +512,15 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 return (
                   <tr
                     key={`${pIdx}_${sIdx}`}
-                    className={`border-b border-slate-800/80 ${
-                      pIdx % 2 === 0 ? 'bg-slate-900/60' : 'bg-slate-950/40'
+                    className={`border-b border-slate-700/70 ${
+                      pIdx % 2 === 0 ? 'bg-slate-800/80' : 'bg-slate-850/60 bg-slate-800/50'
                     }`}
                   >
                     {/* Time / Period Cell (Rowspan) */}
                     {isFirstStationInPeriod && (
                       <td
                         rowSpan={numStations}
-                        className="py-3.5 px-3.5 align-top border-r border-slate-800 font-bold"
+                        className="py-3.5 px-3.5 align-top border-r border-slate-700 font-bold"
                       >
                         <div className="text-xs font-black text-indigo-300 uppercase tracking-tight print:hidden">
                           Period {pIdx + 1}
@@ -539,7 +539,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                                 parseInt(e.target.value, 10) || 0
                               )
                             }
-                            className="w-12 bg-slate-950 border border-slate-800 rounded-lg px-2 py-0.5 text-xs font-bold text-slate-100"
+                            className="w-12 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-xs font-bold text-slate-100"
                           />
                           <span className="text-[11px] text-slate-400 font-medium">mins</span>
                         </div>
@@ -559,7 +559,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                     {isFirstStationInPeriod && (
                       <td
                         rowSpan={numStations}
-                        className="py-3.5 px-3.5 align-top border-r border-slate-800 space-y-2"
+                        className="py-3.5 px-3.5 align-top border-r border-slate-700 space-y-2"
                       >
                         <div className="print:hidden">
                           <select
@@ -568,7 +568,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                             onChange={(e) =>
                               onUpdatePeriodCategory(pIdx, e.target.value)
                             }
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-200"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-200"
                           >
                             {cascadingDrills.map((folder) => (
                               <option key={folder.name} value={folder.name}>
@@ -595,7 +595,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                                 e.target.value as 'static' | 'rotating'
                               )
                             }
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1 text-[11px] font-semibold text-slate-300"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1 text-[11px] font-semibold text-slate-300"
                           >
                             <option value="static">Static Group</option>
                             <option value="rotating">Rotating Stations</option>
@@ -608,9 +608,9 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                     )}
 
                     {/* Station / Drill Title & Instructions */}
-                    <td className="py-3 px-3.5 align-top border-r border-slate-800 space-y-2">
+                    <td className="py-3 px-3.5 align-top border-r border-slate-700 space-y-2">
                       {isRotating && (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-300 text-[10.5px] font-black border border-indigo-500/20 print:bg-slate-100 print:text-slate-900 print:border-slate-300 print:py-0.5 print:px-1.5">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-[10.5px] font-black border border-indigo-500/30 print:bg-slate-100 print:text-slate-900 print:border-slate-300 print:py-0.5 print:px-1.5">
                           <Clock className="w-3 h-3 print:hidden" />
                           <span className="font-mono print:text-[9.5px]">
                             Station {sIdx + 1}: {formatTimeMinutes(stationStartMin)} -{' '}
@@ -633,7 +633,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                               e.target.value = '';
                             }
                           }}
-                          className="w-full bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-indigo-300"
+                          className="w-full bg-slate-900/90 border border-slate-700 hover:border-slate-600 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-indigo-300"
                         >
                           <option value="">-- Choose Drill from Library --</option>
                           {categoryDrills.map((d, dIdx) => (
@@ -653,7 +653,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                           onUpdateStation(pIdx, sIdx, 'name', e.target.value)
                         }
                         placeholder="Drill / Group Name"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-100 focus:ring-1 focus:ring-indigo-500 disabled:bg-transparent disabled:border-transparent print:hidden"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-100 focus:ring-1 focus:ring-indigo-500 disabled:bg-transparent disabled:border-transparent print:hidden"
                       />
 
                       {/* Station Details */}
@@ -665,7 +665,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                           onUpdateStation(pIdx, sIdx, 'desc', e.target.value)
                         }
                         placeholder="Instructions, alignments, cone layout..."
-                        className="w-full bg-slate-950/90 border border-slate-800 rounded-xl p-2.5 text-xs font-medium text-slate-300 leading-relaxed focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-600 print:hidden"
+                        className="w-full bg-slate-900/90 border border-slate-700 rounded-xl p-2.5 text-xs font-medium text-slate-200 leading-relaxed focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-500 print:hidden"
                       />
 
                       {/* Print view */}
@@ -682,7 +682,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                     </td>
 
                     {/* Coaches Column */}
-                    <td className="py-3 px-3.5 align-top border-r border-slate-800 relative">
+                    <td className="py-3 px-3.5 align-top border-r border-slate-700 relative">
                       <textarea
                         rows={2}
                         value={station.coach || ''}
@@ -691,7 +691,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                           onUpdateStation(pIdx, sIdx, 'coach', e.target.value)
                         }
                         placeholder="Type coach names..."
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs font-bold text-slate-100 leading-tight focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-600 print:hidden"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs font-bold text-slate-100 leading-tight focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-500 print:hidden"
                       />
 
                       <div
@@ -713,10 +713,10 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                       {/* Coach Multi-select Popup */}
                       {isCoachPopupOpen && (
                         <div
-                          className="absolute left-0 top-full mt-1.5 w-60 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-3 z-50 space-y-2 print:hidden backdrop-blur-md"
+                          className="absolute left-0 top-full mt-1.5 w-60 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl p-3 z-50 space-y-2 print:hidden backdrop-blur-md"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                          <div className="flex items-center justify-between border-b border-slate-700 pb-1.5">
                             <span className="text-[11px] font-black text-slate-200">
                               Assigned Staff
                             </span>
@@ -737,7 +737,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                               return (
                                 <div
                                   key={coachName}
-                                  className="flex items-center justify-between p-1.5 hover:bg-slate-800/80 rounded-lg"
+                                  className="flex items-center justify-between p-1.5 hover:bg-slate-700 rounded-lg"
                                 >
                                   <label className="flex items-center gap-2 cursor-pointer flex-1">
                                     <input
@@ -762,7 +762,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                                           updatedTokens.join(', ')
                                         );
                                       }}
-                                      className="rounded text-indigo-600 focus:ring-indigo-500 bg-slate-950 border-slate-700"
+                                      className="rounded text-indigo-600 focus:ring-indigo-500 bg-slate-900 border-slate-700"
                                     />
                                     <span className="text-xs font-bold text-slate-200">
                                       {coachName}
@@ -780,7 +780,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                             })}
                           </div>
 
-                          <div className="pt-2 border-t border-slate-800 text-center">
+                          <div className="pt-2 border-t border-slate-700 text-center">
                             <button
                               onClick={() => {
                                 const name = prompt('Enter new Coach Name:');
@@ -798,7 +798,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                     </td>
 
                     {/* Coaching Focus Column */}
-                    <td className="py-3 px-3.5 align-top border-r border-slate-800">
+                    <td className="py-3 px-3.5 align-top border-r border-slate-700">
                       <textarea
                         rows={2}
                         value={station.focus || ''}
@@ -807,7 +807,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                           onUpdateStation(pIdx, sIdx, 'focus', e.target.value)
                         }
                         placeholder="Key coaching cues & assignments..."
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs font-semibold text-slate-200 leading-tight focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-600 print:hidden"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs font-semibold text-slate-200 leading-tight focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-500 print:hidden"
                       />
                       <div className="hidden print:block text-[10.5px] font-medium text-slate-900 whitespace-pre-wrap leading-snug">
                         {station.focus || '—'}
@@ -825,21 +825,21 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                             <button
                               onClick={() => onMovePeriod(pIdx, -1)}
                               title="Move Period Up"
-                              className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200"
+                              className="p-1 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-slate-100"
                             >
                               <ArrowUp className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => onMovePeriod(pIdx, 1)}
                               title="Move Period Down"
-                              className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200"
+                              className="p-1 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-slate-100"
                             >
                               <ArrowDown className="w-3.5 h-3.5" />
                             </button>
                           </div>
                           <button
                             onClick={() => onAddStationToPeriod(pIdx)}
-                            className="px-2 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-sky-300 text-[10px] font-bold rounded-lg flex items-center gap-0.5 transition-colors"
+                            className="px-2 py-1 bg-slate-900 hover:bg-slate-700 border border-slate-700 text-sky-300 text-[10px] font-bold rounded-lg flex items-center gap-0.5 transition-colors"
                           >
                             <Plus className="w-2.5 h-2.5 text-sky-400" />
                             <span>Station</span>

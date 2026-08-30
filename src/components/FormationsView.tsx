@@ -113,7 +113,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Top Action & Filter Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 backdrop-blur-md p-4 rounded-3xl border border-slate-800 shadow-xl print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-800/95 backdrop-blur-md p-4 rounded-3xl border border-slate-700/80 shadow-xl print:hidden">
         <div className="flex items-center gap-2.5 flex-wrap">
           {userRole === 'admin' && (
             <button
@@ -128,13 +128,13 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
           )}
 
           {/* On-screen view filter */}
-          <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-800 px-3 py-1.5 rounded-xl">
+          <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700 px-3 py-1.5 rounded-xl">
             <Filter className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="text-xs font-black text-slate-300">Filter View:</span>
+            <span className="text-xs font-black text-slate-200">Filter View:</span>
             <select
               value={filterViewId}
               onChange={(e) => setFilterViewId(e.target.value)}
-              className="bg-slate-900 border border-slate-700/80 text-xs font-bold text-slate-100 rounded-lg px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+              className="bg-slate-800 border border-slate-600 text-xs font-bold text-slate-100 rounded-lg px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
             >
               <option value="ALL">All Formations ({unitFormations.length})</option>
               {unitFormations.map((f) => (
@@ -149,14 +149,14 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => window.print()}
-            className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-slate-100 font-bold text-xs rounded-xl border border-slate-800 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+            className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-100 font-bold text-xs rounded-xl border border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
           >
             <Printer className="w-3.5 h-3.5 text-indigo-400" />
             <span>Print All</span>
           </button>
           <button
             onClick={() => onOpenSelectivePrintModal(unit)}
-            className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-amber-300 font-bold text-xs rounded-xl border border-slate-800 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+            className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Selective Print</span>
@@ -170,13 +170,13 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
           Mahopac 10U Football &bull; {unit === 'offense' ? 'Offensive' : unit === 'defense' ? 'Defensive' : unit === 'st' ? 'Special Teams' : 'Depth Chart'} Formation Sheets
         </h1>
         <p className="text-[10px] font-bold text-black mt-0.5">
-          High-Visibility Sideline Depth Chart &bull; Starters (ST) &bull; 2nd String (D2) &bull; 3rd String (D3)
+          High-Visibility Sideline Depth Chart &bull; Starters (ST) &bull; 2nd String (D2) &bull; 3rd String (D3) &bull; 4th+ String (D4+)
         </p>
       </div>
 
       {displayedFormations.length === 0 && (
-        <div className="bg-slate-900/90 rounded-3xl border border-dashed border-slate-800 p-12 text-center text-slate-400 shadow-xl">
-          <p className="text-sm font-bold text-slate-300">No formations found for this unit.</p>
+        <div className="bg-slate-800/90 rounded-3xl border border-dashed border-slate-700 p-12 text-center text-slate-400 shadow-xl">
+          <p className="text-sm font-bold text-slate-200">No formations found for this unit.</p>
           {userRole === 'admin' && (
             <button
               onClick={() => onAddFormation(unit)}
@@ -198,16 +198,16 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
               key={form.id}
               data-form-id={form.id}
               onClick={() => onSelectFormation(form.id)}
-              className={`formation-container bg-slate-900/90 backdrop-blur-md rounded-3xl border transition-all p-5 relative shadow-xl ${
+              className={`formation-container bg-slate-800/90 backdrop-blur-md rounded-3xl border transition-all p-5 relative shadow-xl ${
                 isSelected
-                  ? 'border-indigo-500/70 shadow-indigo-500/10 ring-2 ring-indigo-500/30'
-                  : 'border-slate-800 hover:border-slate-700/90'
+                  ? 'border-indigo-500/80 shadow-indigo-500/20 ring-2 ring-indigo-500/30'
+                  : 'border-slate-700/80 hover:border-slate-600'
               }`}
             >
               {/* Formation Card Header */}
-              <div className="formation-card-header flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-slate-800/80 mb-4 print:pb-2 print:mb-3">
+              <div className="formation-card-header flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-slate-700/80 mb-4 print:pb-2 print:mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-black text-xs print:w-7 print:h-7 print:bg-black print:text-white print:border-black print:text-xs print:font-black print:rounded-md">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-black text-xs print:w-7 print:h-7 print:bg-black print:text-white print:border-black print:text-xs print:font-black print:rounded-md">
                     {unit === 'offense' ? 'OFF' : unit === 'defense' ? 'DEF' : unit === 'st' ? 'ST' : 'GRP'}
                   </div>
                   <h2 className="font-black text-base md:text-lg text-slate-100 tracking-tight print:text-black print:text-xl print:font-black print:tracking-wider">
@@ -221,20 +221,20 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                     <button
                       onClick={() => onMoveFormation(form.id, -1)}
                       title="Move Formation Up"
-                      className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-bold transition-all"
+                      className="p-1.5 text-slate-300 hover:text-indigo-400 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold transition-all"
                     >
                       <ArrowUp className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => onMoveFormation(form.id, 1)}
                       title="Move Formation Down"
-                      className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-bold transition-all"
+                      className="p-1.5 text-slate-300 hover:text-indigo-400 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold transition-all"
                     >
                       <ArrowDown className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => onAddRow(form.id)}
-                      className="px-2.5 py-1 text-xs font-bold bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-xl transition-all flex items-center gap-1 shadow-xs"
+                      className="px-2.5 py-1 text-xs font-bold bg-slate-900/90 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl transition-all flex items-center gap-1 shadow-xs"
                     >
                       <Plus className="w-3 h-3 text-indigo-400" />
                       <span>Add Row</span>
@@ -250,7 +250,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                     <button
                       onClick={() => onRenameFormation(form.id)}
                       title="Rename formation"
-                      className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 border border-slate-800 rounded-xl transition-all"
+                      className="p-1.5 text-slate-300 hover:text-indigo-400 hover:bg-slate-700 border border-slate-700 rounded-xl transition-all"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
@@ -274,13 +274,13 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                   return (
                     <div key={row.id || rIdx} className="space-y-1.5 print:space-y-1">
                       {/* Level/Row Header Bar */}
-                      <div className="formation-row-header flex items-center justify-between px-3 py-1.5 bg-slate-950/80 border border-slate-800 rounded-xl">
+                      <div className="formation-row-header flex items-center justify-between px-3 py-1.5 bg-slate-900/90 border border-slate-700 rounded-xl">
                         <div
                           onClick={(e) => {
                             e.stopPropagation();
                             if (userRole === 'admin') onEditRowName(form.id, rIdx);
                           }}
-                          className={`text-[10.5px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5 print:text-black ${
+                          className={`text-[10.5px] font-black uppercase tracking-widest text-slate-300 flex items-center gap-1.5 print:text-black ${
                             userRole === 'admin' ? 'cursor-pointer hover:text-indigo-300' : ''
                           }`}
                         >
@@ -299,14 +299,14 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                             <button
                               onClick={() => onEditRowSlots(form.id, rIdx)}
                               title="Edit number of position slots (1 to 10)"
-                              className="px-2 py-0.5 text-[10px] font-bold bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded-lg flex items-center gap-1"
+                              className="px-2 py-0.5 text-[10px] font-bold bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-lg flex items-center gap-1"
                             >
                               <Settings2 className="w-2.5 h-2.5 text-indigo-400" />
                               <span>Slots ({slotCount})</span>
                             </button>
                             <button
                               onClick={() => onAddPosition(form.id, rIdx)}
-                              className="px-2 py-0.5 text-[10px] font-bold bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded-lg flex items-center gap-1"
+                              className="px-2 py-0.5 text-[10px] font-bold bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-lg flex items-center gap-1"
                             >
                               <Plus className="w-2.5 h-2.5 text-emerald-400" />
                               <span>Pos</span>
@@ -324,7 +324,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
 
                       {/* Formation Grid Row */}
                       <div
-                        className="formation-grid-row grid gap-2.5 p-3 bg-slate-950/50 border border-slate-800/80 rounded-2xl overflow-x-auto print:overflow-visible print:p-1.5 print:gap-1.5"
+                        className="formation-grid-row grid gap-2.5 p-3 bg-slate-900/60 border border-slate-700/80 rounded-2xl overflow-x-auto print:overflow-visible print:p-1.5 print:gap-1.5"
                         style={{
                           gridTemplateColumns: `repeat(${slotCount}, minmax(0, 1fr))`,
                         }}
@@ -355,8 +355,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                 isSlotDragOver
                                   ? 'bg-indigo-950/60 border-2 border-dashed border-indigo-400 ring-2 ring-indigo-500/40'
                                   : pos
-                                  ? 'bg-slate-900/90'
-                                  : 'bg-slate-950/40 border border-dashed border-slate-800/60'
+                                  ? 'bg-slate-850/90 bg-slate-800/90'
+                                  : 'bg-slate-900/40 border border-dashed border-slate-700/60'
                               }`}
                             >
                               {pos ? (
@@ -379,7 +379,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                   className={`h-full flex flex-col rounded-2xl print:rounded-none border transition-all ${
                                     dragOverPosId === pos.id
                                       ? 'border-indigo-500 ring-2 ring-indigo-500/50 bg-indigo-950/40 shadow-lg'
-                                      : 'border-slate-800/90 shadow-sm'
+                                      : 'border-slate-700 shadow-sm'
                                   }`}
                                 >
                                   {/* Card Header (Position Name + Actions) */}
@@ -388,7 +388,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                     onDragStart={(e) =>
                                       onPositionCardDragStart(e, form.id, rIdx, pIdx)
                                     }
-                                    className={`position-card-title px-2.5 py-1.5 bg-slate-950 border-b border-slate-800 rounded-t-2xl print:rounded-none flex items-center justify-between text-xs font-black select-none ${
+                                    className={`position-card-title px-2.5 py-1.5 bg-slate-900 border-b border-slate-700 rounded-t-2xl print:rounded-none flex items-center justify-between text-xs font-black select-none ${
                                       userRole === 'admin' ? 'cursor-grab active:cursor-grabbing' : ''
                                     }`}
                                   >
@@ -443,6 +443,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                     {(depthChart[pos.id] || []).map((player, plIdx) => {
                                       const isStarter = plIdx === 0;
                                       const isD2 = plIdx === 1;
+                                      const isD3 = plIdx === 2;
 
                                       return (
                                         <div
@@ -456,7 +457,9 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                               ? 'bg-slate-950 text-indigo-300 border-indigo-500/40 shadow-xs print-player-badge-starter'
                                               : isD2
                                               ? 'bg-amber-400 text-slate-950 border-amber-500 font-extrabold shadow-xs print-player-badge-d2'
-                                              : 'bg-blue-700 text-white border-blue-500 font-extrabold shadow-xs print-player-badge-d3'
+                                              : isD3
+                                              ? 'bg-blue-700 text-white border-blue-500 font-extrabold shadow-xs print-player-badge-d3'
+                                              : 'bg-white text-slate-900 border-slate-300 font-extrabold shadow-xs print-player-badge-d4'
                                           } ${userRole === 'admin' ? 'cursor-grab active:cursor-grabbing' : ''}`}
                                         >
                                           <div className="flex items-center gap-1.5 min-w-0 truncate">
@@ -466,10 +469,12 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                                   ? 'bg-indigo-500/20 text-indigo-300 print-tag-st'
                                                   : isD2
                                                   ? 'bg-black/20 text-black print-tag-d2'
-                                                  : 'bg-white/20 text-white print-tag-d3'
+                                                  : isD3
+                                                  ? 'bg-white/20 text-white print-tag-d3'
+                                                  : 'bg-slate-200 text-slate-900 border border-slate-300 print-tag-d4'
                                               }`}
                                             >
-                                              {isStarter ? 'ST' : isD2 ? 'D2' : 'D3'}
+                                              {isStarter ? 'ST' : isD2 ? 'D2' : isD3 ? 'D3' : `D${plIdx + 1}`}
                                             </span>
                                             <span className="font-mono text-[10px] print:text-[8.5px] opacity-90 font-black">
                                               #{player.num}
@@ -485,7 +490,15 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                                 e.stopPropagation();
                                                 onRemovePlayerFromCard(pos.id, plIdx);
                                               }}
-                                              className="ml-1 opacity-70 hover:opacity-100 hover:text-rose-300 print:hidden text-xs"
+                                              className={`ml-1 opacity-70 hover:opacity-100 print:hidden text-xs ${
+                                                isStarter
+                                                  ? 'text-indigo-300 hover:text-rose-300'
+                                                  : isD2
+                                                  ? 'text-slate-900 hover:text-rose-700'
+                                                  : isD3
+                                                  ? 'text-white hover:text-rose-300'
+                                                  : 'text-slate-700 hover:text-rose-600'
+                                              }`}
                                             >
                                               &times;
                                             </button>
