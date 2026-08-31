@@ -72,7 +72,8 @@ import {
   getFormattedDayFolder,
   sanitizePracticePlans,
 } from './utils/practiceUtils';
-import { getAutoActiveWeek } from './utils/seasonWeekUtils';
+import { getAutoActiveWeek, normalizeWeeklyData } from './utils/seasonWeekUtils';
+import { normalizeRoster } from './utils/depthChartUtils';
 
 import { Header } from './components/Header';
 import { NavigationTabs } from './components/NavigationTabs';
@@ -103,7 +104,7 @@ import {
 export default function App() {
   // State Initialization from LocalStorage or Defaults
   const [weeklyData, setWeeklyData] = useState<Record<string, WeekState>>(() =>
-    safeJSONParse('footballWeeklyData', {})
+    normalizeWeeklyData(safeJSONParse('footballWeeklyData', {}))
   );
   const [defaultFormations, setDefaultFormations] = useState<FormationBoard[]>(
     () => safeJSONParse('footballDefaultFormations', INITIAL_DEFAULT_FORMATIONS)
@@ -168,10 +169,7 @@ export default function App() {
   );
   const [roster, setRoster] = useState<RosterPlayer[]>(() => {
     const saved = safeJSONParse('footballRoster', null);
-    if (saved && Array.isArray(saved) && saved.length > 0) {
-      return saved;
-    }
-    return MASTER_ROSTER;
+    return normalizeRoster(saved, true);
   });
   const [teams, setTeams] = useState<Team[]>(() =>
     safeJSONParse('footballTeams', DEFAULT_TEAMS)
@@ -329,12 +327,117 @@ export default function App() {
     };
   });
 
+  // Helper to compute team-scoped week key
+  const getScopedWeekKey = (teamId: string, week: string) => `${teamId}__week_${week}`;
+
+  // Helper to resolve the richest week state (formations, depthChart, scrimmageChart, etc.)
+  const resolveWeekState = (
+    wData: Record<string, WeekState>,
+    teamId: string,
+    week: string
+  ): WeekState => {
+    const scopedKey = getScopedWeekKey(teamId, week);
+    const scopedState = wData[scopedKey];
+    const legacyState = wData[week];
+    const defScopedKey = getScopedWeekKey('team_10u', week);
+    const defScopedState = wData[defScopedKey];
+
+    const getDcCount = (dc?: Record<string, PlacedPlayer[]>) => {
+      if (!dc) return 0;
+      return Object.values(dc).reduce(
+        (sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0),
+        0
+      );
+    };
+
+    // Formations resolution
+    let formations: FormationBoard[] = [];
+    if (scopedState?.formations && scopedState.formations.length > 0) {
+      formations = scopedState.formations;
+    } else if (legacyState?.formations && legacyState.formations.length > 0) {
+      formations = legacyState.formations;
+    } else if (defScopedState?.formations && defScopedState.formations.length > 0) {
+      formations = defScopedState.formations;
+    } else if (wData['0']?.formations && wData['0'].formations.length > 0) {
+      formations = wData['0'].formations;
+    } else if (
+      wData[getScopedWeekKey('team_10u', '0')]?.formations &&
+      wData[getScopedWeekKey('team_10u', '0')].formations.length > 0
+    ) {
+      formations = wData[getScopedWeekKey('team_10u', '0')].formations;
+    } else {
+      formations =
+        defaultFormations && defaultFormations.length > 0
+          ? defaultFormations
+          : INITIAL_DEFAULT_FORMATIONS;
+    }
+
+    // Depth chart resolution
+    let depthChart: Record<string, PlacedPlayer[]> = {};
+    if (getDcCount(scopedState?.depthChart) > 0) {
+      depthChart = scopedState!.depthChart;
+    } else if (getDcCount(legacyState?.depthChart) > 0) {
+      depthChart = legacyState!.depthChart;
+    } else if (getDcCount(defScopedState?.depthChart) > 0) {
+      depthChart = defScopedState!.depthChart;
+    } else {
+      depthChart =
+        scopedState?.depthChart ||
+        legacyState?.depthChart ||
+        defScopedState?.depthChart ||
+        {};
+    }
+
+    // Scrimmage chart resolution
+    let scrimmageChart: Record<string, PlacedPlayer[]> = {};
+    if (getDcCount(scopedState?.scrimmageChart) > 0) {
+      scrimmageChart = scopedState!.scrimmageChart;
+    } else if (getDcCount(legacyState?.scrimmageChart) > 0) {
+      scrimmageChart = legacyState!.scrimmageChart;
+    } else if (getDcCount(defScopedState?.scrimmageChart) > 0) {
+      scrimmageChart = defScopedState!.scrimmageChart;
+    } else {
+      scrimmageChart =
+        scopedState?.scrimmageChart ||
+        legacyState?.scrimmageChart ||
+        defScopedState?.scrimmageChart ||
+        {};
+    }
+
+    return {
+      formations,
+      depthChart,
+      scrimmageChart,
+      opponent:
+        scopedState?.opponent ||
+        legacyState?.opponent ||
+        defScopedState?.opponent ||
+        '',
+      wristbandData:
+        scopedState?.wristbandData ||
+        legacyState?.wristbandData ||
+        defScopedState?.wristbandData,
+      scouting:
+        scopedState?.scouting ||
+        legacyState?.scouting ||
+        defScopedState?.scouting,
+    };
+  };
+
   // Ensure current week object exists and copies formations from source week
   const ensureWeekExists = (week: string, sourceWeek?: string) => {
     setWeeklyData((prev) => {
+      const currentResolved = resolveWeekState(prev, activeTeamId, week);
       const scopedKey = getScopedWeekKey(activeTeamId, week);
-      const existing = prev[scopedKey] || prev[week];
-      if (existing && existing.formations && existing.formations.length > 0) return prev;
+
+      if (currentResolved.formations && currentResolved.formations.length > 0) {
+        if (prev[scopedKey] && prev[week]) return prev;
+        return {
+          ...prev,
+          [scopedKey]: currentResolved,
+          [week]: currentResolved,
+        };
+      }
 
       // Determine source week to copy formations from
       let srcWk = sourceWeek;
@@ -349,28 +452,24 @@ export default function App() {
         }
       }
 
-      const srcScopedKey = getScopedWeekKey(activeTeamId, srcWk);
-      const srcState = prev[srcScopedKey] || prev[srcWk];
-
+      const srcResolved = resolveWeekState(prev, activeTeamId, srcWk);
       const templateForms =
-        srcState?.formations && srcState.formations.length > 0
-          ? srcState.formations
-          : prev['0']?.formations && prev['0'].formations.length > 0
-            ? prev['0'].formations
-            : defaultFormations && defaultFormations.length > 0
-              ? defaultFormations
-              : INITIAL_DEFAULT_FORMATIONS;
+        srcResolved.formations && srcResolved.formations.length > 0
+          ? srcResolved.formations
+          : defaultFormations && defaultFormations.length > 0
+            ? defaultFormations
+            : INITIAL_DEFAULT_FORMATIONS;
 
       const newWeekState: WeekState = {
         formations: deepClone(templateForms),
-        depthChart: existing?.depthChart || {},
-        scrimmageChart: existing?.scrimmageChart || {},
-        opponent: existing?.opponent || '',
-        wristbandData: existing?.wristbandData || {
+        depthChart: currentResolved.depthChart || {},
+        scrimmageChart: currentResolved.scrimmageChart || {},
+        opponent: currentResolved.opponent || '',
+        wristbandData: currentResolved.wristbandData || {
           rows: 10,
           columns: [{ color: 'blue', plays: [] }],
         },
-        scouting: existing?.scouting || {
+        scouting: currentResolved.scouting || {
           year: '2026',
           week: `Week ${week}`,
           opponent: '',
@@ -401,9 +500,13 @@ export default function App() {
     isRemoteSyncRef.current = true;
 
     if (data.weeklyData && Object.keys(data.weeklyData).length > 0) {
-      setWeeklyData(data.weeklyData);
-      latestStateRef.current.weeklyData = data.weeklyData;
-      safeJSONSet('footballWeeklyData', data.weeklyData);
+      const normalizedWeekly = normalizeWeeklyData(
+        data.weeklyData,
+        data.defaultFormations || latestStateRef.current.defaultFormations
+      );
+      setWeeklyData(normalizedWeekly);
+      latestStateRef.current.weeklyData = normalizedWeekly;
+      safeJSONSet('footballWeeklyData', normalizedWeekly);
     }
     if (
       data.defaultFormations &&
@@ -476,9 +579,10 @@ export default function App() {
       safeJSONSet('footballScheduleEvents', data.scheduleEvents);
     }
     if (data.roster && Array.isArray(data.roster)) {
-      setRoster(data.roster);
-      latestStateRef.current.roster = data.roster;
-      safeJSONSet('footballRoster', data.roster);
+      const normalized = normalizeRoster(data.roster, true);
+      setRoster(normalized);
+      latestStateRef.current.roster = normalized;
+      safeJSONSet('footballRoster', normalized);
     }
     if (data.teams && Array.isArray(data.teams) && data.teams.length > 0) {
       setTeams(data.teams);
@@ -798,8 +902,8 @@ export default function App() {
               const newEntry: StaffCoach = {
                 email: cleanEmail,
                 role: isMaster ? 'Head Coach (Admin)' : 'Assistant Coach',
-                status: isMaster ? 'Active' : 'Pending',
-                assignedTeamIds: [activeTeamId || 'team_10u'],
+                status: 'Active',
+                assignedTeamIds: ['all'],
               };
               const updatedStaff = [...prevStaff, newEntry];
               if (db) {
@@ -821,26 +925,16 @@ export default function App() {
             cleanEmail.includes('admin') ||
             coachEntry?.role?.toLowerCase().includes('head coach');
 
-          if (
+          setIsPendingApproval(false);
+          const isHead =
             isDannySuperAdmin ||
             isMaster ||
-            coachEntry?.status === 'Active' ||
-            staffList.length <= 1
-          ) {
-            setIsPendingApproval(false);
-            const isHead =
-              isDannySuperAdmin ||
-              isMaster ||
-              coachEntry?.role?.includes('Admin');
-            setUserRole(isHead ? 'admin' : 'assistant');
-            setSyncStatus({
-              text: '✅ Live Multi-Coach Connected',
-              color: '#22c55e',
-            });
-          } else {
-            setIsPendingApproval(true);
-            setSyncStatus({ text: 'Approval Pending', color: '#f59e0b' });
-          }
+            coachEntry?.role?.includes('Admin');
+          setUserRole(isHead ? 'admin' : 'assistant');
+          setSyncStatus({
+            text: '✅ Live Multi-Coach Connected',
+            color: '#22c55e',
+          });
         } else {
           // If no auth yet, open login modal (user can also choose offline mode)
           setIsAuthModalOpen(true);
@@ -959,29 +1053,9 @@ export default function App() {
     attendanceLogs,
   ]);
 
-  // Helper to compute team-scoped week key
-  const getScopedWeekKey = (teamId: string, week: string) => `${teamId}__week_${week}`;
-
   const currentScopedWeekKey = getScopedWeekKey(activeTeamId, currentWeek);
-  const currentWeekState: WeekState =
-    weeklyData[currentScopedWeekKey] ||
-    weeklyData[currentWeek] || {
-      formations: defaultFormations,
-      depthChart: {},
-      scrimmageChart: {},
-      opponent: '',
-    };
-
-  const rawFormations =
-    (currentWeekState.formations && currentWeekState.formations.length > 0)
-      ? currentWeekState.formations
-      : (weeklyData[getScopedWeekKey(activeTeamId, '0')]?.formations && weeklyData[getScopedWeekKey(activeTeamId, '0')].formations.length > 0)
-        ? weeklyData[getScopedWeekKey(activeTeamId, '0')].formations
-        : (weeklyData['0']?.formations && weeklyData['0'].formations.length > 0)
-          ? weeklyData['0'].formations
-          : (defaultFormations && defaultFormations.length > 0)
-            ? defaultFormations
-            : INITIAL_DEFAULT_FORMATIONS;
+  const currentWeekState: WeekState = resolveWeekState(weeklyData, activeTeamId, currentWeek);
+  const rawFormations = currentWeekState.formations;
 
   const currentFormations: FormationBoard[] = useMemo(() => {
     return (rawFormations || [])
@@ -1615,17 +1689,18 @@ export default function App() {
     syncToDefaults = false
   ) => {
     const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
-    setWeeklyData((prev) => ({
-      ...prev,
-      [scopedKey]: {
-        ...(prev[scopedKey] || prev[currentWeek] || {}),
+    setWeeklyData((prev) => {
+      const existing = resolveWeekState(prev, activeTeamId, currentWeek);
+      const updatedWeekState: WeekState = {
+        ...existing,
         formations: newFormations,
-      },
-      [currentWeek]: {
-        ...prev[currentWeek],
-        formations: newFormations,
-      },
-    }));
+      };
+      return {
+        ...prev,
+        [scopedKey]: updatedWeekState,
+        [currentWeek]: updatedWeekState,
+      };
+    });
     if (syncToDefaults) {
       setDefaultFormations(newFormations);
     }
@@ -1636,17 +1711,18 @@ export default function App() {
     newDepthChart: Record<string, PlacedPlayer[]>
   ) => {
     const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
-    setWeeklyData((prev) => ({
-      ...prev,
-      [scopedKey]: {
-        ...(prev[scopedKey] || prev[currentWeek] || {}),
+    setWeeklyData((prev) => {
+      const existing = resolveWeekState(prev, activeTeamId, currentWeek);
+      const updatedWeekState: WeekState = {
+        ...existing,
         depthChart: newDepthChart,
-      },
-      [currentWeek]: {
-        ...prev[currentWeek],
-        depthChart: newDepthChart,
-      },
-    }));
+      };
+      return {
+        ...prev,
+        [scopedKey]: updatedWeekState,
+        [currentWeek]: updatedWeekState,
+      };
+    });
   };
 
   // Helper to update scrimmage chart
@@ -1654,17 +1730,18 @@ export default function App() {
     newScrimChart: Record<string, PlacedPlayer[]>
   ) => {
     const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
-    setWeeklyData((prev) => ({
-      ...prev,
-      [scopedKey]: {
-        ...(prev[scopedKey] || prev[currentWeek] || {}),
+    setWeeklyData((prev) => {
+      const existing = resolveWeekState(prev, activeTeamId, currentWeek);
+      const updatedWeekState: WeekState = {
+        ...existing,
         scrimmageChart: newScrimChart,
-      },
-      [currentWeek]: {
-        ...prev[currentWeek],
-        scrimmageChart: newScrimChart,
-      },
-    }));
+      };
+      return {
+        ...prev,
+        [scopedKey]: updatedWeekState,
+        [currentWeek]: updatedWeekState,
+      };
+    });
   };
 
   // Helper to copy formations from another team into active team
@@ -2614,12 +2691,14 @@ export default function App() {
   };
 
   const handleUpdateRoster = (newRoster: RosterPlayer[]) => {
-    setRoster(newRoster);
-    safeJSONSet('footballRoster', newRoster);
+    const normalized = normalizeRoster(newRoster, false);
+    setRoster(normalized);
+    safeJSONSet('footballRoster', normalized);
+    latestStateRef.current.roster = normalized;
 
     // Build map of jersey number -> display name
     const nameMap = new Map<string, string>();
-    newRoster.forEach((p) => {
+    normalized.forEach((p) => {
       const displayName = (p.rosterName || p.lastName || `${p.firstName} ${p.lastName}`).trim();
       nameMap.set(p.num.trim(), displayName);
     });
@@ -4877,6 +4956,28 @@ export default function App() {
           ) && (
             <RosterSidebar
               roster={activeTeamRoster}
+              activeTeamName={currentActiveTeam.name}
+              totalProgramPlayers={roster.length}
+              onCopyFromMainTeam={() => {
+                const sourceTeam = teams.find((t) => (t.id === 'team_10u' || t.id === 'team-10u')) || teams[0];
+                if (!sourceTeam) return;
+                const sourcePlayers = roster.filter(
+                  (p) => (p.teamId || teams[0]?.id) === sourceTeam.id ||
+                         (p.teamId === 'team_10u' && sourceTeam.id === 'team-10u') ||
+                         (p.teamId === 'team-10u' && sourceTeam.id === 'team_10u')
+                );
+                if (sourcePlayers.length === 0) return;
+                const cloned = sourcePlayers.map((p) => ({
+                  ...p,
+                  teamId: activeTeamId,
+                }));
+                const otherPlayers = roster.filter((p) => (p.teamId || teams[0]?.id) !== activeTeamId);
+                const merged = [...otherPlayers, ...cloned];
+                handleUpdateRoster(merged);
+              }}
+              onRestoreDefaultRoster={() => {
+                handleUpdateRoster(MASTER_ROSTER);
+              }}
               searchTerm={rosterSearchTerm}
               onSearchChange={setRosterSearchTerm}
               activeUnit={activeUnit}

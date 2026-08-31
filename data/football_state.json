@@ -1,168 +1,10 @@
 {
-  "version": 36,
-  "updatedAt": 1788187606590,
+  "version": 49,
+  "updatedAt": 1788193842990,
   "lastAuthor": "Coach",
   "state": {
     "weeklyData": {
       "0": {
-        "wristbandData": {
-          "columns": [
-            {
-              "plays": [
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                }
-              ],
-              "color": "blue"
-            },
-            {
-              "color": "yellow",
-              "plays": [
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                }
-              ]
-            }
-          ],
-          "rows": 16
-        },
-        "opponent": "Brewster",
-        "scouting": {
-          "offenseTendencies": "",
-          "keyPlayers": "",
-          "year": "2026",
-          "teamOverview": "",
-          "opponent": "Brewster",
-          "defenseTendencies": "",
-          "week": "Week 0",
-          "specialTeams": ""
-        },
-        "scrimmageFilters": [
-          "form_21",
-          "form_53"
-        ],
         "formations": [
           {
             "id": "form_21",
@@ -1181,694 +1023,6 @@
             "collapsed": false
           }
         ],
-        "scrimmageChart": {
-          "form_1787848010555-3 (HB)-1787848010556_3": [
-            {
-              "name": "Lacerra",
-              "num": "27"
-            },
-            {
-              "num": "22",
-              "name": "Pestone"
-            }
-          ],
-          "53-DT1": [
-            {
-              "num": "50",
-              "name": "Convery"
-            },
-            {
-              "num": "48",
-              "name": "Sweeny"
-            }
-          ],
-          "form_1787848022188-2 (FB)-1787848022188_3": [
-            {
-              "num": "13",
-              "name": "Veto"
-            },
-            {
-              "name": "Mancini",
-              "num": "10"
-            }
-          ],
-          "53-NT": [
-            {
-              "num": "52",
-              "name": "Piqueras"
-            },
-            {
-              "num": "15",
-              "name": "Swansen"
-            }
-          ],
-          "form_1787848010555-LT-1787848010555_1": [
-            {
-              "name": "Henderson",
-              "num": "6"
-            },
-            {
-              "name": "Crean",
-              "num": "99"
-            }
-          ],
-          "21-1": [
-            {
-              "name": "Ward",
-              "num": "21"
-            },
-            {
-              "num": "7",
-              "name": "Silva"
-            }
-          ],
-          "form_1787848010555-LG-1787848010555_2": [
-            {
-              "name": "Jones",
-              "num": "44"
-            },
-            {
-              "name": "Piqueras",
-              "num": "52"
-            }
-          ],
-          "21-Y1": [
-            {
-              "name": "Sokol",
-              "num": "40"
-            },
-            {
-              "name": "Nardella",
-              "num": "19"
-            }
-          ],
-          "form_1787848010555-X-1787848010555_0": [
-            {
-              "name": "Frascone",
-              "num": "33"
-            },
-            {
-              "num": "20",
-              "name": "Furfaro"
-            }
-          ],
-          "21-LG": [
-            {
-              "name": "Jones",
-              "num": "44"
-            },
-            {
-              "name": "Piqueras",
-              "num": "52"
-            }
-          ],
-          "form_1787848022188-C-1787848022188_3": [
-            {
-              "num": "8",
-              "name": "Kilkenny"
-            },
-            {
-              "num": "17",
-              "name": "Dicob"
-            }
-          ],
-          "form_1787848022188-LT-1787848022188_1": [
-            {
-              "num": "6",
-              "name": "Henderson"
-            },
-            {
-              "num": "99",
-              "name": "Crean"
-            }
-          ],
-          "form_1787848022188-Y1-1787848022188_6": [
-            {
-              "num": "40",
-              "name": "Sokol"
-            },
-            {
-              "num": "19",
-              "name": "Nardella"
-            }
-          ],
-          "53-WILL": [
-            {
-              "num": "19",
-              "name": "Nardella"
-            },
-            {
-              "name": "Jones",
-              "num": "44"
-            }
-          ],
-          "form_1787848010555-Z-1787848010556_6": [
-            {
-              "name": "Cambigianis",
-              "num": "4"
-            },
-            {
-              "num": "11",
-              "name": "Berish"
-            },
-            {
-              "num": "34",
-              "name": "Flemming"
-            }
-          ],
-          "21-LT": [
-            {
-              "name": "Henderson",
-              "num": "6"
-            },
-            {
-              "num": "99",
-              "name": "Crean"
-            }
-          ],
-          "21-C": [
-            {
-              "num": "8",
-              "name": "Kilkenny"
-            },
-            {
-              "name": "Dicob",
-              "num": "17"
-            }
-          ],
-          "form_1787848010555-Y1-1787848010555_6": [
-            {
-              "num": "40",
-              "name": "Sokol"
-            },
-            {
-              "name": "Nardella",
-              "num": "19"
-            }
-          ],
-          "53-SAM": [
-            {
-              "num": "10",
-              "name": "Mancini"
-            },
-            {
-              "num": "40",
-              "name": "Sokol"
-            }
-          ],
-          "form_1787848010555-RG-1787848010555_4": [
-            {
-              "num": "15",
-              "name": "Swansen"
-            },
-            {
-              "num": "2",
-              "name": "Ibrahim"
-            }
-          ],
-          "form_1787848010555-RT-1787848010555_5": [
-            {
-              "num": "48",
-              "name": "Sweeny"
-            },
-            {
-              "num": "50",
-              "name": "Convery"
-            }
-          ],
-          "form_1787848022188-X-1787848022188_0": [
-            {
-              "name": "Frascone",
-              "num": "33"
-            },
-            {
-              "num": "20",
-              "name": "Furfaro"
-            }
-          ],
-          "21-RT": [
-            {
-              "name": "Sweeny",
-              "num": "48"
-            },
-            {
-              "name": "Convery",
-              "num": "50"
-            }
-          ],
-          "21-3": [
-            {
-              "num": "27",
-              "name": "Lacerra"
-            },
-            {
-              "num": "22",
-              "name": "Pestone"
-            }
-          ],
-          "form_1787848022188-3 (HB)-1787848022188_3": [
-            {
-              "num": "27",
-              "name": "Lacerra"
-            },
-            {
-              "num": "22",
-              "name": "Pestone"
-            }
-          ],
-          "21-X": [
-            {
-              "num": "33",
-              "name": "Frascone"
-            },
-            {
-              "name": "Furfaro",
-              "num": "20"
-            }
-          ],
-          "21-2": [
-            {
-              "num": "13",
-              "name": "Veto"
-            },
-            {
-              "name": "Mancini",
-              "num": "10"
-            }
-          ],
-          "53-DT2": [
-            {
-              "num": "99",
-              "name": "Crean"
-            },
-            {
-              "name": "Henderson",
-              "num": "6"
-            }
-          ],
-          "21-RG": [
-            {
-              "name": "Swansen",
-              "num": "15"
-            },
-            {
-              "num": "2",
-              "name": "Ibrahim"
-            }
-          ],
-          "53-CB1": [
-            {
-              "num": "7",
-              "name": "Silva"
-            },
-            {
-              "name": "Frascone",
-              "num": "33"
-            }
-          ],
-          "form_1787848022188-LG-1787848022188_2": [
-            {
-              "num": "44",
-              "name": "Jones"
-            },
-            {
-              "name": "Piqueras",
-              "num": "52"
-            }
-          ],
-          "form_1787848010555-1 (QB)-1787848010555_3": [
-            {
-              "num": "21",
-              "name": "Ward"
-            },
-            {
-              "num": "7",
-              "name": "Silva"
-            }
-          ],
-          "53-MIKE": [
-            {
-              "num": "22",
-              "name": "Pestone"
-            },
-            {
-              "num": "21",
-              "name": "Ward"
-            }
-          ],
-          "53-CB2": [
-            {
-              "num": "11",
-              "name": "Berish"
-            },
-            {
-              "num": "27",
-              "name": "Lacerra"
-            }
-          ],
-          "form_1787848022188-Z-1787848022188_6": [
-            {
-              "num": "4",
-              "name": "Cambigianis"
-            },
-            {
-              "num": "11",
-              "name": "Berish"
-            },
-            {
-              "name": "Flemming",
-              "num": "34"
-            }
-          ],
-          "form_1787848022188-RT-1787848022188_5": [
-            {
-              "num": "48",
-              "name": "Sweeny"
-            },
-            {
-              "num": "50",
-              "name": "Convery"
-            }
-          ],
-          "53-DE2": [
-            {
-              "name": "Dicob",
-              "num": "17"
-            },
-            {
-              "num": "13",
-              "name": "Veto"
-            }
-          ],
-          "form_1787848022188-1 (QB)-1787848022188_3": [
-            {
-              "num": "21",
-              "name": "Ward"
-            },
-            {
-              "num": "7",
-              "name": "Silva"
-            }
-          ],
-          "53-DE1": [
-            {
-              "num": "2",
-              "name": "Ibrahim"
-            },
-            {
-              "num": "8",
-              "name": "Kilkenny"
-            }
-          ],
-          "form_1787848010555-C-1787848010555_3": [
-            {
-              "num": "8",
-              "name": "Kilkenny"
-            },
-            {
-              "num": "17",
-              "name": "Dicob"
-            }
-          ],
-          "form_1787848022188-RG-1787848022188_4": [
-            {
-              "num": "15",
-              "name": "Swansen"
-            },
-            {
-              "name": "Ibrahim",
-              "num": "2"
-            }
-          ],
-          "form_1787848010555-2 (FB)-1787848010556_3": [
-            {
-              "name": "Veto",
-              "num": "13"
-            },
-            {
-              "name": "Mancini",
-              "num": "10"
-            }
-          ],
-          "form_21-Y1-1787851861877": [
-            {
-              "name": "Sokol",
-              "num": "40"
-            },
-            {
-              "name": "Nardella",
-              "num": "19"
-            }
-          ],
-          "form_1787860064353-LG-1787860064353_2": [
-            {
-              "name": "Jones",
-              "num": "44"
-            },
-            {
-              "name": "Piqueras",
-              "num": "52"
-            }
-          ],
-          "form_1787860064353-C-1787860064353_3": [
-            {
-              "name": "Kilkenny",
-              "num": "8"
-            },
-            {
-              "num": "17",
-              "name": "Dicob"
-            }
-          ],
-          "form_1787860064353-RG-1787860064353_4": [
-            {
-              "name": "Swansen",
-              "num": "15"
-            },
-            {
-              "num": "2",
-              "name": "Ibrahim"
-            }
-          ],
-          "form_1787860064353-Y1-1787860064353_6": [
-            {
-              "num": "40",
-              "name": "Sokol"
-            },
-            {
-              "name": "Nardella",
-              "num": "19"
-            }
-          ],
-          "form_1787860064353-3 (HB)-1787860064354_3": [
-            {
-              "name": "Lacerra",
-              "num": "27"
-            },
-            {
-              "num": "22",
-              "name": "Pestone"
-            }
-          ],
-          "form_1787860064353-X-1787860064353_0": [
-            {
-              "num": "33",
-              "name": "Frascone"
-            },
-            {
-              "num": "20",
-              "name": "Furfaro"
-            }
-          ],
-          "form_1787860064353-1 (QB)-1787860064353_3": [
-            {
-              "name": "Ward",
-              "num": "21"
-            },
-            {
-              "name": "Silva",
-              "num": "7"
-            }
-          ],
-          "form_1787860064353-RT-1787860064353_5": [
-            {
-              "name": "Sweeny",
-              "num": "48"
-            },
-            {
-              "num": "50",
-              "name": "Convery"
-            }
-          ],
-          "form_1787860064353-Z-1787860064353_6": [
-            {
-              "num": "4",
-              "name": "Cambigianis"
-            },
-            {
-              "name": "Berish",
-              "num": "11"
-            },
-            {
-              "name": "Flemming",
-              "num": "34"
-            }
-          ],
-          "form_1787860064353-LT-1787860064353_1": [
-            {
-              "num": "6",
-              "name": "Henderson"
-            },
-            {
-              "name": "Crean",
-              "num": "99"
-            }
-          ],
-          "form_1787860064353-2 (FB)-1787860064354_3": [
-            {
-              "name": "Veto",
-              "num": "13"
-            },
-            {
-              "name": "Mancini",
-              "num": "10"
-            }
-          ],
-          "form_1787860077403-LG-1787860077403_2": [
-            {
-              "num": "44",
-              "name": "Jones"
-            },
-            {
-              "num": "52",
-              "name": "Piqueras"
-            }
-          ],
-          "form_1787860077403-RG-1787860077403_4": [
-            {
-              "num": "15",
-              "name": "Swansen"
-            },
-            {
-              "num": "2",
-              "name": "Ibrahim"
-            }
-          ],
-          "form_1787860077403-Y1-1787860077403_6": [
-            {
-              "num": "40",
-              "name": "Sokol"
-            },
-            {
-              "num": "19",
-              "name": "Nardella"
-            }
-          ],
-          "form_1787860077403-RT-1787860077403_5": [
-            {
-              "num": "48",
-              "name": "Sweeny"
-            },
-            {
-              "num": "50",
-              "name": "Convery"
-            }
-          ],
-          "form_1787860077403-3 (HB)-1787860077403_3": [
-            {
-              "num": "27",
-              "name": "Lacerra"
-            },
-            {
-              "name": "Pestone",
-              "num": "22"
-            }
-          ],
-          "form_1787860077403-1 (QB)-1787860077403_3": [
-            {
-              "name": "Ward",
-              "num": "21"
-            },
-            {
-              "name": "Silva",
-              "num": "7"
-            }
-          ],
-          "form_1787860077403-X-1787860077403_0": [
-            {
-              "num": "33",
-              "name": "Frascone"
-            },
-            {
-              "num": "20",
-              "name": "Furfaro"
-            }
-          ],
-          "form_1787860077403-2 (FB)-1787860077403_3": [
-            {
-              "name": "Veto",
-              "num": "13"
-            },
-            {
-              "num": "10",
-              "name": "Mancini"
-            }
-          ],
-          "form_1787860077403-C-1787860077403_3": [
-            {
-              "name": "Kilkenny",
-              "num": "8"
-            },
-            {
-              "name": "Dicob",
-              "num": "17"
-            }
-          ],
-          "form_1787860077403-LT-1787860077403_1": [
-            {
-              "name": "Henderson",
-              "num": "6"
-            },
-            {
-              "name": "Crean",
-              "num": "99"
-            }
-          ],
-          "form_1787860077403-Z-1787860077403_6": [
-            {
-              "num": "4",
-              "name": "Cambigianis"
-            },
-            {
-              "num": "11",
-              "name": "Berish"
-            },
-            {
-              "num": "34",
-              "name": "Flemming"
-            }
-          ],
-          "21-Z": [
-            {
-              "num": "4",
-              "name": "Cambigianis"
-            },
-            {
-              "name": "Berish",
-              "num": "11"
-            }
-          ],
-          "53-FS": [
-            {
-              "name": "Furfaro",
-              "num": "20"
-            },
-            {
-              "num": "4",
-              "name": "Cambigianis"
-            }
-          ]
-        },
         "depthChart": {
           "44-WDE": [
             {
@@ -3737,24 +2891,699 @@
               "num": "40"
             }
           ]
-        }
-      },
-      "1": {
-        "opponent": "Suffern",
-        "scouting": {
-          "teamOverview": "",
-          "year": "2026",
-          "opponent": "Suffern",
-          "defenseTendencies": "",
-          "keyPlayers": "",
-          "week": "Week 1",
-          "specialTeams": "",
-          "offenseTendencies": ""
         },
+        "scrimmageChart": {
+          "form_1787848010555-3 (HB)-1787848010556_3": [
+            {
+              "name": "Lacerra",
+              "num": "27"
+            },
+            {
+              "num": "22",
+              "name": "Pestone"
+            }
+          ],
+          "53-DT1": [
+            {
+              "num": "50",
+              "name": "Convery"
+            },
+            {
+              "num": "48",
+              "name": "Sweeny"
+            }
+          ],
+          "form_1787848022188-2 (FB)-1787848022188_3": [
+            {
+              "num": "13",
+              "name": "Veto"
+            },
+            {
+              "name": "Mancini",
+              "num": "10"
+            }
+          ],
+          "53-NT": [
+            {
+              "num": "52",
+              "name": "Piqueras"
+            },
+            {
+              "num": "15",
+              "name": "Swansen"
+            }
+          ],
+          "form_1787848010555-LT-1787848010555_1": [
+            {
+              "name": "Henderson",
+              "num": "6"
+            },
+            {
+              "name": "Crean",
+              "num": "99"
+            }
+          ],
+          "21-1": [
+            {
+              "name": "Ward",
+              "num": "21"
+            },
+            {
+              "num": "7",
+              "name": "Silva"
+            }
+          ],
+          "form_1787848010555-LG-1787848010555_2": [
+            {
+              "name": "Jones",
+              "num": "44"
+            },
+            {
+              "name": "Piqueras",
+              "num": "52"
+            }
+          ],
+          "21-Y1": [
+            {
+              "name": "Sokol",
+              "num": "40"
+            },
+            {
+              "name": "Nardella",
+              "num": "19"
+            }
+          ],
+          "form_1787848010555-X-1787848010555_0": [
+            {
+              "name": "Frascone",
+              "num": "33"
+            },
+            {
+              "num": "20",
+              "name": "Furfaro"
+            }
+          ],
+          "21-LG": [
+            {
+              "name": "Jones",
+              "num": "44"
+            },
+            {
+              "name": "Piqueras",
+              "num": "52"
+            }
+          ],
+          "form_1787848022188-C-1787848022188_3": [
+            {
+              "num": "8",
+              "name": "Kilkenny"
+            },
+            {
+              "num": "17",
+              "name": "Dicob"
+            }
+          ],
+          "form_1787848022188-LT-1787848022188_1": [
+            {
+              "num": "6",
+              "name": "Henderson"
+            },
+            {
+              "num": "99",
+              "name": "Crean"
+            }
+          ],
+          "form_1787848022188-Y1-1787848022188_6": [
+            {
+              "num": "40",
+              "name": "Sokol"
+            },
+            {
+              "num": "19",
+              "name": "Nardella"
+            }
+          ],
+          "53-WILL": [
+            {
+              "num": "19",
+              "name": "Nardella"
+            },
+            {
+              "name": "Jones",
+              "num": "44"
+            }
+          ],
+          "form_1787848010555-Z-1787848010556_6": [
+            {
+              "name": "Cambigianis",
+              "num": "4"
+            },
+            {
+              "num": "11",
+              "name": "Berish"
+            },
+            {
+              "num": "34",
+              "name": "Flemming"
+            }
+          ],
+          "21-LT": [
+            {
+              "name": "Henderson",
+              "num": "6"
+            },
+            {
+              "num": "99",
+              "name": "Crean"
+            }
+          ],
+          "21-C": [
+            {
+              "num": "8",
+              "name": "Kilkenny"
+            },
+            {
+              "name": "Dicob",
+              "num": "17"
+            }
+          ],
+          "form_1787848010555-Y1-1787848010555_6": [
+            {
+              "num": "40",
+              "name": "Sokol"
+            },
+            {
+              "name": "Nardella",
+              "num": "19"
+            }
+          ],
+          "53-SAM": [
+            {
+              "num": "10",
+              "name": "Mancini"
+            },
+            {
+              "num": "40",
+              "name": "Sokol"
+            }
+          ],
+          "form_1787848010555-RG-1787848010555_4": [
+            {
+              "num": "15",
+              "name": "Swansen"
+            },
+            {
+              "num": "2",
+              "name": "Ibrahim"
+            }
+          ],
+          "form_1787848010555-RT-1787848010555_5": [
+            {
+              "num": "48",
+              "name": "Sweeny"
+            },
+            {
+              "num": "50",
+              "name": "Convery"
+            }
+          ],
+          "form_1787848022188-X-1787848022188_0": [
+            {
+              "name": "Frascone",
+              "num": "33"
+            },
+            {
+              "num": "20",
+              "name": "Furfaro"
+            }
+          ],
+          "21-RT": [
+            {
+              "name": "Sweeny",
+              "num": "48"
+            },
+            {
+              "name": "Convery",
+              "num": "50"
+            }
+          ],
+          "21-3": [
+            {
+              "num": "27",
+              "name": "Lacerra"
+            },
+            {
+              "num": "22",
+              "name": "Pestone"
+            }
+          ],
+          "form_1787848022188-3 (HB)-1787848022188_3": [
+            {
+              "num": "27",
+              "name": "Lacerra"
+            },
+            {
+              "num": "22",
+              "name": "Pestone"
+            }
+          ],
+          "21-X": [
+            {
+              "num": "33",
+              "name": "Frascone"
+            },
+            {
+              "name": "Furfaro",
+              "num": "20"
+            }
+          ],
+          "21-2": [
+            {
+              "num": "13",
+              "name": "Veto"
+            },
+            {
+              "name": "Mancini",
+              "num": "10"
+            }
+          ],
+          "53-DT2": [
+            {
+              "num": "99",
+              "name": "Crean"
+            },
+            {
+              "name": "Henderson",
+              "num": "6"
+            }
+          ],
+          "21-RG": [
+            {
+              "name": "Swansen",
+              "num": "15"
+            },
+            {
+              "num": "2",
+              "name": "Ibrahim"
+            }
+          ],
+          "53-CB1": [
+            {
+              "num": "7",
+              "name": "Silva"
+            },
+            {
+              "name": "Frascone",
+              "num": "33"
+            }
+          ],
+          "form_1787848022188-LG-1787848022188_2": [
+            {
+              "num": "44",
+              "name": "Jones"
+            },
+            {
+              "name": "Piqueras",
+              "num": "52"
+            }
+          ],
+          "form_1787848010555-1 (QB)-1787848010555_3": [
+            {
+              "num": "21",
+              "name": "Ward"
+            },
+            {
+              "num": "7",
+              "name": "Silva"
+            }
+          ],
+          "53-MIKE": [
+            {
+              "num": "22",
+              "name": "Pestone"
+            },
+            {
+              "num": "21",
+              "name": "Ward"
+            }
+          ],
+          "53-CB2": [
+            {
+              "num": "11",
+              "name": "Berish"
+            },
+            {
+              "num": "27",
+              "name": "Lacerra"
+            }
+          ],
+          "form_1787848022188-Z-1787848022188_6": [
+            {
+              "num": "4",
+              "name": "Cambigianis"
+            },
+            {
+              "num": "11",
+              "name": "Berish"
+            },
+            {
+              "name": "Flemming",
+              "num": "34"
+            }
+          ],
+          "form_1787848022188-RT-1787848022188_5": [
+            {
+              "num": "48",
+              "name": "Sweeny"
+            },
+            {
+              "num": "50",
+              "name": "Convery"
+            }
+          ],
+          "53-DE2": [
+            {
+              "name": "Dicob",
+              "num": "17"
+            },
+            {
+              "num": "13",
+              "name": "Veto"
+            }
+          ],
+          "form_1787848022188-1 (QB)-1787848022188_3": [
+            {
+              "num": "21",
+              "name": "Ward"
+            },
+            {
+              "num": "7",
+              "name": "Silva"
+            }
+          ],
+          "53-DE1": [
+            {
+              "num": "2",
+              "name": "Ibrahim"
+            },
+            {
+              "num": "8",
+              "name": "Kilkenny"
+            }
+          ],
+          "form_1787848010555-C-1787848010555_3": [
+            {
+              "num": "8",
+              "name": "Kilkenny"
+            },
+            {
+              "num": "17",
+              "name": "Dicob"
+            }
+          ],
+          "form_1787848022188-RG-1787848022188_4": [
+            {
+              "num": "15",
+              "name": "Swansen"
+            },
+            {
+              "name": "Ibrahim",
+              "num": "2"
+            }
+          ],
+          "form_1787848010555-2 (FB)-1787848010556_3": [
+            {
+              "name": "Veto",
+              "num": "13"
+            },
+            {
+              "name": "Mancini",
+              "num": "10"
+            }
+          ],
+          "form_21-Y1-1787851861877": [
+            {
+              "name": "Sokol",
+              "num": "40"
+            },
+            {
+              "name": "Nardella",
+              "num": "19"
+            }
+          ],
+          "form_1787860064353-LG-1787860064353_2": [
+            {
+              "name": "Jones",
+              "num": "44"
+            },
+            {
+              "name": "Piqueras",
+              "num": "52"
+            }
+          ],
+          "form_1787860064353-C-1787860064353_3": [
+            {
+              "name": "Kilkenny",
+              "num": "8"
+            },
+            {
+              "num": "17",
+              "name": "Dicob"
+            }
+          ],
+          "form_1787860064353-RG-1787860064353_4": [
+            {
+              "name": "Swansen",
+              "num": "15"
+            },
+            {
+              "num": "2",
+              "name": "Ibrahim"
+            }
+          ],
+          "form_1787860064353-Y1-1787860064353_6": [
+            {
+              "num": "40",
+              "name": "Sokol"
+            },
+            {
+              "name": "Nardella",
+              "num": "19"
+            }
+          ],
+          "form_1787860064353-3 (HB)-1787860064354_3": [
+            {
+              "name": "Lacerra",
+              "num": "27"
+            },
+            {
+              "num": "22",
+              "name": "Pestone"
+            }
+          ],
+          "form_1787860064353-X-1787860064353_0": [
+            {
+              "num": "33",
+              "name": "Frascone"
+            },
+            {
+              "num": "20",
+              "name": "Furfaro"
+            }
+          ],
+          "form_1787860064353-1 (QB)-1787860064353_3": [
+            {
+              "name": "Ward",
+              "num": "21"
+            },
+            {
+              "name": "Silva",
+              "num": "7"
+            }
+          ],
+          "form_1787860064353-RT-1787860064353_5": [
+            {
+              "name": "Sweeny",
+              "num": "48"
+            },
+            {
+              "num": "50",
+              "name": "Convery"
+            }
+          ],
+          "form_1787860064353-Z-1787860064353_6": [
+            {
+              "num": "4",
+              "name": "Cambigianis"
+            },
+            {
+              "name": "Berish",
+              "num": "11"
+            },
+            {
+              "name": "Flemming",
+              "num": "34"
+            }
+          ],
+          "form_1787860064353-LT-1787860064353_1": [
+            {
+              "num": "6",
+              "name": "Henderson"
+            },
+            {
+              "name": "Crean",
+              "num": "99"
+            }
+          ],
+          "form_1787860064353-2 (FB)-1787860064354_3": [
+            {
+              "name": "Veto",
+              "num": "13"
+            },
+            {
+              "name": "Mancini",
+              "num": "10"
+            }
+          ],
+          "form_1787860077403-LG-1787860077403_2": [
+            {
+              "num": "44",
+              "name": "Jones"
+            },
+            {
+              "num": "52",
+              "name": "Piqueras"
+            }
+          ],
+          "form_1787860077403-RG-1787860077403_4": [
+            {
+              "num": "15",
+              "name": "Swansen"
+            },
+            {
+              "num": "2",
+              "name": "Ibrahim"
+            }
+          ],
+          "form_1787860077403-Y1-1787860077403_6": [
+            {
+              "num": "40",
+              "name": "Sokol"
+            },
+            {
+              "num": "19",
+              "name": "Nardella"
+            }
+          ],
+          "form_1787860077403-RT-1787860077403_5": [
+            {
+              "num": "48",
+              "name": "Sweeny"
+            },
+            {
+              "num": "50",
+              "name": "Convery"
+            }
+          ],
+          "form_1787860077403-3 (HB)-1787860077403_3": [
+            {
+              "num": "27",
+              "name": "Lacerra"
+            },
+            {
+              "name": "Pestone",
+              "num": "22"
+            }
+          ],
+          "form_1787860077403-1 (QB)-1787860077403_3": [
+            {
+              "name": "Ward",
+              "num": "21"
+            },
+            {
+              "name": "Silva",
+              "num": "7"
+            }
+          ],
+          "form_1787860077403-X-1787860077403_0": [
+            {
+              "num": "33",
+              "name": "Frascone"
+            },
+            {
+              "num": "20",
+              "name": "Furfaro"
+            }
+          ],
+          "form_1787860077403-2 (FB)-1787860077403_3": [
+            {
+              "name": "Veto",
+              "num": "13"
+            },
+            {
+              "num": "10",
+              "name": "Mancini"
+            }
+          ],
+          "form_1787860077403-C-1787860077403_3": [
+            {
+              "name": "Kilkenny",
+              "num": "8"
+            },
+            {
+              "name": "Dicob",
+              "num": "17"
+            }
+          ],
+          "form_1787860077403-LT-1787860077403_1": [
+            {
+              "name": "Henderson",
+              "num": "6"
+            },
+            {
+              "name": "Crean",
+              "num": "99"
+            }
+          ],
+          "form_1787860077403-Z-1787860077403_6": [
+            {
+              "num": "4",
+              "name": "Cambigianis"
+            },
+            {
+              "num": "11",
+              "name": "Berish"
+            },
+            {
+              "num": "34",
+              "name": "Flemming"
+            }
+          ],
+          "21-Z": [
+            {
+              "num": "4",
+              "name": "Cambigianis"
+            },
+            {
+              "name": "Berish",
+              "num": "11"
+            }
+          ],
+          "53-FS": [
+            {
+              "name": "Furfaro",
+              "num": "20"
+            },
+            {
+              "num": "4",
+              "name": "Cambigianis"
+            }
+          ]
+        },
+        "opponent": "Brewster",
         "wristbandData": {
           "columns": [
             {
-              "color": "blue",
               "plays": [
                 {
                   "color": "blue",
@@ -3765,28 +3594,20 @@
                   "text": ""
                 },
                 {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
                   "color": "blue",
                   "text": ""
                 },
                 {
                   "text": "",
                   "color": "blue"
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "color": "blue",
+                  "text": ""
                 },
                 {
                   "text": "",
@@ -3809,91 +3630,112 @@
                   "text": ""
                 },
                 {
-                  "text": "",
-                  "color": "blue"
+                  "color": "blue",
+                  "text": ""
                 },
                 {
                   "color": "blue",
                   "text": ""
                 },
                 {
-                  "text": "",
-                  "color": "blue"
-                }
-              ]
-            },
-            {
-              "plays": [
-                {
-                  "color": "yellow",
+                  "color": "blue",
                   "text": ""
                 },
                 {
-                  "color": "yellow",
+                  "color": "blue",
                   "text": ""
                 },
                 {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "color": "yellow",
+                  "color": "blue",
                   "text": ""
                 }
               ],
-              "color": "yellow"
+              "color": "blue"
+            },
+            {
+              "color": "yellow",
+              "plays": [
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                }
+              ]
             }
           ],
           "rows": 16
         },
+        "scouting": {
+          "offenseTendencies": "",
+          "keyPlayers": "",
+          "year": "2026",
+          "teamOverview": "",
+          "opponent": "Brewster",
+          "defenseTendencies": "",
+          "week": "Week 0",
+          "specialTeams": ""
+        }
+      },
+      "1": {
         "formations": [
           {
             "subtitle": "2 RBs - 1 TE (Y1) - 2 WRs (X Left, Z Right)",
@@ -7467,173 +7309,12 @@
               "num": "10"
             }
           ]
-        }
-      },
-      "2": {
-        "depthChart": {
-          "21-RT": [
-            {
-              "num": "99",
-              "name": "Crean"
-            }
-          ],
-          "44-DT1": [
-            {
-              "name": "Convery",
-              "num": "50"
-            }
-          ],
-          "44-FS": [
-            {
-              "name": "Kilkenny",
-              "num": "8"
-            }
-          ],
-          "44-SAM": [
-            {
-              "name": "Russell",
-              "num": "56"
-            }
-          ],
-          "21-Z": [
-            {
-              "name": "Barry",
-              "num": "12"
-            },
-            {
-              "num": "20",
-              "name": "Furfaro"
-            },
-            {
-              "num": "21",
-              "name": "Ward"
-            }
-          ],
-          "44-CB2": [
-            {
-              "name": "Mancini",
-              "num": "10"
-            }
-          ],
-          "21-X": [
-            {
-              "name": "Henderson",
-              "num": "6"
-            },
-            {
-              "num": "19",
-              "name": "Nardella"
-            }
-          ],
-          "21-2": [
-            {
-              "name": "Sweeny",
-              "num": "48"
-            }
-          ],
-          "21-LT": [
-            {
-              "num": "66",
-              "name": "Mucciacciaro"
-            }
-          ],
-          "44-WDE": [
-            {
-              "name": "Ibrahim",
-              "num": "2"
-            }
-          ],
-          "21-1": [
-            {
-              "num": "10",
-              "name": "Mancini"
-            }
-          ],
-          "21-LG": [
-            {
-              "name": "Cambigianis",
-              "num": "4"
-            }
-          ],
-          "21-3": [
-            {
-              "num": "22",
-              "name": "Pestone"
-            },
-            {
-              "name": "Jones",
-              "num": "44"
-            }
-          ],
-          "44-CB1": [
-            {
-              "num": "7",
-              "name": "Silva"
-            }
-          ],
-          "44-DT2": [
-            {
-              "num": "17",
-              "name": "Dicob"
-            }
-          ],
-          "21-RG": [
-            {
-              "num": "40",
-              "name": "Sokol"
-            }
-          ],
-          "44-SDE": [
-            {
-              "name": "Frascone",
-              "num": "33"
-            }
-          ],
-          "21-C": [
-            {
-              "name": "Piqueras",
-              "num": "52"
-            }
-          ],
-          "21-Y1": [
-            {
-              "num": "15",
-              "name": "Swansen"
-            }
-          ],
-          "44-ROVER": [
-            {
-              "num": "34",
-              "name": "Flemming"
-            }
-          ],
-          "44-MIKE": [
-            {
-              "num": "11",
-              "name": "Berish"
-            }
-          ],
-          "44-WILL": [
-            {
-              "num": "13",
-              "name": "Veto"
-            }
-          ]
         },
-        "scouting": {
-          "year": "2026",
-          "specialTeams": "",
-          "keyPlayers": "",
-          "offenseTendencies": "",
-          "defenseTendencies": "",
-          "week": "Week 2",
-          "opponent": "Yorktown Huskers",
-          "teamOverview": ""
-        },
+        "opponent": "Suffern",
         "wristbandData": {
-          "rows": 16,
           "columns": [
             {
+              "color": "blue",
               "plays": [
                 {
                   "color": "blue",
@@ -7648,8 +7329,16 @@
                   "color": "blue"
                 },
                 {
-                  "text": "",
-                  "color": "blue"
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "color": "blue",
+                  "text": ""
                 },
                 {
                   "color": "blue",
@@ -7664,12 +7353,16 @@
                   "color": "blue"
                 },
                 {
-                  "color": "blue",
-                  "text": ""
+                  "text": "",
+                  "color": "blue"
                 },
                 {
                   "color": "blue",
                   "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "blue"
                 },
                 {
                   "color": "blue",
@@ -7686,27 +7379,50 @@
                 {
                   "text": "",
                   "color": "blue"
-                },
-                {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "color": "blue",
-                  "text": ""
                 }
-              ],
-              "color": "blue"
+              ]
             },
             {
               "plays": [
                 {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
                   "text": "",
                   "color": "yellow"
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
                 },
                 {
                   "text": "",
@@ -7731,50 +7447,27 @@
                 {
                   "color": "yellow",
                   "text": ""
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
                 }
               ],
               "color": "yellow"
             }
-          ]
+          ],
+          "rows": 16
         },
-        "opponent": "Yorktown Huskers",
-        "scrimmageChart": {},
+        "scouting": {
+          "teamOverview": "",
+          "year": "2026",
+          "opponent": "Suffern",
+          "defenseTendencies": "",
+          "keyPlayers": "",
+          "week": "Week 1",
+          "specialTeams": "",
+          "offenseTendencies": "",
+          "gameDate": "2026-09-06 @ 12:00",
+          "gameLocation": "80 Hemion Rd\\nSuffern NY 10901\\nUnited States"
+        }
+      },
+      "2": {
         "formations": [
           {
             "name": "11 Offense",
@@ -8146,45 +7839,171 @@
             "unit": "groups",
             "collapsed": false
           }
-        ]
-      },
-      "3": {
+        ],
+        "depthChart": {
+          "21-RT": [
+            {
+              "num": "99",
+              "name": "Crean"
+            }
+          ],
+          "44-DT1": [
+            {
+              "name": "Convery",
+              "num": "50"
+            }
+          ],
+          "44-FS": [
+            {
+              "name": "Kilkenny",
+              "num": "8"
+            }
+          ],
+          "44-SAM": [
+            {
+              "name": "Russell",
+              "num": "56"
+            }
+          ],
+          "21-Z": [
+            {
+              "name": "Barry",
+              "num": "12"
+            },
+            {
+              "num": "20",
+              "name": "Furfaro"
+            },
+            {
+              "num": "21",
+              "name": "Ward"
+            }
+          ],
+          "44-CB2": [
+            {
+              "name": "Mancini",
+              "num": "10"
+            }
+          ],
+          "21-X": [
+            {
+              "name": "Henderson",
+              "num": "6"
+            },
+            {
+              "num": "19",
+              "name": "Nardella"
+            }
+          ],
+          "21-2": [
+            {
+              "name": "Sweeny",
+              "num": "48"
+            }
+          ],
+          "21-LT": [
+            {
+              "num": "66",
+              "name": "Mucciacciaro"
+            }
+          ],
+          "44-WDE": [
+            {
+              "name": "Ibrahim",
+              "num": "2"
+            }
+          ],
+          "21-1": [
+            {
+              "num": "10",
+              "name": "Mancini"
+            }
+          ],
+          "21-LG": [
+            {
+              "name": "Cambigianis",
+              "num": "4"
+            }
+          ],
+          "21-3": [
+            {
+              "num": "22",
+              "name": "Pestone"
+            },
+            {
+              "name": "Jones",
+              "num": "44"
+            }
+          ],
+          "44-CB1": [
+            {
+              "num": "7",
+              "name": "Silva"
+            }
+          ],
+          "44-DT2": [
+            {
+              "num": "17",
+              "name": "Dicob"
+            }
+          ],
+          "21-RG": [
+            {
+              "num": "40",
+              "name": "Sokol"
+            }
+          ],
+          "44-SDE": [
+            {
+              "name": "Frascone",
+              "num": "33"
+            }
+          ],
+          "21-C": [
+            {
+              "name": "Piqueras",
+              "num": "52"
+            }
+          ],
+          "21-Y1": [
+            {
+              "num": "15",
+              "name": "Swansen"
+            }
+          ],
+          "44-ROVER": [
+            {
+              "num": "34",
+              "name": "Flemming"
+            }
+          ],
+          "44-MIKE": [
+            {
+              "num": "11",
+              "name": "Berish"
+            }
+          ],
+          "44-WILL": [
+            {
+              "num": "13",
+              "name": "Veto"
+            }
+          ]
+        },
+        "scrimmageChart": {},
+        "opponent": "Yorktown Huskers",
         "wristbandData": {
           "rows": 16,
           "columns": [
             {
               "plays": [
                 {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
                   "color": "blue",
                   "text": ""
                 },
                 {
                   "color": "blue",
                   "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "blue"
                 },
                 {
                   "text": "",
@@ -8209,6 +8028,30 @@
                 {
                   "color": "blue",
                   "text": ""
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "text": "",
+                  "color": "blue"
                 },
                 {
                   "color": "blue",
@@ -8228,16 +8071,20 @@
                   "color": "yellow"
                 },
                 {
-                  "color": "yellow",
-                  "text": ""
+                  "text": "",
+                  "color": "yellow"
                 },
                 {
                   "color": "yellow",
                   "text": ""
                 },
                 {
-                  "color": "yellow",
-                  "text": ""
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
                 },
                 {
                   "color": "yellow",
@@ -8268,12 +8115,8 @@
                   "text": ""
                 },
                 {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
+                  "text": "",
+                  "color": "yellow"
                 },
                 {
                   "color": "yellow",
@@ -8284,27 +8127,28 @@
                   "color": "yellow"
                 },
                 {
-                  "color": "yellow",
-                  "text": ""
+                  "text": "",
+                  "color": "yellow"
                 }
               ],
               "color": "yellow"
             }
           ]
         },
-        "depthChart": {},
         "scouting": {
-          "specialTeams": "",
-          "opponent": "",
-          "defenseTendencies": "",
           "year": "2026",
+          "specialTeams": "",
           "keyPlayers": "",
-          "week": "Week 3",
+          "offenseTendencies": "",
+          "defenseTendencies": "",
+          "week": "Week 2",
+          "opponent": "Yorktown Huskers",
           "teamOverview": "",
-          "offenseTendencies": ""
-        },
-        "scrimmageChart": {},
-        "opponent": "",
+          "gameDate": "2026-09-13 @ 12:00",
+          "gameLocation": "421 Baldwin Place Rd Mahopac, NY 10541"
+        }
+      },
+      "3": {
         "formations": [
           {
             "id": "form_21",
@@ -9314,21 +9158,12 @@
             "subtitle": "Standard Format",
             "name": "Offensive Depth Chart"
           }
-        ]
-      },
-      "4": {
+        ],
         "depthChart": {},
-        "scouting": {
-          "specialTeams": "",
-          "week": "Week 4",
-          "offenseTendencies": "",
-          "year": "2026",
-          "defenseTendencies": "",
-          "opponent": "",
-          "keyPlayers": "",
-          "teamOverview": ""
-        },
+        "scrimmageChart": {},
+        "opponent": "Shrub Oak",
         "wristbandData": {
+          "rows": 16,
           "columns": [
             {
               "plays": [
@@ -9337,8 +9172,12 @@
                   "color": "blue"
                 },
                 {
-                  "color": "blue",
-                  "text": ""
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "text": "",
+                  "color": "blue"
                 },
                 {
                   "color": "blue",
@@ -9361,18 +9200,6 @@
                   "color": "blue"
                 },
                 {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
                   "text": "",
                   "color": "blue"
                 },
@@ -9387,6 +9214,14 @@
                 {
                   "text": "",
                   "color": "blue"
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "color": "blue",
+                  "text": ""
                 },
                 {
                   "color": "blue",
@@ -9414,12 +9249,20 @@
                   "text": ""
                 },
                 {
-                  "text": "",
-                  "color": "yellow"
+                  "color": "yellow",
+                  "text": ""
                 },
                 {
-                  "text": "",
-                  "color": "yellow"
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
                 },
                 {
                   "text": "",
@@ -9454,25 +9297,28 @@
                   "color": "yellow"
                 },
                 {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
                   "color": "yellow",
                   "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
                 }
               ],
               "color": "yellow"
             }
-          ],
-          "rows": 16
+          ]
         },
-        "scrimmageChart": {},
-        "opponent": "",
+        "scouting": {
+          "specialTeams": "",
+          "opponent": "Shrub Oak",
+          "defenseTendencies": "",
+          "year": "2026",
+          "keyPlayers": "",
+          "week": "Week 3",
+          "teamOverview": "",
+          "offenseTendencies": "",
+          "gameDate": "2026-09-20 @ 12:00",
+          "gameLocation": "421 Baldwin Place Rd Mahopac, NY 10541"
+        }
+      },
+      "4": {
         "formations": [
           {
             "subtitle": "1 RB - 1 TE (Y1) - 3 WRs (X, W, Z)",
@@ -9844,14 +9690,51 @@
             "unit": "groups",
             "id": "form_grp_def"
           }
-        ]
-      },
-      "5": {
+        ],
+        "depthChart": {},
+        "scrimmageChart": {},
+        "opponent": "Carmel Rams",
         "wristbandData": {
           "columns": [
             {
               "plays": [
                 {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
                   "color": "blue",
                   "text": ""
                 },
@@ -9868,14 +9751,6 @@
                   "text": ""
                 },
                 {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
                   "text": "",
                   "color": "blue"
                 },
@@ -9886,44 +9761,35 @@
                 {
                   "color": "blue",
                   "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "text": "",
-                  "color": "blue"
                 }
               ],
               "color": "blue"
             },
             {
-              "color": "yellow",
               "plays": [
                 {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
                   "color": "yellow",
                   "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
                 },
                 {
                   "text": "",
@@ -9942,16 +9808,8 @@
                   "text": ""
                 },
                 {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
                   "color": "yellow",
                   "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
                 },
                 {
                   "color": "yellow",
@@ -9960,18 +9818,6 @@
                 {
                   "text": "",
                   "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
                 },
                 {
                   "text": "",
@@ -9985,24 +9831,26 @@
                   "text": "",
                   "color": "yellow"
                 }
-              ]
+              ],
+              "color": "yellow"
             }
           ],
           "rows": 16
         },
-        "depthChart": {},
         "scouting": {
+          "specialTeams": "",
+          "week": "Week 4",
+          "offenseTendencies": "",
           "year": "2026",
           "defenseTendencies": "",
-          "specialTeams": "",
+          "opponent": "Carmel Rams",
           "keyPlayers": "",
-          "opponent": "",
-          "week": "Week 5",
           "teamOverview": "",
-          "offenseTendencies": ""
-        },
-        "scrimmageChart": {},
-        "opponent": "",
+          "gameDate": "2026-09-27 @ 13:00",
+          "gameLocation": "30 Fair St, Carmel Hamlet, NY 10512"
+        }
+      },
+      "5": {
         "formations": [
           {
             "name": "11 Offense",
@@ -10374,13 +10222,13 @@
               }
             ]
           }
-        ]
-      },
-      "6": {
+        ],
+        "depthChart": {},
+        "scrimmageChart": {},
+        "opponent": "Wappingers Wildcats",
         "wristbandData": {
           "columns": [
             {
-              "color": "blue",
               "plays": [
                 {
                   "color": "blue",
@@ -10399,18 +10247,6 @@
                   "text": ""
                 },
                 {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
                   "color": "blue",
                   "text": ""
                 },
@@ -10433,6 +10269,18 @@
                 {
                   "text": "",
                   "color": "blue"
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "color": "blue",
+                  "text": ""
                 },
                 {
                   "text": "",
@@ -10446,7 +10294,8 @@
                   "text": "",
                   "color": "blue"
                 }
-              ]
+              ],
+              "color": "blue"
             },
             {
               "color": "yellow",
@@ -10456,50 +10305,6 @@
                   "text": ""
                 },
                 {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
                   "text": "",
                   "color": "yellow"
                 },
@@ -10514,6 +10319,50 @@
                 {
                   "color": "yellow",
                   "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
                 }
               ]
             }
@@ -10521,18 +10370,19 @@
           "rows": 16
         },
         "scouting": {
-          "keyPlayers": "",
-          "specialTeams": "",
-          "defenseTendencies": "",
-          "opponent": "",
-          "week": "Week 6",
-          "offenseTendencies": "",
           "year": "2026",
-          "teamOverview": ""
-        },
-        "depthChart": {},
-        "scrimmageChart": {},
-        "opponent": "",
+          "defenseTendencies": "",
+          "specialTeams": "",
+          "keyPlayers": "",
+          "opponent": "Wappingers Wildcats",
+          "week": "Week 5",
+          "teamOverview": "",
+          "offenseTendencies": "",
+          "gameDate": "2026-10-04 @ 15:00",
+          "gameLocation": "421 Baldwin Place Rd Mahopac, NY 10541"
+        }
+      },
+      "6": {
         "formations": [
           {
             "collapsed": false,
@@ -11542,174 +11392,22 @@
               }
             ]
           }
-        ]
-      },
-      "7": {
-        "depthChart": {
-          "21-LG": [
-            {
-              "num": "4",
-              "name": "Cambigianis"
-            }
-          ],
-          "44-SDE": [
-            {
-              "name": "Frascone",
-              "num": "33"
-            }
-          ],
-          "44-ROVER": [
-            {
-              "name": "Flemming",
-              "num": "34"
-            }
-          ],
-          "21-C": [
-            {
-              "name": "Piqueras",
-              "num": "52"
-            }
-          ],
-          "44-DT2": [
-            {
-              "name": "Dicob",
-              "num": "17"
-            }
-          ],
-          "21-3": [
-            {
-              "name": "Pestone",
-              "num": "22"
-            },
-            {
-              "name": "Jones",
-              "num": "44"
-            }
-          ],
-          "21-RG": [
-            {
-              "num": "40",
-              "name": "Sokol"
-            }
-          ],
-          "44-CB1": [
-            {
-              "name": "Silva",
-              "num": "7"
-            }
-          ],
-          "21-Y1": [
-            {
-              "name": "Swansen",
-              "num": "15"
-            }
-          ],
-          "44-CB2": [
-            {
-              "num": "10",
-              "name": "Mancini"
-            }
-          ],
-          "44-MIKE": [
-            {
-              "name": "Berish",
-              "num": "11"
-            }
-          ],
-          "21-X": [
-            {
-              "num": "6",
-              "name": "Henderson"
-            },
-            {
-              "name": "Nardella",
-              "num": "19"
-            }
-          ],
-          "44-WILL": [
-            {
-              "num": "13",
-              "name": "Veto"
-            }
-          ],
-          "44-WDE": [
-            {
-              "num": "2",
-              "name": "Ibrahim"
-            }
-          ],
-          "21-2": [
-            {
-              "num": "48",
-              "name": "Sweeny"
-            }
-          ],
-          "21-RT": [
-            {
-              "num": "99",
-              "name": "Crean"
-            }
-          ],
-          "44-FS": [
-            {
-              "name": "Kilkenny",
-              "num": "8"
-            }
-          ],
-          "21-1": [
-            {
-              "num": "10",
-              "name": "Mancini"
-            }
-          ],
-          "44-SAM": [
-            {
-              "num": "56",
-              "name": "Russell"
-            }
-          ],
-          "44-DT1": [
-            {
-              "num": "50",
-              "name": "Convery"
-            }
-          ],
-          "21-LT": [
-            {
-              "num": "66",
-              "name": "Mucciacciaro"
-            }
-          ],
-          "21-Z": [
-            {
-              "name": "Barry",
-              "num": "12"
-            },
-            {
-              "num": "20",
-              "name": "Furfaro"
-            },
-            {
-              "name": "Ward",
-              "num": "21"
-            }
-          ]
-        },
+        ],
+        "depthChart": {},
+        "scrimmageChart": {},
+        "opponent": "Brewster",
         "wristbandData": {
           "columns": [
             {
+              "color": "blue",
               "plays": [
                 {
                   "color": "blue",
                   "text": ""
                 },
                 {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "color": "blue",
-                  "text": ""
+                  "text": "",
+                  "color": "blue"
                 },
                 {
                   "text": "",
@@ -11724,26 +11422,6 @@
                   "color": "blue"
                 },
                 {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
                   "text": "",
                   "color": "blue"
                 },
@@ -11756,20 +11434,59 @@
                   "text": ""
                 },
                 {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
                   "color": "blue",
                   "text": ""
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "text": "",
+                  "color": "blue"
                 },
                 {
                   "text": "",
                   "color": "blue"
                 }
-              ],
-              "color": "blue"
+              ]
             },
             {
               "color": "yellow",
               "plays": [
                 {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
                   "text": "",
                   "color": "yellow"
                 },
@@ -11798,8 +11515,12 @@
                   "text": ""
                 },
                 {
-                  "color": "yellow",
-                  "text": ""
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
                 },
                 {
                   "text": "",
@@ -11812,26 +11533,6 @@
                 {
                   "color": "yellow",
                   "text": ""
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
                 }
               ]
             }
@@ -11839,17 +11540,19 @@
           "rows": 16
         },
         "scouting": {
-          "defenseTendencies": "",
-          "teamOverview": "",
-          "week": "Week 7",
-          "opponent": "",
-          "offenseTendencies": "",
           "keyPlayers": "",
           "specialTeams": "",
-          "year": "2026"
-        },
-        "opponent": "",
-        "scrimmageChart": {},
+          "defenseTendencies": "",
+          "opponent": "Brewster",
+          "week": "Week 6",
+          "offenseTendencies": "",
+          "year": "2026",
+          "teamOverview": "",
+          "gameDate": "2026-10-11 @ 15:00",
+          "gameLocation": "50 Foggintown Rd, Brewster, NY 10509"
+        }
+      },
+      "7": {
         "formations": [
           {
             "name": "21 Offense",
@@ -12859,42 +12562,168 @@
             "id": "form_grp_off",
             "name": "Offensive Depth Chart"
           }
-        ]
-      },
-      "8": {
-        "scouting": {
-          "week": "Week 8",
-          "specialTeams": "",
-          "defenseTendencies": "",
-          "opponent": "",
-          "keyPlayers": "",
-          "year": "2026",
-          "teamOverview": "",
-          "offenseTendencies": ""
+        ],
+        "depthChart": {
+          "21-LG": [
+            {
+              "num": "4",
+              "name": "Cambigianis"
+            }
+          ],
+          "44-SDE": [
+            {
+              "name": "Frascone",
+              "num": "33"
+            }
+          ],
+          "44-ROVER": [
+            {
+              "name": "Flemming",
+              "num": "34"
+            }
+          ],
+          "21-C": [
+            {
+              "name": "Piqueras",
+              "num": "52"
+            }
+          ],
+          "44-DT2": [
+            {
+              "name": "Dicob",
+              "num": "17"
+            }
+          ],
+          "21-3": [
+            {
+              "name": "Pestone",
+              "num": "22"
+            },
+            {
+              "name": "Jones",
+              "num": "44"
+            }
+          ],
+          "21-RG": [
+            {
+              "num": "40",
+              "name": "Sokol"
+            }
+          ],
+          "44-CB1": [
+            {
+              "name": "Silva",
+              "num": "7"
+            }
+          ],
+          "21-Y1": [
+            {
+              "name": "Swansen",
+              "num": "15"
+            }
+          ],
+          "44-CB2": [
+            {
+              "num": "10",
+              "name": "Mancini"
+            }
+          ],
+          "44-MIKE": [
+            {
+              "name": "Berish",
+              "num": "11"
+            }
+          ],
+          "21-X": [
+            {
+              "num": "6",
+              "name": "Henderson"
+            },
+            {
+              "name": "Nardella",
+              "num": "19"
+            }
+          ],
+          "44-WILL": [
+            {
+              "num": "13",
+              "name": "Veto"
+            }
+          ],
+          "44-WDE": [
+            {
+              "num": "2",
+              "name": "Ibrahim"
+            }
+          ],
+          "21-2": [
+            {
+              "num": "48",
+              "name": "Sweeny"
+            }
+          ],
+          "21-RT": [
+            {
+              "num": "99",
+              "name": "Crean"
+            }
+          ],
+          "44-FS": [
+            {
+              "name": "Kilkenny",
+              "num": "8"
+            }
+          ],
+          "21-1": [
+            {
+              "num": "10",
+              "name": "Mancini"
+            }
+          ],
+          "44-SAM": [
+            {
+              "num": "56",
+              "name": "Russell"
+            }
+          ],
+          "44-DT1": [
+            {
+              "num": "50",
+              "name": "Convery"
+            }
+          ],
+          "21-LT": [
+            {
+              "num": "66",
+              "name": "Mucciacciaro"
+            }
+          ],
+          "21-Z": [
+            {
+              "name": "Barry",
+              "num": "12"
+            },
+            {
+              "num": "20",
+              "name": "Furfaro"
+            },
+            {
+              "name": "Ward",
+              "num": "21"
+            }
+          ]
         },
+        "scrimmageChart": {},
+        "opponent": "Somers Tuskers",
         "wristbandData": {
-          "rows": 16,
           "columns": [
             {
-              "color": "blue",
               "plays": [
                 {
                   "color": "blue",
                   "text": ""
                 },
                 {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
-                  "color": "blue",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "blue"
-                },
-                {
                   "color": "blue",
                   "text": ""
                 },
@@ -12915,6 +12744,18 @@
                   "color": "blue"
                 },
                 {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
                   "text": "",
                   "color": "blue"
                 },
@@ -12931,8 +12772,8 @@
                   "text": ""
                 },
                 {
-                  "text": "",
-                  "color": "blue"
+                  "color": "blue",
+                  "text": ""
                 },
                 {
                   "color": "blue",
@@ -12942,46 +12783,27 @@
                   "text": "",
                   "color": "blue"
                 }
-              ]
+              ],
+              "color": "blue"
             },
             {
               "color": "yellow",
               "plays": [
                 {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
                   "color": "yellow",
                   "text": ""
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "color": "yellow",
-                  "text": ""
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
-                },
-                {
-                  "text": "",
-                  "color": "yellow"
                 },
                 {
                   "text": "",
@@ -13002,6 +12824,26 @@
                 {
                   "text": "",
                   "color": "yellow"
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
                 },
                 {
                   "color": "yellow",
@@ -13013,11 +12855,23 @@
                 }
               ]
             }
-          ]
+          ],
+          "rows": 16
         },
-        "depthChart": {},
-        "scrimmageChart": {},
-        "opponent": "",
+        "scouting": {
+          "defenseTendencies": "",
+          "teamOverview": "",
+          "week": "Week 7",
+          "opponent": "Somers Tuskers",
+          "offenseTendencies": "",
+          "keyPlayers": "",
+          "specialTeams": "",
+          "year": "2026",
+          "gameDate": "2026-10-18 @ 14:00",
+          "gameLocation": "421 Baldwin Place Rd Mahopac, NY 10541"
+        }
+      },
+      "8": {
         "formations": [
           {
             "collapsed": false,
@@ -13389,7 +13243,165 @@
               }
             ]
           }
-        ]
+        ],
+        "depthChart": {},
+        "scrimmageChart": {},
+        "opponent": "TBD",
+        "wristbandData": {
+          "rows": 16,
+          "columns": [
+            {
+              "color": "blue",
+              "plays": [
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                },
+                {
+                  "color": "blue",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "blue"
+                }
+              ]
+            },
+            {
+              "color": "yellow",
+              "plays": [
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                },
+                {
+                  "color": "yellow",
+                  "text": ""
+                },
+                {
+                  "text": "",
+                  "color": "yellow"
+                }
+              ]
+            }
+          ]
+        },
+        "scouting": {
+          "week": "Week 8",
+          "specialTeams": "",
+          "defenseTendencies": "",
+          "opponent": "TBD",
+          "keyPlayers": "",
+          "year": "2026",
+          "teamOverview": "",
+          "offenseTendencies": "",
+          "gameDate": "2026-10-25 @ 00:00",
+          "gameLocation": "TBD"
+        }
       },
       "pre-2": {
         "formations": [
@@ -17470,9 +17482,6 @@
           "keyPlayersList": [],
           "coachNotes": []
         }
-      },
-      "team_10u__week_0": {
-        "opponent": "Brewster"
       }
     },
     "defaultFormations": [
@@ -18499,7 +18508,7 @@
       {
         "year": "2026",
         "date": "2026-08-31",
-        "lastEdited": 1787897020410,
+        "lastEdited": 1788190672587,
         "week": "Week 1",
         "title": "Practice 8 - 8/13/2026",
         "plan": [
@@ -18508,44 +18517,28 @@
             "desc": "",
             "stations": [
               {
-                "customDrill": "",
-                "videoLink": "",
-                "key": "100% snap accuracy",
-                "coaches": [
-                  "TJ"
-                ],
+                "name": "",
                 "desc": "Instruction: Centers and QBs pair up to practice under-center and shotgun snaps before formal periods begin. Rotate through all QBs and Centers.",
-                "drill": "QB & Center Exchange"
+                "focus": "",
+                "coach": ""
               },
               {
+                "name": "",
                 "desc": "Instruction: Specialists work on snap, hold, and kick mechanics independently.",
-                "customDrill": "",
-                "coaches": [
-                  "TJ"
-                ],
-                "videoLink": "",
-                "key": "Timing and rhythm",
-                "drill": "Specialists: Kicking & Holding"
+                "focus": "",
+                "coach": ""
               },
               {
-                "coaches": [
-                  "TJ"
-                ],
+                "name": "",
                 "desc": "Instruction: QBs throw the basic route tree on air to WRs.",
-                "videoLink": "",
-                "key": "Crisp routes",
-                "drill": "WR Routes with QB Throws",
-                "customDrill": ""
+                "focus": "",
+                "coach": ""
               },
               {
-                "customDrill": "",
-                "videoLink": "",
+                "name": "",
                 "desc": "Instruction: O-Line works through their first 2 steps on air.",
-                "key": "First step quickness",
-                "coaches": [
-                  "TJ"
-                ],
-                "drill": "Offensive Line Steps"
+                "focus": "",
+                "coach": ""
               }
             ],
             "category": "Pre Practice",
@@ -18557,7 +18550,8 @@
             "coaches": [
               "TJ"
             ],
-            "time": 30
+            "time": 30,
+            "format": "static"
           },
           {
             "drill": "Dynamic Warm-Up",
@@ -18572,14 +18566,15 @@
               {
                 "name": "",
                 "desc": "",
-                "coach": "",
-                "focus": ""
+                "focus": "",
+                "coach": ""
               }
             ],
             "time": 20,
             "coaches": [
               "Brian"
-            ]
+            ],
+            "format": "static"
           },
           {
             "time": 5,
@@ -18594,12 +18589,13 @@
               {
                 "name": "",
                 "desc": "",
-                "coach": "",
-                "focus": ""
+                "focus": "",
+                "coach": ""
               }
             ],
             "drill": "Mandatory Water Break",
-            "isCircuit": false
+            "isCircuit": false,
+            "format": "static"
           },
           {
             "key": "",
@@ -18607,8 +18603,8 @@
               {
                 "name": "",
                 "desc": "",
-                "coach": "",
-                "focus": ""
+                "focus": "",
+                "coach": ""
               }
             ],
             "coaches": [
@@ -18621,7 +18617,8 @@
             "category": "Special Teams",
             "videoLink": "",
             "drill": "Custom",
-            "desc": "Introduce Extra Point/Field Goal Personnel and Formation"
+            "desc": "Introduce Extra Point/Field Goal Personnel and Formation",
+            "format": "static"
           },
           {
             "videoLink": "",
@@ -18639,30 +18636,31 @@
             ],
             "stations": [
               {
-                "drill": "",
+                "name": "",
                 "desc": "",
-                "key": "",
-                "customDrill": ""
+                "focus": "",
+                "coach": ""
               },
               {
+                "name": "",
                 "desc": "",
-                "key": "",
-                "customDrill": "",
-                "drill": ""
+                "focus": "",
+                "coach": ""
               },
               {
-                "key": "",
-                "drill": "",
+                "name": "",
                 "desc": "",
-                "customDrill": ""
+                "focus": "",
+                "coach": ""
               },
               {
+                "name": "",
                 "desc": "",
-                "customDrill": "",
-                "key": "",
-                "drill": ""
+                "focus": "",
+                "coach": ""
               }
-            ]
+            ],
+            "format": "static"
           },
           {
             "category": "Individual Offense",
@@ -18677,30 +18675,27 @@
             "desc": "",
             "stations": [
               {
+                "name": "",
                 "desc": "- one boy runs to cone, offensive player starts in stance, takes pursuit angle, breaksdown,\nswoops, drives for 5",
-                "videoLink": "",
-                "customDrill": "Open Field Blocking-OL",
-                "coaches": [],
-                "drill": "Custom",
-                "key": ""
+                "focus": "",
+                "coach": ""
               },
               {
-                "key": "",
-                "videoLink": "",
-                "customDrill": "Open Field Blocking-Skill",
-                "drill": "Custom",
-                "coaches": [],
-                "desc": "- one boy runs to cone, offensive player starts in stance, takes pursuit angle, breaksdown,\nswoops, drives for 5"
+                "name": "",
+                "desc": "- one boy runs to cone, offensive player starts in stance, takes pursuit angle, breaksdown,\nswoops, drives for 5",
+                "focus": "",
+                "coach": ""
               }
-            ]
+            ],
+            "format": "static"
           },
           {
             "stations": [
               {
                 "name": "",
                 "desc": "",
-                "coach": "",
-                "focus": ""
+                "focus": "",
+                "coach": ""
               }
             ],
             "isCircuit": false,
@@ -18712,7 +18707,8 @@
             "coaches": [],
             "customDrill": "",
             "category": "Warm-Up & Breaks",
-            "time": 4
+            "time": 4,
+            "format": "static"
           },
           {
             "periodType": "groups",
@@ -18725,24 +18721,21 @@
             "coaches": [],
             "stations": [
               {
-                "drill": "",
-                "videoLink": "",
-                "coaches": [],
+                "name": "",
                 "desc": "",
-                "key": "",
-                "customDrill": ""
+                "focus": "",
+                "coach": ""
               },
               {
-                "videoLink": "",
-                "customDrill": "",
-                "drill": "",
-                "coaches": [],
+                "name": "",
                 "desc": "- split into two groups, skill &amp; OL\n- one boy runs to cone, offensive player starts in stance, takes pursuit angle, breaksdown,\nswoops, drives for 5",
-                "key": ""
+                "focus": "",
+                "coach": ""
               }
             ],
             "desc": "",
-            "isCircuit": false
+            "isCircuit": false,
+            "format": "static"
           },
           {
             "key": "",
@@ -18756,31 +18749,26 @@
             "time": 21,
             "stations": [
               {
+                "name": "",
                 "desc": "",
-                "drill": "",
-                "coaches": [],
-                "customDrill": "",
-                "videoLink": "",
-                "key": ""
+                "focus": "",
+                "coach": ""
               },
               {
-                "coaches": [],
-                "customDrill": "",
-                "key": "",
-                "videoLink": "",
-                "drill": "",
-                "desc": ""
+                "name": "",
+                "desc": "",
+                "focus": "",
+                "coach": ""
               },
               {
-                "key": "",
+                "name": "",
                 "desc": "",
-                "coaches": [],
-                "customDrill": "",
-                "videoLink": "",
-                "drill": ""
+                "focus": "",
+                "coach": ""
               }
             ],
-            "customDrill": ""
+            "customDrill": "",
+            "format": "static"
           },
           {
             "isCircuit": false,
@@ -18794,13 +18782,14 @@
               {
                 "name": "",
                 "desc": "",
-                "coach": "",
-                "focus": ""
+                "focus": "",
+                "coach": ""
               }
             ],
             "time": 16,
             "coaches": [],
-            "key": ""
+            "key": "",
+            "format": "static"
           },
           {
             "drill": "Custom",
@@ -18813,31 +18802,32 @@
             "customDrill": "Coach Dave Says",
             "stations": [
               {
-                "videoLink": "",
-                "drill": "",
-                "key": "",
-                "customDrill": "",
+                "name": "",
                 "desc": "",
-                "coaches": []
+                "focus": "",
+                "coach": ""
               },
               {
-                "drill": "",
-                "customDrill": "",
-                "key": "",
+                "name": "",
                 "desc": "",
-                "videoLink": "",
-                "coaches": []
+                "focus": "",
+                "coach": ""
               }
             ],
             "category": "Indy / Fundamentals",
             "videoLink": "",
-            "time": 8
+            "time": 8,
+            "format": "static"
           }
         ],
         "endTime": "20:00",
         "startTime": "17:30",
         "day": "Monday",
-        "id": "1786720620048"
+        "id": "1786720620048",
+        "teamId": "team_10u",
+        "dayFolder": "Monday 8/31",
+        "weekFolder": "Week 1",
+        "location": "35 Angela Dr Carmel, NY, United States"
       },
       {
         "endTime": "20:00",
@@ -18845,36 +18835,28 @@
           {
             "stations": [
               {
-                "key": "100% snap accuracy",
-                "coaches": [],
+                "name": "",
                 "desc": "Instruction: Centers and QBs pair up to practice under-center and shotgun snaps before formal periods begin. Rotate through all QBs and Centers.",
-                "drill": "QB & Center Exchange",
-                "customDrill": "",
-                "videoLink": ""
+                "focus": "",
+                "coach": ""
               },
               {
-                "coaches": [],
-                "videoLink": "",
-                "drill": "Specialists: Kicking & Holding",
+                "name": "",
                 "desc": "Instruction: Specialists work on snap, hold, and kick mechanics independently.",
-                "customDrill": "",
-                "key": "Timing and rhythm"
+                "focus": "",
+                "coach": ""
               },
               {
-                "key": "Crisp routes",
-                "videoLink": "",
-                "drill": "WR Routes with QB Throws",
-                "coaches": [],
-                "customDrill": "",
-                "desc": "Instruction: QBs throw the basic route tree on air to WRs."
+                "name": "",
+                "desc": "Instruction: QBs throw the basic route tree on air to WRs.",
+                "focus": "",
+                "coach": ""
               },
               {
+                "name": "",
                 "desc": "Instruction: O-Line works through their first 2 steps on air.",
-                "drill": "Offensive Line Steps",
-                "customDrill": "",
-                "coaches": [],
-                "videoLink": "",
-                "key": "First step quickness"
+                "focus": "",
+                "coach": ""
               }
             ],
             "key": "",
@@ -18888,7 +18870,8 @@
             "videoLink": "",
             "category": "Pre Practice",
             "desc": "",
-            "isCircuit": true
+            "isCircuit": true,
+            "format": "static"
           },
           {
             "category": "Warm-Up & Breaks",
@@ -18905,12 +18888,13 @@
             "stations": [
               {
                 "name": "Dynamic Warm-Up",
-                "coach": "Brian",
+                "desc": "5:30 ‚Äì Lap\n5 Lines @ 5 yards apart (new boys added to last line, no one warms up alone, if uneven number they go\nwith the line before)\n5:33-5:48 Part 1- Expanded Lines\n-Clap it up\n-Feet-Sink-Holsters, Hold 20 Seconds X2\n-10 Jumping Jacks, 10 Seal Jacks\n-10 Squats, 10 Jump in place, 10 Push Ups (Knees if needed), 10 Leg Raises (Hold), Butt Raises\nw/ wrap\n-Feet chopping, change of direction (Middle School, High School, Falls School, Turf), Finish with\n2 burpees and condense the lines\nPart 2- Condensed Lines\n-Start in a Break Down Position Every Time &amp; Catch a Football Every time\n-High Knees (one way)\n-Butt Kicks (one way)\n-Frankenstein‚Äôs (one way)\n-Long Step Back Peddle (Open towards Highschool on second whistle)\n-Short Step Back Peddle (Open towards Highschool on second whistle)\n-Sideways- 1st whistle=Breakdown 2nd whistle=turn sideways 3rd whistle= Runs Sideways\n-Bear Crawls into a Roll, Pop Up\n-Lobsters\n-Swoop Drill -Break down-Sprint-Swoop-Full Stop into Break down position\n-Middle Ball (Diamond Hands), Low Ball (Pinkies Down), High Ball (Attack at Highest Point)\n-Fumble Drill- Get into a low squat and pick up ball &amp; return it, if you don‚Äôt get it on first try,\nFALL ON IT\n-Tip Drill- First guy tips it backwards to the man behind them First guy tips and goes to the back\nline\nPart 3- Extended Lines\n-Rip Drill (Left and Right) Elbow-Dip-Rip\n-Swim (Stager Hinge Swim)\n-Fake Rip Spin",
                 "focus": "Full speed, proper posture",
-                "desc": "5:30 ‚Äì Lap\n5 Lines @ 5 yards apart (new boys added to last line, no one warms up alone, if uneven number they go\nwith the line before)\n5:33-5:48 Part 1- Expanded Lines\n-Clap it up\n-Feet-Sink-Holsters, Hold 20 Seconds X2\n-10 Jumping Jacks, 10 Seal Jacks\n-10 Squats, 10 Jump in place, 10 Push Ups (Knees if needed), 10 Leg Raises (Hold), Butt Raises\nw/ wrap\n-Feet chopping, change of direction (Middle School, High School, Falls School, Turf), Finish with\n2 burpees and condense the lines\nPart 2- Condensed Lines\n-Start in a Break Down Position Every Time &amp; Catch a Football Every time\n-High Knees (one way)\n-Butt Kicks (one way)\n-Frankenstein‚Äôs (one way)\n-Long Step Back Peddle (Open towards Highschool on second whistle)\n-Short Step Back Peddle (Open towards Highschool on second whistle)\n-Sideways- 1st whistle=Breakdown 2nd whistle=turn sideways 3rd whistle= Runs Sideways\n-Bear Crawls into a Roll, Pop Up\n-Lobsters\n-Swoop Drill -Break down-Sprint-Swoop-Full Stop into Break down position\n-Middle Ball (Diamond Hands), Low Ball (Pinkies Down), High Ball (Attack at Highest Point)\n-Fumble Drill- Get into a low squat and pick up ball &amp; return it, if you don‚Äôt get it on first try,\nFALL ON IT\n-Tip Drill- First guy tips it backwards to the man behind them First guy tips and goes to the back\nline\nPart 3- Extended Lines\n-Rip Drill (Left and Right) Elbow-Dip-Rip\n-Swim (Stager Hinge Swim)\n-Fake Rip Spin"
+                "coach": "Brian"
               }
             ],
-            "videoLink": ""
+            "videoLink": "",
+            "format": "static"
           },
           {
             "isCircuit": false,
@@ -18919,10 +18903,10 @@
             "videoLink": "",
             "stations": [
               {
+                "name": "Mandatory Water Break",
                 "desc": "Instruction: Blow whistle twice. Players remove helmets and jog to water stations. Emphasize fast hydration and hustling back to position groups.",
-                "coach": "",
                 "focus": "Hydrate and hustle",
-                "name": "Mandatory Water Break"
+                "coach": ""
               }
             ],
             "drill": "Mandatory Water Break",
@@ -18930,7 +18914,8 @@
             "periodType": "normal",
             "desc": "Instruction: Blow whistle twice. Players remove helmets and jog to water stations. Emphasize fast hydration and hustling back to position groups.",
             "customDrill": "",
-            "coaches": []
+            "coaches": [],
+            "format": "static"
           },
           {
             "periodType": "circuit",
@@ -18940,51 +18925,44 @@
             "category": "Tackle Circuit",
             "stations": [
               {
-                "key": "Shoot hips, wrap cloth",
-                "coaches": [],
-                "videoLink": "",
-                "drill": "Form Fit & Drive (Thud)",
+                "name": "",
                 "desc": "Instruction: Players start 2 yards apart. On whistle, step into the ball carrier, fit the shoulder to the numbers, wrap, and drive for 3 steps.",
-                "customDrill": ""
+                "focus": "",
+                "coach": ""
               },
               {
-                "customDrill": "",
-                "key": "Near foot to near shoulder",
-                "coaches": [],
+                "name": "",
                 "desc": "Instruction: Defender takes an inside-out angle to intersect a runner aiming for the pylon. Break down and drive through the near hip.",
-                "videoLink": "",
-                "drill": "Angle / Alley Tackle"
+                "focus": "",
+                "coach": ""
               },
               {
-                "customDrill": "",
-                "coaches": [],
+                "name": "",
                 "desc": "Instruction: Defender targets the thighs of the runner, wraps legs tight, and rolls to the side using momentum to bring the runner down safely.",
-                "key": "Eyes on thighs, wrap and roll",
-                "drill": "Hawk (Rugby) Roll Tackle",
-                "videoLink": ""
+                "focus": "",
+                "coach": ""
               },
               {
-                "coaches": [],
-                "videoLink": "",
+                "name": "",
                 "desc": "Instruction: 10x10 yard grid. Defender tracks an elusive runner, breaks down 2 yards away, and executes a safe open-field wrap.",
-                "key": "Keep feet alive, track the hip",
-                "drill": "Open Field Shimmy (Space)",
-                "customDrill": ""
+                "focus": "",
+                "coach": ""
               }
             ],
             "desc": "",
             "videoLink": "",
             "isCircuit": true,
             "key": "",
-            "customDrill": ""
+            "customDrill": "",
+            "format": "static"
           },
           {
             "stations": [
               {
-                "coach": "",
-                "focus": "Hydrate and hustle",
                 "name": "Mandatory Water Break",
-                "desc": "Instruction: Blow whistle twice. Players remove helmets and jog to water stations. Emphasize fast hydration and hustling back to position groups."
+                "desc": "Instruction: Blow whistle twice. Players remove helmets and jog to water stations. Emphasize fast hydration and hustling back to position groups.",
+                "focus": "Hydrate and hustle",
+                "coach": ""
               }
             ],
             "coaches": [],
@@ -18996,7 +18974,8 @@
             "customDrill": "",
             "periodType": "normal",
             "category": "Warm-Up & Breaks",
-            "desc": "Instruction: Blow whistle twice. Players remove helmets and jog to water stations. Emphasize fast hydration and hustling back to position groups."
+            "desc": "Instruction: Blow whistle twice. Players remove helmets and jog to water stations. Emphasize fast hydration and hustling back to position groups.",
+            "format": "static"
           },
           {
             "time": 15,
@@ -19005,10 +18984,10 @@
             "videoLink": "",
             "stations": [
               {
-                "desc": "Instruction: Huddle the full 11-man offensive unit. Walk through new plays vs. garbage cans or scout defense. No pads/helmets.",
                 "name": "Offensive Play Install (Walkthrough)",
-                "coach": "",
-                "focus": "Alignment, assignment, snap count"
+                "desc": "Instruction: Huddle the full 11-man offensive unit. Walk through new plays vs. garbage cans or scout defense. No pads/helmets.",
+                "focus": "Alignment, assignment, snap count",
+                "coach": ""
               }
             ],
             "customDrill": "",
@@ -19016,7 +18995,8 @@
             "key": "Alignment, assignment, snap count",
             "category": "Full Team / Installs",
             "desc": "Instruction: Huddle the full 11-man offensive unit. Walk through new plays vs. garbage cans or scout defense. No pads/helmets.",
-            "drill": "Offensive Play Install (Walkthrough)"
+            "drill": "Offensive Play Install (Walkthrough)",
+            "format": "static"
           },
           {
             "category": "Full Team / Installs",
@@ -19029,14 +19009,15 @@
             "coaches": [],
             "stations": [
               {
-                "desc": "Instruction: Live blocking and tackling. Offense runs strictly inside/outside run plays vs the starting defense.",
                 "name": "11-on-11 Run Game Scrimmage",
-                "coach": "",
-                "focus": "Physicality, execution at speed"
+                "desc": "Instruction: Live blocking and tackling. Offense runs strictly inside/outside run plays vs the starting defense.",
+                "focus": "Physicality, execution at speed",
+                "coach": ""
               }
             ],
             "isCircuit": false,
-            "time": 20
+            "time": 20,
+            "format": "static"
           },
           {
             "drill": "",
@@ -19056,7 +19037,8 @@
             "time": 10,
             "key": "",
             "coaches": [],
-            "isCircuit": false
+            "isCircuit": false,
+            "format": "static"
           },
           {
             "drill": "",
@@ -19064,8 +19046,8 @@
             "periodType": "normal",
             "stations": [
               {
-                "desc": "",
                 "name": "Group 1",
+                "desc": "",
                 "focus": "",
                 "coach": ""
               }
@@ -19076,87 +19058,92 @@
             "videoLink": "",
             "category": "",
             "key": "",
-            "isCircuit": false
+            "isCircuit": false,
+            "format": "static"
           },
           {
             "isCircuit": false,
             "stations": [
               {
-                "focus": "",
-                "coach": "",
                 "name": "Group 1",
-                "desc": ""
-              }
-            ],
-            "coaches": [],
-            "key": "",
-            "videoLink": "",
-            "drill": "",
-            "time": 10,
-            "periodType": "normal",
-            "customDrill": "",
-            "desc": "",
-            "category": ""
-          },
-          {
-            "periodType": "normal",
-            "drill": "",
-            "category": "",
-            "key": "",
-            "desc": "",
-            "customDrill": "",
-            "coaches": [],
-            "isCircuit": false,
-            "stations": [
-              {
-                "focus": "",
-                "coach": "",
-                "name": "Group 1",
-                "desc": ""
-              }
-            ],
-            "time": 10,
-            "videoLink": ""
-          },
-          {
-            "desc": "",
-            "stations": [
-              {
-                "focus": "",
-                "coach": "",
                 "desc": "",
-                "name": "Group 1"
-              }
-            ],
-            "periodType": "normal",
-            "coaches": [],
-            "drill": "",
-            "isCircuit": false,
-            "time": 10,
-            "key": "",
-            "category": "",
-            "customDrill": "",
-            "videoLink": ""
-          },
-          {
-            "coaches": [],
-            "category": "",
-            "time": 10,
-            "isCircuit": false,
-            "videoLink": "",
-            "customDrill": "",
-            "periodType": "normal",
-            "desc": "",
-            "key": "",
-            "drill": "",
-            "stations": [
-              {
-                "coach": "",
                 "focus": "",
-                "name": "Group 1",
-                "desc": ""
+                "coach": ""
               }
-            ]
+            ],
+            "coaches": [],
+            "key": "",
+            "videoLink": "",
+            "drill": "",
+            "time": 10,
+            "periodType": "normal",
+            "customDrill": "",
+            "desc": "",
+            "category": "",
+            "format": "static"
+          },
+          {
+            "periodType": "normal",
+            "drill": "",
+            "category": "",
+            "key": "",
+            "desc": "",
+            "customDrill": "",
+            "coaches": [],
+            "isCircuit": false,
+            "stations": [
+              {
+                "name": "Group 1",
+                "desc": "",
+                "focus": "",
+                "coach": ""
+              }
+            ],
+            "time": 10,
+            "videoLink": "",
+            "format": "static"
+          },
+          {
+            "desc": "",
+            "stations": [
+              {
+                "name": "Group 1",
+                "desc": "",
+                "focus": "",
+                "coach": ""
+              }
+            ],
+            "periodType": "normal",
+            "coaches": [],
+            "drill": "",
+            "isCircuit": false,
+            "time": 10,
+            "key": "",
+            "category": "",
+            "customDrill": "",
+            "videoLink": "",
+            "format": "static"
+          },
+          {
+            "coaches": [],
+            "category": "",
+            "time": 10,
+            "isCircuit": false,
+            "videoLink": "",
+            "customDrill": "",
+            "periodType": "normal",
+            "desc": "",
+            "key": "",
+            "drill": "",
+            "stations": [
+              {
+                "name": "Group 1",
+                "desc": "",
+                "focus": "",
+                "coach": ""
+              }
+            ],
+            "format": "static"
           },
           {
             "customDrill": "",
@@ -19167,16 +19154,17 @@
             "category": "",
             "stations": [
               {
-                "desc": "",
                 "name": "Group 1",
-                "coach": "",
-                "focus": ""
+                "desc": "",
+                "focus": "",
+                "coach": ""
               }
             ],
             "coaches": [],
             "videoLink": "",
             "desc": "",
-            "isCircuit": false
+            "isCircuit": false,
+            "format": "static"
           },
           {
             "videoLink": "",
@@ -19188,15 +19176,16 @@
             "desc": "",
             "stations": [
               {
-                "desc": "",
                 "name": "Group 1",
+                "desc": "",
                 "focus": "",
                 "coach": ""
               }
             ],
             "drill": "",
             "periodType": "normal",
-            "key": ""
+            "key": "",
+            "format": "static"
           },
           {
             "isCircuit": false,
@@ -19211,12 +19200,13 @@
             "periodType": "normal",
             "stations": [
               {
-                "desc": "",
-                "coach": "",
                 "name": "Group 1",
-                "focus": ""
+                "desc": "",
+                "focus": "",
+                "coach": ""
               }
-            ]
+            ],
+            "format": "static"
           },
           {
             "desc": "",
@@ -19229,24 +19219,28 @@
               {
                 "name": "Group 1",
                 "desc": "",
-                "coach": "",
-                "focus": ""
+                "focus": "",
+                "coach": ""
               }
             ],
             "videoLink": "",
             "time": 10,
             "isCircuit": false,
-            "key": ""
+            "key": "",
+            "format": "static"
           }
         ],
         "lastEdited": 1787254558367,
         "year": "2026",
         "startTime": "17:30",
-        "day": "Monday",
+        "day": "Sunday",
         "week": "Week 2",
         "date": "2026-08-16",
         "id": "1786722019650",
-        "title": "Practice 9 - 8/17/2026"
+        "title": "Practice 9 - 8/17/2026",
+        "teamId": "team_10u",
+        "dayFolder": "Sunday 8/16",
+        "weekFolder": "Preseason Wk 1"
       },
       {
         "title": "Full Pads",
@@ -19257,20 +19251,16 @@
             "key": "",
             "stations": [
               {
-                "key": "100% snap accuracy",
-                "videoLink": "",
-                "drill": "QB & Center Exchange",
-                "coaches": [],
-                "customDrill": "",
-                "desc": "Instruction: Centers and QBs pair up to practice under-center and shotgun snaps before formal periods begin. Rotate through all QBs and Centers."
+                "name": "",
+                "desc": "Instruction: Centers and QBs pair up to practice under-center and shotgun snaps before formal periods begin. Rotate through all QBs and Centers.",
+                "focus": "",
+                "coach": ""
               },
               {
-                "coaches": [],
-                "customDrill": "",
-                "videoLink": "",
+                "name": "",
                 "desc": "Instruction: Specialists work on snap, hold, and kick mechanics independently.",
-                "key": "Timing and rhythm",
-                "drill": "Specialists: Kicking & Holding"
+                "focus": "",
+                "coach": ""
               }
             ],
             "time": 10,
@@ -19279,7 +19269,8 @@
             "category": "Pre Practice",
             "videoLink": "",
             "desc": "",
-            "customDrill": ""
+            "customDrill": "",
+            "format": "static"
           },
           {
             "desc": "Instruction: Line team up on the sideline or hash marks. Coach leads cadence.",
@@ -19298,7 +19289,8 @@
             "time": 10,
             "videoLink": "",
             "coaches": [],
-            "key": "Full speed, proper posture"
+            "key": "Full speed, proper posture",
+            "format": "static"
           },
           {
             "videoLink": "",
@@ -19309,34 +19301,35 @@
             "customDrill": "",
             "stations": [
               {
+                "name": "",
                 "desc": "",
-                "drill": "",
-                "videoLink": "",
-                "coaches": [],
-                "customDrill": "",
-                "key": ""
+                "focus": "",
+                "coach": ""
               },
               {
-                "coaches": [],
-                "drill": "",
-                "videoLink": "",
-                "key": "",
-                "customDrill": "",
-                "desc": ""
+                "name": "",
+                "desc": "",
+                "focus": "",
+                "coach": ""
               }
             ],
             "desc": "",
             "periodType": "normal",
-            "drill": ""
+            "drill": "",
+            "format": "static"
           }
         ],
         "year": "2026",
-        "endTime": "19:00",
+        "endTime": "20:00",
         "id": "1786993409931",
-        "lastEdited": 1787166142895,
+        "lastEdited": 1788190672583,
         "date": "2026-08-17",
         "week": "Week 2",
-        "startTime": "17:00"
+        "startTime": "17:30",
+        "teamId": "team_10u",
+        "dayFolder": "Monday 8/17",
+        "weekFolder": "Preseason Wk 2",
+        "location": "35 Angela Dr Carmel, NY, United States"
       },
       {
         "endTime": "19:00",
@@ -19354,20 +19347,16 @@
             "key": "",
             "stations": [
               {
-                "customDrill": "",
+                "name": "",
                 "desc": "Instruction: Centers and QBs pair up to practice under-center and shotgun snaps before formal periods begin. Rotate through all QBs and Centers.",
-                "videoLink": "",
-                "coaches": [],
-                "drill": "QB & Center Exchange",
-                "key": "100% snap accuracy"
+                "focus": "",
+                "coach": ""
               },
               {
-                "key": "Timing and rhythm",
-                "coaches": [],
-                "videoLink": "",
+                "name": "",
                 "desc": "Instruction: Specialists work on snap, hold, and kick mechanics independently.",
-                "drill": "Specialists: Kicking & Holding",
-                "customDrill": ""
+                "focus": "",
+                "coach": ""
               }
             ],
             "videoLink": "",
@@ -19376,16 +19365,17 @@
             "coaches": [],
             "category": "Pre Practice",
             "drill": "",
-            "time": 10
+            "time": 10,
+            "format": "static"
           },
           {
             "customDrill": "",
             "stations": [
               {
-                "focus": "Full speed, proper posture",
+                "name": "Dynamic Warm-Up",
                 "desc": "Instruction: Line team up on the sideline or hash marks. Coach leads cadence.",
-                "coach": "",
-                "name": "Dynamic Warm-Up"
+                "focus": "Full speed, proper posture",
+                "coach": ""
               }
             ],
             "drill": "Dynamic Warm-Up",
@@ -19395,9 +19385,13 @@
             "periodType": "normal",
             "videoLink": "",
             "category": "Warm-Up & Breaks",
-            "time": 10
+            "time": 10,
+            "format": "static"
           }
-        ]
+        ],
+        "teamId": "team_10u",
+        "dayFolder": "Monday 8/17",
+        "weekFolder": "Preseason Wk 2"
       },
       {
         "plan": [],
@@ -19409,7 +19403,10 @@
         "week": "Week 3",
         "startTime": "17:00",
         "lastEdited": 1787881772421,
-        "id": "1786994491063"
+        "id": "1786994491063",
+        "teamId": "team_10u",
+        "dayFolder": "Monday 8/17",
+        "weekFolder": "Preseason Wk 2"
       },
       {
         "lastEdited": 1787532114050,
@@ -19418,59 +19415,59 @@
         "startTime": "17:05",
         "id": "prac_kzaqadniw",
         "week": "Week 3",
-        "day": "Tuesday",
+        "day": "Wednesday",
         "year": "2026",
         "plan": [
           {
             "time": 15,
             "stations": [
               {
-                "focus": "",
-                "coach": "",
                 "name": "General",
-                "desc": "Day 10 Year: 2026 | Week: Week 3 | Day: Tuesday | Date: 2026-08-18 Time / Period Category & Format"
+                "desc": "Day 10 Year: 2026 | Week: Week 3 | Day: Tuesday | Date: 2026-08-18 Time / Period Category & Format",
+                "focus": "",
+                "coach": ""
               },
               {
-                "desc": "",
                 "name": "Select Drill(s)",
+                "desc": "",
                 "focus": "",
                 "coach": ""
               },
               {
                 "name": "Drill Details & Instructions",
                 "desc": "Coach(es) Coaching Focus 25 Mins 5:05 PM - 5:30 PM Full 25 mins Pre Practice",
-                "coach": "",
-                "focus": ""
-              },
-              {
-                "name": "GROUP 1",
                 "focus": "",
-                "desc": "QB & Center Exchange Instruction: Centers and QBs pair up to practice under center and shotgun snaps before formal periods begin. Rotate through all QBs and Centers. TJ 100% snap accuracy",
                 "coach": ""
               },
               {
-                "coach": "",
+                "name": "GROUP 1",
+                "desc": "QB & Center Exchange Instruction: Centers and QBs pair up to practice under center and shotgun snaps before formal periods begin. Rotate through all QBs and Centers. TJ 100% snap accuracy",
                 "focus": "",
+                "coach": ""
+              },
+              {
                 "name": "GROUP 2",
-                "desc": "Specialists: Kicking & Holding Instruction: Specialists work on snap, hold, and kick mechanics independently. TJ ,Brian Timing and rhythm"
+                "desc": "Specialists: Kicking & Holding Instruction: Specialists work on snap, hold, and kick mechanics independently. TJ ,Brian Timing and rhythm",
+                "focus": "",
+                "coach": ""
               },
               {
-                "focus": "",
-                "coach": "",
+                "name": "GROUP 3",
                 "desc": "WR Routes with QB Throws Instruction: QBs throw the basic route tree on air to WRs. TJ ,ED Crisp routes",
-                "name": "GROUP 3"
+                "focus": "",
+                "coach": ""
               },
               {
-                "coach": "",
-                "focus": "",
+                "name": "GROUP 4",
                 "desc": "Offensive Line Steps Instruction: O-Line works through their first 2 steps on air. Brian ,John First step quickness 25 Mins 5:30 PM - 5:55 PM Warm-Up & Breaks Dynamic Warm-Up Warmups.... Part 3 Defensive Pilliars/Shed Blocks Brian ,Pete Full speed, proper posture 5 Mins 5:55 PM - 6:00 PM Warm-Up & Breaks Mandatory Water Break Coaches get setup for tackle circuit Hydrate and hustle 20 Mins 6:00 PM - 6:20 PM -- Select Category -- Kickoff Lane Spacing Instruction: Line up kickoff team. Sprint 40 yards downfield ensuring every player maintains exactly 10 yards of spacing. Maintain lane integrity 28 Mins 6:20 PM - 6:48 PM 7 mins / station -- Select Category --",
-                "name": "GROUP 4"
+                "focus": "",
+                "coach": ""
               },
               {
-                "coach": "",
-                "focus": "",
+                "name": "STATION 1",
                 "desc": "Form Fit & Drive (Thud) Instruction: Players start 2 yards apart. On whistle, step into the ball carrier, fit the shoulder to the numbers, wrap, and drive for 3 steps. Brian Shoot hips, wrap cloth",
-                "name": "STATION 1"
+                "focus": "",
+                "coach": ""
               },
               {
                 "name": "STATION 2",
@@ -19479,52 +19476,52 @@
                 "coach": ""
               },
               {
-                "focus": "",
-                "coach": "",
+                "name": "STATION 3",
                 "desc": "Shock, Shed & Fill Instruction: LB steps downhill to meet lead blocker, delivers a heavy two-hand strike to the chest, sheds using a rip move, and fills the gap. Joe Violent strike, shed and tac",
-                "name": "STATION 3"
+                "focus": "",
+                "coach": ""
               },
               {
-                "desc": "",
-                "coach": "",
                 "name": "STATION 4",
-                "focus": ""
-              },
-              {
                 "desc": "",
-                "coach": "",
+                "focus": "",
+                "coach": ""
+              },
+              {
                 "name": "Custom Drill / Write In",
-                "focus": ""
+                "desc": "",
+                "focus": "",
+                "coach": ""
               },
               {
-                "coach": "",
-                "focus": "",
+                "name": "Fill Drill",
                 "desc": "Place 3 half rounds on the ground creating 2 alleys, 1 player is ball runner and must pick an alley, defender must shuffle and fill the whole Pete Focus... 10 Mins 6:48 PM - 6:58 PM Team Chalk Talk Whiteboard Playbook Review Instruction: Gather the full team in front of the whiteboard to install new plays, formations, and signals. Full attention, mental reps 20 Mins 6:58 PM - 7:18 PM Full 20 mins Individual Offense",
-                "name": "Fill Drill"
+                "focus": "",
+                "coach": ""
               },
               {
-                "coach": "",
-                "focus": "",
                 "name": "GROUP 1",
-                "desc": ""
+                "desc": "",
+                "focus": "",
+                "coach": ""
               },
               {
-                "coach": "",
-                "focus": "",
+                "name": "Custom Drill / Write In",
                 "desc": "Inside Run OL/QB/RB Reps of Power/Counter Review Dive & Toss Sweep John ,Brian ,Joe Focus...",
-                "name": "Custom Drill / Write In"
+                "focus": "",
+                "coach": ""
               },
               {
                 "name": "GROUP 2",
                 "desc": "",
-                "coach": "",
-                "focus": ""
+                "focus": "",
+                "coach": ""
               },
               {
-                "coach": "",
-                "focus": "",
+                "name": "Custom Drill / Write In",
                 "desc": "Passing 1 QB w/ WRs Throwing bubble/smoke screens & quick game TJ ,Ed Focus... 25 Mins 7:18 PM - 7:43 PM Full Team / Installs 11-on-11 Run Game Scrimmage Instruction: Live blocking and tackling. Offense runs strictly inside/outside run plays vs the starting defense. Physicality, execution at sp 15 Mins 7:43 PM - 7:58 PM Conditioning (Custom) Coach Dave Says Pete Key coaching focus...",
-                "name": "Custom Drill / Write In"
+                "focus": "",
+                "coach": ""
               }
             ],
             "key": "",
@@ -19532,7 +19529,10 @@
             "category": "Indy / Fundamentals",
             "coaches": []
           }
-        ]
+        ],
+        "teamId": "team_10u",
+        "dayFolder": "Day 1",
+        "weekFolder": "Week 1"
       },
       {
         "year": "2026",
@@ -19541,12 +19541,12 @@
         "plan": [
           {
             "category": "Warm-Up & Breaks",
-            "time": "20",
+            "time": 20,
             "format": "static",
             "stations": [
               {
-                "desc": "Set up 5 lines spaced 5 yards apart. Clap it up, Feet-Sink-Holsters (20s x2), 10 Jumping Jacks, 10 Seal Jacks, 10 Squats",
                 "name": "Warm-Up: Dynamic Progression 1 (Expanded)",
+                "desc": "Set up 5 lines spaced 5 yards apart. Clap it up, Feet-Sink-Holsters (20s x2), 10 Jumping Jacks, 10 Seal Jacks, 10 Squats",
                 "focus": "Make sure they understand basic athletic stances (feet, sink, holsters) before rushing through the motions",
                 "coach": ""
               }
@@ -19568,14 +19568,14 @@
           {
             "stations": [
               {
-                "focus": "Breaks down the tackle into isolated, controlled steps to build perfect muscle memory",
                 "name": "Tackling: Tackle Fit Line",
                 "desc": "Boys face partners across a line. 1st whistle = plant near foot; 2nd whistle = strike near shoulder to breastplate; 3rd whistle = wrap cloth; 4th whistle = drive legs for 5 yards",
+                "focus": "Breaks down the tackle into isolated, controlled steps to build perfect muscle memory",
                 "coach": ""
               }
             ],
             "format": "static",
-            "time": "7",
+            "time": 7,
             "category": "Full Team/Installs"
           },
           {
@@ -19583,21 +19583,21 @@
             "stations": [
               {
                 "name": "Kickoff, Kick Return, Punt",
-                "focus": "",
                 "desc": "",
+                "focus": "",
                 "coach": ""
               }
             ],
-            "time": "15",
+            "time": 15,
             "format": "static"
           },
           {
             "time": 10,
             "stations": [
               {
-                "focus": "",
                 "name": "Chalk Talk over Water Break",
                 "desc": "\n\nReview transitions between 5-3 & 4-4",
+                "focus": "",
                 "coach": ""
               }
             ],
@@ -19605,25 +19605,25 @@
             "category": "Full Team/Installs"
           },
           {
-            "time": "30",
+            "time": 30,
             "format": "rotating",
             "category": "Indy / Fundamentals",
             "stations": [
               {
-                "focus": "",
-                "coach": "Brian, John",
                 "name": "DL & DEs",
-                "desc": ""
-              },
-              {
-                "coach": "Joe",
-                "focus": "",
-                "name": "LBs",
-                "desc": ""
-              },
-              {
                 "desc": "",
+                "focus": "",
+                "coach": "Brian, John"
+              },
+              {
+                "name": "LBs",
+                "desc": "",
+                "focus": "",
+                "coach": "Joe"
+              },
+              {
                 "name": "CBs & Safeties",
+                "desc": "",
                 "focus": "",
                 "coach": "Pete"
               }
@@ -19633,49 +19633,52 @@
             "format": "static",
             "stations": [
               {
-                "desc": "",
                 "name": "Quick Water Break",
-                "coach": "",
-                "focus": ""
+                "desc": "",
+                "focus": "",
+                "coach": ""
               }
             ],
             "category": "üìã General",
-            "time": "5"
+            "time": 5
           },
           {
             "stations": [
               {
-                "focus": "",
-                "coach": "",
                 "name": "GOLD V BLUE",
-                "desc": ""
+                "desc": "",
+                "focus": "",
+                "coach": ""
               }
             ],
-            "time": "25",
+            "time": 25,
             "format": "static",
             "category": "Full Team/Installs"
           },
           {
             "stations": [
               {
-                "focus": "",
-                "coach": "",
                 "name": "Pursuit Angle Drill",
-                "desc": "gold and blue run plays down the field v/ air Hurry Up"
+                "desc": "gold and blue run plays down the field v/ air Hurry Up",
+                "focus": "",
+                "coach": ""
               }
             ],
             "format": "static",
-            "time": "15",
+            "time": 15,
             "category": "Full Team/Installs"
           }
         ],
         "startTime": "17:30",
         "endTime": "20:00",
-        "lastEdited": 1787881771065,
+        "lastEdited": 1788190672586,
         "id": "prac_0tn2jf3xa",
         "title": "Practice Plan 13",
-        "weekFolder": "Week 4",
-        "day": "Thursday"
+        "weekFolder": "Preseason Wk 1",
+        "day": "Thursday",
+        "teamId": "team_10u",
+        "dayFolder": "Thursday 8/27",
+        "location": "35 Angela Dr Carmel, NY, United States"
       },
       {
         "id": "prac_1787587188737",
@@ -19683,109 +19686,93 @@
         "plan": [
           {
             "category": "Warm-Up & Breaks",
-            "time": "20",
+            "time": 20,
             "stations": [
               {
-                "desc": "Dynamic stretch",
                 "name": "Warmup",
-                "coach": ""xúÏΩ]oI÷&xﬂø" ãµ$ÄîDJ≤dçmKñlW…eµ$øûûuCHíA2Kd&+?$”/^†/ÿòôõŸΩÃÉΩﬁª˝=˝v¬ûØàåL&SIJvª´XËÆ≤…df‰âÁÛ9Á4˛†
-ˇ<Èá›4~r®û<)|˜oπøˇµÒá¬œ¢±ó‡Ô‚ƒK¸Æ˚ÎsØ˝◊¸Ô¨ÒWÌÉ'Ö;“}¬ ◊Ú?ñÚØUÀnÃ~ŸΩÓpﬁó=wÒªwﬁçVm5Ú´;?™°7Í7£0zqCıt_=©q'*¶˝˛H7T2‘ÅäÔ¬p¢íPı˝—H√ëV^–Scºc‚uoBØ◊SûÍå¬Ó‹ÆΩ£¬èá∫◊ÛÉAŸ⁄è©sä˜}¡øgv•¯´⁄Tæ~%·ÃÛØË%‘èü*æ24Úƒ¯~}?Ç›˝8A:tá^0Äoz~§ª∏¡D›Å`ˆ""hLDd˙—ùí°Ÿãæ-!Ã„T/Ú∞:bE‚á≥vd ¸¸o02¨PEÁótùP{È˝~¯Yxﬂáóâ˝[≠&#o
-/•lYx[Â˜¥˘Åv^ŸõL"º≠ŒøvˆŒõJ˝§ıOl<úÏ†´Èå˘Åjm´i/∆1ˆÏ—*ûh›√˜«ØõTQÏ˝Œﬂ©ØG=UÉxï"¨Î%zFSá·è˝®õ˙≈8¬.
-QJ¡·≠)ÓæïP3‰y$QÿKÅ⁄ØC —Su4Jµ‚Ìe!Eg˛|Æ£8=™‚ãÍÑ
-Çü¶ ·Æ¥7ﬁz¿’£Q\º⁄jäÌ∫ƒ^‰˘oÉﬁTm©S8À@∫ V0≥Ä≈ˆŒí¨äyõÍÏm†aS@+ÃQıx‡(ÚΩ†°~áÔcÿ«0zt…aV}q§^{iêîã≤™˜∂À˝1ÒÒıD€’èãÆÃº€«ãX]Ñi¢’E∞%tF.Ån≤]ZËX∂›{,∂]åÆÛÍ…óù∂∫PÎ˝xÿ	Ω°NÈ-Pø?UÁ†D:ax≥•^í©3ªıµHÿj/(A¥Aw∂ø¡ë—{oZ—Jê§3≤…gê≈ÀãÇÂï^∏¨ôˇ≠x÷ ®4P.©_˙í˘MESıa¢B˛Ó€È:À√;ãj!ó¬ˆœŒ„ü‹i}C≤˛´vù€√CQHõ≥qÓÅô%g√Ωj™Ωàk˚ô˚˘»ãììûüË|€⁄?ÿﬂ;ÿoÏÔÏ;¡›¢‰ º‹˛aÓ=Û ™Ì√m´π-´dõˇƒ««<ôD^˜v–⁄~˛l˜`Ø’æ÷œÜ{∫ŒÇëßpêtd…—*%•öÍxﬁ‘$8Zcu°o}}Á˛≤{dûÿ‹>hnÔ‰ø•Õ„õ=©Mú"}≥Wv.˚;(örÈ’⁄Æ‡´ˇÔø˛ßˇUΩ÷Åéº¢}˜»Í∆zå àAoF:È©˙ËE„ÊáI•Û8Öﬂ˙]ÛèÊòCıD√ÈHˆ;˛»O¶˜„≈TDkØÇ»ˇﬂˇ(@|—t“P/ÙxÍ`ê¡>·•6æ˝Õ„œºzh¿Ÿaò`»°j˛ú˙›’◊∫‘Â™G˙KÙ›ïËÌjŒ˛ˇãëÙﬂÜ≤ £˝[øóz Q√ò∂UΩé¬tRTñÙ+K⁄£≠ã£≠˜g[/¿ΩÖ≠)Ω∫âO>Înäœ˝ñd˛?˛€ˇ˚ˇ¸c≤|Jø:€:;⁄zu§Œ”(7úù˙J2ìﬂéÊS’oA‹¥Í?àÿUò
-æ%¡ˇ„WÊmæπ—b∑èú˙†bE⁄ª°†–SÄNnˆA∆Ä¸÷•ræ¶¯˙ƒ÷SÖÔ¯∏‰Æí›ﬂ^åêÇlµöa–lµ‘e7Ú«c‡÷*züa@.Ü+'	≥E;.{Øz*M¬xAa˝á‚ßrù¡›»ÂÂG4‰ÆR£%ó∫M¥Í0VâÆ¿SKÈJ´n7ˇ-G˘Œ+≥ne÷≠Ã∫ïY'øZôuje÷≠Ã∫ïYgÆ˛õuÌˆAÚïÃ∫è∫∞ag”î"3û™›Sˇ>rë¡ãnØƒ¢≥7]Ÿt+õne”≠l:˘’ ¶S+õne”≠l:sıÔÿ¶€o›n˛J°∫!P4È>z£õd‚xÄf(£ÆÔ1Ç√ï≥6›≥¸∑•ìõÆL:z€„!ñÆ_OâaÅg≤⁄Öi?Åù–Cê-¸¥)õ≥<„æ#ÉÍéºË±ÕªJâ¸]ôwg˛`ò8ˆuÎÓÁPM0à›C˚éﬂÂ;~{Á˚≤ˆ2–≤#Y™®|9
-Ôk,2Z›∆ ÛK¡W5Mê8ˆBw‚oIÍÑ≈ßµ_é‰ïÎ“˝µ7!Kœµ¸zQXnï◊§ªY√7”êwìdYTR{æÜl? ï‘⁄.—å+T“*‘Ò›Ë¬U®cÍxT2ØB´Pá¸`Í»}ø
-u®zÜ‹Û~øˇuπGA%ø]°íÏ’+≥ne÷≠Ã∫ÏW+≥N≠Ã∫ïY∑2ÎÃ’øc≥.’:¸ÚuÃ∫á¢íruÃ+TRÓüïM∑≤ÈV6ùÛ´ïMßV6› ¶[ŸtÊÍﬂ±M∑˚lö.ã4ø/T˜@TR´¨#ƒ
-ïDWØPIﬂüy∑B%≠PID–ØHÍ*Èõ£í¬i‹
-ñ‘ê;Û5‰ŒCPI˚%öqÖJZÖ:æ]∏
-u¨BèJÊU®cÍê¨BπÔW°Uœê˚ıKÿq-˛G4‰ïtêˇvÖJ≤WØÃ∫ïY∑2Î≤_≠Ã:µ2ÎVf› ¨3WˇéÕ∫0|6˘Jf›ÉQIœK,∫*âØ^Ÿt+õne”eøZŸtje”≠l∫ïMgÆ˛€tøvá”Ù+ÖÍàJjóuÑX°íËÍ*È˚3ÔV®§*â˙IΩB%}sT“ó_zK◊bï¥„ØÄJjóÕ˙X°íV°éÔFÆB´P«£íyÍXÖ:‰´PGÓ˚U®C’3‰:ΩVﬁ>z<CÓQPIÌ≤y+TíZôu+≥ne÷Â~µ2Î‘ ¨[ôu+≥Œ\˝;6Î∂ª_)>˜PTRªl⁄«
-ïƒWØl∫ïM∑≤È≤_≠l:µ≤ÈV6› ¶3Wˇém∫‡Ûˆ0{ƒP›CQIe!V®$∫zÖJ˙˛Ãª*iÖJ"Ç~ERØPIèÇJ¢ˇ˛ïüCZ®•ØÙ‘@¢Ò9ÜO.ê&((œÂ™Ò\≤ïkàz˙°zÎÊo\q€uıqÙ+6®ÜìÔnO∂9ŒÅ(%Âﬁ\R.#˘ù ı˙:Ó|-ó∏ÚKë∂]≈•s˙£”o∑}ßΩ!Á8ÏèOÃ˘"˚—ÈY◊9_‹5ØE“
-∑¸Ò…:œt¢÷s¡óq¿Î¯˘Œ˜rDù/Sø›¡ØÎh/‰f◊SPs\Ï9¥î?˝’‹âÎÀn)2˘ˇ9,Ç<≈Ö˝ƒZîØÚ[<|÷Ampao∞ΩK=¡•(ΩÛ=ıºæ%|æz∫mûø˜¯˝ñ√Çæ›û]=Íñ{uuÖÚëá	cq–‘y1ñó€ÛÀíÆá&¢Ú«∞f∞¸O>wá^P¶¿¿º’·ô‹îS¿¨S¢¥ãk8îõ∆$Ø˛|ÉL#ïNT‚¡ºdÄ«—ÏÚ„Ò¬x&É4Pq‡Mb’—¿*ölêπ˘a?¯¡¶∫·mµ2jè>Üƒ#?zsv•7öÿ≥µΩ˝?“3î◊Ì¶∞öi…éßqé_BÕa	]áÄ/Ø~,∫ˆÕ3E£zÉ¸Ùí√Q‰{3ôΩø.∫ŸB¬+åñ$í;Nì·∏&[H‡‹è·ÿ°Q!ÔvC√QØA7ºAÔr¨ë˝níØß'˛$£i…¶ZfvÓ}®~Çõ∞Snåˆ„nÄ}*∏paöhx?™+‡…ª
-á%GdZd‚;¯∑V/ï·˝Ë\ç‰¡ÉßÊ„EGG~<·ﬂÕì^ã1À…´E9e!ÚZÍe
-n§¡––s≈Ôº`æ.yá√a~/›ï˜MZrhlellEﬂè‚Dµ…äeJ6Êûct/…∆û“”YÍWå∫:Æ“›yç<ájÈîˇë<7ØY ›.?6é‰!0k™ÁöÁQ¶ŸÚ7ûO•',ÔØ¶RÚÉŸàJ%3À^uû=SyüÚW7ªc±hµñ¨&aú§ëÆzóÄ⁄ìπ‰í@'à.Ú√oÌRΩÔçb]˛⁄&Z5ùœegÈ…πNÙ|Ü1ÁgÔpg[˝˝oˇIùyìO¡ùÁX˝IÌ©)¯^†ô'^î®ı@ﬂ©N8Öø˜z`÷Ç`√‹¶¡’Ñp†4π1ﬁ(ƒè˝>ò
-˙V*H« 2úƒ©Ñüπ(8Ò˜b0l¿”wvö{áªÍ⁄jÇq3’§e}
-ö«#Pˇ~OÅøújù4/Åõ†,b4§6¿=Só∫ÓV¨˛].lm´”ÒÀè^˜.k·`û–_˘äÀ_S/·ØbP`j2Ú∫ö>9O„°˙ íc˝ß@Å‡›‡ø∞≤˙˙L‘ÖÁ«Õ:Æ >=JìD>ÉﬁRwëg÷¨∫√pÇ´i(∂›TÿW=?“$∆‘˙;ø◊ÅTÖÀ¬º8sˆ/ß`2≈ˆoWi‘ágù˙ÅÎC≤~
-⁄™ìF\$je§Åπa5D›vìR¸.#Ô%¶≥ÒÕ=fbı
-£I6@zÊˆTa∫[=ı∆ìÍÿCˇ“#ˇ≤É∆_ÅßÓFgz≠3ÉLaóõDTÙ˘èO#/∏ÅÂ$⁄˛˛∑ˇíˇÚ,ÑΩC5£é`«‘π&
-≠øòÒéXa»<!PwC0,F»]ÕÀa%æ	à>XS‹T-‡˘‚èY‰≠ù]˛Gê(p˘Å⁄â≤o∞`vQæBöh/R«ëw7BÀ	éóÊ…v¯<ú ﬂ:ƒ‚∏Üª>%…ßöºO¯ÏÊÂ$ÇﬂÚ◊MróI8·˚eó°¨£ÌÑ;	ß·÷≠øÚΩ1æÌ‡õ∏Í¨˛ÊŒòªà‹∞!…ﬂºL$•ó–áHr¬Ûh?·–√ΩiôMıZ'Ê≈»;∆√F:A≥Ñ±sU§âr~B2d¶∞ndâD.	ÓÎÛ$ö6>ß/œŒ‘˚ü’€+xÏï?1œd-<Hë!·Ë¬;∞XﬁgX	ûà±Ä¸Ç±äÇÑ⁄^éøˇ‡1íS¥É2*—9uaV†÷œtüﬂÚ2Íd‘	ÔöØ¸	^D;Èè’:ú∫à«7>ä¸à»Á›hÖ∑∫IQ•~ÔUîVπº√|bÍ
-‘˙nƒÀ*4G˝uQ≠YCsó*Ó7”^ÑÓ#Rtò‚IZD…VX-FÛKü≈¿Ötc≤8prWÓ}/¡Î{Ù˜πËÜDî8%H:êÃÓı´a⁄+ÇKj9@evÛ˘»õ¢◊Oh&0í’ø©ﬁFl5ÿ¢•cÃßxºÎEëØ£∆dË”x¶à’2gÜï?(V‘ÄÏ*ˆËê¥;lêœwë@háâ¬a‰®Ó(LÊÖÅˆ5J¸•«ı7Â-~FÒNŸ 
-¶f,ï€òáq kKΩç¿¨¢,QI®í.pµ(|Gªr
-%Ü:aÂMpf·o∏4xUüB:`◊Äÿè“ ¿Äá Ë\wL¶`,n∫Í)c«Éc¢l~≠Ä¿ÔÓF≠_§ÉŒtÉtÔ\íﬁGè§GLãNÜhM†uác0«j§p™>QàÜùú**Nc$‘8ƒ‡d:∆Ø:~í›ã	{}]bÊ;ôjÚxy5råÃ#wÅ´J?Ï@’åYû£a¬cËç˙?AKüﬁP´˝UuÅ°§VÉåzäÜ=⁄Û Áî≥Ë2	óèÅOÿN¶4Tœl)}”~ƒ∫ßè v7À8§ÃøüxEáç®7üaèâµÔUß∏V˛[› Dıº”Œˇƒ1¯ÿîf´˜~πxB∑Ï¶s-ë HGy0ﬁÏ‹Ω:æ<ø∫XƒÄR—Yrt©≤D…iâm$µÓdK6ÊR$xï%ó∆êé√Ò8¸.Ÿ05H„Î•N5®Cì≠¸∫7õONÑÓÓ* ¶ú˘_ƒff1u<‘p.˜v6ïk‡éß…›∆™›¢k⁄m¯v+s∆Rºw√+^∂⁄Ï¨\GÂN:§≠g>õÅbñÉf¬≈”ß<8ƒ&çﬂCß£‹˙êrtV3˜,o⁄MA{°„	òø∆ø7Æãv¡˚~üb)EWú≠[4Ó∂0´>‰4›üÛ'_õNÛñπa¸¿ fM˜™4¿Í¨ÃÅπïfuÀ—ésƒt5üóÜ†HnñZUg
-DGè≠©˜M
-¢√∞©ﬁˆQ}´Œ(Ïﬁ4(ˇÃ‘Ü&#©{tÕƒãcÙ‰† º@¬Xîî«¥⁄T e∂–Áﬁ:¬Mƒ á4»ñ&ãÁÑ∞n∫…–Éß√[tìÏ¡ÀÿÈÀÁÌv‚öx‚Zû*â›ºˆ Pﬁ|T#ŒûE∞^áhû†§ä¡ﬁàÛ–UU6g	mÍYSf≥`)õÔË◊2SuG‚sî•∂ñÚ≥œéÑùÅu¬hÃ€/∑éê€`Ù£7•n}0,A<E∞∞qxKŒØØÓé¸qç€–Ê·håΩÄ}â1˘d‰Åê1∂†”$D9O·@5Ë,5–_ãõ}ºe»· _£∞®Féê–Oä∫ã˙Æèï ≠ÈﬁÕ›πèk8Å◊!æŸA;ÇAÑA ±ö çcGW„K°LÄΩ≠Hæûˆ#≠yˇòÿéü«t«õıh∆æWè?(|X©¶Ó◊F˜GÛ‘‹®òÂ”µ˜»¯aíL‚√≠≠ DHbx≥9√ú™n8∂üm=Î˜∂€˝˛~sˇ`O7ww∂€ÕŒŒÛ›fÀÎvˆΩ∂ÓÙw∑º(Ò˚ }∑ûıº~ß”⁄iÓÓ>É=Î{ÕÁ›é◊‹ﬂﬁ=ËÏÏ{{›÷¡ˇî&„Î8LÅ˛å∆◊w∫sΩH?≈/∆∫Áß„?ÚRÆ√ê>Ïz„âÜÿ·A|Ìuãø [‰…È/Ò∏õø·µΩÀµÛ√Îo¨•L=´˘Wa £ç•É≥¿QJNb)6!ì°ü†RÌj ‡ú‰ÜÔ˘»R®uÖWzxﬂuä«+∞0BøQ*4’Çÿ&ºª¸RïVœà`	∑6íË±Ñd…ße±õ˙∫2™‹∫Æ∂JÌÃ9ÎL\ïÊ˙Gå⁄êΩ^∞Ù≠º¨Î˛∑ÁáAj,z97Ω∞¶ﬁÇ√¡úw*´WoœŒ‘Â…’ás–π'ˇÓ‰¯√’€˜?´ãg'óüÇøˇÌˇ§å$ùæ„Ÿ°∫‘òjW≠Êë)ç©éˆpÍ∂∆^t££xC≈Ø´{JÜ#6uNŸß`'á@D¿¿F6È	Î¯’¬‘!~N¿ù∞üÚä/h}ªLO0µËÛÁ§¨M76y’W·%‚ü™cØßAb÷Ç,%$1®‹€∞ã p˛∂A_±Ì§µü|
-0*∏I∑ÎI+ –‡<ø’d=¸àar6Ωô˚)XGs6Åˇo}ò‡6P Qú8äW0¬YÙGŒ´®µ7~≤vH—Ç—í∏ã%¬»ó†Ñöj„≈?¨mr™â„F)—j Ë·ó`Å˙∂l”·wÒÑÇ»@dP ¿ØEá¸ÿ4ÅJi-1ÈµN˙ÂÀö >62¸{J~√¬n`sÜ£Ã(ÆÄ¯™O¡Ø)læé˛Œ[éΩä¸¡@GÓ{O0y3 ¡DPXO≤®∞¥O`çS*ôÃRC˜∏ääªÃ∂âI‰bC¨ÿı”(h|
-`ÈåL≈wÖ#Ô©ëàUFîKîeÉnEÈ†áZ∆∆ìB‘î-»b$w»^K¡ÇJbΩ_›DŸﬁﬁÓvv:Õæ∑˚¨πªˇº◊Ù˙Ìv≥’ÓˆˆvΩÌùÌŒ˜e¢îé2Y.‚åÑHvêŸqóÿF
-÷2aÏÙ∞ËøÀÔä¯ü‡<‡—0’+‡œ≈h»Ç|L"xﬁ"_˜)va´µ˝aì–Ñ?êÛ’˜ı®GL˛ 8É1p<üqwnéØNf2®3)Ìà
-nˆ“Ä%º±∆tH–`†6Ÿ⁄¿ÊiœÔåtÃNÄπQnYﬁ N=]üsKŒ˛W…Ÿ*^h’º©+éå˜Jü§{üBrí.snIôDé”!”8qa·x>Ò»éf)a*§÷Èê#u6ó‡7\•[U0?s«˚ëÉúå'C/ˆø¿æ!ÑnHòs’Ädôl¡:™ƒ∑rv˘A5FW$w~dû…Í◊a<«1&&Ò1øÑÊ§ÑÕg¢‚f›◊/˜ö ΩMáZ\Ï»}û˝≥cÌ<â”Nüø=D{”\€
-k/=¡ewYºh´∞¥˚y•º~˛V]∞≥Kö&»ÆºC‹PúFö·ñ’BU◊î:úøëN®ﬁΩ&∞ÈXﬂ«†IŒO(≥så£4∫«ò@S!ªÊ%ND·mï¥ûG· bQFﬂ∫vŒBXFÎsO\>±3˜Úî⁄P≥ÄPµﬁﬁé’ÁˆÜ≈uŒÅÚ_	:”ﬂ°∏∆˘‘'ÈO>§OB>·p–∆XûÿØ^Çz	∫-@oKI¿BDe$Z%QxÎyﬁ
-¨¿¨9´+"},‹TY¥È2D´ıbmr®Z˙f&\…Hn≤∫‡gvP7Å¡¡vE∞D%~°&¯˛¥X&’ëxS£{;Ñ∞%4Ø˘aY…uó¿∞}Å¬
-Lí‡ØBG¬ºó:@◊•»ñU&£•â NIò7y—\53TË¶Åﬁ%3@ç( "nhÒ2Z5‘çy·∞EF±ÜÄ±å‰jm7ßd€¢ñÌ‚≈8óñ.ŒZÈ/M $ı¡‚wP&w¶Z∑ÉÁ(ƒÑ˚@WMH!Ø	Áo†—Ëxúf9Ö_OûtH†ÂâÓy8CÍí—(U¨âêÈ≠Êô~ﬁ∞¿„™€»|$¶fáS!™óZíìRÀml!2àT2€Tzl·µ5¥VD&Ëªç"=,Åvõ±ãØıèÀ#s9:7+gÇÙ&h0t¨ ‰Ë≤å^±)£ì2HÉ¯2°w´⁄ñ\ À–›&lÜ„ÔJAÁcê$√ïc7„2ºW·¨≈Ë÷jj∆`m¯épº»Ö   "0p	tÜ>Îàa‹·ÑmVy1(fF•-bﬂ	}˜T†ÔêÇôéœ ÛUr “Õ¸è˛¥Çl|k€ﬁ˝ë¶ ãŸKJã^¿c:˛iÇ⁄ûÆAûF.ıÆ¶¶	Îôç‰3ŸCÃ*ô‡Sú•)O´[Æ~ˆhä%<‡âÑëˇ=*IP;TuÌ9<˚FÉ¿ÎÊ;DµÉe”$X;!›±Re.™}ﬁNpnònlLËpƒû2·ﬂ} €Ç%˙jÌ›öö†YjΩµ˝å†i/ﬁÿT/Ÿ*3*éHHQI£—∫ËFaú}’nd¬§•Ô¬ )j/ÿiÿ€ÅÚΩˇñæ⁄eı⁄!∏Ω†a˛jØ Ú?∂Ô$`“ä9æjë)3båÇWõ ©ély˙=B1(ª÷ˆº+√.)¨∞∞®ßv∑õ¡WŸRm˘”+∞c*˝8:w®ß≤ª@¥Ì¶àúª€Ï1èòaÓe‹iRƒç•∂¸ë˜&À*Iuá/%(Œê¬do¡3«ﬁgúé±<]è4{ı€fè¨a<Æå|^y´≈ˇÔﬁËdCE&n‚qIQ3	õ¥≈Q»Ó˚dGëH¬¥;4Íù^ÀñÍñ"•≥9j“Í¿ë∞ËåF$˝@<ä	Ò—¥åKk1ò¯M„úÔ5¡
-›C&)÷Åÿ„ÿƒ∫7ˇ=√≤ù{x⁄UƒXl"Å$%‚À‚ åÁ~˘˜¸{√c™©zî±”§»YsÆ‚r]eÊ}‡Í≥&âåxËMt˛%Kóè‚™ö+Ã‡]*‡d	Ÿ< ∆$€öﬂåæ¨`Î+J≠bT=6?d£
-V˜ƒª^ÇhpãE¨ì\ﬁÜx≤◊Û É#uâˆÓ˙+?Ó˙‚l¶K\È,∞èº¸IO¸¨A68›cKùΩø‹‰Ä¢õófŸaº.¬Ù‹zë¶ÖL¨1YSı:1MP±‡⁄Y¯é—ÁÜõÜ{a!ŸIQè*LÅ…ç+ˆÁm‰‰É)πÖ[ÅºÅØ·«‡#ÊáÕ9{VÆ–¥ÁÓïï Ÿ¸ñ‘tP&ê˝±1ÎKyc"¶≈°¢œô¿ﬂíNâ¯«31e. »4Å£©√»™Ùíç¢Æ2¯E^•Kô&ÁÓ‡êN¿~ªâ◊MÌ-iªn`´{≠ 5GéıR◊∏V|;	∏eNyl-…x≈Î¢¢LÚj–èò+5Ñ^cçÂ!≤UáÄMûh<¸Ú Jx}´G(‰Å ∞ÏH•>#∂∑‡ﬂëÒBn8´Éú)‚÷ˆp¯Â!õ/Ò¡vsGy¢F‘3vÇﬂiê°ïC |vo¶f´Å=Ô¬¶/∞9L'Fp89iZﬂ ˜‚¨ ∏ç“1ÄcCïP^úl*˙är®F9e∆
-9õâSﬁÚ™ÕA√ì´,(	!•ÂÍ«xΩt<vw ü’≠Î∑£_Éª„TB√≈£‡&†_∏µ—x3Ú®»Œ(/¡*=ŒZ◊%ÆÅÄ ~Æ
-TEﬂé'à≤ÿ2ÇÁ$àaπ≠≈	
-±ŸL[ÌóËœìQh“√%≠dYcœXV?l™üCeb	péa€∏òèTM∆ë/¥±ãÆRz{ô%ÒëçàbÃ=ãDë»%<£¬^\D.ñ>/âÕ>W4D ÏÓÅHDüu‹ ˙]ª÷Ülä£È∆≈®:vcÅHﬂäü÷O’Õ =zäÁvz
-4≈∂E†∂«Ü*å’NVÄñ¶`¥?Xy—«b|í~1Ò"Eù&QÑê|‹ﬂ…hJBâê´Çß$.F¸∑≥í(ªöôôU–5!<`¢©˜-l˙Nì◊Å%O"BÛà·DN2∆ÃDÒzÉ–uS)“Ïnôøä{§] ¨‰P} ÿå¨SCË?ƒÚtÔ)m—‰÷ú˛|çVêHƒµnSµMŒVSå2∆.Ñ•6≠≤@üòèÜj{Rê∫©¨ªIváâ_“à1j‚2ß-ò„,é∞ÄW†2j0vÇÖ˚Ùö)¨ˆÿZ6òaÇèDDÙ=ïBra+^†T¡Ç„Ï≈KôÑ∆˝0v*rVº(ö¢‚|∆ü®ˆ¯òà˙ ë”„I2%ó8Òÿ_≤∆)∆2â—pD
-Ó\ó·PÛ6_≤˙;Q8“ıNW«6‹#„qåMzß)ECåUkM wC!_t%ôãg≤5«∫7–lË¯:œ<÷a∏¢MV/•sü˙Y'ÛÌ”ÇÅÁ©@≥s!µ’ô/OŸ(Î£`W6#‰∫XˆıÖØ¬öâŸÉWS®E˝ !ó:Åbçâú8€¸ÓÔ˚œ:≠ÏÅÄf46ÉîìN–À¬]plàVòìbl€"ÑŒvY;r£¯∞©„ê3[– ™|˝¬a„bˆÎ–ÜH4íûGºG:+„æ∫ÁË}–‰Å€aUBILÈﬂW≠˙ÁBS,P\Ú?’FUÎvs{X-˘¿G|ˇã£ô±0ãX≥™Ç:1Ü áí#4v…Ö√>û8¨ ‚/é®Z%√æÅÎvDÈÚ8ÎÇÜúØ÷%8£1∫O¿
-c¿Ò'=n‘y?`œ!Ï'òG‡T{'Y<å±î∫ßJkÂ3^z…ßÅ!q¿Ø‡n6x›‡ßX“I±	/Ú∆ √˘ÅÓ+ÂjÇû7!≥ØSè4@¥{M|	d6 Å?'wZgπ~k›G~ß;g‰Vë/Ä±M28JpÏëÉ∑∫îï>@QÀ&\[xC9(|A¡ ⁄Rã-ådòmCŒFpπ4)¬Ö«UÕä.;‰tÓ+nµ–Òp1CnÒÊTn¶b°ƒNÖ$H—\u
-Ô#ÆœÕ‹>˙1ÖKÜ“:Üp˘∆dÌyÙæ6C≠’p√…“Q‘#…JlëÖ
-zØÓ>⁄*D¨¡√ƒÛh¶[„Çàtá`qB—2m¢„Ø«ºM©BÍõö}I=A∫Câòπê+§?¥®+Nl¥ù¡[ÙiﬂÛ˘πΩ˚“úÓÎª≤	^N÷®ÚB–– ªÕg&ûF]`…ÌÙ±QÇW„¨á«mN≈ÌpåpKÉœ7˘Åí3Ê¨∏Qó¿ø÷Y'®
-ùX¬Çã7“«êlù€©…¿6ldô‰†G ƒ¢&OÉ÷tv¨œ"ŸWS∞g
-–~ƒñP¢~Ÿn$Œ5Ás&8ñ≈Ç0íÙ{åÇ†^¡>LÚ;™åyüQvSïd™˜t∂v£Î√R3Ë<g(L	kÑ˝fH≤Y0€ˆq27P∆jÔÂ«8QYm©À;‰¸+\„cXô¯Ñs,˜>è¬DÇL ñG~ÚEùÉsT>⁄Ã†&5#∞AÑ¿ıÑ«+†/ÄDî-øÛ|[ëÇùË≥â=˜˝'mFû©Dü…≥®Ã¨â;í
-†¿ñ≥úŒ7zPÙ†0ËÜc#ëŸE1´büãÊJ	øSÅ¸„¿†ñ1X∏=/®Ó·&`%Ú/ÂızÄÊŸHGÎ"Y6±Iı¨ÈT5rGM=±dqﬁ›ÏE:Ó a´¨Y ö‹í¸Sê:∑Ñú ‡Ö˘0»’ƒgÙå=
-c9ÕdÊé8Òìœñƒ%La Üà´ö«Ev|ã<ßw&`09—Í¥d ÌÁ¬MÊ®˙êªq£ÏÆ1p˜Â¡6ôëÌÖw»äÎEH(\6•¡ñeÆ!)CîÓπ*ÈõàÅRÏÍHÃµ\ÙDŒW«vK»~¢1∂ØQÃtQÄ¬>™0ü2éÓj∆Í”á
- –F“»#-á)Bv{».à«s¢4KÊI .]_Fy‹â≠Ç¿.ï0›HX¸ ıW'[gG“yOú˚’‡Î±uŸ\ñÛ:E÷{äbd98¿ÅˇkzO˙ë¨t$(*b»AOfd©X5whöu—üÌ9'(´ÖJÀÛ◊[≈∏%ùª®˘wi‹u¨«XÍÅa≥NxT-´`õE† Lº⁄£ƒ†4kË—!©e≥"ıO•õ95^w—“˜n»∏#1‡fƒÔf6»¬¥K◊|ûom¨ï€SQ*-9úœØƒ2ò_íˇLÖ˚%ÊYªòﬂ°πTÀÔ≈áÿÚ>iSªN}∆˜T£OR…1∆ù˙#ÈgŒ≠£<Ín»Âê;Y\b‚|ùÀ∂π’E%æ‡åªvàÇ@ÕË:‚tÉ„#—‡◊¿,∫Ï&K†Ãä®^ñè\hÀIQUüÛ¸b·Ñ\Z4¶¢≠w_.rRò∞˛˛l&∂Qàë‘40,tœ˝ÖÓjî[à«d|…	b˝„≈÷’…}|x¬Ö’°! «Û»d∑–aJƒe›Ö£pn&¬⁄zˆïúÛ(∫®ù∑äL<ÜôN6”É√Ö$P»NàË	õèÕzgÉ r≤8y÷fäŒ¶"Ì›+¸ô…ˇëÂ”b
-¶‚ïãÊ„≈!6Ä¡W{
-[À´=‚yÀ°ûãaY,ù∞ﬂ"fº	â·[–º =Å„Â¶Ÿ).Óƒ,Ò'rPÕ˜°a"†5ÿ™∫®‹˛w[w˝ÿÆÜ«ë¨_¢É»1nÜlΩóaZCß—à?hL5s)Q,Àõ¶nyZ˛î%˙9¿˙Yk…n4;Î¶¶⁄Ñ'ÃO0H—»|‚	5∏v€«<JJ+è™HE”69UaÛ–â)¨Ó°ås ≥BÁKŒê•ü∞ÁqQ¥XÖd°®Êî˛óBüÁp∞ia43ßf9ÀÔ ©3êr)‚L<¶Râ }∫í(Âúç§‚±Rè{H∑‡›ƒÂ8¸â⁄ì£Ú∆™≤ëßªPIì
-‚¡)qïÊwx„‹€ÙIÖGÿ∂—¯|A∆Ì˙„˛ëH…ñp,∆.≈Ø€Â˛û¿ßEq°üPìﬁ$-ö«\àŒ∆L–¶}
-óêÜb]ºﬁåû˛å·gZuªAúH,∫Eq.±ΩPiøo—πx‹:öyœè´|¢øP(ŸÎ¬~ÇÓKD8\nìëhXNõÍ4áÓe√C∑-ö√òrúﬂ≈˙‰‡ÏcnˆNOà!Ô˚P±$¡-Í¬As…»K«ûÌâaﬁªÄ„¡Ïéc—ò«πqB„X∞ºT•3KÇCe-#OâH∞{Å+0pÆÆ6N87íc≈˙“£&FæC”"õ¬mu§Ã’…°zp7§Ã!G+S{¡Ω≈°\~ä”pÀŒ˚ÅÏA|8ç—È›Thb[d`òNt&Õß’/ﬁÿÂú|[πnR™ù≤i©9+àµø©E°YsÑÄÑO0¿h"éN|KÑït˚¯R”g‡ƒF0¿KCße§æƒgö°a¬Ω†˚Ìcf≈“ljd€œ”ZPŸ√™Òç/©.‚'#Ã07c6¥≥ÇàºoàGy-°D€É”mU
-·8JqºpDä=|¨Ü·HI•Z∂ﬂSº±ˆ/ÒGN≤ˆΩÎô»·H(¶.yÏ≥˜óó=D{ò0Ìmj©CIU¬Rp8KÎ=DVp¶2‡˙h9I›˝˘n6£`!P†á¢ÓñõòXá?e˚k~tÎ':aêbáã˚∆nc”‹ mˆC:÷1[∂≈™©bS^ﬂ†∫G·yºN~‡>FxÜ)xL=T4∂ªR#„7ipIò˜å¸ÑlüﬁV¶3ﬂ§dëóRS†&:‡˘^$õ˘.«∂Áà∫Öıº®Éí∏1ñhFjZ§hÚ—D⁄ívlnÊJ£È1ß3Ò#ÿFÚ8™m»ûi⁄ÂFœ© úù"â)u2>^H•ÆMã$Æ ˇFá`EJﬁ‘ÜàÙß†Z_òUJ≤Õ¿`≥çã<+Üdû[Gó˜àÍLÇºÌ}æœ"3¸óp`fM?ƒPAòüÕó„ÄÎúJè(ßq57~Òõ4¬ò“·à–œá◊Á&˚FËi“rÊœ:œE§L0œ"•oﬁ¶ôµÃÈBYäâçö-£ßçÖáÖU9Õ3ªÎ¡q&z?√ÆƒöÏüÀ€»8≥§ˇPÿÓ⁄mdÊP~$∞Ïdé∫Ωöç∫-cl»∫’´3jΩm-énÆS‘πI9'Nsﬁ€î∞÷Õ·òÎÅAí~œ¶‹§Õ^<¬Œ›ÔùÛHßrŒO∫é∞GÜQé¶L(!%#É∆)T`”tBsRÀNÑ„ìc_
-‹õ	NóŒg9ê¿9™Ú¬e∑• EöqJò’π±§-æœ<¨÷Á8líÀí1‰¥"·⁄lS1…∫f{x<Dwõ 5O©‡z˝_å=~Æùp)kÂnø7Å…+Ã“÷∞œí¥∆I´ç∑√zfÿo=óAá	ˆ§AïÉ&K’0†X"∑œ¡Æ Ù[∑µÚz«ÖÄ5≥⁄ãP¨VïÅ´è(°ÛÊ=6M¡) G·(J_5(KáéıD⁄r⁄g}mÇ‹Ω&˘∑9°ˆ¿E¥(lÜ9û¿	ƒ'áãÛìÑ„˚˛P˝Lë	ÃRVFsW9éWåÊ¡IX≤qo¢ÏÔuÑ9é:¡bD›êõp	gø˘qö¯®*∫ƒ£û—‹aóMı2∂jÇû!≤3]\1≥∑¶§ÒTp‹˝û√[íçvF∆öÛÔ-Ê»Ùm¿∆ë~»6Æ]˛ö∫¸©å7A<¯÷nÔCeæ∂x<,?„p±Ñ[∞¨B‹(pbIVÅ+◊´({ƒ¿ å^t“Ï)Í:[GfO]ÄSé∆<¿	√á˘È
-é3!ù`ƒ0ÈCÃSd//ÖËØ$a;«}(ø§EG`%Ro∫¡2Ï›û!.t4“|GZ›ô"á?-¿±Gf±Ÿˆ\“Ú∞’ÁÒá⁄ ñÙ√8n†
-åì§@%ª)[…ﬁ/“]øºr§ÏU~—§‘<çµx
-é=BY∂V±ƒœØŸ◊ä’v√¶‘vV_ë1ûÅ·àjÁ#ú'8"ØërE—8∆ñ¥Zz√KÜ};˝ëïó+˙6'Í_DP`‰
->8÷»Ö¡1•ë<9<?ú∂&°GfAÂ…πBÛ6Û˘FÆÂÊù	∂ÄK8"k3¿’nÖÙnœt„‡— ∆˚t≈èrE÷fjk)JÅ$e®übˇï’#ŒËï(ˇvUhPP4∞—OÙ1O˛ˆ‘ºz9Ê¡ZW<ŸV:÷`MÛôÑˇﬁø&Hv11Cb≤K4¨•°‹56örÆ—¿à⁄»T^œVJT|cAQJ—•ÖÊôgNŸ—˙Ÿl’¿„'∫EìÄ{ä”r¡ÌÎç8õÅ2_”µºπ∞E‘kä—+°˛}rO¸<“M¥Múæ'(ﬁY¸Ö™“WG√Chd î∑>#o˙]ê|¶∏TZ-±∫.µ]¯ó€¬’Ú	Kk≤ì•ÌÍ∞«Ÿ—°z{vd`zß¸úÀáa]MË°|'8"ú:CáK?¢°ô&Q1¸ä‹¿‹8ÖÈÒ ∆tŸSõ7û(èQÌSwr{ªML ÿvH¶¿ í§Òî¥C!⁄BÊbıa•zN¢)èjÒ^I˚.b∑·,PX0≈‹ÎH⁄Å ¿X4ãÏ›;?ä@R=≈à	eÓﬁÚh”˜†ÕN·›ÖsF~u√à‰“ŸGNfıH"lŒÄ*c≥{ËG òÓ•∏¥ÉµDO∞L}a!Årø Êug†l	é+f˚GÁÂ4Ã=©dë†¯à“
-N“œJe™˛XÊùzvÊQ√Œ⁄dn,s.#¸{xë3NÌOpthh◊:”Aøc√NPøïéÔUﬁﬂ5p,Ê]>MtùZålÚOﬁΩ?øÃ3µr∞õë?§*‹ß+ﬂáì¶”≥≠ÁM≥ÍC^BV7ct:à÷fC∞Ë˝=+ él÷\ˇ-ißUí˘ƒ¶9gÇ©ÉiﬁË%‚N¥tg.z…
- ëbD$ßµ ¨ìÚÉÏN¨4•óÛu”!Ú√Ü):èGò·¡Gº†˚r©ëÌ\RWêÏÓ5_—"∏ÀöQø∑'ãh`€òÃ™˜b\\É0"·kZçQTÿXì‰3¿ˇ¿Ây§sÇıMú⁄àÕ#;∞Æc‘- ,Ó{ç‹dFt|∆¶C:ˆ¨∞—áH@p¢≥h´“ÄpÂ¡nk¬˛≈«[ë‹TóW∫çÄkoÉ¸¸ È8⁄ó‚xŒeh¿ÿˆ}_®„ï¸˝ª˙açî¨ÒÄŒñ¢k¡¥¢ß—)!î),€^˜	E!y¨ß®1âDÇ_;:≈t”ôì{fÍÇ‹6î‚Oìòoàam∞Á‰ÂHét§´ç3—GàûÎÍ]\\ûÀ|p÷æO’±X+ˇ‚ó<ó2∞ç≤K·Ó´áÓŒ∏∂ßàqêÓ<≈à
-‹ïa≤KŸΩv¶çm®&n∏Ûÿs!…Ÿe¶áD¢vU(’ºfŒz≈Ÿ^„ÛK¢@—d˚7˛Yo¸X´8Î5rñôtã•>"è≈bràÇ+’Œ1H 2˜)¯SÇUÌoπqU‡Ù§›Önm öﬂxßë+˛2(,∏˝˚ﬂ˛Û/‹Y\ ﬂ…Õ˙Tü””KÍöƒ—^˚-Gº(ÈæÖPòMWeÕ l;Ô–ÎIˇÜÕ∏h¬Ë—íé;±zæmı¢H=ÏéÆUáäƒ?^p√åƒL‚°WÙÌñl2Y∂QØér›¨ôÙÎÆ §6>ïà6 +PœÛÀp|cK#jßHö˚ÙŒ4™‰®–îÄ&πy±‘HEÏ.ÉÅñ:è{¶⁄Ä—ë€l.√æG\C“⁄v–’∆	eSØ‡ì£kGZ—Tò≠[l[0í6’¶·ím∑`‡i∂≈hÇÜ	sÅd(Ë©_@ç∫Ø“päcùnuâœŸÊgaà=⁄I5˜3@@º]8Å’LdNÊÌ›HS…s’?—‹‰@&Ë¥gd„av8‹åc»ˆïk3˙“a’®¬÷UÁï§•'Á’ÚôW©F¬SÄimÌÄÇ„ª<˘<ÒQbs√0º—&’¢Ïùi±iQuFg#¢ö
-≠bÓìç 5ÌdXâ D“ÿõ3´¬Úª¡|€±©&‘+}º…$BN∆;Œù°3ñ zèvñjaéj<gêjV¯=Û¬ˆs#Vko›ë⁄"/≤bûÌ#… +jÄ˝YOƒ¸ã∏ÌﬁÓ9;$Q
-‚®ï±îtZπù°≈ o√Ω@π∞õ°oÖpöMÃ◊˘d˝¡UTPé 	ŒÖt¥ì€_¸@M0~Xk<zæœPãÍ™˙Íp;ÂDu˛ ÿ∞úR:ÎÙyJñ?ﬂ‡[öà‘˘’Ï÷S`ÉﬂtãÀŒgN»É¨≈◊Û‘”⁄ôˇeÕé“ªóN¨õA@ŸæRt8˝ƒ@”ÀÕF
-Ω‚Äµ±& F&ÃMú÷ß‹`òUNì÷A:ÓPÙJ*±*(©b,u√®«_0%:eAëŒIﬂI¡v¿r"“%êpºßi6»É2ÔXúeÄπg>~-›:^ScÇ5RÉ»ÈÑ‘ÉH˝ËLEqcvT{∂€ˆìõâ≠≤êhﬁDw˝æﬂÂó•Ü4ŒFa´·.ú‡ŒH;pˆª9`Î9úDº[6>tΩ’*L≠û(d¶É Ä&Ï«:;¸”¶°‹¥§≥… µÛ<7ÌI ∆ngh”ó'dJœ–§ªrÛK¨á§8⁄ë∫d>íiçD√Gê‹Bcrâ`_ﬂ‡ÏácÏ[zZÁƒöŸ∂“$Û¨s¸Í§ë˝Ö¢Y¯≤ˆPMºû<|3˜+∂/z˙ØŸ”«rjÛs√±]yB(Ôs”]ùâ6äö˛+sZΩ#ë¬°R®‹P?É´u2≈AAAo*ˆ"8ŒlS˙œñ¡”(+ëxR1"¡›f≥¡.ù«›\Ã‚≥ÎæÜ°â5ìbΩwo[d:¨ìôÄì…h+÷)ÅHΩ8 5æ†.÷n¬rPK“ót5v¶oÖè0|bwVYTÁ…˝e€ÍÇ{‚3f˜€”4t]+‡≈
-zﬂtl†…YèGÎ}“zYDÊÿ@ÜÔ%ˆæ#lﬂä¨âWè n˛c´ ¸v)FÖu‹dqDˇ¡dh^c2çˇÜ»õã¥dËG4@$ãÉj.3MwA•z „$&;”?8£CÖLÛJh3“∫ºVÃ—+SEØè¡j¡Cv"ø!‚?xrnÏSGeä√
-T€∞∂œåJ—ıõsÒœEh8mÌnswkÙ’j√c”öQ≤¡€£AÛÕ∏TK‘êÖ£Ò„≤§T,ô]”f{eÉxƒ¸Xê§qÔ8hZµfµBEµ~u≤A¯J¸Döˆ¡˚4e÷=£3âhÿ’Juì±ãS∑v;
-O™.ß£amìê9K¿*‡ë⁄Ó¢±gÂÜ§4M#‹ìÁVoΩj®´sä“–§hPÜW≠Ÿè_6‘…^ˆ1›óÁMQƒËà”H^Ô0c∫/Üq‰1ú]x{˘ûYç!P	JUt¶i‡@–ß1¬‹bgq¯sã¨*ˆÑ„≥D»∑|#
-äæ™ŒjZ≤ä~5ïBΩË%6Jó\…tß∑]èª~áF I∑.PA˘Í$få∑¡„`(+ów8πÕz¶ŒUã«⁄.ÁD†—‘ê“M:‘∫‰œ†uAÌ›lÒKıÚìê‹°S–h˜úôl‡µ3 ;≥9.·Ö≥πKÑ©ôˆºÔ‡¶√#◊ïá%ŸdäÛ~π[ î'##Êú.U0>çì,Ì@ºı∫$pixç√%sŸq Pd†áQºR®˜ŒW6Ïmpj-S#Y;JD∏ﬂ◊æ∆Ô"¥å‡€‹xYÛ:HÑ·mìú¡hjÏó$å‡oó$êI‹<w˛~$FÌÇcÖîë€íÆTwxdh°9ZŸ¯ ÷[hÒ≈DﬂÑ+iM˘RfÈJµ û”À=√R£òﬂ˜Uò¢k˙*®Ì˚X|-ªxM5Ÿf"D≤G4Äµ5§5ûÃm2z€ÿõtÕ6Åk≥Ó&∞ô".¨¡]`Ü&6?X–π;‘Û
-'l⁄ö3\(•—–(6b≥ˆ¶ıòF≥e'E§ΩÙÅÌFÕöb√õ∏B\N\ä£ã·&Y_DÆô√Ç'}øÔÊt∞ õ§-≈˙÷◊˛¶k[kÔÙ⁄P4åzÿû"Ñ' ›=!)Ú:õ~∂{'ârwS\õÃ“CG⁄m™µw'kÍèt'ÎA ÷5Ï√0-≤ˆó˜J¸lÊBª/Âu∏ôÜ´_“í:%Z Ÿ}–ƒ¸yÁ•ë√ÚπÏ®ÚôêY’5!¡ºævÍ˘íÄÓÅ©˜z∑œÃµÛ+π€Ê≈§úÍûÉè≈A»—8XÁ∂PÀ^ÅiäÜ©¿|åé…L@¥–lÉäÒ∆îo¢oÜ£Smz∂	N/Zcj(j˛L^Â…⁄õôõ˝ ò¿C"IO›3S8)⁄¸¬nóO)8I¸Ÿ∑π£Ÿí\∑≥“7’Ó&√Œ% ÕŸGs©–i÷≤HLñù9Ã  ‡A¿˛q`8ÁìAÁ¯º⁄Ì mÇË3Ω∑ù±ÕU›Ÿ  ¡Òé9≈)úÄÌ·§!Ê(Âaíêé‹Ÿ“õª«ó¥∑6€)ı6<á—∏-.$}§üOúÕWù?]µQc∫™€]îûsˇ>l◊s≥Ân£Ωöœ`ÇhÅE6ÌUË”∆¶Yá•ë&^Øâï√'Á©0/KtŒjm;DäƒP{∞u>ıà4Ö±é≠f‰à¸ñ¿˛(Ωøaµ]÷[”V4Î@Z%ÏüZxb'Sem~9,ô`7µè¿§ûP˘˛] å…)æ”êá_%27ÉÎvmfµÑ=6H“	»:l®vg¬_É»Ît´s^"+’ú)j+yìST¿FÅü™ÚêŸTëëå‹å¬ñBIﬁÓ}`ÇﬂâﬂEB^hp√E ÏX»€CùAqêOV±≥≈…ˆ?éÁQC§"ø}ÉH#ØaIZF
-"†—CSGP˚]ÔSÁ‰µC%Ò %æπ&à}ÍKûçö¥Ô [K˝Ò(`µ!≥1ΩQ√¡‹Q;⁄>ıEŸ45óKq>ˆx÷‹|ﬁunÁ≥~øûAîô¿Zf"YjáuœÙ@ñFy∑~ñ<ù-2]DB…`8ä,—úîFTòëß5N¸N'Ùy$-æ¨ëÌ !eîìﬁ2‚/7ñ ´ÓµL«åfπ.€IgﬂO˝Ûp“¸`W„>:gqŒ»@Ù‹ç±Ó,R∆e&≈Apé(d‘æ.ıU-≤†‡¢yÒ¥√ÑFÃ<ûﬁﬁY…¿ Â	Ë¡ë8ı∏“4@]YC…ë3/©ø7h˜8biò”ÊÂ3îã∑ƒÎÈqœ
-¬Qf+œÖ˙"Ü∏-Æë<∂≠œ•Yê¡-$≈—¡¸¡qi<Ï˘ ®‹H˙G⁄‚ìΩ¨xã∆*	b≤Lze“|5Dß)õ¿NPà6]*3ùŒT;}4hÑ¿óÖY(ƒœ˚ö≠Ì.ÃMDá±À‹‰5á≥i^ù©Ø¢È÷6®%0ˆ®§Ëw√ê%&˜?ì6ÉX#ÖﬂòérÙ:ü¶A‘8òoºªµ~ë:”ÖÉãÃ°¨πΩ≥w‰\ˆñÅ’ŒO π›8	0Ü˚é¥úLG®≥¢,k›•ÅyñÖdûB‡¬%ÿt
-Pî*∆.ño&jw∞;w> ˚“HÜÜAo:““J:Gáõc`Ô>¥k-Hk7ÆŸ'≠›g9ñã§êD9¢— 0å—∑ËQ•ñfYﬂ–,7îïx•·a≤”Ä˙≤¯≠≥W∂π≤≥gÏﬁ…ù"Aæ¨≠≤å∑ëIZ†¶DxhlXç˘÷˚˘ú˚3oVÒ§ù‰MùjõÚFæ2L^ †F‹ˆŒÇıs[
-—,∫GÆ£Bë◊\RN Ù/
-&¡«^‚ÏÄ#p)ÄlË(p2í¶î˝(0æX±¥@≤Ä…ó7çXhJfÀ8!∞éy˛å~L≠—ƒœÌ˚§§∏ÉÌ*mh{\áÉ BÛ<ÈÇôŸgôp?O‰∏Hã-ÙŒ´≠€\ÏzúuãëåÒ„ï∆;\XÛXNzy€›.◊nû∞<
-ßRQäx@a#›yä¬Ú≥Åíl∑∂8XÏA˙ﬁµ—ﬂ§8 òtYË/‘.»ÄÏõÇ≠^€:t|2Dü,H~ÇXM!ë∑V;:ΩëŒu\…Í ‹2xkûÉõuÓMv…} ãp= ¢ü∏ËN,
-[¨g%8ªj/ŒØ8Í€©XÒ◊ÕÏ'1'pFYj[pŸπ4_=“z∞Ê∑5ùÆ£Ω~A±iîµs≠Ÿ´ªPêV}èß¨ë„C˝¡gÜ;“óp@πLÚv_XO‹LÒc7∆Ò>ï_Õ®n«Ÿw,[¥âÁ¨¬`ÕÚtdΩ@ÔúÕÄj∞V˘…¿éÙïtZ^ZÎ	D¥∂?∑∂A˙Ωú*fﬂRÇFπÍì Õ§ÜˇiÃcÇÁ¨$°‰"æµ¶ôîÜÄ]∂©^˙c€±ñÓK°¢°3oÈ~û∆*ÇÊ)e¨sR}ù	Ò±hò÷ƒÁQﬂ•_æ∞0†ŒÊd§±%„≥óe∆Ê‰DåÚ¿=F9ÔB©£Ua€DOÛÈQJû0ﬂ=øU6.CÅÏ*J=†è’î¨~4”√dQır6œQrp“•‰[÷Å±Ÿa„”K:;“~`Ê…≥y<_í9C‹¢Ü&°ãMà«5Ù‘˙OÅ÷ts 
-Û‘ó{lÚÊoÃÔlÚA§T«dM∏uåÈ≈„ÚA~˚"NËÀßPQ†3èù£Jõ6ZXè©ªí?w—*…bZT∏Ï∞I…4Fá|6%òb«	∂â·˝@‹+uî!/àfíO√0Úø†∞£FbTQ¢s√?Q-äZ∏ ¥±»¸u7-È,R÷:_‹ÏÑªí†ä¿àdh˙Õ∞àÊiôiØwY8ƒ[ô¯“ËÇÙ,x∏mˆqg£4f¶jØáFô”õ∑…4}éehçb`W¬U 4Æ‰Â†8—¥éEë3Â‡±sS0›PC.¬´‡â˙cñ^ÁÏ•`Ê"Ü∏aO^ÃËûçaÚà≤v4dû∫æzÂÇºfÛª‹ç@¶,ãµ›√GÒ†eD®$3v8Ÿ)≥±ÆÜ;!uÀ8ë$µÂñtØÖ\ÿ\¨˛]:7òÅπtŒπóØ«d@Äx!I“:§ûT”ì€|ﬁFÙ‚∏Cç÷)]≤∑/P{.òw∏D©«¸˘ˆÁ´ÿ˘r'Ö]ÍRQ—ïÆl/Mù”±u—8XﬂeTÂ\f«™ŒßÆ#Ü¿∏ƒ à›O¡Êª'Û—õÒåÒ>ø≠8Ã}ùP”Jë∑Ó®ò$öŸGÉ¨<ÓNC_nvy˝æﬂÕm_ñ˛wí˙Yﬂÿˇ¯ﬂïyı™ˆ≥√XEè∏dD©Ó¨˜Rqà≈A>t"‡“E5ßB)wûìI~ãôÎ¯oÖf™Ÿ¥ø{2R˙úkøú∏CŸ\ÒÙÊ±èô∆r®é?úûfÁOH3ÃCyté≥w¥[ƒŒÔ4¬Mváü:ì8}Ã§yŸÄx£dJ5‚¬'Coü.*B≈¬ó àÖ»#l9ªê1œ0“π¡y∆HÃfSr"!)…˝™ƒeFŒ#0ŒDHú5Yë∞å)„&È ˙•Ö≤ö’öµ>ª<L√∂ÿmp\ù¶xÑ=Ï0…‹{–‡ˆ"jgjKø—©0ËòNLêRFÅ$Y‘•Ãﬁ‹±ÎÌ€ã.St^òƒL-eü«7…êRß«ˆQ≤1Oìí†¢™¬à#63$µK∫ï˜Œ≈≤7sgxe»OÍ{«52ÛÜ8!Éê9ÛÙß±G	c¨GßA/¿}≥‹ëOk÷í≤\∂a?)⁄Ç√¶ü&,=§|ó*¡í√¡00%.6*MLƒ°=¨'rJóïà&îR´2˙!∏(˜üÑü8Œ,@R¯≥ùˆñw ∫-à®8Lä†ß@ßI‰™”£VÌ5…/C-6“Ö<¨‹EÏÓ¢Ö‚oÎ®pÙ0üÅGw,Äè>yà¢Q’∂úßØä,¶“Ôxòù/	ˆD≈≠ªG≈˝_ˇ˜Ã∞¨ÍÎ˜+2*Ø¿V4¥ÀmµúXÌª€L8é}Ÿ∏ﬂïçHoôæ	ÇC⁄5Ë$‰iˆT]ìÿ∂¶3óÀ(‡Ó‰N”å„ë›∑&’#`ôÖ@Œ„∏K¨˝Ñ€bïf|»MΩ‡-œ∞\ÒRUï?‡˘ôO*üónÊ‹.ÿZ‡N€^Æ˘≤ñ‰N&ß‘S”@ÑcÑ·F∂¢«Ööñ˙Q6ëù!∞Xã%]Vr3"hü…t€Ã»5JOÕ«`sﬁπ;•·çb‹«f€I°¥DBrÎ	'ÀcÿﬂyN+ær·j;JŒ–cÅùüÖB∂1≤(@Ä LvÉxU“Ö÷û˝dŒhﬁ¨µÈ\Ç3·ÚŒıVªi®Ç]÷dÄ¨-"$™ƒ8ô∑	ƒjˆΩ¿7»"2R	”ñ+ìóQKŸQ£ﬁNyÆÏ81\Mjûc:¸‘ÃDÁ÷ôofF,ò0ßH∏Ahk™4®ds…$	ÁÛ¸/<Ú ù8å:¸7µ~D°iÊúfÎµòá;íÖP6I6›P“Øfù!lçú~∫ÉÊÃπ4Ïä2ÿ¢4◊PEÌK^QFË¯enöò€ñô;ÜCOùJnrAD[dËŒ!néõ÷Ã·¯◊!ÂﬁG¯h'Ø1ˇ◊s(!7ìÒaãöõÖõ…_}Ï≈Úìof∞øacnº0@/#‚cgAQwÒ¡°É™U9¡ß=Ú~Åm£©˘%'3®˚:É¯»ËÊÈ}±ûl‰no¥©¡≈±ªYçø‚»XO2Q(ù>ëπÕòE´†(Ä-BﬁˆOrª4Y÷ ë≥ïËÖ›ÛˆZîo√ï’b˛9/∂à]Ùø˝W≥ﬂÓ·ü3…f±†@.™¢M$≈}Jk´pÃëπﬂP®„»õ·GCÇyŸJkønäπˆ·:ËÙ{ddøˇv∆…W«Aõòvµ •8»{A˘3˜ÑõiÚ‚õ´)>ÀÕG‘‡∏Âﬂ˘ ∂“qêX¥›6Ó|o05sx≥Ú4„˙
-ˆ/ÓÑ÷ìq¢„ûd*|ŒDX± …Ê6ï¥A	"ôù,Å@–YnRª9Á4V)Cr0P(oâÌPuDóå∆}
->˙÷◊wé4ã≠ÅUÏO±iﬁñ±ˇ
-ˇE¡ÃèËè∞g˛uy•§uÃ<ﬁ†ùCÕF©;"ÃV§Ô·ñBΩ˚&ç¢©˙0Y|ﬂ∂#∂ÏlÓÈ~A≥`Çd.ÊˇësvÙµûpg!ÜòÄ™≥U—Â¢≤RIæzSµï´Ö≤!Ñ?8?z2H·º„v¯ïY≤åÁ|˛9!Ö≠¡9)º ìèhº_H√åôo≥ItÑ*|{!)…£≤ì8¡bÜNﬁ∏$∞¥~bMÅ‹jsˆaÒÆôÖà	Zà•w6CÈr7û]ës„K”£¯Ö3ó¢¯U~2]Ò€ΩU˘ƒ›]Uqo¯ˆﬁ€W¸æΩ˜Á˘WŒÒÿøπ<ˆ>¬QXìaå$'],€Õ'˜ë›o˘»≤? ≤R&(
-±s∏á≠Ñ5JœYvBr7ŒoUÓ∆π„ì˚& r_ŒUÓª¬©*]f∆¡πeŒ0U£≠À≈Ô
-Q¸:„áFM Ã}X’ì
-|_¸ÆÍßŸ
-g5déocÔV˜éÜÎê…f`ûdb¬˝ÀIfÌ=˘1‘Ó_ÜŒeÁ:qæª˙ÒIN(c¿Ó2ˇp{lªÎ÷vö?:o∞@WóﬁcStFÂ≤gŒg‹–Æpﬂ‹˘ëØgN#/tˇ‡†’jÔ?ﬂ›>ÿ˝^óúﬂÙƒÎ˜œ∞∂?[≠k/%^íí†|I›ª‹gÄ·M2{3µ˛≤7ˆss üË1ˆ™=$æ	¶„÷vk˚O¸l≥é+SŸè˜Ë	v§åÔ¿v÷¡üÜabÔ\Ãçt)ˆ∂7#C-÷33+÷nWu„èn4–‰∫ÉÏOSoÜ≈U’{—o∂v≥úó@ö00Àyˆız‡¨Î—Ê¸:?ˇ$ û‹ÆÁ§¿ÿ√Zxîôg~'bkePdúªñ'Ì=ÃAd¡'<ìÖz d‚–DLT·ò
-Á“.˘ Ùan	8Xœõƒ∫wj}Ñµì…ÈHüPµr˘iÒ{¯‚˙6πûD˙z“rÈíL'D∫IÑmr∫9≤&~¬t≈âWó⁄ãClQÙ»”cı|ÑÅó∂iö˚kuç?ﬁŒ≈m¿…√€€ÌgÕÌÉf{/Áò¢~Â≥Ò‹⁄?‹…˝ºt˚›Û√Ì‹w£ê…=!<Õ0úx]ı]ÒKŒçTì«w2&≥ÏáWBáaòõV¯Ÿ„÷ΩÛÑQTÆkÌ9◊Ù1ìÒ>˙≥ª|*hÑ:NÄaêv3GµÜô¸T"lp;Å}É“NtnNË	7SÌΩD¡ÿ⁄oÔ>€ñ‹wñ=ÅÁÈ^Ò¢äÛU`íˆ¬Lbp@˘÷OÛùZó‡ê˝o∆!i‘ˇ6¬fò◊ã7πä–ÇwÌ’∞ rˇjz£&∑ùcîSKÏ◊aâ˝ÖY"ÓFe<óLgü'9LOŸD˜ö‹|>7lv‹ÂÜˆr‹pôx=?/¬n@Ò/Îë∫@cßµ˝¡Ω,|Ãv·UØC BÒ—R?R©8úèCÏ;pÓ‰ÍÜ€≠b∏÷v!ÿS°HCE≤§‡5¡ÏüJ:è“≤2•êC\Ç ¨‚ªÉ:|w∞ﬂ›µñQWqfk[xL`#yuÆÅÃ;r…}§ ÿØ5ü˝û7∑[øAadZâà1”Pbƒp™'£b+¡lû:éÜØ‰ÑΩÌúê]Tõ◊I¬	Mjè+9ΩÜM[a¨è`4K0¬Œoè.áöÊ“~å¿àÓpr r—¥
-W2ËÜÜƒæQ5…Ùã*ñh’aâ÷¢,1ÚØmòbÊs√¢ã©#ı'ÂHË≈y†¬v]V…z\xi:ä’PFàë|eT‘AØq™A]EÙlªÇ«^FÑÕÎLûıÚ°Hz”¿√‚8ÇßÜ0V õPª∑èîO«Î˛Q<¿°ä’⁄uX≠Ω´µó÷Cm8√óp:£ÅãÉÊBàJ{öAÁKXØ]…zø=Ò„≈ÜBú¸≤m:)xp¥ˇ@;ja“lïje¥Sávfá%ï≤√ÖÓQÛ¬£1‹´›<O(2[*á*ô°µ˝€cÜ◊®U§oœÇ⁄Îà∏ÕÌÊòÓ)5<CJø¶’¬a∑7Ï. Î!·¨∑±Wi\à£◊‰Äˆ|hUp¿N·ªo„Â_ˆ>]DH2ÖDü]Ü˘ÕR™àní!ÉΩ‰aüG äQL¨êdæÍ$ã4h£J€´√b{ã±ÿŒ“˙gvÌ/atì d·rB]±≥¡O‘-vé⁄©dπo∏˚v∞ù§@‚9≥tπi∫4;+u¶∂äóíâïQ'H∑∑Xê9bIÑqÈ')—ƒlª…TíÚ <ci!cWì+~É¡∫Ã¬6“‘∏g8MÜcje …ÿÄI∏é˙÷'Dj¶•*Ÿ¢N†no±@∞≈r∫háu—ü2YÒfæ2™ÊÅØ¢ÀïcÇ„°ç|≠ﬁ•—d8Ωü™‹£‚{WË%vä^b=⁄≤—∫:N(#qí∞Ókä=°∫C,Çsÿ÷ëÂªÈW≤\ù›ﬁÇ1∫›%Ynót{7”‡.±Ñé"}P{ÂÃ∑[≈|ÌgÛôoßÇ˘ˆ˛!Ò·¸À.c	I™È1l!Ÿ‹†LŒ$¬£©ŒŸ$ö‡0€±î3MÜaV2‹Û:˜|1Ü€[í·ˆååCà˙éÔπóD~Xû∑‹õÀg≠Ì ¯ﬂ≤BŒÆä'‡\\‹e:dπe≈€Ã+/$ﬂ]¢©D˜Ñã‰àë¢Í†é5é™¯(ª®=[íèû©K‡4óü…%©uÊ›h*µÉΩÀ ˘ÈY?U˘ﬂüW|›E$◊CYIHÚjpçtuLÄ(ï<T'˝l¡Ù˛í<¥o0HG^§$$}ÍÉ-é¬ÈeÑFf!¢&öìùÿØ‰¶
-3|YÈî-ÀÂß∆§gﬂıõä%å∑aN#÷ö*Ô•ï+"gB’ïºU'Ë¸l¡†Û¡\ﬁJ¬4
-cQ ao“≤‘øH≥®Ìh)è'5√ÚCyÌXQ]åjïÒ◊AµwÁÛWëá\˛⁄≠‡Ø¸öñéı‹<È?0èÀÆé^ôwVÔÕÁ˜â´-Â€:‹b£∑ÌW9íŸ4≈.∏H⁄»™åÕÌ÷Qx7™dΩ:Ógu‹ã•Tﬂa¨dÍÃÜ<ıGc≈AeUëK;X6ü⁄.J≥\.-¬û°˜Ë!áa÷Î}êk|>≥˘¢÷gÇ5Ï<sãÙ èıƒ—ùåÃ ≤FD÷Äî∫—=ÉÊ
-ﬁˆÃÓ1‚w˚˘≥›ÉΩV˚Z?ÓÂ^22˘∑Øu“Õg6Á⁄˘ÃÊ\ÙhÃvïÍπÕ&âä¿éV´ÕV©,´Êº
-Y∂l»Íõpû%E€—EJ™	π¢4h‰Bôç¯ôp ÊÜÆÀ≤^gp7‘aΩ÷ıØ„ˆóÔêı>Í^¿Ãg¬Ê—¯3yÍﬂáÂÅ“jÆ˚
-·ÛÔáÎ≤Í €ÉÅfî∂ãÄh`∑íêZÔ„Til2±,ßµ€I-Nk_?è˝Ë;‰¥´!02öÉVBå“ú:©öúV˚Æ9-CQ30©ä·âh*±Z«¢±-i~∞·0ú6	˜Ü‚˛Ix˜;ﬂòí›o›nÆ√;◊ÒÕ˜&È⁄KXt9ÈÉeQ	+ãÆ≥›Mí˝Z›Óı ÿ	æCf{êEWÕy_§˚˝Ë÷∏E7¸ºﬂÔ◊aΩΩÎ(—œøC÷[÷¢´Ê∫
-Œ??◊˝C,∫TÎKN{v´;¯9mYãÆö”æˆ|e—ïﬂÓ≥iZÀ£ÿøÓ€›Ôåˇvñ∞Ë*ÄÀÇ{V]-fßq+®√l◊ù·ÓÌw»l≤Ë™9Ô+¿›ø›˙∑Ë~˝v¢:¨˜¸z∑◊ˇÂ;dΩe-∫jÆ´ ≤˝Ûs›?ƒ¢√gìZú÷⁄æ?ﬂk}á¨∂¨IW…jÌØP¬±2È D]w8Mk1`Î:i=Î|g∏ªÑMWÅó<®Ã‰Øl∫á⁄t_~È’s`·#ˇ{”¨ª5Í™YÔ7ù˚áuù^+èªöÀ{;◊ùÒŒ¯;‰Ωe≠∫j∂˚gÕá}øV›ˆ‡`∑ûò€Ωnız˛w»jÀZu’¨ˆ™°VV]	ü∑á{µpÔ∫˝¸ÀÕ∑a@ÍzáÎ∞çÓ≤ÁªÀóÑﬁ4Ï√0°ë»`¿¥ß‘≥Ápmÿ∑Ñ ∏tÈÊ7áﬂÌÏaÀ/=Ú‘´H˙l4‘œi®RíF-Ê[|çÍΩ3πÁ°˙ëÊæÎæ
-:›ÔpX<rÓπ›®u9XΩ ÏH!Û{èxJ
-‚Ç/o<*Òän>¨ıóºÖ‰8TjÔ∞µáU2Î'‘20†œ’˙áKÍ;x=occ£ÇKw∑wû∑∂€ª◊€◊”]Ø:gkÆ≠dRs—?îI∆ó_¡=YÒÂ≤|Ÿ∫˛≈OÔ~#|˘JøÛíDáÍçﬂ]é=øÇ≥€n·<Ëﬁù hΩã{Ø§î˘ﬁio∑ıÌÿ≥ºäHÍ>üˇuôÆ}ΩØ¸FòÓ‰◊‘üP»·'Ú|ò,«v.Ã≥äÚã˝z∂;˘Ûá∑ÁÔN~æRW/ﬂûù\\6q^ãô9ÚÓíö7ój›»∑Ò	_âF∂·òßÕ8ÎPãCä˝¿ı}5S5Ùnu˜ø˝óÑ∆ìjÌÊç∞i∆tC≈!]”≈qq∏}Èˇ)mvıáŸs∞+•≥>‡•Ô~yˆ93
-*ÿˇ`e‘3
-û=ñ|ﬁΩˆ~yÊ≠¯ÚÎ ^w|˘hv√ﬁı¥=¨F˘ˇv¯Úk‡aW|˘U¯ÚŸı ‹ˇ≠8Q„ÀÂ≥ˇ|˘ˇ  ˇˇÏ]Îr€6˛øOÅqgv›ôÿ—Ö∫˘◊&≤ù¨+%Æ§÷€]g80	I®yëyq+œtfü•è÷'ŸRî	ä )J≤$[ôI†‚;ﬂπ á8{'óıæÊø;æâ¸⁄É\nD.õjÛ◊°<›Ò≠»ÂÚorYT.[ÍìˆPy#rπâÏ‹É\nfëæ§÷*wÚóaﬁä`K‡=Êf≥¨ÕÚÔ¡‹L÷ÂA0fE≈e„≠,≠o"'Û òõÃ™äMMû¸V≥X÷ÊA07#òä˙dñ≥xéÁA07#ò5’˜ú]Ú1ÂÂ13$s^'˝&›Î–!I;q5ø∞J"uEíØîl„Nèkôì`%S®î«|Ê›”˘°Ú∑V◊w=‘f)'‘b≥j€˙Ù.˙ƒ‰{®21OÂìù¿º˘¨´˛SEû ˇ:ßtßºzÿë‹%•ŸP«ò?Yæ†PñkµJ©æ›§¯ÇBY∏∂ÎA(7#îMUÍØ%Ô≥∏Pˆ»wI([ÍØ Öo^(‰;$îïí:5À”JaÂ©@Ç˜›˜áCòäÂR≤:$ØG¿ó1åd≥Ñ>ìïÈÈ∑∑÷lha&|´TÜKπ%S˜§<ÚFK^<KxÙD]™Î Fòcü&™ÛäòRQE∑÷≠ı¡ugg*∏gÏ˜æ≈j#û|∆∆0ºÈå’ˆu∞é⁄ ¢ÎrÕJHç<âŒP«ø'®ã-çZî5ˇLub≥Îÿ“Yy‚Ÿ±F@6{÷u:≤˘˙ÇùŒ≈ù≤J¶%˘Yº˚¿ùG7W›>yYâV/J¢ıøU"+Ÿ' —⁄KIﬂRY3Éä—#4F]Ï∏c&#g®7≈†»|◊f_cÅY≥¥‡3œôa≥¿t9‘≥∆ˆòÑñü)t±<¢yGG–â∫\{€6 X`Ù#q¶\KèjSÇ=Ñ˘ù∆	W]÷âË“¡Æ®äâ˝¡“Ú(dKmŸ9yœ‹Æ®Õ“É¸\ã=·vÏ¯wË+æO#µ¥ßÏ`©›$uÍ≥æR6_Å@∏Ëj‹ÀöJ¯,•k&ŸÁ¨Ï⁄clö‡≥¸ÎŒ¡cjÚç36ˆŸ´tÑßs«◊0Í˙öF1˚ÎÿIJ{!£ØT'ÍS„ãŸ‹”Oè„‰≥“U’◊Gªî“Tÿ√#‘[˛8ëñt´I^€TÃe‰KLpbﬂEc˚åMÉxë˘$˝e<[¡£æêw=LïÀ/lòS8#4ï<iÆ‡"∫Ùù!∞/iuZRvi´°∞˘ª¡ì	µF¨(Û5tÄ∏@¡VI U≤¯/ˇŒÙ∂a∆SÔîIÃ∑C∂{n2]0Üq◊tﬁ∑_R<Átjsnt.n◊‘'€X«éÕ÷b¥5õFhy≈\…vMQB◊¿⁄£µÇ®≤ßøõ/¢s©U‘¶=ËŸ¬yôÒ¯a
-ÉvÇÀ)Ùë˙õ<yí>m.˛‘Uã>x{œÇ⁄1/˙»+K3Bƒ,™o/>>NYDàÆ˜“"&WZ∏Fn}ïk~\l¯Ï¿JËÃG°πÿ‹P=ßºKŸà≈ÿÃ¿wM∆Í¡«Û4*Àã2ãs∑Kí¢ﬂmq*'∆±O∑æ9·KSMZı¨≤ûÆJS}xºW÷/k¡œo·-Géx
-gËøãh˘Ê¬R˛ê˘áÄFÒ(Ò˝Q{äùú8‘ƒŒÙ⁄viÑ|Ô#'MDcßéÛ]⁄\;:h;ﬁEA«Ωè‹ƒÍ$•[áˇ(ˆ]AÑ?ümﬂa ó„0¡∫NÙ‘&Fc5=œ4ï‡BlÛ±M≈3§úÚ◊*·µ˘•?$⁄`ÜÖ"ƒbà†àEp‹Ù÷«ø—ÒM/éﬁ~√Q¬7©ª)X.2±8ø»ƒ‚ó2:\dÉq—B«Á|ø}§!$tDÄﬁƒÍzÍkgmä™èé·”ˆå¶3ë«√"⁄§X]O]ˆ3—¯O>=≈“í@4„Sπ$™À‡¿ü∆¡<~≥@ Ü≥Yë–P?Ê ≈J0pM‘m„â!4xéO∂L~ââÉ(†D Öq’ãòÙõ|TŸs´,vwg€'B(ÿÆ ÍHÙ≥Ÿí◊πZŸÑ4∂≠π™bÕ¨Ià∞`K´õÛÓ˙Ã9Ñ›=7Á¸2¯≥ºËsæ’oÿr…éπ∫µΩwuÀb_˜?R°ö:ßö}ó∆◊N6ÉL0zü2qTá¡*8‘WÅ°∫≤Çj	A`+ò"“Gã˘V9ÏvNﬂjœCÒäÿ…eÀ¡"$R“ˆ:÷ÿe'∑"vrø`ﬁâçCtìπ∂öﬂÏh^{πW¯wWÏX]◊K‘B€ÉÄÉè¿y,ñÄ"9ÒPîñBl≈YÓáÜîî∆Éãª:-™‚xc∂[(¥#≥Ïù›Úr˜A∑*ﬁÒ∏–u*\º∫4ài¬3f‡qôÕêénNÇ ´:ª≠-£°àù¨ˆÿ°¬%›æ}o´C±Feı
-l∏"¶FKˆ:Æ@MemÆ) ds"_ X¬∞
-’≈¯o5„≠àw82ÃEêsíµXÿ^ÌPK[ßBM¢óX∆´ÜîDÿWÉ√é5Iƒaè≈Ò}	¯VYûÓßµË´óX∞⁄>YƒY,ëOÑƒ,ø/àŒ àl∑ìm8÷ºÇªcl©ã1b	À"å‚yÃY@≠Ö1ùåYY≠5◊Fu90Z‚Eﬁ≠°yq!|öÊ AòóÙ¥∂ØπÇüQ~bPÎ˚(5=ë
-ìc≠Ÿ¸≥¸◊_lﬂœ≤`„}à|rl2Î«ÉÄ›pŒÇdŸ~¯+7oÜÕr&è(Ãﬂàc⁄ò`Ωmcm¸º5∆ﬁ˙aW∏F	•_áC5gcı¬\›aî´´”GÍ“ƒwcÉ0	˘…1ÿ˝cœõúΩO·Úâ¶[ß¡|Yxr™ŸÊ˚`n\mLtﬂ Ôõ∏9ƒM•t“ öv¢4jıì&Å¥a©UÆj’÷π;•ö{$cƒÏ©Z?âÊ≤%ô ıŒañÁZÆ4ZJ©©•
-R8‡ÎêébÀN≤õn@†›∂Ì9≈ÛU=æ˝ñB¸,åÅ¨sÙN‘UY8û}·‹LnIúªóªo˛PﬂÊs»»7∞”_¸\_iæÎŸ&kÏ‡;bLxzt=∫πG†™€1ù=?“ezWzW¯ﬁËÔ®?¬˝ûË‰m†µÆ±ÓB˜K‰ûΩªÄ7)7)ÛõÊßsrw‘ùN‡åﬂËØˇ˝âÿL!í∫¨'áWC÷ì≥)Î©$≈eπyE∞–‹á¬Z`˛C°ŒÖGÕôÇ9b≈±·£-çtÏëTŸCOæMï˘…øùΩ–¿u˛ñƒÛàπ˘âŒ+CﬂÒØ˛ó©„ËùÑ∏˘‰ÙWd/π]Ó$[p4√◊‚ÛË¬Ù^xJú/~h˜æ≈:‡;y˚‹™t1Ãßg;S™”>höÆáGüÇ1†¯–O°ìaœ}á<B`Óÿv<Ÿñ1=ÂßÕ$ÆáM¶ËÀçäR/Õ˛˜oÏ¸  ˇˇ ôù>»
+                "desc": "Dynamic stretch",
+                "focus": "",
+                "coach": ""
+  xúÏΩÀnŸ÷&8?O±”KHâ§ÆñQ¿±d…v¶îVJÚ1N’iA∆&¡åãd∫ˇ∞Å.TUˇ§™?jPËa£gı<Á™°◊mÔÿ"CîHÀrißƒFÏÀ⁄k}ÎÆT˛Áü˛‰¸¢˛èZ·◊g›(zÈ≥=ı,IΩ4Ë<s.ˇì{Ôø/~/Üæ’⁄-=èûÖ	\˚wÖ+Â'–›°GOyvÍMˇ>´›æÀ◊IÔ:ÒÆ¥j©ÅÍD›i_ıΩA∑GYË'5ÂÎÆ}´añ§*Èg›Ó@◊T⁄◊°Jn¢h§“HuÒM˝h†ï˙jàOLΩŒﬁË˘æÚT{uÆ‡!pÔM_©æ‹◊æÑΩIcÎFù'˚l“≈N‰u˙t±tÌü 7W¨ÕO˝ˇ´Zú7fˆ2ÒGﬁbXäõ~ê§8√Nﬂ{p≈b›¡m¢ŸÈNKao¢•JhyxeËIi?àÌMﬂg!^á=XYé;âÂ _©¸ÿÎ¡\àPäC'ŒLë'¯_¬ˇ>”¸0z=
+Ù¿W˜õÒá.Ã+	Æµº1Ã/ŒBÿÎËˆ8µ°vfÔçF1éWW ü˛öRøh=¬;Ïh:vA®ö5ˆ<$√ Ü¡W≠íë÷>íJ0yùtÅãW…¿:^™{Q<vé Aw≤†<á’≈r)8–32ªá1µ˜aG~ãˆ6ÇÕ|ÆˆôVºKÃ~ËÃ¬œß:N¢0‘ï€˚XzK"T,¯Q‹ÙB{√ı˜!‹=$ÂªçúhÃ∏‘˜y˚˚–´uußñ<Ñ˜ﬂz˝√vÓC]ø5l»Ç)å˛mŸè/¨©ü£>¸{ ˚≈Ûç≥}ı÷À¬)Ïy˛·˛È⁄<„˚tñ®≥(Kµ:À¬Vïé¿9Ï⁄’7^ËãüÔwÕn-àfÁe-u¶V?IøÖ˙Ö:¢˜°¯~ÆNÅ’∑£Ëj]Ω&å¢ûël∂Ó«:Ó=7ã9Î¬èØì5ÀèA¿ÀF%¶˙)¨Î=ôﬂC±˝√NµrÛu„BæÀ‚x¨>éTƒ◊û¬:ﬁu`˝n‹s˝›ıµ?;/v£ıÒB¯ø⁄t^ØD∆mŒ≈©‡JŒÖ{◊X{1ﬁ‘j¥∂›œ^í˙A™}ˆŒÓŒ÷ÓNswwgc«π	ûß<µgÕùΩçÜ˚ ÖÊZ´±◊(\K·òæ«G”OóÕFÊ^ıΩÒúM#{„çUÛYi ˘eöx”,î%¬ú¨ûÙûQÏu.a"ªÕ∆ÀÌÕ›≠fÎRo˜∑Ù,ãQ|„i¨ÌºRüÆä#≥KŒÉRuuäå_∏+Ë•Cu¶Ø}Súq™ÕõÎç›zc£¥§≠“√ûÕºÂ=‹mællÔ¥∂v^:7≤K«r2wlñπ£Kªˇ˚_ˇÀˇ•ﬁÍP«^r~#aÜåd}¨SP û´O^<¨UÍ≥c¯n–Q	È.ı˚h†øÌ`§„y≈˝DPs´bëˇ˛ﬂ˛;múh6™©◊=â¿z∞œ∞à0©è≥˛Êı«ûè∫Pv•hﬂ®⁄Çﬂ≤†s•∫ZW+sÁ®¯=ﬁ¢∑™)˚?˝üF
+=Œ ÇÆ?ÛÄkG	m´zGŸ®,éÈ[vi˜◊œˆ◊?Ø:≈∂f‚›vâøËNÜè~2À¸ˇ˜ˇı?ˇìLè≥“oé◊è˜◊ﬂÏ´”,N@øgãHÂ2ìA QÒs’âÆÅ›ı¥ÍﬁµÿluÒKûÃÇˇÁˇ°ÃlgπQÀ∞ØúbS°/ò≈ﬁèµwEÊ¶Á*Ÿ\Ôè˛≠'Ú˘ú}x]úÈπ¬i<‚rWÒÓ«g#$ õÕz÷õMuﬁâÉ·®µjΩè—‘ó¿ù£Äv+:„5"ëe≤Hf=„ﬁ,
+ﬁ⁄]/®*(:à:¥ºxqc-§z‡'P iı†¶~˝kM}F°m!’…É¿fªw3pœŸ7 õôNpˆ9‡Ø#ÚDK-™Rœ-5T"œÕ“‚-ÒìÁáûªKZBœ“›KËÈ¸YBœ%Ùtˇ,°Áz™%Ù\Bœß
+=˙ÏYÄPO {∂ZªÈ7∆ûü¥Ú¸≠Z€su£ˇ∑Q®ãKWÇù[`ß}Ëx.ÅÁx.Åß|k	<’x.ÅÁxöªˇ°ÅgΩ z`î=õ/+†Áf´©ˆΩÅÑ˛”—ÍÃW'^?yƒ†ÄÉ∂6Êcﬂi^7æ|c≥gòNˇì7∏J˚ 5zàé@†vè#Çí‚‚ï†Áviiâí‰°”ëÁÓ¨»≥˘@û}™ª¿û”πÇ”r+ä!_C9[ü˙∞Ì»√8o¯j]6ßÚ|ùP‰ãÍº¯QQh•‡xR(Ù8ËıSGòÑ˛©:|—nx.’;=∂&p+ Ô˚Jì<¸›·,U´|>àn$j]Dâ∫NîLıÀëRíΩ#æ&"™Ô≤‘ﬂòj≥⁄Ø≤≥Æ˚[oDÄ‘®~MVÚu7Øy*Ç‹
+2ê„€S‰¯˜2!›å“ùo+◊ö#VÆŸò ø+˜áêﬁKª—“n‰,Ì7ÉIKªëÛgi7Z⁄ç‘“n¥¥=UªëçïkŒú∂ÒH`≥ˇeß€ùl∂™¡ÊBbÂ W+Á$ª-°gÈÓ%Ùt˛,°Áz∫ñ–s	=’z.°ÁSÖûy¨\B=Ïôi}˝∂ÿsﬁXπf´¥∞¸Ù≈≈ -ÅÁxÊ◊ó¿s	<ãw-ÅÁ≠Ø,Åß{}	<›«-ÅÁìûn¨\F=Ëππ=ŒÊM”∏ÀÏ9g¨\sR]öªcÂfFûN}§y.cÂû
+]∆ -cÂhAø·R/cÂæo¨\Û©ï˙à∆I3¸vr|cûXπù	Ú{˛X93ı?ÄÙ^⁄çñv#giøLZ⁄çú?Kª—“n§ñv£•›Ë©⁄çÚXπùA¬ﬂøFmW≥Yp˙ƒ∆¬"⁄v'Ÿw—ˆG0Ô,‚ :KªàKÄ∏àÚ∏%@\ƒLÄËD¥ ‘S0GF€£oå=Áéh{9v.2¢Õ9!K‡Y∫{	<ù?K‡πûÓü%\OµûK‡˘TÅg!¢≠ £û Ù¸Ω”Ü˛ÃûsF¥µ&UèYDD€»'æåh{:(t—∂åh£˝ÜKΩåh˚æm ì"mø~ˆÁN]¨ê∂õsƒùµ&uïZXç∂•ugi›…Ø/≠;OKê.≠;KÎé]÷o∏‡KÎŒ“∫√_˘„Xwl‹YÎ©ıîj˚Õ"v[<ÿ\HD[kRc©≈E¥-°ÁzÊ◊ó–s	=ãw-°Á≠Ø,°ß{}	=›«-°ÁìÅûyD[kZS©ÔÖ=Ω›ÕolËú7¢≠5©©‘"#⁄∂ó¿s	<Ìı%\œ‚]K‡yÎ+K‡È^_O˜qK‡˘dÄß—÷zj}–¬/ç~≥Áºmìjº,#⁄ËÓeD€”C°Àà∂eD-Ë7\ÍeD€wéhõ•l∆Â(÷óÖbn’/õMÙrü;Õ\/◊~ƒóıFeÚÛæ•ôW˙ﬁêx~¢÷—TÙ5
+µ˘?*W≠ƒ‹qy.{6“q˘eö˚—-∆~S‰ˆÍ(à+AÌ`29(–&:§M˚®Ê)¯·¶$∞kïg„Ã|çVÏ©p•Y@·BﬂVÔ∂˛Áp6F™µ´ŒHË¢-Ê≠ˆÅØ*uÊ”ÛZ˚æj„Ω5’À®h}∂ØºNGÄS•Z•ëB=(àZÖŸ∞≠„§zs}‡oPA 7WÃ˚”Ç~@{4S÷˝œ¢µÄäIüq≈ÍÕ~M˘«~0JjH{¿÷i!f¶¿√.Ïi™nÇ¥ÔU}`@S¨óOY@.ñP∏©Ïˇ¥AfuP⁄¶à:kﬁOT€Î\ç¥–ËÕG™N˚AÏØ∞Ô÷(É1ÓJ€õP°—°ü›±Gcçﬂ˘ˆªçf¸%≤ˆn-	Ø‡„õèˇ˜ø˛«ˇw™&(ì˘|˚ó†suª∞SÊß3ùfq®*AáµIÄÄK,î©)Ô:
+@Ö“xÓÖù$lÔI£¨”«≠U# µ®›±cp®«ÄMÅ sz®‹«YàMÅf∫∞]õàÑJ±Dw„kM`ŒŒÓeÚ˘˙ÊëÒNn]ƒ3π Ï…˘k–◊?≤ôOìÑ∆≥£Ω™Xeiß¬˝hiA-älÒ©4oò]˘ò7Jé5É∫‰`´©´PÉTœ ! _å ‡“ßo bØØ√†S≠ó8N∏ö¬UË±]/?Æ˙§ ÚTß‹,÷ˆ‹9,µüuª`∑[ı1aµQL—…ã^;⁄@Â@˝ΩHÖrnw«„ÊﬂˆQã€W':¡ìtÍ%…¿Ò–N•$LãÀÔ¥/	∞› „©±õ±èL7—ù-á5~ÿ7√»é—w¿∂†Ly£’<_¥Ï=oDÆ`£,ÑG§∫”Éﬂ≥âí8ÁA˙›v=¿Ø‡˜a#yDÔ≈Svn.ñ˛ﬁ£mè§Òoí#≤í˙ﬁÍâPp0ZOnÇ°ÙBÊÌıTJBΩ⁄êî‚MåÃt∫è|˛‚ˆ~3Í;∆Éˆfﬂ— `ŒS|õÖŸíÍPo¡∑˘ß 8§æ<B<∂
+Œíﬂ·OJ-„R û˛@˛ﬁZ¡›W¿nbœvcÎaêT˚Nÿ	\S}Ã¿J#x¿@˜X	_zÜãûa8‚Õz?›˜[·*F˚~“A˘‰3ü´)¿uê; ≠ÿÊVπcÔ2ﬂà1d@¨ÎI[ÓY¯s•µÚßÚßwôò©4èab6vp–∏J˝≥JZS—¯]≤1õ4ıª·obçêD√âìÇ~Òkd¶≥ÅÉ…êŸ‹°ßX3./RlcähÜË·
+√(™-oÒ[∏…©é¢XæÙ6ÚÍMøœ∏†≈ÛØ†{ °ûÇπ#vÂ}˝àÖÜ˙w⁄ª÷›†apªÜπîFı.G79rD
+®ˆ^çÇ…òÁªÏ…wpFÊ€rû‚©|‡>HøŒ≤)ØÎàÍ€x;,(At∆ê	1¯k‰Í∏Œ’s
+äÛ÷‚ H≠—hÙ;ÏÃﬂˇ€ø‡∆˚ñ»“IWﬂ,≤Í¿9SDJ.ªØ⁄(9Á(¬MÃzs´∞i¨í Õh@@âËãP1‹k=õÉòX1N€âoÅs ∫Œ˚1Ø&§ÈOÓÕr#Y[q/Ä»¯∑gó˛¥âX[¶ªOÓM6Õfﬁ´¶íÈ4R¶ê˚∆Àﬂ'Z~∂X˘i{ÁÓ\æoŒ9ú∏î[SóÚ!0b·´<{T¸,1ÒwEƒ/ti[UT:
+,|˝Ó˚~ü»˜Y‚ﬁo1ßÀÖØÁ¨Ó˜èoü5∫˝Òñuö}c·ã:õ]„!QÏ≥∆∞/vQßÛ‘«;¯≥F´ﬂ+V}¶Hı{Æ•¸d1≈37“z]Q@ÍèÅÓ«|Ô(Êôcòã=<	t0s¥ÚΩcïgàT^ËJo<∞0[LÚ"ígãG~º}L¿pœ»„ƒœu</Sﬁ˜0Î⁄(„ßÂPå{ä¡”XOä\˘À?}}—&gà∫ß`Õtúˇ˙m?ƒ*a8õ—]UÇRÔ–ùl6ÈGi/Z’’÷0vMÿ≥s·”^Æ©3‘≈µ2bè
+æÜÿ%ø˙∂ÆüoÎÏªY[Ë™Hl[ê R–Cƒì≠QƒdçÜÖ ÷Pw˙⁄tÅ¯z§·ü0åü‚úpŸ…çH¶»∂óÄ ˜øJ—ÚÇ&ÿzÿ˜OgOrO>‘…rà€ëXzÇ©¿†ª‰πo±”_f≤ò),ã≠üÂìÔ≈æ€⁄,ófÍ“l¥¶ÆçÑ@N“øó‹8%Sk¢(pé∆v[¡okÍÉçFØq M_a∂†„≈qÄ! ÂÈSê'∫)ï‹%Ò˙Ï©gnÀ¡Ó0Yµ¡«¸)≤(Ç<4ÔJ£êCx¯∫éÆlèå0√ÄƒûÓ¿G&åBïb™hz‰'"êùtÈ˚˘8úèl òƒ◊"ÓÈ4°ß}–[ÄCwÈ7û<ÔrÇ—pÍ5º„ËtHEPπ≈,¡EFàÛ≤!^j«¯I˛,^,å‚~22¯FÄh1# ÂmË'–£Uè~Uÿf’ÇSƒ·A5’4Æå ·#cËnf ÎF>ÄæË5ì¿≈¶ãrIww1?	_v»eÇ‰ëò[ÖôÇÏ5π·éÔWò»÷DÎ≥n"i˛Ò‰bÖ£∆±Ò?äJ;+Î;∆$5üYﬁá:•†°ÃZSÔªxíM∂	*µpH;˝»®U⁄ß{(t0¡ËÈ4ˆBq^ê•ïd|g¡h˝¸&ÆÔ#â¿GK[Òû§@8ﬁóUÅ®…xyâ^ØÔ„†k¿‡Qj™Î XUòb‡(≈å‚¸:îuxwg€».#k¥¡z!Àç!…^í6õû‚Zºô∫üŒVT$Úu({`ZöájŒ–D4G˘›ùæNR
+≥≈êníîÄ•U¥:^8ÌJIF%¯êæ,àXÃ˙¨Sdı
+.‚Çﬂÿ¶Z·¡Ê3¸&
+«¡—cﬂ◊⁄⁄£`¢ø≠&
+vÄ∂∏ÉaGAè◊k¯≈D∂ù&¿ÒÒπ´ú¨‡Xw”IY=Rf?†ªì2çà¶ÎM@Y˘'˜Yòs“Ò0J|≤˘úÿSø|Ìˆ‰û]iZ∑_0ëı&w–$zò(˝%çı¿5"o›%Öe˜„z≥ÒqMΩ’§Ã—w=âå3
+”^‡…£Àß† †¡∑Ãàú‡zôÙ)){Ö!PÑ$Ê∆’ÿˆH€/ÛÉ6≈Ö·ª£—(
+Qò¯∆ΩûÀçîÏuùÄÓù	ãIG…
+¥ÉJ.Ã‘É≥0 üïÖ∫ÅÌF6—púGí‚«æÇÊÄ¯>)! ÊènØÑç†cwﬁ£B” i5áœ/\*™
+EªıƒFJ·‰®OzI˚,èC‰p8Í{Iˆk"Ù«æT◊ÑX7e–¢!Ÿƒ_Ù&≈_‰ﬁmÙ™à›@•7AGØY3PWC‘%Ò5ü£SR ¸ñVqm÷ÈÀD¶çe⁄˙sàçª@Ó˚ÏœnúXíµªÑMgœΩbZp‘˛©4ˆâ'x“SÓÔó,ÌnZôÍ5}Ü•Qó8ﬂÑDŸïê{*°»Ãæ≥ˇ!°àQ6[√˘ËîB PÃ&jUrÉäLÙ	ZX^òcgIﬂ=∆x2á—‘¡“l˜l‚ÍiÖ˙Í·óI˚ÂxrûµqW`∞%!yÌ√Ø{Ÿ¡¿ÏÄ7÷‘Ã§~©øìy®’V#Q_Z/j†F´ü≥·'Û≥Gô∞…π∆Í¸˙{Ê•…≥“êfIÇrπ?Åå!ÁÕÊ_·%Ä¨¿Tq!Ä”ç£,Ï!B•môú6˚¢SÆ^TYd∑d^°yü¬.ÈÛ"Îû:ÛÇ≈¿~ñ¶Úã∫Yõ"Á˝piKµ≥x§ıÉm¶âµÄEG(kí)3ì•áÔå`!Q*†DBkÂ=3«k„D–Ìîº5`»õØÂ´	!Ÿã6#kfõV$wRT†'–.Lùäözá#¯G ÎàÖ‡Á#–KØ`:©°ˆêeÀÉoB$4fpJdÙ∂nñ:Ò`óÜ^|ró`ÄÇºí%ÑéiπÚµ™©+/ˆ"ÃÙ WÃ$"S,.W≥!˘»îPëï<uÉiË<éâﬂîM›œ B<«yr{”∫6ñK<G±¨ABALŸï•êi¬˘Îiã	C/≈ò~;~^z—û⁄∑ıR01ÉÃîU§yÖΩuN‡8G?Ç˝zMùë‹ Ü™zål¿'"jvbÈÂg÷nÏX π≠ÌçÀÊekÍLÿÇ∑XXè¢·Ü)™’Éy∏á]†Õ˙'¨ˆ¡ï¢ ŸÖìÓerTS™h"¬¡≥≤í °Â®Úï∫B÷N¨⁄Ÿ◊Ø∏xY<˚¿.z1–eJs´⁄îQ™”lçè ∫YáÕPæwá«Ωà%ŸGÀœAÏ›®\“‰‹?˜¨aëóXSºyÿÉ±·SÕ*ƒ* }tÇG‚' ö“¢cVrWyñ
+Ã®‰°vå	«âÈ“H LÛ0»®M( (˛&äƒÙP≈ßÏ∫ôo‚Q√ØV,?Z¶çÑ›âÃ¯ËÄ.É‰>8ˆ
+>“ŸßJ{∫GDí4z–\eG®$ŒgåÄh BÏOëSπ%êåcâ∫÷1‡@,≥TSaÑ≠‚‡+>©⁄/kƒƒ1hG7ı7¡®æ¿eÜÊ⁄yÍı Ÿ‘ﬂùÎ:^Åéù‚ŒÅ¸g⁄	º˘9?ÿ@Ë9(bóú*Ö›†€ÇQhjÂdEçñ≈°Zm6æ ˚…ã5ıöQôq¥Ñò›ﬁ¥µ9 ?t‚(…/µj9Ûnx=ÃŸaÊB7l‘Ï„@¯ﬁà~Kó6YºRÊz"ŒÀî/mU!*J—«'	[&≈8ﬂÙµ‰8ñÕ (¿$}ÊÍHñT“	t¬˜JÅn∑ÁD’"ò÷	Ú’f£é	áj]µ‰ß7ﬁ‰,s´'¿—πA9Uì›ÖEk‘–BJÀπŸ`ç¡hƒÏwG^£6Í£(…rÿíyor3d[˜Q|!¶Z™≈ãV Lxﬁ9Ùæ√lòW“õí"]>≤Ü∏≤£z¯≠˝øs•”*6v/$åWO£:m±IÿöÉw‰	*ﬁeƒ;MãîKR$a`÷0NRù‹1ånKDI/ÉÖC+¸`<âJg"6Ä¯u£úo’Ön!ÇI”j t`hb’¯ªeËA∂sOªäŸ}NK Vg¶≈Ï ¿swÚu˛æ!äaÄ	Ù9uª:ÆO\Æ™Ã¥T}\'ñëÙΩë.Nr‚ë]’@rEπøèzr»˙.&akû]¨ Î≤≈ciπƒ|ëAåÓ∞VΩƒç‚FØX%ô3±Ä¨ıºÒ‡Hù#ﬁ]}$ù`DîÕÎíT*À‰D&Ìø‚ãû’√T\z∆∫:˛pæ∆E◊ë¡º√h]‰öªˆ‚ ÇÛ~u0_Tµ
+‘´∑ËãYäÇˇ◊zëõÔ8,¡Pb›P/$?IJ√¿:Ú‡ä˝yﬂÖ9F˘z0j∫]‹
+§úFêP.∞ˆŒŸ≥rAÖÃyágÂ1Ib(	¡—_˜ê>V#B`πcWﬁ@ƒ,$;Ù<ÚúòÏ[â*Ü˘ë‹≤)sdH.	Ic7"˝k RÄ.`…¥πWùßÉB:¸tRØ=€G“vë™&@>πÊ»±\Í’ä'7R‚5ú_^;gº‡qQΩ)[)w*◊Jxã¡3‰á∞~Z∂â‡V·oHÉT†ÛZê…√*w(Èx†øË‰ñ~'ew∫](‚Üb±˘eûÕ˚`´æ°<ë
+ ¯L„wZŒÏGHàAÁjúWV√⁄(Åxø1…8Ü√)•æf∆@≈t”ä∑÷A:pl(pÕK“5EóÙò9HAÿX!e3u‚ûÊYµ[ ®mmXy:A‹!'ÑƒN¢}î>Ã†=¯Ÿp‰ﬁLRÎp¯7Vıá«—∑A›i¡äÊ7îèÇ
+Ü ˆXÒ¡¯ï⁄à›{“®gL-.p˚8c]ª÷·˜Z£@ïÒ˝pcô-Kû„ ÇÂ§≤îl≤ôâ±¨¿-˙Àh˘ƒ˚`q˚D…26,ãqY˝¥¶~çî±%¿9Üm„⁄» ) ê-_÷hc]%Ù∂r$ÒâADŸÊû[¢àÂRÖ¢˙øi§iÓ¢%1ÏsyÄ©Ωºπ,•£}÷QÉË{≠ô6¸S]M◊.FÂÔ^‹√“˜ßÚß≥;èfı -‹≈s;=Ü5Ìc^wCSÖAÌÑÙ9o¶Xu7∂ÈH	GG®ŒÜ∆QO¬Kﬁh4S¢p4¡”b#˙[· Õ∏°ï®õâï”\‡øÌØ·K∏Ël˙Fù«íßüHÖê¸N§‘!Å†ÕOè7å\5ï,›@Óñ¯´®«Tÿ¯mO}§®OÁyHuÕP#û´£Û¸s…ÙëG≥˚ÎoT-,@ªyBkÏ≠&eÇ>\ZÊJqtÉ¿ƒ-OIUŒSétÚ$ÜxMYuìpá±_“à0B§	˜«ibª.£,0ﬁöÛí45xh;¡ó¬s¸z£=∞»=LXÑâYÑœ·Xcâl≤‚J‡≤‘Í~8£¥8©+^è©^'˘s–˛D°‚7@DîéL4D|LGÈò\¢X˚™≠º6X»8F£(xÚ¨áí∑˛ö≈ﬂ>∞B¨ÅáUIÔ†{d<∂Ò §°yÿº ô‰hRÆıÉQMŒ ï‡cÖL‚%r£m%g"†gbÊ0îrQá·Ç6YΩÓt≤ÿÎå’Ø:ùéOK œS°fÂB¬·s]ûºQVG¡4-b#§∫XÚÒÖSa…ƒ‰¡£)•à|eìÀ,Ü"*o’é@â≥	mˇÁ—9ke$£"S¬˙eÅt2òê&Î‘´ü„ù	qíMÉ±≠Ó¶˘aó±#%Ï¬røg3çBŒdA#´“ıKáçmà˘k¨@"÷Hz—…¨ú˙f=G¬˙YÜW¯∞á*%'Ê±¬;Dˇ‘–¿5:fÂgı∑˝ô#Å™eªy¸ô¥ﬂÁÁüÌﬂ*£wp[TPve4ÇbSrå`ó∞h˚{§¢∞ã?€ßŸh˚∂ÜUëqÈ¨ë7≤îØV≈8£—∫OÅ¿Ò'g_‘∞ò ⁄Xsà∫)˙ÿ’'in„¬˛⁄Wì(rZzÕßÅC‚L˘∑v°Ä2⁄&ºÿ√»T_î´ æ7 ±Ø Q4@ƒΩ∆æ<Aê¿œÈç÷πØﬂ¢˚8hw¶Ë*S·P!VàFó∫“§züÀHÁê_hÃ¶·0¬ÎÉŒAÊ2 a©Ê1Y2Ã∂ ê≥\éá.òp·À•äa˘!ßs_	H8ßÌı‡Ê` ùZä◊!ëPj#m˚≤$∏¢Ö udﬁßÓ™}Ùe2óÙ%óç¢ïdı=öoça®’°jÆ9
+R|ñØëz«Ë∫&∫Ï&Ì„y0Ö“c˛<vzú'ËBK⁄≥≤ñic∑•…UHπ–˘EJ„ÍÙ≈bÊÜ\·˙Szu%©µ∂s}⁄ı~Ô‘"Øì¶ÔÚ&ò>ú¨Au»ÖnÄTﬁ¨o{öÈÖCôÙ1x5…S≥<ŒL√â•⁄°°ñöTLrü1{≈ç∏˙µö»*Ö™–â≈gæm2ëH≥d},=i<∞y˘k‚Éh‚`" ;%„ÊÒæö,)∫K¯wXL	ıÀ∏ë(◊úœ[∆±‹fF±∏ﬂd≥ˇ1ÿáó¸Üí j]9+;ÅÆJÇÍæŒ7 p ¨>ïôyvOfJ#Ï7á$õ3∂O“©ŒÄI§ˆAæL¬◊w≤∫¿1.e‚®∏ˇi•bd≤E2A9ö‹[“DMjé¿Ê*ôè7ôÅæÇ%"o˘ç«1ÀÊ†”˙¨aYô‡ qõëf*÷g“,*=Î˚¢édP`≥{òOÁåª&π…u¢°·»¨¢òQ±ŒE•Öﬁ)]j1aP,\Ö ƒWìv∞byÑIyæœ–\ﬁ◊Qÿ∫pñ5Í5GùÙ«ï≥À‚Ã›ÏE6l„¬V°YX4∑ÖÅ‘Fï¿2ÛQ}z|áoËAî»i&ò;`«O—[íL 
+bàqU”Ë¢L‚é˜`ÄÔqÄ\U˜ú;-Ï”Zbaì^¬]$úNk»ªghÃ~à¸ã¬6ôê1⁄üêq:3Q%I1ÖÀ¶‘YròI"w/d0KØÿD4îΩçËµ2odub∑Ñmà¡æyÕaPQ`ÖaE»`ptGs¨ÆÅ>î !mA{$Â–E»j·Úy¥8Æí®ô3è2VÈ∫¶óåƒùÿ,t·b≈l“ö±^π˙Êp˝xˇÖîÂæM˘8˝í#vV2<ï·º•&Çœëç/ØÍíª	≠†"AVôHöøïy©†öÑf‘g}Áôamp9¸5Ù∆à£l∑§s7áò?…í ‘°b™öÃn8Ê5µ,Ç≠Åä‡›û€Ä—]" :$3aV\˝#)⁄rNáÃâñæ∏!·¿›bøky≠&SFÛyæ∂∂VÆtCVDr4ÔZ)2ÊIÚœ(‹ãËgÌ†áJ/>|/>&÷êG·ì÷µÎ‰◊†}Éj4∆Wr¿∏ì$ÃπuÑ«¨rﬁ«>ÁN/´ƒ8)≠⁄K+„é9˘V4#Îà“M	àOΩ0®≤√Lz,ë∑Ó·„üîÍÑêU5`?ø úàSãÜdC¥	í≥ú‰’ﬂH/X˝p|À∂Q≤ëÃ0lË8û˚3›—»∑®£ÌC\à’OgÎáwΩp~áãC≥Älœ#»nCá…áÃËÜ¸dÒ›móÚ)9ÁQdQ´àäå=Ü^ôç^`L÷œC!+	Q6õÒﬁ6xH9H‚§YõBqptH˚(}ôÒˇñÂÖ„≤¶b ÂÛÈlèäÿw∏Qè÷‘±üG	úÙΩxƒzã¿xcK'_è∞p∫„fè•+^Œ¢8D
+öq>‘Q§†ÜÉ ˚AYï€ü·nÎNêÿ—P;1µzé
+"€∏9dÎÉLÑ√–jÍ ã¸Aã¬TsïŸ≤ÃîbÍæñø‰Fân!`}Ä@÷√\≤+Õ ∫©übÃÊ+h§®Â:±OLÓá›–èÖú“Ú£™•¢Ç“Ï™∞~h¨ˇc[sfkù/>CÊ~:Ï¡û'e÷N¡*ƒE4„éºâ°œS(ÿÈFº‰çOe◊pπ„å=¶Rà¿˙tƒQ >q≈c¶GÏ·*8Yô±À±˘•'[Â™≤ñßõàC°tn‚¡B®ï;∫rûm
+ËPèW„Ô√©â5	∑åÿPd¿˝Çñí9,≈±\äﬁ¿bp’ªªîq7Çàù¯Ñ˜&IhëÃ!
+aQV#§ÅyßêP≈™h;ºæ˛Ç·√=ˆ¥p‘Ì¢D"—u≤sQ€+lŸqË¸>∫ç‹⁄öÄº$U:—_…îlåuQ7Eı%¶8nù#—»∞ú‚Õ∫—Ω<‰p€§9¥)!≈Ão0Fˆ>J˙≤2ﬂyŸí∑⁄õŸL–uRCº7!€ÉY«§1è}„çcÉ›`Rï ,1ïc=≈"¡Íé¿Ñ≥pvµQ @π+ÊóÓSˇï»T4#s€,\Ê‚pOΩπ|FÆê# ‘ﬁ<±DÔ±–f–Ö#…[vL±Ht¿˚„ïﬁ5Ö€Fò&ÑÆõO´œﬁ–Âú|õπn\™Ì;òÈorQ®|*E@¬ÉGh`4G«æ%ÃJSŸı≠âÖb∑#kqÄO4ùNZÍs|ßÆâ∫èo3+ê⁄/ 9ÿ™MAÕ‘¿˚¸*W—ì·¶@´Å≠<!¢®¢≈ë∫:à)—ñ%Fw[ï@8à3juﬁEÄe:ÿ–J ódS™%+–=EK`ˇ“`‡8ª`ﬂ;û±t/oØ1{Æ ‚…u|≥¶’¿“º]r™R,õ≥$^`’«»
+ˆTÜú:'âªﬂˆ·aÉ!2ˆ
+¯»ä‡iÖ"¿≥–ßl?<ÔπâX:îØ ¸∆ëN9H±Õ…}C◊Ç±fÂ8Â‡ál®Î∂‡ñ…bS^◊DuÕcG·jÙ1ñ¢Tá∏≈xÜ…xrë]4∂Íw-ß7©SEòˆˇÈEåO'∑î¥}}πΩ!Èqhh6Î®Äkë¨Q±m+≈lÕu„Ìyq9Pc"÷åºŸ"ÈÅë÷•‹∆=67W•z‰Jú¬ﬂ∑#Äç‰uî€êø”º§Àïûíh3<Ü∆˙ç.uüŒ$SÅÆ#ŸBŒ ˝Fáƒäò(yì"‹îÇjyaF)elõ`2∆Eö ŸÅw&V—Â=¢¸„†m{˚\ÏpëÈyÒ9Íôv
+Û n≥%˛r¨GjïSbøùh8BÎ8Ö_Ç‘z3&w8FËOoõ1}{ÌåP”§·Ã‘ÇÏÿÛlÑ†T[3Ìÿ]à&+äbbP≥n‰¥Q£∞∞(«@ÛwÕmg¢˘MiéZek≤?O.#„¥K¯Siªg.#3ΩG¿ÇÇÖo˜`´€õ€V∑áÄ”tÓÕ1b¥É≠õ´duÆìœâ›úw⁄6≈¨5@8úp>0»¿í”o[°ÀM≥Ö2`«a1≥àd*˚¸§ÍkdhÂ®€Ä	Æmå£çƒfj,®@¶ŸàbÃI,Áq"l‡09÷•@ΩaÖ¢◊ê	Ï£öú∏Ïñ Ks G`5|nê¥ço¿3£ÿõ|ÖÜúR$úõm2&ôBWlèy‰Ay∑•µ=&\Ø˛≈‡qßÎcÂn0E˛I+Ã›ÿÁNZ£$j„Ì∞öVﬂ,x–EaÇ=©QÊ†ÒR’LP¨5ë€˜`)G˙Æ[œqµÄ@¿úYÌ≈»V´“@Í#J‰ÃÕº©M82Gë˚™F^:T¨mªrr˚¨ÆP√ÕÒøM1µﬂ#∏à4Gp<A‡§p±í‚xﬂÔ©_…2Å~@Ú hÆ*«ˆäÅâypvŸ∏6Q˛˚,¬ER˚Kêø§&úÉ¬Ÿ≠ø∆8M
+¯®J∫ƒ£ûØπC.kÍub=$TÀ4Ñ»œtyƒLtŸßj‚p‹ﬂ°-ÒFª#ù:¯˚6Ê»‘m¿¬±ûgWŒœ(∫]Î¯ ∆ÉØü·∂¿ÒﬁSÊ≤ç«¡√"ˆ36ãπ”*Dçu g1≈*pÊz’J√q`P †ï4{ä:Œ÷L„ºp ±¢A»1‡ÑÊ√b≠]GôêJ0z˝˘ƒ`R˝Ö	‹RË¿æî'ij„„	3ñz˙91iÀ&Ò„BMÅÔ∏V7&…·∑˝{PÏælæ=Á4º9∂˙‘F¸°4Ä!˝ƒa	8nB8NíE‰Ï&o%kø∏÷®≤ì3G&MÂ◊Å πÊ©»ÒsPÏ1¥ëykI¸˙ñu≠D5Íh6•"ê∞≥⁄Ëä3·ô0Ì|ÅRíTéHk$_Q<ƒ>√XœÄcöÿ÷e∂”XSYˇaIﬂÊD˝E$vZ±Ò¡âF⁄(ïÅN¯(ıhâ@ì√Û√nkbz*OŒ¬€\k‰Ip-ÔL±\ ±DõäƒÆt+πw}SçÉÎÌ”eK¥ÄdNúô®-RîIÚP?«˙+sÂ#ﬁí+?ëˇpehêQ4¥—7n–O˙¡ ;Ÿsº˙‰òã*.àQ‘•bÊ4ã˘Ô√[
+â¡*&¶dx~´k)(èAâçPCŒ5b ¥h!F6±@ìÛŸ&.*æàç±£ò∏¢2ÊùÍÚ¥£’„€Yãwtã$ıf˙ˆf œ«Ä“¨÷iıÍz≈√ﬂOÔÄü∆∫éòqœÿÈ}â‚m‚/eï÷8;^Bù;ä@EÙ{#êÔ…gíK•‘#–U…Ì¬_^PDŸé@ú!ù0∑&úÑì∂CòÖ<é˜˜‘˚„}¶wƒÔ9ü/÷Ö£	›$¥êﬂ)ë ßŒ£√•ë-Yê®ã1¸6πÜæq2”„ALË$≤¶&ÏÒéU‰ŸI˛∏5t ÿrH&¡ ßÒò§Éè!⁄≤ÃÂÏäï6—≥pMzTì˜J
+ÿπn√÷-6`¡$p≠#©‘N —‹gÔNÇ8ébn«Iûª˜‹âÊH≥#ò˚\V8˜e§W◊K>™Æ÷pº/6ß]Å¡¬¨±2–}b‹"≈p%ï¬ÃS_Ÿê@y^eÒ∫c†l5VÙˆ»Œ√©ôgR "Ö‚cîV_‚$É<uQ Ô£ËO§Eçg[‘l¶Êﬁ√lŒì˛L‰XßLÌ/pt–◊£V90‰;ÏÒ[©¯^ı]é≈¥+ÃßnB]•≠k¸∆√ì«¢óy&WvbçC‰˜®Ü
+◊È Û6©(&ußf¢Á53Í=Bû7cd*à≥a∞Ë›5+&YSiî†&%¡'ÜÊÏ	¶:@L3°óò+—“ì9§Ô•/ê	£ErJ¿8…?»ÍƒÍn]j9¡1ØQ5
+°AzxaíŒì5fÑWº¢Ár™ë≠\2+#Ÿ‹™ø°Apï5iÕvgMë¿∂0¿™01NÆAÛ5•∆∏ë™†I“‡?PytN0ü¢˛°€•‚ëm◊ `wM„†`‡p¿R!kVXÎC,Ap"≥h´≤ê‚&ª-0Ñ¸Ÿ&Î±ñ∏©èdF¨ºRÙ dÈÿÛâÏxŒm`l˘æØTÒJæå˛'ª˙iÖÑ¨—Äé¥Æ%hEo£SBQR$∞ly›üƒQq(í‡lÇùHƒp˙X—)°áæ ï‹cì‰ñ°}öÿ|MÄµâ='-G<p$#]iú≥>ä1Êπéû°äãKsπŒ“˜π:¥Úó`Ç¡ÛA ˚æVvI‹}3_‚Ó-Uf{Ñ1Ø±ô∫à4êVÅåª“Lv.ª◊ •±5’$5∑}^¡$Y#\fjH§jÉ£
+%õ◊¥≈´8€+|~â¿YÜ˚ﬂ#<hÑﬁ¯µV(∞;0"“´êôTã•:"ã∞bÔõÜºú©väFRÊπœÅ¿ÁË¨*ÀÖ´Bß&».TkCê8„çZ!˘ÀDaôÄ€øˇÛø|Ê ‚í˛Nj.¨Oı9=:ß™Il]·±_≥≈ãúÓÎ
+≥¶‡ÆºXô-Áyæ‘oà.¿M#éùPq'Q/V.
+◊√
+·®Zµ)I¸”ÃH)ß*yäÅYªôú¥Qoˆ’¨yÈW]ëIe|*#⁄`Åﬂ`[ﬁ©i8Å≈Rà⁄IíÊ:Ω∑
+U≤UhLÅ&ÖÓaTHEpóâÅñ<è;
+¶ZÉ—æ[l.¬æÙúC“l8—’F	e®W“ÅI—5’©π+Ã˙5ñ-HôjSp…ñ[®ÂÕ?πƒhä¿Ñ©@<Ù÷Ø F›©‘ú‰XßZ›<ˆ9[¸Ï,ä∞F;âÊn$à∑É'0õâ‡dÔ∆öRÃUW¸å©„„Äl∆CÔ"P∏1≈êÒïã©∞jDaÛ™çÚJ‹“±ìÛhyãÃTf2#·)¿iÆoÄÄ„ß<ó0Ú}x„Bls˝(∫“∆’¨Ïƒîÿ¥QuFfcD5%Z%\&Ô{f …∞¡`HCoJØ
+KÔ&Ê€ˆj3¶^©‡çF1R2>qj„∂Ñc©¨ˆh∏ïö∑%S∫∑Ââﬂ∑&lÁXËÎ6Û÷Ì´u“"9…«GMº(^yA∞? …·â∏Äà⁄Ó¨û≥A¸π ∂ZJJw©î€1"ò◊Âƒz,Ñ∫Ü”¨°ø. ÙwQB9
+'8R—R 3ñø¯âä`¸¥R3ÒË≈:CM g®™´√ÂîS)‘˘ìƒÜ$ê“y•œõHº¸≈¢ è	©Ú´Ÿ≠Á@Œtù”Œoùêπ–b◊s‚iÂ8¯∫¢Nÿ›IGN¨õâÄ≤u•Ëp©	Mü…Ù:“q0‘àñ	≥A#ßÙ)ÊCU'ÅNkÓUçu«ˆî†JîT	,u¢à«œËÉ∞ K˚§oƒá0°3ˆ§êètê syﬁ1#8˜ sÕ
+|˝J≤u∏¢Ü÷H"«#A(e\lËG{,ÇΩ£⁄≥’∂áË‹LmñÖXÛF∫tÉOñ
+jò÷ÿ∞ØpÇ€ÌÑ≥ﬂL	∂ûBIDªÜÇ^êääÕ&µ!"UœÆÓ(‘îÍ“†	Î±:<‰J$ï19ü}”‚Œ&îÀ’n=åG5#ƒhüƒÙr)DË€&3à‘}E≤∆aRÇíIËAí®,§œÖıQ)è◊pú[÷òT"ÿ◊wÿ˚· ÎÖÕrbÕÉlYi‚yV9~sXÀ!kN÷~¢©Ø'/_+|ÀöÌÀö˛[÷Ù1ù⁄ÿ¸\slGfBäF˚\sGg¨çÇc#SeJ©w…*â 5ı+®Zácl˙c¡ãx‡ÿ≥MÓ?õO≠¨Ñ{‡IEãWõÕª¥ªπË≈g’}M+∆≈zÁﬁ6	:¨L¿Œd¥´‰@§_œˆÖ/®Çã≈M¯B6jâ˚íÓF√>îÌ≠ZÇ˜#¨Œ
+,ãÚ<πæåƒ6¢BYpá}∆4¬‰~k~˙âöÆÅ¢kl<Xâﬁ7®s÷‚÷zá§^në90!√w.ˆé√l›≤¨âVèA‹¸c≥¯ÌÆ%÷që≈U`˝&CxçŒ4˛#ojÃ““~Së‹™9}Ã›¡êJ’'6…ƒÈ˛¡JdöñB≥HKÎ√•baΩrQd„ı—∏@%x'Ú1˛(r¡ΩTQôÏ∞™ÌI∞∂Ñ:"ÛÏ{Én}j¸s94ú∂v≥æπæràrµ·µ¯ <üÄ¢∆`ˆ®AP3N’1d√—ÀÒ„2§{àXÇ]9—Ê1ˆîb`ûÛâ$MRòcØnÉØ•1´ez ’Í≈·í¿Øê„ßR¥ÊSóÊ»ùIÀÄ¿n&W7Å]Ï∫µ)±£¶Ít:j÷ñ	7wÉUHæ¬†‘Ãô]ö¶Ó·KÀ	÷ﬂ‘‘≈ÜyYi∞ˇ≥ax—º˝ÒÎö:‹ ?¶Árø)≤Ì≥…Û?åùw_·»kÿª˛¸ìá@•»UQô¶Üaó⁄D∞	sù%úç√üödU±'lü•Ö|oÇoD@—•jØ¶]VëØ&S(_/öƒö≥“Ó‰ußŸÆ&ù I"√Ä§⁄'(£|sòpå∑c¡cc(óW8πŒk¶Qú´ ãEmós"4’$uìNï.˘§.àΩ´uûî_ÏÑ|œ:âv«ô…˜¶ù∞3ô„^9P∏Eàö◊û˜‘txÂ
+GÂaJ6Aqﬁ/wdÂ	dp◊u™ƒ¯HhlîÊnz·µ◊!&ÄC√{*ôõÕÂ«)è"9åÏïLù∏pæí®fwËª÷r1íó£ƒ˜ª óÆSõZF·€\xYÛ*p√[? >É÷(îÿØâ¡oÁƒêâ›ºt~?Ä%FÑv∆∂BÚ»≠KU™| ¥¨9¢l|À-D|	≠o Ñ4¶b*≥T•∫'û“‰`=Å‘»Ê¡œ}e®öæâz™qâØ‰7Ø®:cVYÑÿâÏ	`±Üî∆ìæMFn`{„ÆiPpm^›6SÿÖÂ!∏L–$¿¶€ K2wÉj^aáMõsÜ%7ÇbÛ!keJèŸ¿hFvíDÍgsñ5c¢`kﬁƒ‚ê∞„Rgò7 Î"rŒ˙<©˚}3•ÇÄﬁƒm…÷∑∫Ú◊([Y_9—+/`E£ÿ«zd!<ÓÓ…í"≠3Ù≥’;âïªõ‚b2€H5,h∑¶VNW‘ø°'YR∂Æf_Ünëïø~¯àw‚g∑n¥—…=¨º5Ssısö!âSZ\ˆÖ7öòﬁÔ|¢Âpr_v2Tºêy÷5EÇy]Ì‰ÛIH™&‹ÛØ=Óôk˚Wr"∂ıãI"4(’æÇ«‰ §hl,Å}[®dØ¥¿4I√î`>D≈‰ñA¥TlÉíÒó⁄îØ°nÜ≠S˜¨{∂J/"¥1’&≠â¸d≠5ôõà¿√8D‚û⁄7¶p,2†µ¯F^ÌI\>π‡ƒÒggsC5≤≈+∏j{•Ø©Õ5;ﬂÉ4{Õ$B«y!»Ú"Xc≤ÏÃ^  ÏQ‡QÉsûò4:«˜Õ\Æ‹:àæ–ºmèmŒÍŒIÔê]úB	XN
+b2n&…6©∏¿ï-Ω©{|N{kΩùíøaÕshç[ßÊBR–GÍ˘$y’È›Uk3tWu´ã“{ÓﬁÓÌzj∂‹-¥7„äÁaÇà¿bÎˆ*’ic(Ü ãÏ∞‘“ƒÛÎò9|≤ü
+˝≤¥ŒyN£-áHñ*∂ ß#çQ¢+Ÿ"ø.a‰ﬁa%j{RmMõ—¨C)ïlbœ¯<–¿S€ô*/ÛÉ'»!ôÿª©|:ıdïÔﬁä19¬9=`ä·W©ÙÕ‡¡∫U˚y.°œÄ$Ø√Çj7∆¸’ãΩv€ê:˚%ÚTÕ[ImfrDç
+X¡@+sıQ^r€Ud8#£∞©P‚∑˚„wMÏw±Ñ!-‘â∏‡"yv,‰Ì° †ÿ»'œÿYgg5{á/'”VC∏"œæFKí ≠aJZæàÄ†á∫é†Ù1AtÂxüYOQ:T¨Eºräo°bóÍíÁ≠&Ì\yk©û"Ã6d2¶’úò;*G€•∫([M≈Â2Ïè=E3n>Ô:óÛYΩÄoﬂä(3Üµbòâx©“=÷=˘›∫πÛÙvíÈ}8î4Ü#Àıâ@nDâ≈µ∆éﬂŸ(}Hâ/+Ed;àIYeèâØˆWhKêg˜Z¢cB≥Tóoã∏≥Ô^˝”hTˇhW„>:gq HCÙ<∏m›π•å”L ç‡V»QC8]™´$R‰ûåã˙≈”S\0∆Ã„Èı_…Hzñ/è@D©«ëf!  Ñ)Û‚˙{á∏«aK∑“|rÂrGAé[‚åıö‘∏g·3+œâ˙¬Ü∏,Æ·<∂¨˜•π'Å€êG€‡ó¬√^ Å“ç§~§M>IQÀJ÷©≠íDLN‚|õ_çPi ˚ ∞!¶À§c¶s¿y’ ßﬂ
+¥B‡b©
+—ÛŒ«z≥Ò—s÷apôÎºfs∂√-@´3˘UÙ!M`Âï∆ïT˝¶1«‰˙gRfs§ä©(G”i‘bÜÉ˘ŒªπR´gYØ=~°∞që9î3nÔÌ'≤/{›Ñ’Nw π’8)`˜◊r4†ÃäsØuáÊYí~
+°.¡–VÄ¨T	Vp±t3ÚPö∏ç›πÚ·K√j&z”·ññ”92‹˚Ù)Aª∂†AAZ‹∏bﬂ¥rrúI 	rX£	¿0†ÔæGïJöÂuCsﬂPû‚iÑÜáŒN‘ó€oùΩ≤≈ï%…ò5c˜Iná1ÚÂeï•Ωçt“¢ jrÑG√jÙ∑ﬁMÁ\∑òi≥ä&m oÏd€L.‰+Õ¥`R&jƒ-Ô,±~nI!ö¿}wcﬂUT»ÚZp IÄ˝C∆$‚–Kùp.êÕ:J8qSÚ~îﬂ0¨DJ Ÿ¿ÀWÑFÃ4≈≥eî«4}∆6?¶“h¢ÁvR∏ÉÂ*≠i{úáÉ "Û>©Çô„≥ ‹MjÄ•ÅAÅ:ÒfñmnÏzíWãê"$
+¥w∏˙∞Ê∂ú4y[›ÆPn≥‹è∆íQä <$≥õÓ<≈	a≈ﬁ¿íl∑∂‹X ]w1∫£õîì"Ñ˛Jm»Øî∞˙ÃË–—…0˙‰ûÀèÅ VRàÂ≠ŸJ˚Nm‰_WÚ<7fÕ}pÛ Ω"£	ó‹%º∏‡ Á`Ù'›	¢∞…zˆP“Å≥£ˆí‚àÛ@›r9À˛:9~8Å= fYm\vÑı◊°oLZsK~õ”È*⁄´gdõF^;Õ^‹Di’ı∏À)>T¸VÛcá~éz‰À$m˜ï’ƒM ª	∂á(˝Íñh·rú]Ÿ"&û¬∞JçM4Û”Å’›xÁºTç•2Oå`KﬂÑJÀÂ|·Õ∆ófa‡D1Îñb0¬µîü4&’l˚Ow/†$Y…)ã¯ﬁB3I\∂¶^C[±ñûK¶¢æ”oÈnö∆,Ç˙y¨\}ï‚-,ƒ}Õ¥∆>èrË.˚˙ïôU6'ê∆H&`-À¥Õ)∞€‰Å;z`Â¥3¿•äV•m9ƒßi¬¸Ù‚VYªUrbßP0êÎu¨∫xı„[5L¶,™‚E=ÔÊcîú¥˚Æ‰{ñÅâŸa£”ã;;÷Ah˙…ªπ=_ö+C\bIB7èÙ‘Í/°÷ÙpÚ
+s◊ó;l“ÊØÃ˜¨ÛA∏T€ÎÂE∏tå©≈„ıäFûåùàc˙rÕ)îËÙcg´“ö5ºñ∆cÚÆ‰g†.%!¶˚2óÜî¨@£u(`∏(∆€N∞EÑ¢^´#yâ5ÍGqô£å™ï˛äjí’¬eP¶åEÆØªnIØg#e≠Ú≈≈N∏J!1™§ëˆMΩf—‹-3Û'«]N2‚£å}◊Ëå‰,h∏-÷qo[iLOUﬂGPÊ‘f¿m2EüiZC≠XïpµÎ~Ÿ+w4ù≈§L9ÒÿÖ.òÆ©°‡·Qp«˙cÜ>ÀŸÀ ÊbqÕûº(º’†˚∂EùG‰µ£&ÛTı›¨W¡»k6ø√’§À≤†m_≈çñ1BÖ;ô±¬…Jôµu’‹©ÎFâ$Æ-è§g›€¿Ö•¡ıo“πAÃYî¢rŒµƒ–x=$ ÏÖ8IsèjRçLMnÛy£ám*¥NÓz‡Ω]	5∞ÊÇπqÉSî|¶œ˜ø^$Œ≈MÏv®JEEU∫I{iÚúÇ∏É‡`uì£*ß˚	ã∫Ä™é`0⁄%z∞ÿ›¿0?•‹ôèf∆=∆ª<[Qòª:•¢ï¬o›V1i<6ºèYy\ùÜ<æ\Ï$ˆ∫›†Sÿæ‹˝Ô8ıÛ∫±ˇ˘(3ı™Ú≥Û≈XAèq…¡Ä\›yÌ•r/0`ã…ÇºÁX¿•äjAÑíÔ4'„¸òÎËo•b™y∑øk2í˚úsøˆJ
+ú®Cy\—Ù¶ëèÈ∆≤ß>ÂßwH3ƒC~t∂≥∑µõƒŒs‡&ªÕOùNúz“ººAäΩA:¶q°ìæ7ÇOÔÀB·KeåÖ(F ÿtV!Óa§çÛHÃ{S≤#C>2‚˚UéÀ|9˜ˆúéêÿk≤¬aôê«M‹AÙM jFøgZ‘¨6p3[b∑∆vuÍ‚˘Xaí©ˆ†∆ˆb*gjSøQ©—ËòçåëRZ'πØJôœ‹¡ıvˆ"ãäN3ìòÆ•¨Û∆2QÈ±uî¨Õ”∏$(©™‘‚àaÜ∏vâ@◊ã⁄πËBˆanØ<ÚìÍﬁqéÃÙÉ!JH/¢BŒ‹˝i¿QBÎæç”†	p›,∑Â”äER6ÉÀÏ'A{„∞©ß	Cè»ﬂ%çJ0Â∞◊MäãµÜJ—@&b”ÊÇ”rJïïò:îR©2˙"®(wüÑ_ÿŒ,Å§≥Ìˆ»;„∫ukà®48å AO°Œ“ÿ;¶F≠⁄™ì^ÜRl†K~Xyä‡Æ¢ÖÏo}øtÙ–üÅGw¿ßÄ4D≤Q´jõŒ›WÖSÍw“œœó{‚Ú÷›!‚˛üˇÔV≥¨Í
+Îw2JØ¿
+V‘¥”m∂ú†ˆÕ/€æ`Ÿ∏ﬁïµHØõ∫	á¥i¢ìê¶YSu!±-MgnÉu0Ù-≠Ä∫”M=évo‹úTèÀl‰4ä;«‹Ox,fi&{\‘fyåÈäÁÚ™*ˇW»(ˆ|jS˙ºT3Ár¡Å;e{9Á;ÃKí;ûÏROEmX #472äñrZf∑r0Dvö¿b.ñTY)Ùà†}&Ë6¥ûë*îûb¿7ÉµiÁÓàö7
+∏OÃ∂ì@i
+á‰“éó«4∞øÒ'f|Ã’∂ïúYè{Ï,Ë,d≤˝Ñ˛ì˚Pìm« ZïT°µg?ù“ö7/ÌGI∫!ß‡å8ΩsµŸ™õU¡*k“@÷&“™$ÿô∑ãUÔz°d\#Dd∏0.LKr¨åc\Z-ÂGçj{8Èπ≤„Dp3ÆÊ)∫√èLOdPnùn¶gƒΩÊ	5»⁄Å**ô≈úsíòÛπˇyòr;â‚6˛õ\?Z°¬“L9ÕVk1/w8EŸ§`∫æ∏_Õ8#ÿ9¸v'ö≥†“∞* ¡}U´}Œ# ˙û¸∫–MÃ≠âÀÙ√¶ßN&7© "Ü-≤é	TÁ0néã÷L°¯∑l!Â⁄G¯j«Ø1˝€SVB&Ì√Ó7Kì_¨≈ÚK`z∞øcc™Ω0D-#ÊcgÄ†à;≤¯`”¡Â*	ü‡”{üa€¢xlæ…Œ™¬æ A|∫π{áXè^o§©âã£uƒLÏzµ5˛Ç-cæx$‚H*}"qõ6ãV@ë[òº≠ü‰Vi≤§A,g=’˜vtO€kæ5óW◊à¯ßLÏ>∏Ë?¸´Ÿo˜OÈds?£@¡™¢ç%≈}À,h´ÙÙë¬rø#S«æwãÕLÛV[;ËucÙÂ∞◊F•ﬂ#êeÙ˛œ¨åìÆGmb ’:(ÂFﬁ˜‰?SO∏Èñ!?€\•IqQ$7=2`ä{¯ú/l)'ã∂€⁄ùÔ4¶Ê
+oûûfT_â˝Àç;ë’dÎ∏'û
+>g,¨òÂd}kJJÅ œNÓ@†–Y.Rª6Â4V)≥§` S^ÏPuDhç˚[¯∑L_˙∆·fâU#0ã˝9¶!M€≤É>¶‡_‡?dÃ¸Ñ˙kÊﬂñV&îéôF=ƒ9T‹`êπ-¬l¿ä‘=\W(wﬂeq<VG˜ﬂ∑˘vƒ¶ÄO=›Û-h˛tNç˘_–ké˜ø’Ó†åÉ}å!¶@’€Y—ìYe•ê|˙cµ^»Ö≤&Ñ?9_z÷À‡ºcv¯ñ≤iåÁ|˛ñì¬“â†úî¶ÚÏÇ˜3)òqÎjﬁâé"ÖJWœƒ%π?È¡ƒN0ô°EWÓÿµ~f°@a¥|X~jéë Bú¯d”îÆ‡€#r|n*bî/8}) óäùÈ W∑6TÂ77U≈≥·ÍùèØ¯:\ΩÛÎ≈)hÏü\˚c+,á»–FR‡.ñÏn-N·#ªﬂÚë%‰eâ†ÃƒJƒ·∂	§1ÒúÂ'§‡‚V\8>Ö+≈P∏T:WÖk•S5qò9Üyã®j•´.MîØï(¢|9ßá⁄å+3ıeUo*—}˘Z’WÛﬁñê∫MºkÌpÆ≥Ñœˆ—Û,gÓ/á9⁄{ˆs§›_˙Œmß:uÆ]¸¸¨¿î—`w^|π=6xÌ≤Ÿ»äGÁ,–›ìÔÅI:è‚…ºg «\–ÆÙ‹¬˘ëÀ∑N#tgw∑ŸlÌº‹lÏn>’!7=ı∫›cÃÌœGÎ‚•‘K3bîØ©zó˚ ﬁƒ!Ûô©’◊˛0(ÙÅ|¶áX´vèË&õçf„œ=¸l≠+]Ÿã{ı+R&7Äùu¯Á~î⁄◊;7s°Ì„äΩ˜oÒPKá≥¡Ãä±€Q]É+krŸ∆ˆÁ±◊è¢Ú®fõË£ç›Á5ºê:‹¶<;=îu=XÇ^Ñ¡ü%Äß∞Î.0Ù0yÊq–éY¬Z‘ÁéÂYk}yÑ‡3Ó…B5eÚ±i":™∞MÖskáte˙∞0l¨ÁçÌY¡2¢¸Ç›≠ÏSöÂZÂ6 lñ?ÿ*∞]˛`ß¸¡n˘ÉóÚAÒX£Î;ËC ≠û|∂S¢‹*K Œ>¶„mı(∆≤>ù§A tpr˛Z5mtº)b⁄j¥∂U]Q?`ı∆£!ˆt¬É∞K7øD◊õ≥Ë®xToÏ÷ΩcˇÊŒﬁF£@Å°oÆµ{ç¬µAƒu»løÖö©x†ö™/b–„Ø≠©èaÄÓQ*('ˆ€≤6˝®–qÒí¯µ78	Bj›'À‹◊‹rÓÈ¢7ÊC¸+z®Ÿ≠¬œ‹S?S¸ÍIÁMR8À	&Y ?ı‚+µz£gÔÃKŸó˜∫œﬁTíœØ0ñoˇ[ÔZ}Õ„Q∏{JmÌ5∑‘ÈâZ=§£“Ájı„9∂–Bœ˜^º(ïÄ®C_ß,ÿ^6∂wZ[;ªóçÀN´Ì÷Ïy∆•g˝◊(F
+˜∫´o=Ùqi´n
+¬+ÌZn2â"Ú(/∑7w∑ö≠KΩ›ﬂ™Ï≈˝Ì	|>öﬁ\“Ù”°ÈÊÂóØ_∑ø7M∑{7É ËáoO”oÙ	f
+EÍ ∆tF⁄["ÌÊÀ
+“ﬁl51~€ø	B‘¨:H7Í@”»Î ç√ú∂6õèG⁄Újı—Á6>Ä’ÉÊŸ£Sªﬂñ`[óÈıó÷˜&ÿVk7˝Œ{¯{å»yäﬁ∑è£áëÏˆtí›.ë•K≤;?<…˛ˆÒ˝È…·ØÍ‚Ïı˚„√≥Û:U@ˇ¬…9Êﬂù´U'¯Ê≈ﬂpJûADTæÕ&˜SŸ\∏ü[<ıA∑ˇ˛œˇïSªÂ®Ê’l©É˜PÂ0‹ælƒ%¸µŸ’ünü°MXÛÖú°çKØ˝2˛ﬁghßy›¯Ú#ôä£≥ª2≥ôÌE…ÖM†è§Ω§È˘h∫ŸòN”Kp˛ÿ‡|ÎÚs∂|oöæ•;O\·lU“tsI”Oá¶∑/76ΩË{”tˇÀNﬁÙËG§È÷í¶üMÔ\ø6˝ÔM”ô÷—◊ô¶ó∆Ó'D”ªó›ŒM˙Ωizs{ú}g;À|4Ω≥§ÈßC”//wø¥O√˝€/_nl6‡üÊ”&‰çJBﬁ]Ú”!‰f„r´˜ıªkÜøç⁄ÒèL‘/óD˝Ñà∫y˘“˚˝Â˜&Í(⁄˝»D›Z˙◊üQ∑.{≠œﬂ›ﬁÒı≥ˇ‘u√ÕJ¢~òg}I‘ﬂÜ®7.∑^#6øK‘àﬂÙ∆?2QW8óD˝ËDΩy9˙}ÁªGñ4zªõ?4ß^Z<ûQo]néã±6èC‘ç4l}Ón|ÒÊ'e[÷ˇ!¥|n{¸∂)=∫⁄´=åº+Ï õ!~Âk.yWå´L«X§ÃΩnäO›Òòáê{ær◊	U4ªAR¸[xÇÂ0“©Ñ∏™Q‰èWı)⁄KUk4\ªM—Mòˇb(z˚Ú*€–ã£Ëó’n,€Oâ’Ó\∆:È>∫uyß’ÿn5õªO4TÑΩ¨7ñT¸î®x˜rg≥PLÈ √%∞∫Àçï~ó°Oâ~_^~é{èLøVã≥√H>_ﬂ¸®Ùº√xBÙ‹j\Óé
+ÏãoŒOø=o¯ ⁄‚<Îva’ÓOªµVE6À&l◊4⁄›m®wzàïÙŒ¸ø˝-î°qÀÀF>öôà´¥∑	SŒ¬ +V‚’O}Ï¸KTˇLΩ^ì√vc¶√`ft¬≠µ8AfU7®ƒΩæÉ™ÓzM©˘T÷z?±ÏI´•Òóˆ‘A∆ò›‘‚-ß˝(çz±7¬Íõ{Í8ª“ÍÑ≥ËÒÚ__G¯π˙∞—i‰<Xbm≥.(°ÙÏS/®_Ωÿ◊ÉÅ7”1k^v∑6ÆüêV˘∞≥sù®øFÒUäı√ﬁeI©jä=D1K/+„zàüÊûù™);áË-V[{áÂë~Ü&§ò-¯=Ïx∞‹:Ò‚§è4≤ßŒ∆0≤,I‡d–kBêÄaáû˘e`R.í>^<ËS∑ö=ıó n¡≤ﬁ∞Ù‡¶ )\?à@ñ‡â∆~(Ö+gˆe—	Î;v¨À
+N&=PG±ó`CŸÈ˚uË«˙2uœ)Áü~∂[ó√—ˆÛÔw∂œ˚q÷V
+Ì°Æà
+xYoU$ˆ<ÕC=qÆ–”¸14µl*ŒrÂQΩÛ†€yı=¨iØﬁ∑cØãÂ$bYôPèÚq÷Ò‘I÷È˛ç£ÚqN˘4ˇÏç}™Û`pÌM?…Á ˆaÜ0ùx6	ΩqŸÓÏ¸ßÿKERg≈≤tˆWÿ|_V∫◊6*ŒÒV≈9">¬˙¢ÁiÕåÌù7`7E>ƒ≈lì˚†⁄)S}$dk&s«1n>≤Pûpf¶ä…‚°˘˚1eqNﬂLáfÛÚ˜+ˇk?y‘£k˚
+>lÒƒ√≥5ı4ï•g∂*ã|/!x«¨üî8úÕ«˜Ù¿mYΩ%]Xj/∫Úk °ûÇö'ÌÑûÈlo]F„ﬁÕ∂A ÁÚ§Ω]u†´R{z†∑@FΩ6iªAõOÕœÁ∆Àáä√I}$Yh^]®ÇB'Ë€ûÂü=l!˙ã}ºüT¨Dú≈„SFµ3ù†ÌÀa˜™Û√ü TÅÒÉå∏ònÚŸ©<GïQ-”œ—ˆ˜”ßN¯æ2Òˇ  ˇˇÏùÔn€6¿øÔ)Ñ\`qlK∂Â~[ú?CÁ4©Ì¬ÎÄ¢`d9*[û%ÕÄ{ñ=⁄ûd¸#*<YÈHÒla˘ê¥&e”˜„ÔH˘≤!bkÔzT“®òûiÖ`~î»Ç?>9±9
+#Q-}Ó~ûŒBÛËıôJ‡ïMÙz|~ë•Ãvû2ÁÏïo§Èeﬁ*ï9’é]45ıË~‘hÊ∞fæiï≥≠eˆ€Œ∑Ú˚˝ÀOÊ]‘[»<«vπYlMÂ”ª†ﬁ≈∑C!Ò$ı˘º<c§\≠ΩZ?ﬁ≈˜líZ√s–õ¯©Íbï>®í‹:$V±å⁄6πG¨6ÄoE>ãñ·Ëó`CO&nä`Ö¶SwöYDT≈‰E‚=ÙLcaùÿ`á[u¯ZãΩñºÙ]‘„\Ìg‘“bŒ1&1JKä2é$d$Ö CAs2,ÉÊoFm2T”Vê¶(j5—éî(^e@3◊72pé/ï8/.ï8?6ç⁄¯RÕÛ≤g‘.`ΩJ0}í∂öhWJîy>2¢‘!*njo•Ÿ⁄ëQ√ÔV=öL“jív…Ejá í{‡≈Ì’HâÚw=CﬂiGä∂»°åfaàâî’·ëÖ $ôGîqåßﬂ´UR#∂ØÔ54≤FP‰Ö}¥äÿ’K‚≠	á§ßÄ·¶î0ã_eåYXªóh¢ß©Utpc)kpî«*Ò˙ó$Y+Œq§VU]◊∂‡Ÿ=D≥À‰¨A“î€\:%I&©ä{A7ÂyA7FÌ¶ä^¥»∂$ˆä°Œwñ›*uX·Iªö·	óµMytrÅæzRÛz·9¡ΩÇÂÌ@Õr¨d9ºVbõ„∏∆NäÊãV&aÇ=)A2Á.òµ’˘yﬁ¨Ü´£ÈÕVqˆ'ë≥ödKñê…åÕ=G]]X¬hñá%Ô;D¬ìîü˚üOM*:D≠ÅQïºEﬂBπ/{ÁÜQ Æù=ÜN˜@é;`LC£ ∑06
+C‰B÷‡(w~»^-≈å-»ˇ%/§ë\÷jò¶<¿å7H–x≥ﬁaÖ&]9IÑ≠ATæ∫y9ùz“y⁄+ﬂ],<x"Aœ+µÇjÑ'ö˙9nQzIìãZM”í{∑˝˘⁄ìÆûåÇ/Å_eâ∂∂™ﬁì¥Iπ^ˆQŒÇÊ[¨ˆ™›%Õå’
+©7g–ë2‹°π=e~Ø>˘2¶b†§ÎTìÍ˝2 ˆ˜`PT	ôå’€9ˆî$» f‰TÜ‚1Ãp˘kŒ	3Éπ<»Ù˛ÿ∏ÿÀR≈'◊•X⁄}ÃŒ¶¶&r÷ )ﬂ’E∂ZÀH∆;∞ c5Hu\2Pô%ØñÉ≤rjƒ9bíì"C,¶™®8ó¢∞Ö-lîÌ≤YöeÏE≠⁄ìØ´∞Ù?È ªNÕe_ù›ßõ{t∆ó	ôS§˘xÚ0i]∆xO˙ÓÀ¯}IÜ≈«`Õ„<±zpØ◊¡f◊ÉQ»N”1FÏø@Ë~@vÂüxX¯@’Á.öˆ‰Ãüñ—In)y¥êß,‹ŒfûCN#mçX6»ågÉLΩØ^Ë•>˘.È^÷>y~E´7gg~˘‘ô.ÎT^K¥™;¡‚å &tÊÓt„ªg6≤g»∂ß]◊qN≠nªsjª¯ó3kÙö¶cˆÓ›˚∫Á‰ÅÒ∑Í}ê…≤ó# re(Ú'ôÕV∑g5l+ª#±ñ`eüyBo'ßÏ≤¢	÷Ü∞lh÷J2ïÀ%I*Oùë*
+∞©Î‡∂.kŸ:”¨!Åg¡s…ó˙î4lÌ>l|¥m7>1ÿ'Œ&åÇ)†{◊ájNï¸‰é?cÚ≈¿cE_0(ØaKw©›⁄™›Çµçç—è∆·k¯•”èaìwá¶!Æ~µ¡˝û‰«°‘C÷÷CVÚPrä5x¢M.`¨ﬂ∆?˝mI I'Ø&‡’Õ´	`⁄y5≠twŸMÓ¨>Kˆ¨≥>C˛¨Sk1 ™òEƒ§-w<‰{\ìûMò{á9Ã„)s@Qì<ºß˘3çW0¡‹â9ÊYo‚ÿÏl¡R8Ò; ,˘:%«ã˜ŒGèxl‹∞qÔìP›Áó'£ ¬ÚåÇı£ÅMgÑ¸Ï8>ˆ["ÔO⁄ClzWÚn˛dDÆKÄÖÛ`ÖF∞ÙÎPl7å–Ç˙f∑euÒ¥∏?ê}ˇ  ˇˇ øphœ

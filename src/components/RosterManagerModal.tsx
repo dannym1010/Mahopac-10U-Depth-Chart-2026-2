@@ -872,6 +872,66 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                   </tbody>
                 </table>
               </div>
+
+              {filteredRoster.length === 0 && (
+                <div className="p-8 text-center bg-slate-850 rounded-2xl border border-slate-800 my-2">
+                  <UserPlus className="w-10 h-10 text-indigo-400 mx-auto mb-3 opacity-60" />
+                  <h4 className="font-black text-sm text-slate-200 mb-1">
+                    {roster.length === 0
+                      ? 'No Players in Master Roster'
+                      : selectedTeamFilter !== 'all'
+                      ? `No Players Registered for ${teams.find((t) => t.id === selectedTeamFilter)?.name || 'Selected Team'}`
+                      : 'No Matching Players Found'}
+                  </h4>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto mb-4">
+                    {roster.length === 0
+                      ? 'Your program currently has no players on file. You can restore the standard 26-player roster, import a CSV, or add players individually.'
+                      : selectedTeamFilter !== 'all'
+                      ? 'You can copy the roster from another team, import a CSV file, or add new players directly.'
+                      : 'Try adjusting your search criteria or clear the search filter.'}
+                  </p>
+                  <div className="flex items-center justify-center gap-2 flex-wrap">
+                    {roster.length === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onUpdateRoster(MASTER_ROSTER);
+                          setSelectedTeamFilter('all');
+                        }}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all cursor-pointer flex items-center gap-2"
+                      >
+                        <Sparkles className="w-4 h-4 text-amber-300" />
+                        <span>Restore Master 26-Player Roster</span>
+                      </button>
+                    )}
+                    {selectedTeamFilter !== 'all' && roster.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const sourceTeam = teams.find((t) => t.id !== selectedTeamFilter);
+                          if (sourceTeam) {
+                            setCopySourceTeamId(sourceTeam.id);
+                            setCopyTargetTeamId(selectedTeamFilter);
+                            setActiveTab('copy');
+                          }
+                        }}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all cursor-pointer flex items-center gap-2"
+                      >
+                        <Users className="w-4 h-4 text-indigo-200" />
+                        <span>Copy Players From Another Team</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={startAddPlayer}
+                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <UserPlus className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Add Player</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

@@ -1,10 +1,104 @@
 import { ScheduleEvent, FormationBoard, PlacedPlayer, WeekState, SeasonConfig, WeekOption, formatWeekLabel } from '../types';
+import { INITIAL_DEFAULT_FORMATIONS } from '../data/initialData';
 
 export interface AutoWeekResult {
   activeWeek: string;
   reason: string;
   priorWeek?: string;
   isAutoCalculated: boolean;
+}
+
+/**
+ * Normalizes weeklyData across both legacy unscoped week keys ('0', '1', ...)
+ * and team-scoped keys ('team_10u__week_0', ...), guaranteeing that depth charts,
+ * formations, scrimmage charts, scouting, and opponent details are preserved and synced.
+ */
+export function normalizeWeeklyData(
+  wData: Record<string, WeekState> | undefined,
+  defaultForms: FormationBoard[] = INITIAL_DEFAULT_FORMATIONS
+): Record<string, WeekState> {
+  if (!wData || typeof wData !== 'object') return {};
+  const result: Record<string, WeekState> = { ...wData };
+
+  const allWeeks = [
+    '0', '1', '2', '3', '4', '5', '6', '7', '8',
+    'pre-1', 'pre-2', 'pre-3', 'pre-4', 'playoffs', 'championship'
+  ];
+
+  const getDcCount = (dc?: Record<string, PlacedPlayer[]>) => {
+    if (!dc) return 0;
+    return Object.values(dc).reduce(
+      (sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0),
+      0
+    );
+  };
+
+  const deepClone = <T>(obj: T): T => {
+    if (!obj) return obj;
+    try {
+      return JSON.parse(JSON.stringify(obj));
+    } catch {
+      return obj;
+    }
+  };
+
+  allWeeks.forEach((wk) => {
+    const unKey = wk;
+    const team10uKey = `team_10u__week_${wk}`;
+    const un = result[unKey];
+    const sc = result[team10uKey];
+
+    const unDc = getDcCount(un?.depthChart);
+    const scDc = getDcCount(sc?.depthChart);
+    const unForms = un?.formations?.length || 0;
+    const scForms = sc?.formations?.length || 0;
+
+    // Pick formations: non-empty formations, fallback to Week 0 or defaults
+    const bestForms =
+      (scForms > 0 ? sc?.formations : null) ||
+      (unForms > 0 ? un?.formations : null) ||
+      (result['0']?.formations?.length ? result['0'].formations : null) ||
+      (result['team_10u__week_0']?.formations?.length ? result['team_10u__week_0'].formations : null) ||
+      (defaultForms.length > 0 ? defaultForms : INITIAL_DEFAULT_FORMATIONS);
+
+    // Pick depthChart: prefer the one with more placed players
+    const bestDc =
+      (scDc >= unDc && scDc > 0 ? sc?.depthChart : null) ||
+      (unDc > 0 ? un?.depthChart : null) ||
+      sc?.depthChart ||
+      un?.depthChart ||
+      {};
+
+    // Pick scrimmageChart: prefer the one with placements
+    const scScrimCount = getDcCount(sc?.scrimmageChart);
+    const unScrimCount = getDcCount(un?.scrimmageChart);
+    const bestScrim =
+      (scScrimCount >= unScrimCount && scScrimCount > 0 ? sc?.scrimmageChart : null) ||
+      (unScrimCount > 0 ? un?.scrimmageChart : null) ||
+      sc?.scrimmageChart ||
+      un?.scrimmageChart ||
+      {};
+
+    const bestOpponent = sc?.opponent || un?.opponent || '';
+    const bestWristband = sc?.wristbandData || un?.wristbandData;
+    const bestScouting = sc?.scouting || un?.scouting;
+
+    const mergedWeek: WeekState = {
+      formations: deepClone(bestForms),
+      depthChart: deepClone(bestDc),
+      scrimmageChart: deepClone(bestScrim),
+      opponent: bestOpponent,
+      wristbandData: bestWristband,
+      scouting: bestScouting,
+    };
+
+    if (un || sc || unDc > 0 || scDc > 0 || unForms > 0 || scForms > 0) {
+      result[unKey] = mergedWeek;
+      result[team10uKey] = mergedWeek;
+    }
+  });
+
+  return result;
 }
 
 /**

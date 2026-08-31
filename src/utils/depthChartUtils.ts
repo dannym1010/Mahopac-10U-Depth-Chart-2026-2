@@ -1,4 +1,53 @@
 import { FormationBoard, PlacedPlayer, RosterPlayer } from '../types';
+import { MASTER_ROSTER } from '../data/initialData';
+import { deepClone } from '../services/storageService';
+
+/**
+ * Ensures roster array is valid, populated with required fields,
+ * has default team assignments, and falls back to MASTER_ROSTER if empty.
+ */
+export function normalizeRoster(
+  rawRoster: any[] | null | undefined,
+  fallbackToMaster: boolean = true
+): RosterPlayer[] {
+  if (!rawRoster || !Array.isArray(rawRoster) || rawRoster.length === 0) {
+    return fallbackToMaster ? deepClone(MASTER_ROSTER) : [];
+  }
+
+  const cleanList: RosterPlayer[] = rawRoster
+    .filter((p) => Boolean(p && typeof p === 'object' && (p.num !== undefined && p.num !== null)))
+    .map((p) => {
+      const cleanNum = String(p.num).trim();
+      const fName = (p.firstName || '').trim();
+      const lName = (p.lastName || '').trim();
+      const rName = (p.rosterName || lName || fName || '').trim();
+      const team = (p.teamId || 'team_10u').trim();
+
+      return {
+        num: cleanNum,
+        firstName: fName,
+        lastName: lName,
+        rosterName: rName,
+        teamId: team,
+        primaryPosition: (p.primaryPosition || '').trim(),
+        secondaryPosition: (p.secondaryPosition || '').trim(),
+        offensivePosition: (p.offensivePosition || p.primaryPosition || '').trim(),
+        defensivePosition: (p.defensivePosition || p.secondaryPosition || '').trim(),
+        specialTeamsPosition: (p.specialTeamsPosition || '').trim(),
+        conditioningHours: typeof p.conditioningHours === 'number' ? p.conditioningHours : 10,
+        paddedHours: typeof p.paddedHours === 'number' ? p.paddedHours : 10,
+        isCaptain: Boolean(p.isCaptain),
+        notes: (p.notes || '').trim(),
+        weeklyHours: p.weeklyHours || { '0': 5, '1': 4.5, '2': 4.5 },
+      };
+    });
+
+  if (cleanList.length === 0 && fallbackToMaster) {
+    return deepClone(MASTER_ROSTER);
+  }
+
+  return cleanList;
+}
 
 export interface PlayerDepthChartAssignment {
   positionName: string; // e.g. "QB", "MLB", "LT", "CB"

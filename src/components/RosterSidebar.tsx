@@ -18,6 +18,10 @@ interface RosterSidebarProps {
   onOpenRosterManager?: () => void;
   onOpenCompliance?: () => void;
   onSelectPlayerForEdit?: (player: RosterPlayer) => void;
+  activeTeamName?: string;
+  totalProgramPlayers?: number;
+  onCopyFromMainTeam?: () => void;
+  onRestoreDefaultRoster?: () => void;
 }
 
 export const RosterSidebar: React.FC<RosterSidebarProps> = ({
@@ -36,6 +40,10 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
   onOpenRosterManager,
   onOpenCompliance,
   onSelectPlayerForEdit,
+  activeTeamName,
+  totalProgramPlayers = 0,
+  onCopyFromMainTeam,
+  onRestoreDefaultRoster,
 }) => {
   // If Wristband tab is active, show Play Library
   if (activeUnit === 'wristband') {
@@ -132,19 +140,24 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
     <div className="w-full lg:w-80 bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-4 sticky top-[170px] flex flex-col max-h-[calc(100vh-190px)] print:hidden">
       {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-700/80 mb-2">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 shrink-0">
             <UserCheck className="w-4 h-4" />
           </div>
-          <h2 className="font-black text-sm text-slate-100 tracking-tight">
-            Team Roster
-          </h2>
+          <div className="min-w-0">
+            <h2 className="font-black text-sm text-slate-100 tracking-tight truncate">
+              {activeTeamName ? `${activeTeamName}` : 'Team Roster'}
+            </h2>
+            <p className="text-[10px] text-slate-400 font-semibold truncate">
+              {roster.length} {roster.length === 1 ? 'Player' : 'Players'}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0">
           {userRole === 'admin' && onOpenRosterManager && (
             <button
               onClick={onOpenRosterManager}
-              className="p-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 border border-indigo-500/30 transition-all text-[10px] font-bold flex items-center gap-1 px-2"
+              className="p-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 border border-indigo-500/30 transition-all text-[10px] font-bold flex items-center gap-1 px-2 cursor-pointer"
               title="Add or edit players"
             >
               <UserPlus className="w-3 h-3" />
@@ -295,8 +308,48 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
           );
         })}
         {filteredRoster.length === 0 && (
-          <div className="text-center py-6 text-xs text-slate-400 font-medium">
-            {roster.length === 0 ? 'No players on roster yet. Click "+ Edit" to add players.' : 'No matching players found'}
+          <div className="py-6 px-3 text-center space-y-3">
+            <p className="text-xs text-slate-400 font-medium">
+              {roster.length === 0
+                ? activeTeamName
+                  ? `No players assigned to ${activeTeamName} yet.`
+                  : 'No players on roster yet.'
+                : 'No matching players found.'}
+            </p>
+            {roster.length === 0 && (
+              <div className="space-y-2 pt-1">
+                {totalProgramPlayers > 0 && onCopyFromMainTeam && (
+                  <button
+                    type="button"
+                    onClick={onCopyFromMainTeam}
+                    className="w-full py-2 px-3 bg-indigo-600/90 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Copy 10U Roster ({totalProgramPlayers})</span>
+                  </button>
+                )}
+                {totalProgramPlayers === 0 && onRestoreDefaultRoster && (
+                  <button
+                    type="button"
+                    onClick={onRestoreDefaultRoster}
+                    className="w-full py-2 px-3 bg-indigo-600/90 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Restore Default Roster</span>
+                  </button>
+                )}
+                {userRole === 'admin' && onOpenRosterManager && (
+                  <button
+                    type="button"
+                    onClick={onOpenRosterManager}
+                    className="w-full py-1.5 px-3 bg-slate-900 hover:bg-slate-750 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <UserPlus className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Manage / Add Players</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </ul>
