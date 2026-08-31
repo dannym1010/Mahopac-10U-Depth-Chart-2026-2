@@ -288,9 +288,19 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 
   // Next Upcoming Event
   const nextEvent = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const upcoming = sortedEvents.filter((e) => e.date >= '2026-08-25'); // reference season start
-    return upcoming[0] || sortedEvents[0];
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
+
+    // Filter events starting today or in the future
+    const upcoming = sortedEvents.filter((e) => e.date >= todayStr);
+    if (upcoming.length > 0) {
+      return upcoming[0];
+    }
+    // If no upcoming events remain, fallback to the last or first event
+    return sortedEvents[sortedEvents.length - 1] || sortedEvents[0];
   }, [sortedEvents]);
 
   // Helper to format date string nicely (e.g., "Saturday, Sep 5, 2026")

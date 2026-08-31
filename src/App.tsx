@@ -13,6 +13,8 @@ import {
   RosterPlayer,
   PlacedPlayer,
   FormationBoard,
+  FormationRow,
+  PositionSlot,
   PracticePlan,
   DrillFolder,
   PlaybookGuideTree,
@@ -95,6 +97,15 @@ export default function App() {
   const [practiceData, setPracticeData] = useState<PracticePlan[]>(() => {
     const saved = safeJSONParse('footballPracticeData', null);
     if (saved && Array.isArray(saved) && saved.length > 0) {
+      const has831Plan = saved.some((p: PracticePlan) => p.date === '2026-08-31');
+      if (!has831Plan) {
+        const default831Plan = DEFAULT_INITIAL_PRACTICES.find((p) => p.date === '2026-08-31');
+        if (default831Plan) {
+          const updated = [...saved, default831Plan];
+          safeJSONSet('footballPracticeData', updated);
+          return updated;
+        }
+      }
       return saved;
     }
     return DEFAULT_INITIAL_PRACTICES;
@@ -125,9 +136,39 @@ export default function App() {
   const [masterPlayLibrary, setMasterPlayLibrary] = useState<string[]>(() =>
     safeJSONParse('footballMasterPlays', MASTER_PLAY_LIBRARY)
   );
-  const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>(() =>
-    safeJSONParse('footballScheduleEvents', DEFAULT_SCHEDULE_EVENTS)
-  );
+  const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>(() => {
+    const saved = safeJSONParse('footballScheduleEvents', null);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      const has831 = saved.some((e: ScheduleEvent) => e.date === '2026-08-31');
+      if (!has831) {
+        const mondayEvent: ScheduleEvent = {
+          id: 'evt_w1_p0',
+          type: 'practice',
+          title: 'Week 1 Prep - Monday Installation & Fundamentals',
+          week: '1',
+          date: '2026-08-31',
+          startTime: '17:30',
+          endTime: '19:00',
+          location: 'Crane Road',
+          locationType: 'home',
+          arrivalMinutesBefore: 15,
+          focusOrNotes:
+            'Full Pads. Monday game-week install: Carmel defensive front keys, punt coverage lanes, 11-person offense wristband test.',
+          linkedPracticePlanId: 'p_pre_monday_831',
+          createdAt: 1724900000000,
+          lastEdited: 1724900000000,
+        };
+        const updated = [...saved, mondayEvent].sort((a, b) => {
+          if (a.date !== b.date) return a.date.localeCompare(b.date);
+          return (a.startTime || '').localeCompare(b.startTime || '');
+        });
+        safeJSONSet('footballScheduleEvents', updated);
+        return updated;
+      }
+      return saved;
+    }
+    return DEFAULT_SCHEDULE_EVENTS;
+  });
   const [seasonConfig, setSeasonConfig] = useState<SeasonConfig>(() =>
     safeJSONParse('footballSeasonConfig', DEFAULT_SEASON_CONFIG)
   );
@@ -1481,27 +1522,372 @@ export default function App() {
   /* =========================================================================
      FORMATION ACTIONS
      ========================================================================= */
-  const handleAddFormation = (unit: 'offense' | 'defense' | 'st' | 'groups') => {
-    const name = prompt(
-      `Enter ${unit.toUpperCase()} Formation Name (e.g. 11 Shotgun / 5-3 Defense):`
-    );
-    if (!name || !name.trim()) return;
-    const cleanName = name.trim();
+  const handleSetRowSlots = (formId: string, rIdx: number, newCount: number) => {
+    const safeCount = Math.max(1, Math.min(12, newCount));
+    const forms = currentFormations.map((f) => {
+      if (f.id === formId) {
+        const rows = [...f.rows];
+        if (!rows[rIdx]) return f;
+        let positions = [...rows[rIdx].positions];
+        while (positions.length < safeCount) positions.push(null);
+        if (safeCount < positions.length) positions = positions.slice(0, safeCount);
+        rows[rIdx] = { ...rows[rIdx], slotCount: safeCount, positions };
+        return { ...f, rows };
+      }
+      return f;
+    });
+    updateCurrentWeekFormations(forms, true);
+  };
+
+  const handleAddSlotToRow = (formId: string, rIdx: number) => {
+    const form = currentFormations.find((f) => f.id === formId);
+    if (!form || !form.rows[rIdx]) return;
+    const currentCount = form.rows[rIdx].positions.length;
+    if (currentCount >= 12) return;
+    handleSetRowSlots(formId, rIdx, currentCount + 1);
+  };
+
+  const handleRemoveSlotFromRow = (formId: string, rIdx: number, pIdx?: number) => {
+    const forms = currentFormations.map((f) => {
+      if (f.id === formId) {
+        const rows = [...f.rows];
+        if (!rows[rIdx]) return f;
+        let positions = [...rows[rIdx].positions];
+        if (positions.length <= 1) return f;
+        if (typeof pIdx === 'number' && pIdx >= 0 && pIdx < positions.length) {
+          positions.splice(pIdx, 1);
+        } else {
+          const lastNullIdx = positions.lastIndexOf(null);
+          if (lastNullIdx !== -1) {
+            positions.splice(lastNullIdx, 1);
+          } else {
+            positions.pop();
+          }
+        }
+        rows[rIdx] = { ...rows[rIdx], slotCount: positions.length, positions };
+        return { ...f, rows };
+      }
+      return f;
+    });
+    updateCurrentWeekFormations(forms, true);
+  };
+
+  const handleAssignPositionToSlot = (
+    formId: string,
+    rIdx: number,
+    pIdx: number,
+    posName: string
+  ) => {
+    if (!posName || !posName.trim()) return;
+    const cleanName = posName.trim();
+    const newPosId = `${formId}-${cleanName}-${Date.now()}_${pIdx}`;
+    const newPos: PositionSlot = { id: newPosId, name: cleanName };
+
+    const forms = currentFormations.map((f) => {
+      if (f.id === formId) {
+        const rows = [...f.rows];
+        if (!rows[rIdx]) return f;
+        const positions = [...rows[rIdx].positions];
+        while (positions.length <= pIdx) {
+          positions.push(null);
+        }
+        positions[pIdx] = newPos;
+        rows[rIdx] = { ...rows[rIdx], slotCount: positions.length, positions };
+        return { ...f, rows };
+      }
+      return f;
+    });
+    updateCurrentWeekFormations(forms, true);
+  };
+
+  const handleAddPositionDirect = (
+    formId: string,
+    rIdx: number,
+    posName: string
+  ) => {
+    if (!posName || !posName.trim()) return;
+    const cleanName = posName.trim();
+    const newPosId = `${formId}-${cleanName}-${Date.now()}`;
+    const newPos: PositionSlot = { id: newPosId, name: cleanName };
+
+    const forms = currentFormations.map((f) => {
+      if (f.id === formId) {
+        const rows = [...f.rows];
+        if (!rows[rIdx]) return f;
+        const positions = [...rows[rIdx].positions];
+        const emptyIdx = positions.indexOf(null);
+        if (emptyIdx !== -1) {
+          positions[emptyIdx] = newPos;
+        } else {
+          positions.push(newPos);
+        }
+        rows[rIdx] = { ...rows[rIdx], slotCount: positions.length, positions };
+        return { ...f, rows };
+      }
+      return f;
+    });
+    updateCurrentWeekFormations(forms, true);
+  };
+
+  const handleRenamePositionDirect = (
+    formId: string,
+    rIdx: number,
+    pIdx: number,
+    newName: string
+  ) => {
+    if (!newName || !newName.trim()) return;
+    const cleanName = newName.trim();
+    const forms = currentFormations.map((f) => {
+      if (f.id === formId) {
+        const rows = [...f.rows];
+        if (!rows[rIdx]?.positions[pIdx]) return f;
+        const positions = [...rows[rIdx].positions];
+        positions[pIdx] = { ...positions[pIdx]!, name: cleanName };
+        rows[rIdx] = { ...rows[rIdx], positions };
+        return { ...f, rows };
+      }
+      return f;
+    });
+    updateCurrentWeekFormations(forms, true);
+  };
+
+  const handleRenameRowDirect = (
+    formId: string,
+    rIdx: number,
+    newName: string
+  ) => {
+    if (!newName || !newName.trim()) return;
+    const cleanName = newName.trim();
+    const forms = currentFormations.map((f) => {
+      if (f.id === formId) {
+        const rows = [...f.rows];
+        if (!rows[rIdx]) return f;
+        rows[rIdx] = { ...rows[rIdx], label: cleanName };
+        return { ...f, rows };
+      }
+      return f;
+    });
+    updateCurrentWeekFormations(forms, true);
+  };
+
+  const handleAddRowDirect = (
+    formId: string,
+    label: string,
+    slotCount: number = 7
+  ) => {
+    const cleanLabel = (label && label.trim()) || 'Secondary Level';
+    const safeSlots = Math.max(1, Math.min(12, slotCount || 7));
+    const forms = currentFormations.map((f) => {
+      if (f.id === formId) {
+        return {
+          ...f,
+          rows: [
+            ...f.rows,
+            {
+              id: `row_${Date.now()}_${f.rows.length}`,
+              label: cleanLabel,
+              slotCount: safeSlots,
+              positions: Array(safeSlots).fill(null),
+            },
+          ],
+        };
+      }
+      return f;
+    });
+    updateCurrentWeekFormations(forms, true);
+  };
+
+  const handleAddFormationDirect = (
+    unit: 'offense' | 'defense' | 'st' | 'groups',
+    name: string,
+    templateKey?: string
+  ) => {
+    const cleanName = (name && name.trim()) || `New ${unit.toUpperCase()} Formation`;
     const newId = `form_${Date.now()}`;
+    
+    let initialRows: FormationRow[] = [
+      {
+        id: `row_${Date.now()}_0`,
+        label: unit === 'offense' ? 'Offensive Line' : unit === 'defense' ? 'Defensive Line' : unit === 'st' ? 'Line / Coverage' : 'Level 1',
+        slotCount: 7,
+        positions: Array(7).fill(null),
+      },
+    ];
+
+    if (templateKey === '11_offense' || (unit === 'offense' && cleanName.toLowerCase().includes('11'))) {
+      initialRows = [
+        {
+          id: `row_${Date.now()}_0`,
+          label: 'Offensive Line & TE (Y1)',
+          slotCount: 7,
+          positions: [
+            { id: `${newId}-LT`, name: 'LT' },
+            { id: `${newId}-LG`, name: 'LG' },
+            { id: `${newId}-C`, name: 'C' },
+            { id: `${newId}-RG`, name: 'RG' },
+            { id: `${newId}-RT`, name: 'RT' },
+            { id: `${newId}-Y1`, name: 'Y1' },
+            null,
+          ],
+        },
+        {
+          id: `row_${Date.now()}_1`,
+          label: 'Wide Receivers (X, W, Z)',
+          slotCount: 7,
+          positions: [
+            { id: `${newId}-X`, name: 'X' },
+            null,
+            null,
+            null,
+            { id: `${newId}-W`, name: 'W' },
+            null,
+            { id: `${newId}-Z`, name: 'Z' },
+          ],
+        },
+        {
+          id: `row_${Date.now()}_2`,
+          label: 'Backfield (1 - 4)',
+          slotCount: 7,
+          positions: [
+            null,
+            null,
+            { id: `${newId}-1`, name: '1 (QB)' },
+            null,
+            { id: `${newId}-4`, name: '4 (RB)' },
+            null,
+            null,
+          ],
+        },
+      ];
+    } else if (templateKey === '44_defense' || (unit === 'defense' && cleanName.toLowerCase().includes('4-4'))) {
+      initialRows = [
+        {
+          id: `row_${Date.now()}_0`,
+          label: 'Defensive Line (DE, DT, NT, DE)',
+          slotCount: 7,
+          positions: [
+            null,
+            { id: `${newId}-LDE`, name: 'LDE' },
+            { id: `${newId}-LDT`, name: 'LDT' },
+            null,
+            { id: `${newId}-RDT`, name: 'RDT' },
+            { id: `${newId}-RDE`, name: 'RDE' },
+            null,
+          ],
+        },
+        {
+          id: `row_${Date.now()}_1`,
+          label: 'Linebackers (WLB, MLB, SLB, ROV)',
+          slotCount: 7,
+          positions: [
+            { id: `${newId}-WLB`, name: 'WLB' },
+            null,
+            { id: `${newId}-MLB`, name: 'MLB' },
+            null,
+            { id: `${newId}-SLB`, name: 'SLB' },
+            null,
+            { id: `${newId}-ROV`, name: 'ROV' },
+          ],
+        },
+        {
+          id: `row_${Date.now()}_2`,
+          label: 'Secondary (LCB, FS, SS, RCB)',
+          slotCount: 7,
+          positions: [
+            { id: `${newId}-LCB`, name: 'LCB' },
+            null,
+            { id: `${newId}-FS`, name: 'FS' },
+            null,
+            { id: `${newId}-SS`, name: 'SS' },
+            null,
+            { id: `${newId}-RCB`, name: 'RCB' },
+          ],
+        },
+      ];
+    } else if (unit === 'defense') {
+      initialRows = [
+        {
+          id: `row_${Date.now()}_0`,
+          label: 'Defensive Line',
+          slotCount: 7,
+          positions: [
+            null,
+            { id: `${newId}-LDE`, name: 'LDE' },
+            { id: `${newId}-DT1`, name: 'DT1' },
+            null,
+            { id: `${newId}-DT2`, name: 'DT2' },
+            { id: `${newId}-RDE`, name: 'RDE' },
+            null,
+          ],
+        },
+        {
+          id: `row_${Date.now()}_1`,
+          label: 'Linebackers',
+          slotCount: 7,
+          positions: [
+            null,
+            { id: `${newId}-WLB`, name: 'WLB' },
+            null,
+            { id: `${newId}-MLB`, name: 'MLB' },
+            null,
+            { id: `${newId}-SLB`, name: 'SLB' },
+            null,
+          ],
+        },
+        {
+          id: `row_${Date.now()}_2`,
+          label: 'Secondary',
+          slotCount: 7,
+          positions: [
+            { id: `${newId}-CB1`, name: 'CB1' },
+            null,
+            { id: `${newId}-FS`, name: 'FS' },
+            null,
+            { id: `${newId}-SS`, name: 'SS' },
+            null,
+            { id: `${newId}-CB2`, name: 'CB2' },
+          ],
+        },
+      ];
+    } else if (unit === 'st') {
+      initialRows = [
+        {
+          id: `row_${Date.now()}_0`,
+          label: 'Front Line & Coverage',
+          slotCount: 7,
+          positions: [
+            { id: `${newId}-L1`, name: 'L1' },
+            { id: `${newId}-L2`, name: 'L2' },
+            { id: `${newId}-LS`, name: 'LS/C' },
+            { id: `${newId}-R2`, name: 'R2' },
+            { id: `${newId}-R1`, name: 'R1' },
+            { id: `${newId}-GN1`, name: 'Gunner L' },
+            { id: `${newId}-GN2`, name: 'Gunner R' },
+          ],
+        },
+        {
+          id: `row_${Date.now()}_1`,
+          label: 'Specialists & Returners',
+          slotCount: 7,
+          positions: [
+            null,
+            { id: `${newId}-UP`, name: 'Upback' },
+            null,
+            { id: `${newId}-K`, name: 'K / P' },
+            null,
+            { id: `${newId}-RET`, name: 'Returner' },
+            null,
+          ],
+        },
+      ];
+    }
 
     const newForm: FormationBoard = {
       id: newId,
       unit,
       name: cleanName,
       collapsed: false,
-      rows: [
-        {
-          id: `row_${Date.now()}`,
-          label: 'Main Level',
-          slotCount: 7,
-          positions: Array(7).fill(null),
-        },
-      ],
+      rows: initialRows,
     };
 
     const updated = [...currentFormations, newForm];
@@ -1509,16 +1895,20 @@ export default function App() {
     setSelectedFormationId(newId);
   };
 
-  const handleDuplicateFormation = (formId: string) => {
+  const handleRenameFormationDirect = (formId: string, newName: string) => {
+    if (!newName || !newName.trim()) return;
+    const clean = newName.trim();
+    const updated = currentFormations.map((f) =>
+      f.id === formId ? { ...f, name: clean } : f
+    );
+    updateCurrentWeekFormations(updated, true);
+  };
+
+  const handleDuplicateFormationDirect = (formId: string, newName: string) => {
     if (userRole !== 'admin') return;
     const form = currentFormations.find((f) => f.id === formId);
     if (!form) return;
-
-    const newName = prompt(
-      'Enter name for duplicated formation:',
-      `${form.name} (Copy)`
-    );
-    if (!newName || !newName.trim()) return;
+    const clean = (newName && newName.trim()) || `${form.name} (Copy)`;
 
     const newFormId = `form_${Date.now()}`;
     const dc = { ...currentDepthChart };
@@ -1527,7 +1917,7 @@ export default function App() {
     const clonedForm: FormationBoard = {
       id: newFormId,
       unit: form.unit,
-      name: newName.trim(),
+      name: clean,
       collapsed: false,
       rows: form.rows.map((row, rIdx) => ({
         id: `row_${Date.now()}_${rIdx}`,
@@ -1546,22 +1936,86 @@ export default function App() {
     };
 
     const updated = [...currentFormations, clonedForm];
-    updateCurrentWeekFormations(updated);
+    updateCurrentWeekFormations(updated, true);
     updateCurrentWeekDepthChart(dc);
     updateCurrentWeekScrimmageChart(sc);
     setSelectedFormationId(newFormId);
   };
 
+  const handleMovePositionDirect = (
+    formId: string,
+    srcRIdx: number,
+    srcPIdx: number,
+    targetRIdx: number
+  ) => {
+    const form = currentFormations.find((f) => f.id === formId);
+    if (!form || !form.rows[srcRIdx]?.positions[srcPIdx]) return;
+    const pos = form.rows[srcRIdx].positions[srcPIdx]!;
+    if (targetRIdx < 0 || targetRIdx >= form.rows.length) return;
+
+    const forms = currentFormations.map((f) => {
+      if (f.id === formId) {
+        const rows = deepClone(f.rows);
+        rows[srcRIdx].positions[srcPIdx] = null;
+        const emptyIdx = rows[targetRIdx].positions.indexOf(null);
+        if (emptyIdx !== -1) {
+          rows[targetRIdx].positions[emptyIdx] = pos;
+        } else {
+          rows[targetRIdx].positions.push(pos);
+          rows[targetRIdx].slotCount = rows[targetRIdx].positions.length;
+        }
+        return { ...f, rows };
+      }
+      return f;
+    });
+    updateCurrentWeekFormations(forms, true);
+  };
+
+  const handleCopyPositionDirect = (
+    formId: string,
+    srcRIdx: number,
+    srcPIdx: number,
+    targetFormId: string
+  ) => {
+    const srcForm = currentFormations.find((f) => f.id === formId);
+    if (!srcForm || !srcForm.rows[srcRIdx]?.positions[srcPIdx]) return;
+    const pos = srcForm.rows[srcRIdx].positions[srcPIdx]!;
+
+    const targetForm = currentFormations.find((f) => f.id === targetFormId);
+    if (!targetForm) return;
+
+    const newPosId = `${targetForm.id}-${pos.name}-${Date.now()}`;
+    const newPos = { id: newPosId, name: pos.name };
+
+    const forms = currentFormations.map((f) => {
+      if (f.id === targetForm.id) {
+        const rows = [...f.rows];
+        rows[0].positions.push(newPos);
+        rows[0].slotCount = rows[0].positions.length;
+        return { ...f, rows };
+      }
+      return f;
+    });
+
+    const dc = { ...currentDepthChart };
+    if (dc[pos.id]) dc[newPosId] = deepClone(dc[pos.id]);
+
+    updateCurrentWeekFormations(forms, true);
+    updateCurrentWeekDepthChart(dc);
+  };
+
+  const handleAddFormation = (unit: 'offense' | 'defense' | 'st' | 'groups') => {
+    handleAddFormationDirect(unit, `New ${unit.toUpperCase()} Formation`);
+  };
+
+  const handleDuplicateFormation = (formId: string) => {
+    handleDuplicateFormationDirect(formId, '');
+  };
+
   const handleRenameFormation = (formId: string) => {
     const form = currentFormations.find((f) => f.id === formId);
     if (!form) return;
-    const newName = prompt('Rename Formation:', form.name);
-    if (newName && newName.trim()) {
-      const updated = currentFormations.map((f) =>
-        f.id === formId ? { ...f, name: newName.trim() } : f
-      );
-      updateCurrentWeekFormations(updated, true);
-    }
+    handleRenameFormationDirect(formId, form.name);
   };
 
   const handleDeleteFormation = (formId: string) => {
@@ -1588,70 +2042,24 @@ export default function App() {
       const temp = forms[gIdx1];
       forms[gIdx1] = forms[gIdx2];
       forms[gIdx2] = temp;
-      updateCurrentWeekFormations(forms);
+      updateCurrentWeekFormations(forms, true);
     }
   };
 
   const handleAddRow = (formId: string) => {
-    const label = prompt('Enter Row Level Label (e.g. Backfield, Linebackers):', 'Secondary Level');
-    if (!label) return;
-    const forms = currentFormations.map((f) => {
-      if (f.id === formId) {
-        return {
-          ...f,
-          rows: [
-            ...f.rows,
-            {
-              id: `row_${Date.now()}`,
-              label: label.trim(),
-              slotCount: 7,
-              positions: Array(7).fill(null),
-            },
-          ],
-        };
-      }
-      return f;
-    });
-    updateCurrentWeekFormations(forms);
+    handleAddRowDirect(formId, 'Secondary Level', 7);
   };
 
   const handleEditRowName = (formId: string, rIdx: number) => {
     const form = currentFormations.find((f) => f.id === formId);
     if (!form || !form.rows[rIdx]) return;
-    const newName = prompt('Edit Row Name:', form.rows[rIdx].label);
-    if (newName && newName.trim()) {
-      const forms = currentFormations.map((f) => {
-        if (f.id === formId) {
-          const rows = [...f.rows];
-          rows[rIdx] = { ...rows[rIdx], label: newName.trim() };
-          return { ...f, rows };
-        }
-        return f;
-      });
-      updateCurrentWeekFormations(forms);
-    }
+    handleRenameRowDirect(formId, rIdx, form.rows[rIdx].label);
   };
 
   const handleEditRowSlots = (formId: string, rIdx: number) => {
     const form = currentFormations.find((f) => f.id === formId);
     if (!form || !form.rows[rIdx]) return;
-    const currentCount = form.rows[rIdx].positions.length;
-    const countStr = prompt('Enter number of slots (1 to 10):', String(currentCount));
-    const newCount = parseInt(countStr || '', 10);
-    if (isNaN(newCount) || newCount < 1 || newCount > 10) return;
-
-    const forms = currentFormations.map((f) => {
-      if (f.id === formId) {
-        const rows = [...f.rows];
-        let positions = [...rows[rIdx].positions];
-        while (positions.length < newCount) positions.push(null);
-        if (newCount < positions.length) positions = positions.slice(0, newCount);
-        rows[rIdx] = { ...rows[rIdx], slotCount: newCount, positions };
-        return { ...f, rows };
-      }
-      return f;
-    });
-    updateCurrentWeekFormations(forms);
+    handleSetRowSlots(formId, rIdx, form.rows[rIdx].positions.length);
   };
 
   const handleDeleteRow = (formId: string, rIdx: number) => {
@@ -1664,32 +2072,11 @@ export default function App() {
       }
       return f;
     });
-    updateCurrentWeekFormations(forms);
+    updateCurrentWeekFormations(forms, true);
   };
 
   const handleAddPosition = (formId: string, rIdx: number) => {
-    const posName = prompt('Enter Position Label (e.g. QB, MLB, LT):');
-    if (!posName || !posName.trim()) return;
-    const cleanName = posName.trim();
-    const newPosId = `${formId}-${cleanName}-${Date.now()}`;
-
-    const forms = currentFormations.map((f) => {
-      if (f.id === formId) {
-        const rows = [...f.rows];
-        const row = rows[rIdx];
-        const emptyIdx = row.positions.indexOf(null);
-        const positions = [...row.positions];
-        if (emptyIdx !== -1) {
-          positions[emptyIdx] = { id: newPosId, name: cleanName };
-        } else {
-          positions.push({ id: newPosId, name: cleanName });
-        }
-        rows[rIdx] = { ...row, slotCount: positions.length, positions };
-        return { ...f, rows };
-      }
-      return f;
-    });
-    updateCurrentWeekFormations(forms);
+    handleAddPositionDirect(formId, rIdx, 'Pos');
   };
 
   const handleEditPositionName = (
@@ -1699,21 +2086,7 @@ export default function App() {
   ) => {
     const form = currentFormations.find((f) => f.id === formId);
     if (!form || !form.rows[rIdx]?.positions[pIdx]) return;
-    const currentName = form.rows[rIdx].positions[pIdx]!.name;
-    const newName = prompt('Edit Position Name:', currentName);
-    if (newName && newName.trim()) {
-      const forms = currentFormations.map((f) => {
-        if (f.id === formId) {
-          const rows = [...f.rows];
-          const positions = [...rows[rIdx].positions];
-          positions[pIdx] = { ...positions[pIdx]!, name: newName.trim() };
-          rows[rIdx] = { ...rows[rIdx], positions };
-          return { ...f, rows };
-        }
-        return f;
-      });
-      updateCurrentWeekFormations(forms);
-    }
+    handleRenamePositionDirect(formId, rIdx, pIdx, form.rows[rIdx].positions[pIdx]!.name);
   };
 
   const handleMovePositionRow = (
@@ -1723,32 +2096,7 @@ export default function App() {
   ) => {
     const form = currentFormations.find((f) => f.id === formId);
     if (!form || !form.rows[rIdx]?.positions[pIdx]) return;
-    const pos = form.rows[rIdx].positions[pIdx]!;
-
-    const rowOptions = form.rows.map((r, i) => `${i}: ${r.label}`).join('\n');
-    const targetIdxStr = prompt(
-      `Move [${pos.name}] to which row level?\n\n${rowOptions}\n\nEnter row number:`
-    );
-    const targetRIdx = parseInt(targetIdxStr || '', 10);
-    if (isNaN(targetRIdx) || targetRIdx < 0 || targetRIdx >= form.rows.length)
-      return;
-
-    const forms = currentFormations.map((f) => {
-      if (f.id === formId) {
-        const rows = deepClone(f.rows);
-        rows[rIdx].positions[pIdx] = null;
-        const emptyIdx = rows[targetRIdx].positions.indexOf(null);
-        if (emptyIdx !== -1) {
-          rows[targetRIdx].positions[emptyIdx] = pos;
-        } else {
-          rows[targetRIdx].positions.push(pos);
-          rows[targetRIdx].slotCount = rows[targetRIdx].positions.length;
-        }
-        return { ...f, rows };
-      }
-      return f;
-    });
-    updateCurrentWeekFormations(forms);
+    handleMovePositionDirect(formId, rIdx, pIdx, (rIdx + 1) % form.rows.length);
   };
 
   const handleCopyPositionToOtherForm = (
@@ -1756,43 +2104,10 @@ export default function App() {
     rIdx: number,
     pIdx: number
   ) => {
-    const srcForm = currentFormations.find((f) => f.id === formId);
-    if (!srcForm || !srcForm.rows[rIdx]?.positions[pIdx]) return;
-    const pos = srcForm.rows[rIdx].positions[pIdx]!;
-
-    const otherForms = currentFormations.filter((f) => f.id !== formId);
-    if (otherForms.length === 0) {
-      alert('No other formations available.');
-      return;
+    const otherForm = currentFormations.find((f) => f.id !== formId);
+    if (otherForm) {
+      handleCopyPositionDirect(formId, rIdx, pIdx, otherForm.id);
     }
-
-    const options = otherForms.map((f, i) => `${i + 1}. ${f.name}`).join('\n');
-    const choiceStr = prompt(
-      `Copy position [${pos.name}] to:\n\n${options}\n\nEnter number:`
-    );
-    const choiceIdx = parseInt(choiceStr || '', 10) - 1;
-    if (isNaN(choiceIdx) || choiceIdx < 0 || choiceIdx >= otherForms.length)
-      return;
-
-    const targetForm = otherForms[choiceIdx];
-    const newPosId = `${targetForm.id}-${pos.name}-${Date.now()}`;
-    const newPos = { id: newPosId, name: pos.name };
-
-    const forms = currentFormations.map((f) => {
-      if (f.id === targetForm.id) {
-        const rows = [...f.rows];
-        rows[0].positions.push(newPos);
-        rows[0].slotCount = rows[0].positions.length;
-        return { ...f, rows };
-      }
-      return f;
-    });
-
-    const dc = { ...currentDepthChart };
-    if (dc[pos.id]) dc[newPosId] = deepClone(dc[pos.id]);
-
-    updateCurrentWeekFormations(forms);
-    updateCurrentWeekDepthChart(dc);
   };
 
   const handleDeletePosition = (
@@ -1809,7 +2124,7 @@ export default function App() {
       }
       return f;
     });
-    updateCurrentWeekFormations(forms);
+    updateCurrentWeekFormations(forms, true);
   };
 
   /* =========================================================================
@@ -3184,6 +3499,19 @@ export default function App() {
                 onDragStartPlacedPlayer={handleDragStartPlacedPlayer}
                 onPositionCardDragStart={handlePositionCardDragStart}
                 onPositionCardDropOnSlot={handlePositionCardDropOnSlot}
+                onSetRowSlots={handleSetRowSlots}
+                onAddSlotToRow={handleAddSlotToRow}
+                onRemoveSlotFromRow={handleRemoveSlotFromRow}
+                onAssignPositionToSlot={handleAssignPositionToSlot}
+                onAddPositionDirect={handleAddPositionDirect}
+                onRenamePositionDirect={handleRenamePositionDirect}
+                onRenameRowDirect={handleRenameRowDirect}
+                onAddRowDirect={handleAddRowDirect}
+                onAddFormationDirect={handleAddFormationDirect}
+                onRenameFormationDirect={handleRenameFormationDirect}
+                onDuplicateFormationDirect={handleDuplicateFormationDirect}
+                onMovePositionDirect={handleMovePositionDirect}
+                onCopyPositionDirect={handleCopyPositionDirect}
               />
             )}
 

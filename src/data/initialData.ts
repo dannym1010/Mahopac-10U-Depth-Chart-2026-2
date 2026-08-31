@@ -618,6 +618,22 @@ export const DEFAULT_SCHEDULE_EVENTS: ScheduleEvent[] = [
     lastEdited: 1724800000000,
   },
   {
+    id: "evt_w1_p0",
+    type: "practice",
+    title: "Week 1 Prep - Monday Installation & Fundamentals",
+    week: "1",
+    date: "2026-08-31",
+    startTime: "17:30",
+    endTime: "19:00",
+    location: "Crane Road",
+    locationType: "home",
+    arrivalMinutesBefore: 15,
+    focusOrNotes: "Full Pads. Monday game-week install: Carmel defensive front keys, punt coverage lanes, 11-person offense wristband test.",
+    linkedPracticePlanId: "p_pre_monday_831",
+    createdAt: 1724900000000,
+    lastEdited: 1724900000000,
+  },
+  {
     id: "evt_w1_p1",
     type: "practice",
     title: "Week 1 Prep - Inside Run & Carmel Schemes",
@@ -1037,6 +1053,88 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
             desc: "Run 10 core plays on air with cadence, shift motions, and huddle break.",
             coach: "Head Coach",
             focus: "Zero pre-snap penalties, crisp execution"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "p_pre_monday_831",
+    year: "2026",
+    weekFolder: "Preseason Wk 2",
+    dayFolder: "Monday 8/31",
+    date: "2026-08-31",
+    title: "Week 1 Monday Installation & Base Fundamentals",
+    location: "Crane Road",
+    periods: [
+      {
+        time: 10,
+        category: "📋 General",
+        format: "static",
+        stations: [
+          {
+            name: "Dynamic Warmup & Team Breakdown",
+            desc: "High knees, hip openers, form runs, kickoff team cadence call.",
+            coach: "Head Coach",
+            focus: "High tempo, focus, team discipline"
+          }
+        ]
+      },
+      {
+        time: 20,
+        category: "⚡ (Warm-up, Agility and Conditioning)",
+        format: "static",
+        stations: [
+          {
+            name: "Foot Fire & Reaction Tackling Pad",
+            desc: "Quick chop feet into rapid strike on padded shield with proper leverage.",
+            coach: "Defensive Coach",
+            focus: "Eyes up, shoulder strike, wrap and squeeze"
+          }
+        ]
+      },
+      {
+        time: 25,
+        category: "🏈 Offense",
+        format: "rotating",
+        stations: [
+          {
+            name: "11-Person Base Scheme & Wristband Installation",
+            desc: "24 Dive, 25 Trap, and Sweep installation with wristband number checks.",
+            coach: "Head Coach",
+            focus: "Rapid huddle break and clean handoff mesh"
+          },
+          {
+            name: "Offensive Line Drive & Reach Blocks",
+            desc: "Steps for gap control and seal blocks against Carmel 4-man front.",
+            coach: "Line Coach",
+            focus: "Wide base, low pad level, hand placement"
+          }
+        ]
+      },
+      {
+        time: 20,
+        category: "🛡️ Defense",
+        format: "rotating",
+        stations: [
+          {
+            name: "DL & LB Gap Integrity & Pursuit Flow",
+            desc: "Keying guards, shooting correct gaps, outside containment.",
+            coach: "Defensive Coach",
+            focus: "Never lose outside leverage, fast lateral flow"
+          }
+        ]
+      },
+      {
+        time: 15,
+        category: "🏈 Special Teams",
+        format: "static",
+        stations: [
+          {
+            name: "Punt Coverage Lanes & Specialist Timing",
+            desc: "Gunner release off line, lane discipline, secure snap-to-kick in 2.0s.",
+            coach: "Special Teams Coach",
+            focus: "Sprint to returner, breakdown inside 5 yards"
           }
         ]
       }
