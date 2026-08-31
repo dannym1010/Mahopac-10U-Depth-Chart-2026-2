@@ -19,20 +19,7 @@ export function normalizeWeeklyData(
   defaultForms: FormationBoard[] = INITIAL_DEFAULT_FORMATIONS
 ): Record<string, WeekState> {
   if (!wData || typeof wData !== 'object') return {};
-  const result: Record<string, WeekState> = { ...wData };
-
-  const allWeeks = [
-    '0', '1', '2', '3', '4', '5', '6', '7', '8',
-    'pre-1', 'pre-2', 'pre-3', 'pre-4', 'playoffs', 'championship'
-  ];
-
-  const getDcCount = (dc?: Record<string, PlacedPlayer[]>) => {
-    if (!dc) return 0;
-    return Object.values(dc).reduce(
-      (sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0),
-      0
-    );
-  };
+  const result: Record<string, WeekState> = {};
 
   const deepClone = <T>(obj: T): T => {
     if (!obj) return obj;
@@ -43,61 +30,55 @@ export function normalizeWeeklyData(
     }
   };
 
-  allWeeks.forEach((wk) => {
-    const unKey = wk;
-    const team10uKey = `team_10u__week_${wk}`;
-    const un = result[unKey];
-    const sc = result[team10uKey];
+  const fallbackFormations =
+    defaultForms && defaultForms.length > 0
+      ? defaultForms
+      : INITIAL_DEFAULT_FORMATIONS;
 
-    const unDc = getDcCount(un?.depthChart);
-    const scDc = getDcCount(sc?.depthChart);
-    const unForms = un?.formations?.length || 0;
-    const scForms = sc?.formations?.length || 0;
+  for (const [key, weekState] of Object.entries(wData)) {
+    if (!weekState || typeof weekState !== 'object') continue;
 
-    // Pick formations: non-empty formations, fallback to Week 0 or defaults
-    const bestForms =
-      (scForms > 0 ? sc?.formations : null) ||
-      (unForms > 0 ? un?.formations : null) ||
-      (result['0']?.formations?.length ? result['0'].formations : null) ||
-      (result['team_10u__week_0']?.formations?.length ? result['team_10u__week_0'].formations : null) ||
-      (defaultForms.length > 0 ? defaultForms : INITIAL_DEFAULT_FORMATIONS);
+    const formations =
+      Array.isArray(weekState.formations) && weekState.formations.length > 0
+        ? deepClone(weekState.formations)
+        : deepClone(fallbackFormations);
 
-    // Pick depthChart: prefer the one with more placed players
-    const bestDc =
-      (scDc >= unDc && scDc > 0 ? sc?.depthChart : null) ||
-      (unDc > 0 ? un?.depthChart : null) ||
-      sc?.depthChart ||
-      un?.depthChart ||
-      {};
+    const depthChart =
+      weekState.depthChart && typeof weekState.depthChart === 'object'
+        ? deepClone(weekState.depthChart)
+        : {};
 
-    // Pick scrimmageChart: prefer the one with placements
-    const scScrimCount = getDcCount(sc?.scrimmageChart);
-    const unScrimCount = getDcCount(un?.scrimmageChart);
-    const bestScrim =
-      (scScrimCount >= unScrimCount && scScrimCount > 0 ? sc?.scrimmageChart : null) ||
-      (unScrimCount > 0 ? un?.scrimmageChart : null) ||
-      sc?.scrimmageChart ||
-      un?.scrimmageChart ||
-      {};
+    const scrimmageChart =
+      weekState.scrimmageChart && typeof weekState.scrimmageChart === 'object'
+        ? deepClone(weekState.scrimmageChart)
+        : {};
 
-    const bestOpponent = sc?.opponent || un?.opponent || '';
-    const bestWristband = sc?.wristbandData || un?.wristbandData;
-    const bestScouting = sc?.scouting || un?.scouting;
-
-    const mergedWeek: WeekState = {
-      formations: deepClone(bestForms),
-      depthChart: deepClone(bestDc),
-      scrimmageChart: deepClone(bestScrim),
-      opponent: bestOpponent,
-      wristbandData: bestWristband,
-      scouting: bestScouting,
+    result[key] = {
+      ...weekState,
+      formations,
+      depthChart,
+      scrimmageChart,
+      opponent: weekState.opponent || '',
+      wristbandData: weekState.wristbandData || {
+        rows: 10,
+        columns: [{ color: 'blue', plays: [] }],
+      },
+      scouting: weekState.scouting || {
+        year: '2026',
+        week: key,
+        opponent: '',
+        gameDate: '',
+        gameLocation: '',
+        teamOverview: '',
+        offensiveTendencies: '',
+        defensiveFronts: '',
+        specialTeamsNotes: '',
+        keysToVictory: [],
+        keyPlayersList: [],
+        coachNotes: [],
+      },
     };
-
-    if (un || sc || unDc > 0 || scDc > 0 || unForms > 0 || scForms > 0) {
-      result[unKey] = mergedWeek;
-      result[team10uKey] = mergedWeek;
-    }
-  });
+  }
 
   return result;
 }

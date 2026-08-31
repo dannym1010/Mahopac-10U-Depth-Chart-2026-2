@@ -189,7 +189,7 @@ body {
     print-color-adjust: exact !important;
   }
 
-  /* Player Badges - Sideline Depth Chart Hierarchy: Starter(2nd line)=White badge with Black ST box, 2nd(D2)=Gold, 3rd(D3)=Blue, 4th+(D4)=White */
+  /* 2nd line: Starter badge on print (White background, Black player text, Black ST box with White text) */
   .print-player-badge-starter {
     background-color: #ffffff !important; /* 2nd line: White player badge */
     color: #000000 !important; /* Black player text */
@@ -207,7 +207,7 @@ body {
     print-color-adjust: exact !important;
   }
 
-  .print-player-badge-starter span,
+  .print-player-badge-starter span:not(.print-tag-st),
   .print-player-badge-starter div {
     color: #000000 !important;
     -webkit-print-color-adjust: exact !important;
@@ -215,7 +215,9 @@ body {
   }
 
   /* 2nd line ST Box: White text with black inside that little box containing ST */
+  .print-player-badge-starter span.print-tag-st,
   .print-player-badge-starter .print-tag-st,
+  span.print-tag-st,
   .print-tag-st {
     background-color: #000000 !important; /* Black inside little box */
     color: #ffffff !important; /* White text */
@@ -231,8 +233,8 @@ body {
 
   /* 3rd line: D2 should be Gold with black text */
   .print-player-badge-d2 {
-    background-color: #facc15 !important; /* 2nd String: Rich Team Gold */
-    color: #000000 !important; /* Solid Black Text */
+    background-color: #facc15 !important; /* 2nd String: Gold */
+    color: #000000 !important; /* Black Text */
     border: 1.5px solid #ca8a04 !important; /* Deep Gold Border */
     font-size: 10px !important;
     font-weight: 900 !important;
@@ -247,16 +249,18 @@ body {
     print-color-adjust: exact !important;
   }
 
-  .print-player-badge-d2 span,
+  .print-player-badge-d2 span:not(.print-tag-d2),
   .print-player-badge-d2 div {
     color: #000000 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
+  .print-player-badge-d2 span.print-tag-d2,
   .print-player-badge-d2 .print-tag-d2,
+  span.print-tag-d2,
   .print-tag-d2 {
-    background-color: #000000 !important; /* Black Pill */
+    background-color: #000000 !important; /* Black Pill inside D2 */
     color: #facc15 !important; /* Gold D2 Text */
     border: 1px solid #000000 !important;
     font-size: 8.5px !important;
@@ -270,8 +274,8 @@ body {
 
   /* 4th line: D3 should be Blue with white text */
   .print-player-badge-d3 {
-    background-color: #1d4ed8 !important; /* 3rd String: Royal Team Blue */
-    color: #ffffff !important; /* Pure White Text */
+    background-color: #1d4ed8 !important; /* 3rd String: Royal Blue */
+    color: #ffffff !important; /* White Text */
     border: 1.5px solid #1e40af !important; /* Deep Blue Border */
     font-size: 10px !important;
     font-weight: 900 !important;
@@ -286,14 +290,16 @@ body {
     print-color-adjust: exact !important;
   }
 
-  .print-player-badge-d3 span,
+  .print-player-badge-d3 span:not(.print-tag-d3),
   .print-player-badge-d3 div {
     color: #ffffff !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
+  .print-player-badge-d3 span.print-tag-d3,
   .print-player-badge-d3 .print-tag-d3,
+  span.print-tag-d3,
   .print-tag-d3 {
     background-color: #ffffff !important; /* White Tag */
     color: #1d4ed8 !important; /* Blue D3 Text */
@@ -307,6 +313,7 @@ body {
     print-color-adjust: exact !important;
   }
 
+  /* 5th line+: D4 is good (White with black text and slate border) */
   .print-player-badge-d4 {
     background-color: #ffffff !important; /* 4th+ String / Additional: Pure White */
     color: #000000 !important; /* Solid Black Text */
@@ -331,6 +338,9 @@ body {
     print-color-adjust: exact !important;
   }
 
+  .print-player-badge-d4 span.print-tag-d4,
+  .print-player-badge-d4 .print-tag-d4,
+  span.print-tag-d4,
   .print-tag-d4 {
     background-color: #e2e8f0 !important; /* Light Slate Tag */
     color: #0f172a !important; /* Dark Tag Text */

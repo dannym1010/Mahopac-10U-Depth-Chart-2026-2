@@ -81,19 +81,43 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
         mergedFormations = result;
       }
 
-      // Merge Depth Chart per position ID (Offense & Defense positions coexist safely)
+      // Merge Depth Chart per position ID (Offense & Defense positions coexist safely without ghost retention)
       const curDC = curWeekState.depthChart || {};
       const incDC = incWeekState.depthChart || {};
-      const mergedDC: Record<string, any> = { ...curDC };
+      let mergedDC: Record<string, any> = {};
 
-      for (const [posId, players] of Object.entries(incDC)) {
-        mergedDC[posId] = players;
+      if (metadata?.activeUnit && metadata.activeUnit !== 'all') {
+        const activeUnitPosIds = getFormationUnitPosIds(mergedFormations, metadata.activeUnit);
+        
+        // Retain positions from other units
+        for (const [posId, players] of Object.entries(curDC)) {
+          if (!activeUnitPosIds.has(posId)) {
+            mergedDC[posId] = players;
+          }
+        }
+        
+        // Take incoming positions for active unit (or any extra position in incDC)
+        for (const [posId, players] of Object.entries(incDC)) {
+          if (activeUnitPosIds.has(posId) || !mergedDC[posId]) {
+            mergedDC[posId] = players;
+          }
+        }
+      } else {
+        // Full snapshot save or scope='all': incoming depthChart is authoritative
+        mergedDC = { ...incDC };
       }
 
       // Merge Scrimmage Chart per position ID
       const curSC = curWeekState.scrimmageChart || {};
       const incSC = incWeekState.scrimmageChart || {};
-      const mergedSC: Record<string, any> = { ...curSC, ...incSC };
+      let mergedSC: Record<string, any> = {};
+      if (metadata?.activeUnit === 'scrimmage') {
+        mergedSC = { ...curSC, ...incSC };
+      } else if (metadata?.scope === 'all' || !metadata?.activeUnit) {
+        mergedSC = { ...incSC };
+      } else {
+        mergedSC = { ...curSC, ...incSC };
+      }
 
       merged.weeklyData[weekKey] = {
         ...curWeekState,

@@ -353,14 +353,6 @@ export default function App() {
     const defScopedKey = getScopedWeekKey('team_10u', week);
     const defScopedState = wData[defScopedKey];
 
-    const getDcCount = (dc?: Record<string, PlacedPlayer[]>) => {
-      if (!dc) return 0;
-      return Object.values(dc).reduce(
-        (sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0),
-        0
-      );
-    };
-
     // Formations resolution
     let formations: FormationBoard[] = [];
     if (scopedState?.formations && scopedState.formations.length > 0) {
@@ -383,36 +375,28 @@ export default function App() {
           : INITIAL_DEFAULT_FORMATIONS;
     }
 
-    // Depth chart resolution
+    // Depth chart resolution: direct priority (never override existing scoped depth charts)
     let depthChart: Record<string, PlacedPlayer[]> = {};
-    if (getDcCount(scopedState?.depthChart) > 0) {
-      depthChart = scopedState!.depthChart;
-    } else if (getDcCount(legacyState?.depthChart) > 0) {
-      depthChart = legacyState!.depthChart;
-    } else if (getDcCount(defScopedState?.depthChart) > 0) {
-      depthChart = defScopedState!.depthChart;
+    if (scopedState && scopedState.depthChart !== undefined) {
+      depthChart = scopedState.depthChart;
+    } else if (legacyState && legacyState.depthChart !== undefined) {
+      depthChart = legacyState.depthChart;
+    } else if (defScopedState && defScopedState.depthChart !== undefined) {
+      depthChart = defScopedState.depthChart;
     } else {
-      depthChart =
-        scopedState?.depthChart ||
-        legacyState?.depthChart ||
-        defScopedState?.depthChart ||
-        {};
+      depthChart = {};
     }
 
     // Scrimmage chart resolution
     let scrimmageChart: Record<string, PlacedPlayer[]> = {};
-    if (getDcCount(scopedState?.scrimmageChart) > 0) {
-      scrimmageChart = scopedState!.scrimmageChart;
-    } else if (getDcCount(legacyState?.scrimmageChart) > 0) {
-      scrimmageChart = legacyState!.scrimmageChart;
-    } else if (getDcCount(defScopedState?.scrimmageChart) > 0) {
-      scrimmageChart = defScopedState!.scrimmageChart;
+    if (scopedState && scopedState.scrimmageChart !== undefined) {
+      scrimmageChart = scopedState.scrimmageChart;
+    } else if (legacyState && legacyState.scrimmageChart !== undefined) {
+      scrimmageChart = legacyState.scrimmageChart;
+    } else if (defScopedState && defScopedState.scrimmageChart !== undefined) {
+      scrimmageChart = defScopedState.scrimmageChart;
     } else {
-      scrimmageChart =
-        scopedState?.scrimmageChart ||
-        legacyState?.scrimmageChart ||
-        defScopedState?.scrimmageChart ||
-        {};
+      scrimmageChart = {};
     }
 
     return {
@@ -638,13 +622,15 @@ function mergeRemoteWeeklyData(
         }
       });
 
-      const localDC = localState.depthChart || {};
-      const remoteDC = remoteState.depthChart || {};
-      const mergedDC: Record<string, PlacedPlayer[]> = { ...localDC, ...remoteDC };
+      const mergedDC: Record<string, PlacedPlayer[]> =
+        remoteState.depthChart !== undefined
+          ? { ...remoteState.depthChart }
+          : { ...(localState.depthChart || {}) };
 
-      const localSC = localState.scrimmageChart || {};
-      const remoteSC = remoteState.scrimmageChart || {};
-      const mergedSC: Record<string, PlacedPlayer[]> = { ...localSC, ...remoteSC };
+      const mergedSC: Record<string, PlacedPlayer[]> =
+        remoteState.scrimmageChart !== undefined
+          ? { ...remoteState.scrimmageChart }
+          : { ...(localState.scrimmageChart || {}) };
 
       merged[weekKey] = {
         ...localState,
@@ -1963,14 +1949,19 @@ function mergeRemoteWeeklyData(
         ...existing,
         formations: newFormations,
       };
-      return {
+      const updatedAll = {
         ...prev,
         [scopedKey]: updatedWeekState,
         [currentWeek]: updatedWeekState,
       };
+      safeJSONSet('footballWeeklyData', updatedAll);
+      latestStateRef.current.weeklyData = updatedAll;
+      return updatedAll;
     });
     if (syncToDefaults) {
       setDefaultFormations(newFormations);
+      safeJSONSet('footballDefaultFormations', newFormations);
+      latestStateRef.current.defaultFormations = newFormations;
     }
   };
 
@@ -1986,11 +1977,14 @@ function mergeRemoteWeeklyData(
         ...existing,
         depthChart: newDepthChart,
       };
-      return {
+      const updatedAll = {
         ...prev,
         [scopedKey]: updatedWeekState,
         [currentWeek]: updatedWeekState,
       };
+      safeJSONSet('footballWeeklyData', updatedAll);
+      latestStateRef.current.weeklyData = updatedAll;
+      return updatedAll;
     });
   };
 
@@ -2006,11 +2000,14 @@ function mergeRemoteWeeklyData(
         ...existing,
         scrimmageChart: newScrimChart,
       };
-      return {
+      const updatedAll = {
         ...prev,
         [scopedKey]: updatedWeekState,
         [currentWeek]: updatedWeekState,
       };
+      safeJSONSet('footballWeeklyData', updatedAll);
+      latestStateRef.current.weeklyData = updatedAll;
+      return updatedAll;
     });
   };
 
