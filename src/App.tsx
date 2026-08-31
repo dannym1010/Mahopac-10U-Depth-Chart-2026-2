@@ -63,6 +63,7 @@ import {
   saveServerState,
   subscribeServerEvents,
   normalizePracticeTemplates,
+  normalizeCascadingDrills,
   CLIENT_ID,
 } from './services/storageService';
 import {
@@ -136,7 +137,9 @@ export default function App() {
     )
   );
   const [cascadingDrills, setCascadingDrills] = useState<DrillFolder[]>(() =>
-    safeJSONParse('footballCascadingDrills', DEFAULT_CASCADING_DRILLS)
+    normalizeCascadingDrills(
+      safeJSONParse('footballCascadingDrills', DEFAULT_CASCADING_DRILLS)
+    )
   );
   const [guideTree, setGuideTree] = useState<PlaybookGuideTree>(() =>
     safeJSONParse('footballPdfGuidesTree', DEFAULT_GUIDES_TREE)
@@ -455,9 +458,10 @@ export default function App() {
       safeJSONSet('footballPracticeTemplates', normalizedTemplates);
     }
     if (data.cascadingDrills) {
-      setCascadingDrills(data.cascadingDrills);
-      latestStateRef.current.cascadingDrills = data.cascadingDrills;
-      safeJSONSet('footballCascadingDrills', data.cascadingDrills);
+      const normalizedDrills = normalizeCascadingDrills(data.cascadingDrills);
+      setCascadingDrills(normalizedDrills);
+      latestStateRef.current.cascadingDrills = normalizedDrills;
+      safeJSONSet('footballCascadingDrills', normalizedDrills);
     }
     if (data.guideTree) {
       setGuideTree(data.guideTree);
@@ -3380,8 +3384,9 @@ export default function App() {
         safeJSONSet('footballPracticeTemplates', normalized);
       }
       if (importedDrills) {
-        setCascadingDrills(importedDrills);
-        safeJSONSet('footballCascadingDrills', importedDrills);
+        const normalizedDrills = normalizeCascadingDrills(importedDrills);
+        setCascadingDrills(normalizedDrills);
+        safeJSONSet('footballCascadingDrills', normalizedDrills);
       }
       if (importedGuideTree) {
         setGuideTree(importedGuideTree);

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   ClipboardList,
   Plus,
@@ -187,22 +187,41 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   // Helper to flat list drills from matching category or all
   const getDrillsForCategory = (catName: string): DrillItem[] => {
     const flat: DrillItem[] = [];
+    const cleanCat = (catName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const traverse = (nodeList: DrillFolder[]) => {
       nodeList.forEach((n) => {
-        if (n.drills) flat.push(...n.drills);
+        const cleanNode = (n.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (
+          cleanCat &&
+          (cleanNode === cleanCat ||
+            cleanNode.includes(cleanCat) ||
+            cleanCat.includes(cleanNode))
+        ) {
+          if (n.drills) flat.push(...n.drills);
+        }
         if (n.subfolders) traverse(n.subfolders);
       });
     };
 
-    const matchingFolder = cascadingDrills.find((f) => f.name === catName);
-    if (matchingFolder) {
-      if (matchingFolder.drills) flat.push(...matchingFolder.drills);
-      if (matchingFolder.subfolders) traverse(matchingFolder.subfolders);
-    } else {
-      traverse(cascadingDrills);
-    }
+    traverse(cascadingDrills);
     return flat;
   };
+
+  // Group all drills from cascadingDrills by folder hierarchy for quick dropdown select
+  const allCategorizedDrills = useMemo(() => {
+    const groups: { category: string; drills: DrillItem[] }[] = [];
+    const collect = (folder: DrillFolder, prefix = '') => {
+      const fullName = prefix ? `${prefix} ➔ ${folder.name}` : folder.name;
+      if (folder.drills && folder.drills.length > 0) {
+        groups.push({ category: fullName, drills: folder.drills });
+      }
+      if (folder.subfolders) {
+        folder.subfolders.forEach((sf) => collect(sf, fullName));
+      }
+    };
+    cascadingDrills.forEach((f) => collect(f));
+    return groups;
+  }, [cascadingDrills]);
 
   // Build hierarchical year -> week -> practice tree
   const practiceTree: Record<string, Record<string, PracticePlan[]>> = {};
@@ -1609,22 +1628,43 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                         <div className="print:hidden">
                           <select
                             defaultValue=""
+                            disabled={userRole !== 'admin'}
                             onChange={(e) => {
-                              const found = categoryDrills.find(
-                                (d) => d.name === e.target.value
-                              );
+                              const drillName = e.target.value;
+                              if (!drillName) return;
+                              // Check in categoryDrills first, then allCategorizedDrills
+                              let found = categoryDrills.find((d) => d.name === drillName);
+                              if (!found) {
+                                for (const grp of allCategorizedDrills) {
+                                  found = grp.drills.find((d) => d.name === drillName);
+                                  if (found) break;
+                                }
+                              }
                               if (found) {
                                 onSelectDrillForStation(pIdx, sIdx, found);
                                 e.target.value = '';
                               }
                             }}
-                            className="w-full bg-slate-900/90 border border-slate-700 hover:border-slate-600 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-indigo-300"
+                            className="w-full bg-slate-900/90 border border-slate-700 hover:border-slate-600 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-indigo-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all cursor-pointer"
                           >
-                            <option value="">-- Choose Drill from Library --</option>
-                            {categoryDrills.map((d, dIdx) => (
-                              <option key={dIdx} value={d.name}>
-                                {d.name}
-                              </option>
+                            <option value="">-- Choose Drill from Library (120+ drills) --</option>
+                            {categoryDrills.length > 0 && (
+                              <optgroup label={`⭐ Matching Category Drills (${categoryDrills.length})`}>
+                                {categoryDrills.map((d, dIdx) => (
+                                  <option key={`cat_${dIdx}`} value={d.name}>
+                                    {d.name}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {allCategorizedDrills.map((grp, gIdx) => (
+                              <optgroup key={`grp_${gIdx}`} label={`📁 ${grp.category} (${grp.drills.length})`}>
+                                {grp.drills.map((d, dIdx) => (
+                                  <option key={`all_${gIdx}_${dIdx}`} value={d.name}>
+                                    {d.name}
+                                  </option>
+                                ))}
+                              </optgroup>
                             ))}
                           </select>
                         </div>

@@ -122,6 +122,57 @@ export function normalizePracticeTemplates(raw: any): Record<string, PracticePer
   return result;
 }
 
+/**
+ * Normalizes cascading drill folders, ensuring all default and custom folders are preserved,
+ * subfolders and drills arrays are valid, and no folders or drills are lost.
+ */
+export function normalizeCascadingDrills(raw: any): DrillFolder[] {
+  if (!raw || !Array.isArray(raw) || raw.length === 0) {
+    return DEFAULT_CASCADING_DRILLS;
+  }
+  // Create a map by folder name to ensure all folders (defaults and custom) are kept
+  const folderMap = new Map<string, DrillFolder>();
+
+  // First seed with defaults
+  DEFAULT_CASCADING_DRILLS.forEach((df) => {
+    folderMap.set(df.name, deepClone(df));
+  });
+
+  // Then merge/override with saved folders
+  raw.forEach((folder: any) => {
+    if (folder && typeof folder === 'object' && typeof folder.name === 'string') {
+      const existing = folderMap.get(folder.name);
+      if (existing) {
+        const existingDrillNames = new Set((existing.drills || []).map((d) => d.name));
+        const mergedDrills = [...(existing.drills || [])];
+        (folder.drills || []).forEach((d: any) => {
+          if (d && d.name && !existingDrillNames.has(d.name)) {
+            mergedDrills.push(d);
+            existingDrillNames.add(d.name);
+          }
+        });
+        folderMap.set(folder.name, {
+          ...existing,
+          ...folder,
+          drills: mergedDrills.length > 0 ? mergedDrills : existing.drills,
+          subfolders:
+            folder.subfolders && folder.subfolders.length > 0
+              ? folder.subfolders
+              : existing.subfolders,
+        });
+      } else {
+        folderMap.set(folder.name, {
+          name: folder.name,
+          subfolders: Array.isArray(folder.subfolders) ? folder.subfolders : [],
+          drills: Array.isArray(folder.drills) ? folder.drills : [],
+        });
+      }
+    }
+  });
+
+  return Array.from(folderMap.values());
+}
+
 // Track server state availability to avoid 404 polling loops on static deployments (e.g. Vercel)
 let isServerApiAvailable: boolean | null = null;
 
