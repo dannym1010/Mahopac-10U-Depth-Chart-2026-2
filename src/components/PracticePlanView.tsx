@@ -1430,10 +1430,10 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
           <table className="w-full border-collapse practice-table text-xs">
             <thead>
               <tr className="bg-slate-900 text-slate-200 font-black uppercase text-[11px] border-b border-slate-700 print:bg-slate-100 print:text-black">
-                <th className="py-3 px-3 text-left w-24 sm:w-28 print:w-[12%]">Time / Period</th>
-                <th className="py-3 px-3 text-left w-32 sm:w-36 print:w-[13%]">Category / Format</th>
-                <th className="py-3 px-3.5 text-left print:w-[47%]">Stations / Drills</th>
-                <th className="py-3 px-2.5 text-left w-32 sm:w-36 print:w-[12%]">Coaches</th>
+                <th className="py-3 px-3 text-left w-24 sm:w-28 print:w-[11%]">Time / Period</th>
+                <th className="py-3 px-3 text-left w-28 sm:w-32 print:w-[8%]">Category</th>
+                <th className="py-3 px-3.5 text-left print:w-[58%]">Stations / Drills</th>
+                <th className="py-3 px-2.5 text-left w-28 sm:w-32 print:w-[7%]">Coaches</th>
                 <th className="py-3 px-3 text-left w-36 sm:w-40 print:w-[16%]">Focus / Cues</th>
                 {userRole === 'admin' && (
                   <th className="py-3 px-2 text-center w-20 print:hidden">
@@ -1544,7 +1544,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                               ))}
                             </select>
                           </div>
-                          <div className="hidden print:block font-black text-slate-950 text-[10.5px] uppercase tracking-tight leading-tight">
+                          <div className="hidden print:block font-black text-slate-950 text-[9.5px] uppercase tracking-tight leading-tight break-words">
                             {row.category}
                           </div>
 
@@ -1568,8 +1568,8 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                               <option value="rotating">Rotating Stations</option>
                             </select>
                           </div>
-                          <div className="hidden print:block text-[9px] font-bold text-slate-600 mt-0.5 leading-none">
-                            {isRotating ? 'Rotating Stations' : 'Full Group'}
+                          <div className="hidden print:block text-[8.5px] font-bold text-slate-600 mt-0.5 leading-none">
+                            {isRotating ? 'Rotating' : 'Full Grp'}
                           </div>
                         </td>
                       )}
@@ -1689,7 +1689,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                           <ChevronDown className={`w-3 h-3 transition-transform ${isCoachPopupOpen ? 'rotate-180' : ''}`} />
                         </div>
 
-                        <div className="hidden print:block text-[9.5px] font-bold text-slate-950 leading-tight">
+                        <div className="hidden print:block text-[8.5px] font-bold text-slate-950 leading-tight break-words">
                           {station.coach || '—'}
                         </div>
 
