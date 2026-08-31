@@ -107,21 +107,24 @@ export default function App() {
   );
   const [practiceData, setPracticeData] = useState<PracticePlan[]>(() => {
     const saved = safeJSONParse('footballPracticeData', null);
+    let plansToUse: PracticePlan[] = [];
     if (saved && Array.isArray(saved) && saved.length > 0) {
-      const sanitized = sanitizePracticePlans(saved, DEFAULT_SCHEDULE_EVENTS);
-      const has831Plan = sanitized.some((p: PracticePlan) => p.date === '2026-08-31');
-      if (!has831Plan) {
-        const default831Plan = DEFAULT_INITIAL_PRACTICES.find((p) => p.date === '2026-08-31');
-        if (default831Plan) {
-          const updated = sanitizePracticePlans([...sanitized, default831Plan], DEFAULT_SCHEDULE_EVENTS);
-          safeJSONSet('footballPracticeData', updated);
-          return updated;
+      plansToUse = [...saved];
+      // Ensure all standard season practices from DEFAULT_INITIAL_PRACTICES are present
+      DEFAULT_INITIAL_PRACTICES.forEach((defP) => {
+        const exists = plansToUse.some(
+          (p) => p && (p.id === defP.id || (p.date && defP.date && p.date === defP.date))
+        );
+        if (!exists) {
+          plansToUse.push(defP);
         }
-      }
-      safeJSONSet('footballPracticeData', sanitized);
-      return sanitized;
+      });
+    } else {
+      plansToUse = [...DEFAULT_INITIAL_PRACTICES];
     }
-    return sanitizePracticePlans(DEFAULT_INITIAL_PRACTICES, DEFAULT_SCHEDULE_EVENTS);
+    const sanitized = sanitizePracticePlans(plansToUse, DEFAULT_SCHEDULE_EVENTS);
+    safeJSONSet('footballPracticeData', sanitized);
+    return sanitized;
   });
   const [practiceTemplates, setPracticeTemplates] = useState<
     Record<string, PracticePeriod[]>
@@ -1049,24 +1052,57 @@ export default function App() {
   // Filter roster, schedule events, and practice plans by active team (strictly isolated)
   const activeTeamRoster = React.useMemo(() => {
     return roster.filter((p) => {
-      if (p.teamId) return p.teamId === activeTeamId;
-      return activeTeamId === 'team-10u';
+      if (!p) return false;
+      if (p.teamId) {
+        return (
+          p.teamId === activeTeamId ||
+          (p.teamId === 'team_10u' && activeTeamId === 'team-10u') ||
+          (p.teamId === 'team-10u' && activeTeamId === 'team_10u')
+        );
+      }
+      return (
+        activeTeamId === 'team_10u' ||
+        activeTeamId === 'team-10u' ||
+        activeTeamId === teams[0]?.id
+      );
     });
-  }, [roster, activeTeamId]);
+  }, [roster, activeTeamId, teams]);
 
   const activeTeamScheduleEvents = React.useMemo(() => {
     return scheduleEvents.filter((e) => {
-      if (e.teamId) return e.teamId === activeTeamId;
-      return activeTeamId === 'team-10u';
+      if (!e) return false;
+      if (e.teamId) {
+        return (
+          e.teamId === activeTeamId ||
+          (e.teamId === 'team_10u' && activeTeamId === 'team-10u') ||
+          (e.teamId === 'team-10u' && activeTeamId === 'team_10u')
+        );
+      }
+      return (
+        activeTeamId === 'team_10u' ||
+        activeTeamId === 'team-10u' ||
+        activeTeamId === teams[0]?.id
+      );
     });
-  }, [scheduleEvents, activeTeamId]);
+  }, [scheduleEvents, activeTeamId, teams]);
 
   const activeTeamPracticeData = React.useMemo(() => {
     return practiceData.filter((p) => {
-      if (p.teamId) return p.teamId === activeTeamId;
-      return activeTeamId === 'team-10u';
+      if (!p) return false;
+      if (p.teamId) {
+        return (
+          p.teamId === activeTeamId ||
+          (p.teamId === 'team_10u' && activeTeamId === 'team-10u') ||
+          (p.teamId === 'team-10u' && activeTeamId === 'team_10u')
+        );
+      }
+      return (
+        activeTeamId === 'team_10u' ||
+        activeTeamId === 'team-10u' ||
+        activeTeamId === teams[0]?.id
+      );
     });
-  }, [practiceData, activeTeamId]);
+  }, [practiceData, activeTeamId, teams]);
 
   // Team CRUD handlers
   const handleAddTeam = (newTeamData: Omit<Team, 'id'>) => {
@@ -3438,12 +3474,15 @@ export default function App() {
       ? practiceData.find((p) => p && p.id === event.linkedPracticePlanId)
       : undefined;
 
+    if (!existing && event.date) {
+      existing = practiceData.find((p) => p && p.date === event.date);
+    }
+
     if (!existing) {
       existing = practiceData.find(
         (p) =>
           p &&
-          ((event.date && p.date === event.date) ||
-            p.id === event.id ||
+          (p.id === event.id ||
             (p.title &&
               event.title &&
               p.title.trim().toLowerCase() === event.title.trim().toLowerCase() &&
@@ -3451,28 +3490,60 @@ export default function App() {
       );
     }
 
+    // Fallback: check DEFAULT_INITIAL_PRACTICES if not yet in state
+    if (!existing && event.date) {
+      const defaultInitial = DEFAULT_INITIAL_PRACTICES.find(
+        (p) => p.date === event.date || p.id === event.linkedPracticePlanId || p.id === event.id
+      );
+      if (defaultInitial) {
+        existing = defaultInitial;
+      }
+    }
+
+    const formattedDayFolder = getFormattedDayFolder(event.date);
+
     if (existing) {
       const existingId = existing.id;
+      const existingPlan = existing;
       setPracticeData((prev) => {
-        const next = prev.map((p) =>
-          p.id === existingId
-            ? {
-                ...p,
-                title: title,
-                date: event.date || p.date,
-                day: dayOfWeek,
-                dayFolder: dayOfWeek,
-                startTime: startTime,
-                endTime: endTime,
-                weekFolder: weekFolder,
-                year: year,
-                location: location,
-                lastEdited: Date.now(),
-              }
-            : p
-        );
-        safeJSONSet('footballPracticeData', next);
-        return next;
+        const alreadyInList = prev.some((p) => p.id === existingId);
+        if (alreadyInList) {
+          const next = prev.map((p) =>
+            p.id === existingId
+              ? {
+                  ...p,
+                  teamId: p.teamId || event.teamId || activeTeamId || 'team_10u',
+                  title: p.title || title,
+                  date: event.date || p.date,
+                  day: dayOfWeek,
+                  dayFolder: p.dayFolder || formattedDayFolder,
+                  startTime: startTime,
+                  endTime: endTime,
+                  weekFolder: weekFolder,
+                  year: year,
+                  location: location,
+                  lastEdited: Date.now(),
+                }
+              : p
+          );
+          safeJSONSet('footballPracticeData', next);
+          return next;
+        } else {
+          const next = [
+            ...prev,
+            {
+              ...existingPlan,
+              teamId: existingPlan.teamId || event.teamId || activeTeamId || 'team_10u',
+              date: event.date || existingPlan.date,
+              day: dayOfWeek,
+              dayFolder: existingPlan.dayFolder || formattedDayFolder,
+              weekFolder: weekFolder,
+              year: year,
+            },
+          ];
+          safeJSONSet('footballPracticeData', next);
+          return next;
+        }
       });
 
       if (event.linkedPracticePlanId !== existingId) {

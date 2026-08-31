@@ -903,12 +903,13 @@ export const DEFAULT_ATTENDANCE_LOGS: AttendanceRecord[] = [
 export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
   {
     id: "p_pre_1",
+    teamId: "team_10u",
     year: "2026",
     weekFolder: "Preseason Wk 1",
     dayFolder: "Tuesday 8/25",
     date: "2026-08-25",
     title: "Preseason Conditioning & Stance Starts #1",
-    location: "Main Field",
+    location: "Crane Road",
     periods: [
       {
         time: 10,
@@ -991,12 +992,13 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
   },
   {
     id: "p_pre_2",
+    teamId: "team_10u",
     year: "2026",
     weekFolder: "Preseason Wk 1",
     dayFolder: "Thursday 8/27",
     date: "2026-08-27",
     title: "Pursuit Angles & Base Offensive Install",
-    location: "Main Field",
+    location: "Crane Road",
     periods: [
       {
         time: 10,
@@ -1060,6 +1062,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
   },
   {
     id: "p_pre_monday_831",
+    teamId: "team_10u",
     year: "2026",
     weekFolder: "Week 1",
     dayFolder: "Monday 8/31",
@@ -1142,12 +1145,13 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
   },
   {
     id: "p_pre_3",
+    teamId: "team_10u",
     year: "2026",
     weekFolder: "Week 1",
     dayFolder: "Tuesday 9/01",
     date: "2026-09-01",
     title: "Week 1 Shells & Fundamentals / Redzone Prep",
-    location: "Main Field",
+    location: "Crane Road",
     periods: [
       {
         time: 15,
@@ -1211,12 +1215,13 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
   },
   {
     id: "p_pre_4",
+    teamId: "team_10u",
     year: "2026",
     weekFolder: "Week 1",
     dayFolder: "Thursday 9/03",
     date: "2026-09-03",
     title: "Week 1 Full Padded Scrimmage Dress Rehearsal",
-    location: "Main Field",
+    location: "Crane Road",
     periods: [
       {
         time: 15,
@@ -1273,13 +1278,14 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
     ]
   },
   {
-    id: "p_w1_1",
+    id: "p_w2_1",
+    teamId: "team_10u",
     year: "2026",
-    weekFolder: "Week 1",
+    weekFolder: "Week 2",
     dayFolder: "Tuesday 9/08",
     date: "2026-09-08",
-    title: "Week 1 Game Plan & Execution",
-    location: "Main Field",
+    title: "Week 2 - Somers Wing-T Contain & Tackling",
+    location: "Crane Road",
     periods: [
       {
         time: 15,
@@ -1336,6 +1342,70 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
             desc: "Shield punt wall, long snap consistency, 40-yard sprint gunners.",
             coach: "Special Teams Coach",
             focus: "Zero blocked punts, fair catch awareness"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "p_w2_2",
+    teamId: "team_10u",
+    year: "2026",
+    weekFolder: "Week 2",
+    dayFolder: "Thursday 9/10",
+    date: "2026-09-10",
+    title: "Week 2 - Redzone Execution & 2-Pt Plays",
+    location: "Crane Road",
+    periods: [
+      {
+        time: 15,
+        category: "⚡ (Warm-up, Agility and Conditioning)",
+        format: "static",
+        stations: [
+          {
+            name: "Dynamic Warmup & Agility",
+            desc: "Ladder drills and hip mobility.",
+            coach: "Offensive Coach",
+            focus: "Agility and foot quickness"
+          }
+        ]
+      },
+      {
+        time: 30,
+        category: "🏈 Offense",
+        format: "static",
+        stations: [
+          {
+            name: "Redzone & 2-Point Conversion Package",
+            desc: "Goal line execution: Power 36, TE Pop, Wedge.",
+            coach: "Head Coach",
+            focus: "Score from 3 yards out"
+          }
+        ]
+      },
+      {
+        time: 30,
+        category: "🛡️ Defense",
+        format: "static",
+        stations: [
+          {
+            name: "Goal Line Defense & Blitz Check",
+            desc: "Gap fills and stopping interior push.",
+            coach: "Defensive Coach",
+            focus: "No gain at the goal line"
+          }
+        ]
+      },
+      {
+        time: 15,
+        category: "🎯 Special Teams",
+        format: "static",
+        stations: [
+          {
+            name: "Extra Point & Field Goal Team",
+            desc: "Snap, hold, kick timing in 1.3 seconds.",
+            coach: "Special Teams Coach",
+            focus: "Accuracy and snap consistency"
           }
         ]
       }

@@ -252,7 +252,7 @@ export function sanitizePracticePlans(
 
     return {
       ...p,
-      teamId: p.teamId || 'team-10u',
+      teamId: p.teamId === 'team-10u' ? 'team_10u' : (p.teamId || 'team_10u'),
       day: correctDay,
       dayFolder: correctDayFolder,
       weekFolder: correctWeek,
