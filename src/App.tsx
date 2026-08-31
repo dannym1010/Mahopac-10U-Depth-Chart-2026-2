@@ -72,6 +72,7 @@ import {
   getDayOfWeekForDate,
   getFormattedDayFolder,
   sanitizePracticePlans,
+  findBestActivePracticeId,
 } from './utils/practiceUtils';
 import { getAutoActiveWeek, normalizeWeeklyData } from './utils/seasonWeekUtils';
 import { normalizeRoster } from './utils/depthChartUtils';
@@ -218,8 +219,8 @@ export default function App() {
   const [selectedFormationId, setSelectedFormationId] = useState<string | null>(
     null
   );
-  const [currentPracticeId, setCurrentPracticeId] = useState<string | null>(
-    null
+  const [currentPracticeId, setCurrentPracticeId] = useState<string | null>(() =>
+    safeJSONParse('footballCurrentPracticeId', null)
   );
   const [activeGuideMain, setActiveGuideMain] = useState<string>('Offense');
   const [activeGuideSub, setActiveGuideSub] = useState<string>('Full Playbook');
@@ -822,6 +823,15 @@ function mergeRemoteWeeklyData(
         setPracticeData(sanitized);
         latestStateRef.current.practiceData = sanitized;
         safeJSONSet('footballPracticeData', sanitized);
+
+        // If current practice is not set or invalid, auto-select the best active practice
+        if (!currentPracticeId || !sanitized.some((p) => p && p.id === currentPracticeId)) {
+          const bestId = findBestActivePracticeId(sanitized, currentPracticeId, currentWeek);
+          if (bestId) {
+            setCurrentPracticeId(bestId);
+            safeJSONSet('footballCurrentPracticeId', bestId);
+          }
+        }
       }
     }
     if (data.practiceTemplates) {
@@ -1358,24 +1368,34 @@ function mergeRemoteWeeklyData(
   useEffect(() => {
     ensureWeekExists(currentWeek);
 
+    const teamPractices = activeTeamPracticeData.length > 0 ? activeTeamPracticeData : practiceData;
     if (practiceData.length === 0) {
       const defaultPlan: PracticePlan = {
         id: 'prac_' + Date.now(),
+        teamId: activeTeamId,
         year: '2026',
-        weekFolder: 'Week 1',
+        weekFolder: currentWeek,
         title: 'Practice #1',
         date: new Date().toISOString().split('T')[0],
-        day: 'Wednesday',
+        day: getDayOfWeekForDate(new Date().toISOString().split('T')[0]),
         startTime: '17:05',
         lastEdited: Date.now(),
-        plan: deepClone(DEFAULT_PRACTICE_TEMPLATES['Standard Practice']),
+        plan: deepClone(DEFAULT_PRACTICE_TEMPLATES['Standard Practice'] || []),
       };
       setPracticeData([defaultPlan]);
       setCurrentPracticeId(defaultPlan.id);
-    } else if (!currentPracticeId && practiceData.length > 0) {
-      setCurrentPracticeId(practiceData[0].id);
+      safeJSONSet('footballCurrentPracticeId', defaultPlan.id);
+    } else {
+      const isCurrentValid = teamPractices.some((p) => p && p.id === currentPracticeId);
+      if (!isCurrentValid || !currentPracticeId) {
+        const bestId = findBestActivePracticeId(teamPractices, currentPracticeId, currentWeek);
+        if (bestId && bestId !== currentPracticeId) {
+          setCurrentPracticeId(bestId);
+          safeJSONSet('footballCurrentPracticeId', bestId);
+        }
+      }
     }
-  }, [currentWeek]);
+  }, [currentWeek, activeTeamId, practiceData.length]);
 
   // Auto-advance depth chart week after game score is entered or day after game is scheduled
   useEffect(() => {
@@ -5241,7 +5261,10 @@ function mergeRemoteWeeklyData(
                 userRole={userRole}
                 scheduleEvents={activeTeamScheduleEvents}
                 onQuickCreateFromSchedule={handleQuickCreatePlanFromSchedule}
-                onSelectPractice={setCurrentPracticeId}
+                onSelectPractice={(id) => {
+                  setCurrentPracticeId(id);
+                  safeJSONSet('footballCurrentPracticeId', id);
+                }}
                 onOpenNewPracticeModal={handleOpenNewPracticeModal}
                 onEditPracticeDetails={handleEditPracticeDetails}
                 onAutoNumberPractices={handleAutoNumberPractices}

@@ -47,6 +47,7 @@ import {
   calculateWeekFolderForDate,
   getDayOfWeekForDate,
   getFormattedDayFolder,
+  findBestActivePracticeId,
 } from '../utils/practiceUtils';
 import { triggerPrint } from '../utils/printUtils';
 
@@ -135,7 +136,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   const [isPlanLibraryOpen, setIsPlanLibraryOpen] = useState(false);
   const [dropdownSearchTerm, setDropdownSearchTerm] = useState('');
   const [dropdownViewMode, setDropdownViewMode] = useState<'tree' | 'flat' | 'schedule'>('tree');
-  const [filterTag, setFilterTag] = useState<'all' | 'active_only' | 'cancelled' | 'this_week' | 'upcoming' | 'past'>('all');
+  const [filterTag, setFilterTag] = useState<'all' | 'active_only' | 'cancelled' | 'recent' | 'this_week' | 'upcoming' | 'past'>('all');
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [activeCoachPopup, setActiveCoachPopup] = useState<string | null>(null);
   const [coachSearchTerm, setCoachSearchTerm] = useState('');
@@ -143,7 +144,44 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   const [stationGroupFilters, setStationGroupFilters] = useState<Record<string, string>>({});
 
   const currentPlan =
-    practices.find((p) => p.id === currentPracticeId) || practices[0];
+    practices.find((p) => p && p.id === currentPracticeId) ||
+    practices.find((p) => p && p.id === findBestActivePracticeId(practices)) ||
+    practices[0];
+
+  // Identify the most recently edited practice plan
+  const latestEditedPlan = useMemo(() => {
+    if (!practices || practices.length === 0) return null;
+    const sorted = [...practices]
+      .filter((p) => p && typeof p.lastEdited === 'number' && p.lastEdited > 0)
+      .sort((a, b) => (b.lastEdited || 0) - (a.lastEdited || 0));
+    return sorted[0] || null;
+  }, [practices]);
+
+  // Identify today's practice or closest upcoming practice
+  const todayOrUpcomingPlan = useMemo(() => {
+    if (!practices || practices.length === 0) return null;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const today = practices.find((p) => p && p.date === todayStr && !p.isCancelled);
+    if (today) return today;
+    const upcoming = practices
+      .filter((p) => p && p.date && p.date >= todayStr && !p.isCancelled)
+      .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    return upcoming[0] || null;
+  }, [practices]);
+
+  const formatLastEditedTime = (ts?: number) => {
+    if (!ts) return '';
+    const diff = Date.now() - ts;
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    return new Date(ts).toLocaleDateString([], {
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   // Calculate dynamic practice sequence map across all practices
   const practiceSeqMap = getPracticeSequenceMap(practices);
@@ -425,6 +463,11 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
 
     if (filterTag === 'this_week' && currentPlan) {
       return p.weekFolder === currentPlan.weekFolder;
+    }
+
+    if (filterTag === 'recent') {
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      return typeof p.lastEdited === 'number' && p.lastEdited >= sevenDaysAgo;
     }
 
     if (filterTag === 'upcoming') {
@@ -747,6 +790,40 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
           </div>
         </div>
 
+        {/* Coach Latest Edit Notification / Quick Switcher Banner */}
+        {latestEditedPlan && currentPlan && latestEditedPlan.id !== currentPlan.id && (
+          <div className="bg-gradient-to-r from-amber-950/70 via-indigo-950/70 to-slate-900 border border-amber-500/40 rounded-2xl p-3 text-xs text-amber-100 flex flex-wrap items-center justify-between gap-3 shadow-md animate-in fade-in duration-200">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 bg-amber-500/20 text-amber-400 rounded-lg shrink-0">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="font-bold text-slate-100 flex items-center gap-2 flex-wrap">
+                  <span>Recent Coach Edit:</span>
+                  <span className="font-black text-amber-300">{latestEditedPlan.title}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-indigo-900/60 border border-indigo-500/40 text-[10px] text-indigo-300">
+                    {latestEditedPlan.weekFolder} • {latestEditedPlan.date || 'No Date'}
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    ({formatLastEditedTime(latestEditedPlan.lastEdited)})
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-300">
+                  A head coach recently updated this plan. Click below to view the latest edits.
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onSelectPractice(latestEditedPlan.id)}
+              className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+            >
+              <span>View Latest Plan</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* Cancellation Alert Banner */}
         {currentPlan?.isCancelled && (
           <div className="bg-rose-950/80 border border-rose-500/60 rounded-2xl p-3.5 text-xs text-rose-200 flex items-center justify-between gap-3 animate-in fade-in duration-200">
@@ -1061,6 +1138,17 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 )}
                 <button
                   type="button"
+                  onClick={() => setFilterTag('recent')}
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all shrink-0 cursor-pointer ${
+                    filterTag === 'recent'
+                      ? 'bg-amber-500 text-slate-950 border border-amber-400 shadow-sm'
+                      : 'bg-slate-950 text-amber-400/90 hover:text-amber-300 border border-slate-800'
+                  }`}
+                >
+                  ⚡ Recently Edited
+                </button>
+                <button
+                  type="button"
                   onClick={() => setFilterTag('upcoming')}
                   className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all shrink-0 cursor-pointer ${
                     filterTag === 'upcoming'
@@ -1115,6 +1203,65 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
 
             {/* Modal Body - Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+              
+              {/* Highlighted Spotlight: Most Recently Edited Practice */}
+              {latestEditedPlan && (
+                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-indigo-950/40 border border-amber-500/30 shadow-md flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 shrink-0">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
+                          Most Recently Edited by Coach
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          • {formatLastEditedTime(latestEditedPlan.lastEdited)}
+                        </span>
+                      </div>
+                      <div className="font-black text-sm text-slate-100 mt-0.5">
+                        {latestEditedPlan.title}
+                      </div>
+                      <div className="text-[11px] text-slate-400 font-mono flex items-center gap-2 mt-0.5">
+                        <span>{latestEditedPlan.weekFolder}</span>
+                        <span>•</span>
+                        <span>{latestEditedPlan.date || 'No Date'}</span>
+                        <span>•</span>
+                        <span>{latestEditedPlan.startTime || '17:05'}</span>
+                        <span>•</span>
+                        <span className="text-emerald-400 font-bold">
+                          {(latestEditedPlan.plan || latestEditedPlan.periods || []).length} Periods
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectPractice(latestEditedPlan.id);
+                      setIsPlanLibraryOpen(false);
+                    }}
+                    className={`px-3.5 py-2 rounded-xl font-bold text-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                      currentPracticeId === latestEditedPlan.id
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                    }`}
+                  >
+                    {currentPracticeId === latestEditedPlan.id ? (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Currently Viewing</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Open This Plan</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
               
               {/* MODE 1: HIERARCHICAL WEEK FOLDERS VIEW */}
               {dropdownViewMode === 'tree' && (
@@ -1286,6 +1433,13 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                                                   </span>
                                                 ) : null}
 
+                                                {latestEditedPlan && p.id === latestEditedPlan.id && (
+                                                  <span className="px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-500/50 text-[9px] font-black text-amber-300 flex items-center gap-1">
+                                                    <Sparkles className="w-2.5 h-2.5" />
+                                                    Latest Edit
+                                                  </span>
+                                                )}
+
                                                 {p.dayFolder && (
                                                   <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-750 text-[10px] font-bold text-amber-400">
                                                     {p.dayFolder}
@@ -1378,6 +1532,12 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                                     Day {seq.practiceNumber}
                                   </span>
                                 ) : null}
+                                {latestEditedPlan && p.id === latestEditedPlan.id && (
+                                  <span className="px-2 py-0.5 rounded-lg bg-amber-500/20 border border-amber-500/50 text-[9px] font-black text-amber-300 uppercase flex items-center gap-1">
+                                    <Sparkles className="w-2.5 h-2.5" />
+                                    Latest Edit
+                                  </span>
+                                )}
                               </div>
                               {isSelected ? (
                                 <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black">

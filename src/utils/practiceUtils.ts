@@ -239,9 +239,9 @@ export function sanitizePracticePlans(
     .filter((p): p is PracticePlan => Boolean(p && typeof p === 'object'))
     .map((p) => {
       const dateStr = p.date || '';
-      const correctDay = getDayOfWeekForDate(dateStr);
-      const correctWeek = calculateWeekFolderForDate(dateStr, scheduleEvents);
-      const correctDayFolder = getFormattedDayFolder(dateStr);
+      const correctDay = dateStr ? getDayOfWeekForDate(dateStr) : (p.day || 'Wednesday');
+      const correctWeek = dateStr ? calculateWeekFolderForDate(dateStr, scheduleEvents) : (p.weekFolder || 'Week 1');
+      const correctDayFolder = dateStr ? getFormattedDayFolder(dateStr) : (p.dayFolder || p.day || 'Day 1');
 
       const rawPeriods = Array.isArray(p.plan) && p.plan.length > 0
         ? p.plan
@@ -282,3 +282,78 @@ export function sanitizePracticePlans(
       };
     });
 }
+
+/**
+ * Intelligently finds the most relevant/active practice plan ID to display:
+ * 1. Matches requested preferredId if present in list
+ * 2. Matches exact practice on Today's date
+ * 3. Most recently edited practice plan (highest lastEdited timestamp in the last 7 days)
+ * 4. Closest upcoming practice plan (date >= today)
+ * 5. Practice in the active week folder
+ * 6. Latest created/chronological practice plan (never falls back to an arbitrary ancient index 0)
+ */
+export function findBestActivePracticeId(
+  practices: PracticePlan[],
+  preferredId?: string | null,
+  currentWeekFolder?: string
+): string | null {
+  if (!Array.isArray(practices) || practices.length === 0) return null;
+
+  // 1. If preferredId is provided and exists in the practice list, use it
+  if (preferredId) {
+    const found = practices.find((p) => p && p.id === preferredId);
+    if (found) return found.id;
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // 2. Check if there is an exact practice plan for Today's date
+  const todayPlan = practices.find((p) => p && p.date === todayStr && !p.isCancelled);
+  if (todayPlan) return todayPlan.id;
+
+  // 3. Check for the most recently edited practice plan
+  const sortedByRecentEdit = [...practices]
+    .filter((p) => p && typeof p.lastEdited === 'number' && p.lastEdited > 0)
+    .sort((a, b) => (b.lastEdited || 0) - (a.lastEdited || 0));
+
+  if (sortedByRecentEdit.length > 0) {
+    const mostRecent = sortedByRecentEdit[0];
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    if ((mostRecent.lastEdited || 0) > sevenDaysAgo) {
+      return mostRecent.id;
+    }
+  }
+
+  // 4. Check for the closest upcoming practice (date >= today)
+  const upcomingPractices = practices
+    .filter((p) => p && p.date && p.date >= todayStr && !p.isCancelled)
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  if (upcomingPractices.length > 0) {
+    return upcomingPractices[0].id;
+  }
+
+  // 5. Check if there's a practice in currentWeekFolder
+  if (currentWeekFolder) {
+    const weekPlans = practices
+      .filter((p) => p && p.weekFolder === currentWeekFolder && !p.isCancelled)
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    if (weekPlans.length > 0) {
+      return weekPlans[0].id;
+    }
+  }
+
+  // 6. If any recent edit exists at all, use it
+  if (sortedByRecentEdit.length > 0) {
+    return sortedByRecentEdit[0].id;
+  }
+
+  // 7. Otherwise, latest chronological date first
+  const sortedChronological = [...practices].sort((a, b) => {
+    const dA = a.date || '0000-00-00';
+    const dB = b.date || '0000-00-00';
+    return dB.localeCompare(dA);
+  });
+
+  return sortedChronological[0]?.id || practices[0]?.id || null;
+}
+
