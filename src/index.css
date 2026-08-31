@@ -45,25 +45,17 @@ body {
 @media print {
   @page {
     size: letter portrait;
-    margin: 0.2in;
+    margin: 0.25in;
   }
 
-  /* Reset container constraints so physical printer drivers can spool and paginate without memory or layout lockups */
+  /* Reset outer container constraints so physical printer drivers and browser preview can paginate smoothly */
   html,
-  body,
-  #root,
-  #root > div,
-  main,
-  div,
-  section,
-  article {
+  body {
     background-color: #ffffff !important;
     background: #ffffff !important;
     color: #000000 !important;
     font-size: var(--print-font-size, 12px) !important;
     width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
@@ -71,14 +63,24 @@ body {
     padding: 0 !important;
     overflow: visible !important;
     position: static !important;
-    float: none !important;
-    transform: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  /* Flatten nested flex wrappers that cause physical printer spoolers to stall on cross-axis pagination */
-  .flex:not(.wristband-insert-print-box):not(.print-player-badge-starter):not(.print-player-badge-d2):not(.print-player-badge-d3):not(.print-player-badge-d4):not(.print\:hidden):not(.hidden-print):not([class*="print:hidden"]):not([class*="hidden-print"]),
-  .flex-col:not(.wristband-insert-print-box):not(.print\:hidden):not(.hidden-print):not([class*="print:hidden"]):not([class*="hidden-print"]),
-  .lg\:flex-row {
+  #root,
+  #root > div,
+  main {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    position: static !important;
     display: block !important;
   }
 

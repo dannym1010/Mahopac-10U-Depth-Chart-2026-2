@@ -60,15 +60,19 @@ export function triggerPrint(options?: PrintOptions) {
   window.addEventListener('focus', onFocusReturn, { once: true });
 
   // Allow browser layout and paint cycle to settle before initiating print job
-  setTimeout(() => {
-    try {
-      window.focus();
-      window.print();
-    } catch (e) {
-      console.error('window.print() error:', e);
-      doCleanup();
-    }
-  }, 120);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        try {
+          window.focus();
+          window.print();
+        } catch (e) {
+          console.error('window.print() error:', e);
+          doCleanup();
+        }
+      }, 60);
+    });
+  });
 }
 
 /**
