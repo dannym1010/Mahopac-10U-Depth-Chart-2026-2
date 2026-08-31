@@ -234,37 +234,51 @@ export function sanitizePracticePlans(
   plans: PracticePlan[],
   scheduleEvents?: ScheduleEvent[]
 ): PracticePlan[] {
-  return plans.map((p) => {
-    if (!p) return p;
-    const dateStr = p.date || '';
-    const correctDay = getDayOfWeekForDate(dateStr);
-    const correctWeek = calculateWeekFolderForDate(dateStr, scheduleEvents);
-    const correctDayFolder = getFormattedDayFolder(dateStr);
+  if (!Array.isArray(plans)) return [];
+  return plans
+    .filter((p): p is PracticePlan => Boolean(p && typeof p === 'object'))
+    .map((p) => {
+      const dateStr = p.date || '';
+      const correctDay = getDayOfWeekForDate(dateStr);
+      const correctWeek = calculateWeekFolderForDate(dateStr, scheduleEvents);
+      const correctDayFolder = getFormattedDayFolder(dateStr);
 
-    const rawPeriods = Array.isArray(p.plan) && p.plan.length > 0
-      ? p.plan
-      : Array.isArray(p.periods) && p.periods.length > 0
-      ? p.periods
-      : [];
+      const rawPeriods = Array.isArray(p.plan) && p.plan.length > 0
+        ? p.plan
+        : Array.isArray(p.periods) && p.periods.length > 0
+        ? p.periods
+        : [];
 
-    const sanitizedPeriods = rawPeriods.map((period) => ({
-      ...period,
-      stations: Array.isArray(period.stations)
-        ? period.stations.map((st) => ({
-            ...st,
-            coach: (st.coach || '').trim(),
-          }))
-        : [],
-    }));
+      const sanitizedPeriods = rawPeriods
+        .filter((period) => Boolean(period && typeof period === 'object'))
+        .map((period) => {
+          const rawStations = Array.isArray(period.stations) ? period.stations : [];
+          const validStations = rawStations
+            .filter((st) => Boolean(st && typeof st === 'object'))
+            .map((st) => ({
+              name: st?.name || '',
+              desc: st?.desc || '',
+              focus: st?.focus || '',
+              coach: (st?.coach || '').trim(),
+            }));
 
-    return {
-      ...p,
-      teamId: p.teamId === 'team-10u' ? 'team_10u' : (p.teamId || 'team_10u'),
-      day: correctDay,
-      dayFolder: correctDayFolder,
-      weekFolder: correctWeek,
-      plan: sanitizedPeriods,
-      periods: sanitizedPeriods,
-    };
-  });
+          return {
+            ...period,
+            time: Number(period.time) || 0,
+            category: period.category || '',
+            format: period.format || 'static',
+            stations: validStations.length > 0 ? validStations : [{ name: '', desc: '', coach: '', focus: '' }],
+          };
+        });
+
+      return {
+        ...p,
+        teamId: p.teamId === 'team-10u' ? 'team_10u' : (p.teamId || 'team_10u'),
+        day: correctDay,
+        dayFolder: correctDayFolder,
+        weekFolder: correctWeek,
+        plan: sanitizedPeriods,
+        periods: sanitizedPeriods,
+      };
+    });
 }

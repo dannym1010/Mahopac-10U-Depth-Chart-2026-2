@@ -265,10 +265,14 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
       ? sortedPractices[currentIndex + 1]
       : null;
 
-  const currentPlanPeriods = currentPlan?.plan || currentPlan?.periods || [];
+  const currentPlanPeriods = Array.isArray(currentPlan?.plan)
+    ? currentPlan.plan
+    : Array.isArray(currentPlan?.periods)
+    ? currentPlan.periods
+    : [];
   const currentPlanPeriodsCount = currentPlanPeriods.length;
   const currentPlanDurationMinutes = currentPlanPeriods.reduce(
-    (acc, per) => acc + (per.time || 0),
+    (acc, per) => acc + (Number(per?.time) || 0),
     0
   );
 
@@ -276,13 +280,14 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   const unplannedScheduleEvents = scheduleEvents.filter(
     (e) =>
       (e.type === 'practice' || e.type === 'scrimmage') &&
-      !practices.some((p) => p.date === e.date)
+      !practices.some((p) => p && p.date === e.date)
   );
 
   let currentStartMinutes = parseTimeString(currentPlan?.startTime || '17:05');
 
   // Filter practices based on search and tag
   const filteredPractices = sortedPractices.filter((p) => {
+    if (!p) return false;
     const term = dropdownSearchTerm.toLowerCase().trim();
     if (term) {
       const seq = practiceSeqMap[p.id];
@@ -292,11 +297,14 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
       const matchDay = (p.dayFolder || p.day || '').toLowerCase().includes(term);
       const matchSeq = seq?.practiceNumber ? `practice #${seq.practiceNumber}`.includes(term) || `day ${seq.practiceNumber}`.includes(term) : false;
       const matchFocus = (p.plan || p.periods || []).some((per) =>
-        (per.stations || []).some(
+        per &&
+        Array.isArray(per.stations) &&
+        per.stations.some(
           (st) =>
-            (st.name || '').toLowerCase().includes(term) ||
-            (st.focus || '').toLowerCase().includes(term) ||
-            (st.desc || '').toLowerCase().includes(term)
+            st &&
+            (((st.name || '').toLowerCase().includes(term)) ||
+              ((st.focus || '').toLowerCase().includes(term)) ||
+              ((st.desc || '').toLowerCase().includes(term)))
         )
       );
       if (!matchTitle && !matchWeek && !matchDate && !matchDay && !matchSeq && !matchFocus) {
@@ -1480,472 +1488,479 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
               </tr>
             </thead>
             <tbody>
-              {(currentPlan?.plan || currentPlan?.periods || []).map((row, pIdx, allPeriods) => {
-                const rowDuration = Number(row.time) || 0;
-                const periodEndMin = currentStartMinutes + rowDuration;
-                const timeString = `${formatTimeMinutes(currentStartMinutes)} - ${formatTimeMinutes(periodEndMin)}`;
-                const isRotating = row.format === 'rotating';
+              {(currentPlanPeriods || [])
+                .filter((row): row is PracticePeriod => Boolean(row && typeof row === 'object'))
+                .map((row, pIdx, allPeriods) => {
+                  const rowDuration = Number(row.time) || 0;
+                  const periodEndMin = currentStartMinutes + rowDuration;
+                  const timeString = `${formatTimeMinutes(currentStartMinutes)} - ${formatTimeMinutes(periodEndMin)}`;
+                  const isRotating = row.format === 'rotating';
 
-                const stationsList =
-                  row.stations && row.stations.length > 0
-                    ? row.stations
-                    : [{ name: '', desc: '', coach: '', focus: '' }];
-                const numStations = stationsList.length;
-                const stationDuration =
-                  isRotating && numStations > 0
-                    ? rowDuration / numStations
-                    : rowDuration;
+                  const rawStations = Array.isArray(row.stations) ? row.stations : [];
+                  const validStations = rawStations.filter(
+                    (st): st is PracticeStation => Boolean(st && typeof st === 'object')
+                  );
+                  const stationsList =
+                    validStations.length > 0
+                      ? validStations
+                      : [{ name: '', desc: '', coach: '', focus: '' }];
+                  const numStations = stationsList.length > 0 ? stationsList.length : 1;
+                  const stationDuration =
+                    isRotating && numStations > 0
+                      ? rowDuration / numStations
+                      : rowDuration;
 
-                const categoryDrills = getDrillsForCategory(row.category);
-                const isNearBottom = pIdx >= allPeriods.length - 2;
+                  const categoryDrills = getDrillsForCategory(row.category);
+                  const isNearBottom = pIdx >= allPeriods.length - 2;
 
-                const element = stationsList.map((station, sIdx) => {
-                  const isFirstStationInPeriod = sIdx === 0;
-                  const coachPopupId = `coach_popup_${pIdx}_${sIdx}`;
-                  const isCoachPopupOpen = activeCoachPopup === coachPopupId;
+                  const element = stationsList.map((station, sIdx) => {
+                    const safeStation = station || { name: '', desc: '', coach: '', focus: '' };
+                    const isFirstStationInPeriod = sIdx === 0;
+                    const coachPopupId = `coach_popup_${pIdx}_${sIdx}`;
+                    const isCoachPopupOpen = activeCoachPopup === coachPopupId;
 
-                  const assignedCoachTokens = (station.coach || '')
-                    .split(',')
-                    .map((c) => c.trim())
-                    .filter(Boolean);
+                    const assignedCoachTokens = (safeStation.coach || '')
+                      .split(',')
+                      .map((c) => c.trim())
+                      .filter(Boolean);
 
-                  const stationStartMin =
-                    currentStartMinutes + sIdx * stationDuration;
-                  const stationEndMin = stationStartMin + stationDuration;
+                    const stationStartMin =
+                      currentStartMinutes + sIdx * stationDuration;
+                    const stationEndMin = stationStartMin + stationDuration;
 
-                  return (
-                    <tr
-                      key={`${pIdx}_${sIdx}`}
-                      className={`border-b border-slate-700/70 ${
-                        pIdx % 2 === 0 ? 'bg-slate-800/80' : 'bg-slate-850/60 bg-slate-800/50'
-                      }`}
-                    >
-                      {/* Time / Period Cell (Rowspan) */}
-                      {isFirstStationInPeriod && (
-                        <td
-                          rowSpan={numStations}
-                          className="py-3.5 px-3.5 align-top border-r border-slate-700 font-bold"
-                        >
-                          <div className="text-xs font-black text-indigo-300 uppercase tracking-tight print:hidden">
-                            Period {pIdx + 1}
-                          </div>
-                          <div className="hidden print:block font-black text-black uppercase tracking-tight leading-tight print-text-title">
-                            Period {pIdx + 1}
-                          </div>
-                          <div className="flex items-center gap-1.5 mt-1 print:hidden">
-                            <input
-                              type="number"
-                              value={row.time}
-                              disabled={userRole !== 'admin'}
-                              onChange={(e) =>
-                                onUpdatePeriodTime(
-                                  pIdx,
-                                  parseInt(e.target.value, 10) || 0
-                                )
-                              }
-                              className="w-12 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-xs font-bold text-slate-100"
-                            />
-                            <span className="text-[11px] text-slate-400 font-medium">mins</span>
-                          </div>
-                          <div className="text-[11px] font-extrabold text-amber-300 mt-1.5 font-mono print:hidden">
-                            {timeString}
-                          </div>
-                          <div className="hidden print:block font-extrabold text-black font-mono mt-1 leading-tight print-text-body">
-                            {timeString}
-                          </div>
-                          <div className="hidden print:block font-bold text-slate-700 mt-0.5 leading-none print-text-sub">
-                            ({row.time} min)
-                          </div>
-                        </td>
-                      )}
+                    return (
+                      <tr
+                        key={`${pIdx}_${sIdx}`}
+                        className={`border-b border-slate-700/70 ${
+                          pIdx % 2 === 0 ? 'bg-slate-800/80' : 'bg-slate-850/60 bg-slate-800/50'
+                        }`}
+                      >
+                        {/* Time / Period Cell (Rowspan) */}
+                        {isFirstStationInPeriod && (
+                          <td
+                            rowSpan={numStations}
+                            className="py-3.5 px-3.5 align-top border-r border-slate-700 font-bold"
+                          >
+                            <div className="text-xs font-black text-indigo-300 uppercase tracking-tight print:hidden">
+                              Period {pIdx + 1}
+                            </div>
+                            <div className="hidden print:block font-black text-black uppercase tracking-tight leading-tight print-text-title">
+                              Period {pIdx + 1}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-1 print:hidden">
+                              <input
+                                type="number"
+                                value={row.time}
+                                disabled={userRole !== 'admin'}
+                                onChange={(e) =>
+                                  onUpdatePeriodTime(
+                                    pIdx,
+                                    parseInt(e.target.value, 10) || 0
+                                  )
+                                }
+                                className="w-12 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-xs font-bold text-slate-100"
+                              />
+                              <span className="text-[11px] text-slate-400 font-medium">mins</span>
+                            </div>
+                            <div className="text-[11px] font-extrabold text-amber-300 mt-1.5 font-mono print:hidden">
+                              {timeString}
+                            </div>
+                            <div className="hidden print:block font-extrabold text-black font-mono mt-1 leading-tight print-text-body">
+                              {timeString}
+                            </div>
+                            <div className="hidden print:block font-bold text-slate-700 mt-0.5 leading-none print-text-sub">
+                              ({row.time} min)
+                            </div>
+                          </td>
+                        )}
 
-                      {/* Category / Format Cell (Rowspan) */}
-                      {isFirstStationInPeriod && (
-                        <td
-                          rowSpan={numStations}
-                          className="py-3.5 px-3.5 align-top border-r border-slate-700 space-y-2"
-                        >
+                        {/* Category / Format Cell (Rowspan) */}
+                        {isFirstStationInPeriod && (
+                          <td
+                            rowSpan={numStations}
+                            className="py-3.5 px-3.5 align-top border-r border-slate-700 space-y-2"
+                          >
+                            <div className="print:hidden">
+                              <select
+                                value={row.category}
+                                disabled={userRole !== 'admin'}
+                                onChange={(e) =>
+                                  onUpdatePeriodCategory(pIdx, e.target.value)
+                                }
+                                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-200"
+                              >
+                                {cascadingDrills.map((folder) => (
+                                  <option key={folder.name} value={folder.name}>
+                                    {folder.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="hidden print:block font-black text-black uppercase tracking-tight leading-tight break-words print-text-title">
+                              {row.category}
+                            </div>
+
+                            {/* Format selector (Static vs Rotating) */}
+                            <div className="print:hidden">
+                              <label className="text-[10px] uppercase font-black text-slate-400 block mb-1 tracking-wider">
+                                Station Mode:
+                              </label>
+                              <select
+                                value={row.format || 'static'}
+                                disabled={userRole !== 'admin'}
+                                onChange={(e) =>
+                                  onUpdatePeriodFormat(
+                                    pIdx,
+                                    e.target.value as 'static' | 'rotating'
+                                  )
+                                }
+                                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1 text-[11px] font-semibold text-slate-300"
+                              >
+                                <option value="static">Static Group</option>
+                                <option value="rotating">Rotating Stations</option>
+                              </select>
+                            </div>
+                            <div className="hidden print:block font-bold text-slate-700 mt-1 leading-none print-text-sub">
+                              {isRotating ? 'Rotating' : 'Full Group'}
+                            </div>
+                          </td>
+                        )}
+
+                        {/* Station / Drill Title & Instructions */}
+                        <td className="py-3 px-3.5 align-top border-r border-slate-700 space-y-2 print:space-y-1">
+                          {isRotating && (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-[10.5px] font-black border border-indigo-500/30 print:bg-slate-200 print:text-black print:border-slate-400 print:py-0.5 print:px-1.5 print:mb-1 print-text-badge">
+                              <Clock className="w-3 h-3 print:hidden" />
+                              <span className="font-mono print:font-bold">
+                                Station {sIdx + 1}: {formatTimeMinutes(stationStartMin)} -{' '}
+                                {formatTimeMinutes(stationEndMin)} (
+                                {Math.round(stationDuration)} min)
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Drill Quick Select Dropdown */}
                           <div className="print:hidden">
                             <select
-                              value={row.category}
+                              defaultValue=""
                               disabled={userRole !== 'admin'}
-                              onChange={(e) =>
-                                onUpdatePeriodCategory(pIdx, e.target.value)
-                              }
-                              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-200"
+                              onChange={(e) => {
+                                const drillName = e.target.value;
+                                if (!drillName) return;
+                                // Check in categoryDrills first, then allCategorizedDrills
+                                let found = categoryDrills.find((d) => d.name === drillName);
+                                if (!found) {
+                                  for (const grp of allCategorizedDrills) {
+                                    found = grp.drills.find((d) => d.name === drillName);
+                                    if (found) break;
+                                  }
+                                }
+                                if (found) {
+                                  onSelectDrillForStation(pIdx, sIdx, found);
+                                  e.target.value = '';
+                                }
+                              }}
+                              className="w-full bg-slate-900/90 border border-slate-700 hover:border-slate-600 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-indigo-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all cursor-pointer"
                             >
-                              {cascadingDrills.map((folder) => (
-                                <option key={folder.name} value={folder.name}>
-                                  {folder.name}
-                                </option>
+                              <option value="">-- Choose Drill from Library (120+ drills) --</option>
+                              {categoryDrills.length > 0 && (
+                                <optgroup label={`⭐ Matching Category Drills (${categoryDrills.length})`}>
+                                  {categoryDrills.map((d, dIdx) => (
+                                    <option key={`cat_${dIdx}`} value={d.name}>
+                                      {d.name}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              )}
+                              {allCategorizedDrills.map((grp, gIdx) => (
+                                <optgroup key={`grp_${gIdx}`} label={`📁 ${grp.category} (${grp.drills.length})`}>
+                                  {grp.drills.map((d, dIdx) => (
+                                    <option key={`all_${gIdx}_${dIdx}`} value={d.name}>
+                                      {d.name}
+                                    </option>
+                                  ))}
+                                </optgroup>
                               ))}
                             </select>
                           </div>
-                          <div className="hidden print:block font-black text-black uppercase tracking-tight leading-tight break-words print-text-title">
-                            {row.category}
-                          </div>
 
-                          {/* Format selector (Static vs Rotating) */}
-                          <div className="print:hidden">
-                            <label className="text-[10px] uppercase font-black text-slate-400 block mb-1 tracking-wider">
-                              Station Mode:
-                            </label>
-                            <select
-                              value={row.format || 'static'}
-                              disabled={userRole !== 'admin'}
-                              onChange={(e) =>
-                                onUpdatePeriodFormat(
-                                  pIdx,
-                                  e.target.value as 'static' | 'rotating'
-                                )
-                              }
-                              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1 text-[11px] font-semibold text-slate-300"
-                            >
-                              <option value="static">Static Group</option>
-                              <option value="rotating">Rotating Stations</option>
-                            </select>
-                          </div>
-                          <div className="hidden print:block font-bold text-slate-700 mt-1 leading-none print-text-sub">
-                            {isRotating ? 'Rotating' : 'Full Group'}
+                          {/* Station Title */}
+                          <input
+                            type="text"
+                            value={safeStation.name || ''}
+                            disabled={userRole !== 'admin'}
+                            onChange={(e) =>
+                              onUpdateStation(pIdx, sIdx, 'name', e.target.value)
+                            }
+                            placeholder="Drill / Group Name"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-100 focus:ring-1 focus:ring-indigo-500 disabled:bg-transparent disabled:border-transparent print:hidden"
+                          />
+
+                          {/* Station Details */}
+                          <textarea
+                            rows={2}
+                            value={safeStation.desc || ''}
+                            disabled={userRole !== 'admin'}
+                            onChange={(e) =>
+                              onUpdateStation(pIdx, sIdx, 'desc', e.target.value)
+                            }
+                            placeholder="Instructions, alignments, cone layout..."
+                            className="w-full bg-slate-900/90 border border-slate-700 rounded-xl p-2.5 text-xs font-medium text-slate-200 leading-relaxed focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-500 print:hidden"
+                          />
+
+                          {/* Print view */}
+                          <div className="hidden print:block">
+                            <div className="font-black text-black uppercase tracking-tight leading-snug print-text-title">
+                              {safeStation.name || 'Station / Drill'}
+                            </div>
+                            {safeStation.desc && (
+                              <div className="font-semibold text-slate-950 mt-1 whitespace-pre-wrap leading-relaxed print-text-body">
+                                {safeStation.desc}
+                              </div>
+                            )}
                           </div>
                         </td>
-                      )}
 
-                      {/* Station / Drill Title & Instructions */}
-                      <td className="py-3 px-3.5 align-top border-r border-slate-700 space-y-2 print:space-y-1">
-                        {isRotating && (
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-[10.5px] font-black border border-indigo-500/30 print:bg-slate-200 print:text-black print:border-slate-400 print:py-0.5 print:px-1.5 print:mb-1 print-text-badge">
-                            <Clock className="w-3 h-3 print:hidden" />
-                            <span className="font-mono print:font-bold">
-                              Station {sIdx + 1}: {formatTimeMinutes(stationStartMin)} -{' '}
-                              {formatTimeMinutes(stationEndMin)} (
-                              {Math.round(stationDuration)} min)
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Drill Quick Select Dropdown */}
-                        <div className="print:hidden">
-                          <select
-                            defaultValue=""
-                            disabled={userRole !== 'admin'}
-                            onChange={(e) => {
-                              const drillName = e.target.value;
-                              if (!drillName) return;
-                              // Check in categoryDrills first, then allCategorizedDrills
-                              let found = categoryDrills.find((d) => d.name === drillName);
-                              if (!found) {
-                                for (const grp of allCategorizedDrills) {
-                                  found = grp.drills.find((d) => d.name === drillName);
-                                  if (found) break;
-                                }
-                              }
-                              if (found) {
-                                onSelectDrillForStation(pIdx, sIdx, found);
-                                e.target.value = '';
-                              }
-                            }}
-                            className="w-full bg-slate-900/90 border border-slate-700 hover:border-slate-600 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-indigo-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all cursor-pointer"
-                          >
-                            <option value="">-- Choose Drill from Library (120+ drills) --</option>
-                            {categoryDrills.length > 0 && (
-                              <optgroup label={`⭐ Matching Category Drills (${categoryDrills.length})`}>
-                                {categoryDrills.map((d, dIdx) => (
-                                  <option key={`cat_${dIdx}`} value={d.name}>
-                                    {d.name}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            )}
-                            {allCategorizedDrills.map((grp, gIdx) => (
-                              <optgroup key={`grp_${gIdx}`} label={`📁 ${grp.category} (${grp.drills.length})`}>
-                                {grp.drills.map((d, dIdx) => (
-                                  <option key={`all_${gIdx}_${dIdx}`} value={d.name}>
-                                    {d.name}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* Station Title */}
-                        <input
-                          type="text"
-                          value={station.name || ''}
-                          disabled={userRole !== 'admin'}
-                          onChange={(e) =>
-                            onUpdateStation(pIdx, sIdx, 'name', e.target.value)
-                          }
-                          placeholder="Drill / Group Name"
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-100 focus:ring-1 focus:ring-indigo-500 disabled:bg-transparent disabled:border-transparent print:hidden"
-                        />
-
-                        {/* Station Details */}
-                        <textarea
-                          rows={2}
-                          value={station.desc || ''}
-                          disabled={userRole !== 'admin'}
-                          onChange={(e) =>
-                            onUpdateStation(pIdx, sIdx, 'desc', e.target.value)
-                          }
-                          placeholder="Instructions, alignments, cone layout..."
-                          className="w-full bg-slate-900/90 border border-slate-700 rounded-xl p-2.5 text-xs font-medium text-slate-200 leading-relaxed focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-500 print:hidden"
-                        />
-
-                        {/* Print view */}
-                        <div className="hidden print:block">
-                          <div className="font-black text-black uppercase tracking-tight leading-snug print-text-title">
-                            {station.name || 'Station / Drill'}
-                          </div>
-                          {station.desc && (
-                            <div className="font-semibold text-slate-950 mt-1 whitespace-pre-wrap leading-relaxed print-text-body">
-                              {station.desc}
+                        {/* Coaches Column & Smart Scrolling Selector */}
+                        <td className="py-3 px-3.5 align-top border-r border-slate-700 relative">
+                          {/* Render assigned coach chips for immediate clarity */}
+                          {assignedCoachTokens.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-1.5 print:hidden">
+                              {assignedCoachTokens.map((c, cIdx) => (
+                                <span
+                                  key={cIdx}
+                                  className="px-2 py-0.5 rounded-md bg-indigo-950 border border-indigo-500/40 text-[10px] font-bold text-indigo-300 flex items-center gap-1"
+                                >
+                                  <span>{c}</span>
+                                </span>
+                              ))}
                             </div>
                           )}
-                        </div>
-                      </td>
 
-                      {/* Coaches Column & Smart Scrolling Selector */}
-                      <td className="py-3 px-3.5 align-top border-r border-slate-700 relative">
-                        {/* Render assigned coach chips for immediate clarity */}
-                        {assignedCoachTokens.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-1.5 print:hidden">
-                            {assignedCoachTokens.map((c, cIdx) => (
-                              <span
-                                key={cIdx}
-                                className="px-2 py-0.5 rounded-md bg-indigo-950 border border-indigo-500/40 text-[10px] font-bold text-indigo-300 flex items-center gap-1"
-                              >
-                                <span>{c}</span>
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                          <textarea
+                            rows={2}
+                            value={safeStation.coach || ''}
+                            disabled={userRole !== 'admin'}
+                            onChange={(e) =>
+                              onUpdateStation(pIdx, sIdx, 'coach', e.target.value)
+                            }
+                            placeholder="Type or select coach names..."
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs font-bold text-slate-100 leading-tight focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-500 print:hidden"
+                          />
 
-                        <textarea
-                          rows={2}
-                          value={station.coach || ''}
-                          disabled={userRole !== 'admin'}
-                          onChange={(e) =>
-                            onUpdateStation(pIdx, sIdx, 'coach', e.target.value)
-                          }
-                          placeholder="Type or select coach names..."
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs font-bold text-slate-100 leading-tight focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-500 print:hidden"
-                        />
-
-                        <div
-                          onClick={() => {
-                            setCoachSearchTerm('');
-                            setActiveCoachPopup(
-                              isCoachPopupOpen ? null : coachPopupId
-                            );
-                          }}
-                          className="text-[11px] text-indigo-400 font-bold cursor-pointer mt-1.5 hover:underline print:hidden flex items-center gap-1 select-none"
-                        >
-                          <Users className="w-3 h-3 text-indigo-400" />
-                          <span>Select Coaches</span>
-                          <ChevronDown className={`w-3 h-3 transition-transform ${isCoachPopupOpen ? 'rotate-180' : ''}`} />
-                        </div>
-
-                        <div className="hidden print:block font-bold text-black leading-snug break-words print-text-body">
-                          {station.coach || '—'}
-                        </div>
-
-                        {/* Enhanced Coach Multi-select Popup with Upward Smart Flipping */}
-                        {isCoachPopupOpen && (
                           <div
-                            className={`absolute left-0 w-72 bg-slate-850 border border-slate-600 rounded-2xl shadow-2xl p-3.5 z-50 space-y-2.5 print:hidden backdrop-blur-md ring-1 ring-slate-700/80 ${
-                              isNearBottom ? 'bottom-full mb-2' : 'top-full mt-1.5'
-                            }`}
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={() => {
+                              setCoachSearchTerm('');
+                              setActiveCoachPopup(
+                                isCoachPopupOpen ? null : coachPopupId
+                              );
+                            }}
+                            className="text-[11px] text-indigo-400 font-bold cursor-pointer mt-1.5 hover:underline print:hidden flex items-center gap-1 select-none"
                           >
-                            <div className="flex items-center justify-between border-b border-slate-700 pb-2">
-                              <div className="flex items-center gap-1.5">
-                                <Users className="w-3.5 h-3.5 text-indigo-400" />
-                                <span className="text-xs font-black text-slate-100">
-                                  Assign Coaching Staff
-                                </span>
+                            <Users className="w-3 h-3 text-indigo-400" />
+                            <span>Select Coaches</span>
+                            <ChevronDown className={`w-3 h-3 transition-transform ${isCoachPopupOpen ? 'rotate-180' : ''}`} />
+                          </div>
+
+                          <div className="hidden print:block font-bold text-black leading-snug break-words print-text-body">
+                            {safeStation.coach || '—'}
+                          </div>
+
+                          {/* Enhanced Coach Multi-select Popup with Upward Smart Flipping */}
+                          {isCoachPopupOpen && (
+                            <div
+                              className={`absolute left-0 w-72 bg-slate-850 border border-slate-600 rounded-2xl shadow-2xl p-3.5 z-50 space-y-2.5 print:hidden backdrop-blur-md ring-1 ring-slate-700/80 ${
+                                isNearBottom ? 'bottom-full mb-2' : 'top-full mt-1.5'
+                              }`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="flex items-center justify-between border-b border-slate-700 pb-2">
+                                <div className="flex items-center gap-1.5">
+                                  <Users className="w-3.5 h-3.5 text-indigo-400" />
+                                  <span className="text-xs font-black text-slate-100">
+                                    Assign Coaching Staff
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveCoachPopup(null)}
+                                  className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-750 cursor-pointer"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => setActiveCoachPopup(null)}
-                                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-750 cursor-pointer"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
 
-                            {/* Coach Search filter */}
-                            {savedCoaches.length > 4 && (
-                              <div className="relative">
-                                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                                <input
-                                  type="text"
-                                  value={coachSearchTerm}
-                                  onChange={(e) => setCoachSearchTerm(e.target.value)}
-                                  placeholder="Search coaches..."
-                                  className="w-full pl-8 pr-2.5 py-1 bg-slate-950 border border-slate-700 rounded-xl text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
-                                />
-                              </div>
-                            )}
-
-                            {/* Coaches List with Large Readability */}
-                            <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
-                              {savedCoaches
-                                .filter((c) =>
-                                  !coachSearchTerm ||
-                                  c.toLowerCase().includes(coachSearchTerm.toLowerCase().trim())
-                                )
-                                .map((coachName) => {
-                                  const isChecked =
-                                    assignedCoachTokens.includes(coachName) ||
-                                    assignedCoachTokens.includes(`Coach ${coachName}`);
-
-                                  return (
-                                    <div
-                                      key={coachName}
-                                      className={`flex items-center justify-between p-2 rounded-xl transition-all border ${
-                                        isChecked
-                                          ? 'bg-indigo-950/70 border-indigo-500/40 text-indigo-100'
-                                          : 'hover:bg-slate-750/70 border-transparent text-slate-200'
-                                      }`}
-                                    >
-                                      <label className="flex items-center gap-2.5 cursor-pointer flex-1 select-none">
-                                        <input
-                                          type="checkbox"
-                                          checked={isChecked}
-                                          onChange={(e) => {
-                                            let updatedTokens = [...assignedCoachTokens];
-                                            if (e.target.checked) {
-                                              if (!updatedTokens.includes(coachName))
-                                                updatedTokens.push(coachName);
-                                            } else {
-                                              updatedTokens = updatedTokens.filter(
-                                                (t) =>
-                                                  t !== coachName &&
-                                                  t !== `Coach ${coachName}`
-                                              );
-                                            }
-                                            onUpdateStation(
-                                              pIdx,
-                                              sIdx,
-                                              'coach',
-                                              updatedTokens.join(', ')
-                                            );
-                                          }}
-                                          className="rounded text-indigo-600 focus:ring-indigo-500 bg-slate-950 border-slate-700 w-4 h-4 cursor-pointer"
-                                        />
-                                        <span className="text-xs font-bold">
-                                          {coachName}
-                                        </span>
-                                      </label>
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          if (confirm(`Remove "${coachName}" from the team coach list?`)) {
-                                            onDeleteSavedCoach(coachName);
-                                          }
-                                        }}
-                                        className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-                                        title={`Delete ${coachName} from team list`}
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                  );
-                                })}
-
-                              {savedCoaches.length === 0 && (
-                                <div className="p-3 text-center text-xs text-slate-400">
-                                  No saved coaches. Click below to add staff coaches.
+                              {/* Coach Search filter */}
+                              {savedCoaches.length > 4 && (
+                                <div className="relative">
+                                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                                  <input
+                                    type="text"
+                                    value={coachSearchTerm}
+                                    onChange={(e) => setCoachSearchTerm(e.target.value)}
+                                    placeholder="Search coaches..."
+                                    className="w-full pl-8 pr-2.5 py-1 bg-slate-950 border border-slate-700 rounded-xl text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+                                  />
                                 </div>
                               )}
-                            </div>
 
-                            <div className="pt-2 border-t border-slate-700 text-center">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const name = prompt('Enter new Coach Name (e.g. Coach Dan, Coach Mike):');
-                                  if (name && name.trim()) {
-                                    onAddNewSavedCoach(name.trim());
-                                  }
-                                }}
-                                className="w-full py-2 bg-indigo-950 hover:bg-indigo-900 border border-indigo-500/40 text-indigo-300 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                              >
-                                <UserPlus className="w-3.5 h-3.5" />
-                                <span>Add New Coach</span>
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </td>
+                              {/* Coaches List with Large Readability */}
+                              <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
+                                {savedCoaches
+                                  .filter((c) =>
+                                    !coachSearchTerm ||
+                                    c.toLowerCase().includes(coachSearchTerm.toLowerCase().trim())
+                                  )
+                                  .map((coachName) => {
+                                    const isChecked =
+                                      assignedCoachTokens.includes(coachName) ||
+                                      assignedCoachTokens.includes(`Coach ${coachName}`);
 
-                      {/* Coaching Focus Column */}
-                      <td className="py-3 px-3.5 align-top border-r border-slate-700">
-                        <textarea
-                          rows={2}
-                          value={station.focus || ''}
-                          disabled={userRole !== 'admin'}
-                          onChange={(e) =>
-                            onUpdateStation(pIdx, sIdx, 'focus', e.target.value)
-                          }
-                          placeholder="Key coaching cues & assignments..."
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs font-semibold text-slate-200 leading-tight focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-500 print:hidden"
-                        />
-                        <div className="hidden print:block font-medium text-black whitespace-pre-wrap leading-relaxed print-text-body">
-                          {station.focus || '—'}
-                        </div>
-                      </td>
+                                    return (
+                                      <div
+                                        key={coachName}
+                                        className={`flex items-center justify-between p-2 rounded-xl transition-all border ${
+                                          isChecked
+                                            ? 'bg-indigo-950/70 border-indigo-500/40 text-indigo-100'
+                                            : 'hover:bg-slate-750/70 border-transparent text-slate-200'
+                                        }`}
+                                      >
+                                        <label className="flex items-center gap-2.5 cursor-pointer flex-1 select-none">
+                                          <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            onChange={(e) => {
+                                              let updatedTokens = [...assignedCoachTokens];
+                                              if (e.target.checked) {
+                                                if (!updatedTokens.includes(coachName))
+                                                  updatedTokens.push(coachName);
+                                              } else {
+                                                updatedTokens = updatedTokens.filter(
+                                                  (t) =>
+                                                    t !== coachName &&
+                                                    t !== `Coach ${coachName}`
+                                                );
+                                              }
+                                              onUpdateStation(
+                                                pIdx,
+                                                sIdx,
+                                                'coach',
+                                                updatedTokens.join(', ')
+                                              );
+                                            }}
+                                            className="rounded text-indigo-600 focus:ring-indigo-500 bg-slate-950 border-slate-700 w-4 h-4 cursor-pointer"
+                                          />
+                                          <span className="text-xs font-bold">
+                                            {coachName}
+                                          </span>
+                                        </label>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (confirm(`Remove "${coachName}" from the team coach list?`)) {
+                                              onDeleteSavedCoach(coachName);
+                                            }
+                                          }}
+                                          className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+                                          title={`Delete ${coachName} from team list`}
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
 
-                      {/* Period Actions (Only on first station row in the period) */}
-                      {userRole === 'admin' && isFirstStationInPeriod && (
-                        <td
-                          rowSpan={numStations}
-                          className="py-3.5 px-2 align-top text-center print:hidden"
-                        >
-                          <div className="flex flex-col items-center gap-1.5">
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => onMovePeriod(pIdx, -1)}
-                                title="Move Period Up"
-                                className="p-1 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-slate-100 cursor-pointer"
-                              >
-                                <ArrowUp className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => onMovePeriod(pIdx, 1)}
-                                title="Move Period Down"
-                                className="p-1 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-slate-100 cursor-pointer"
-                              >
-                                <ArrowDown className="w-3.5 h-3.5" />
-                              </button>
+                                {savedCoaches.length === 0 && (
+                                  <div className="p-3 text-center text-xs text-slate-400">
+                                    No saved coaches. Click below to add staff coaches.
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="pt-2 border-t border-slate-700 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const name = prompt('Enter new Coach Name (e.g. Coach Dan, Coach Mike):');
+                                    if (name && name.trim()) {
+                                      onAddNewSavedCoach(name.trim());
+                                    }
+                                  }}
+                                  className="w-full py-2 bg-indigo-950 hover:bg-indigo-900 border border-indigo-500/40 text-indigo-300 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                                >
+                                  <UserPlus className="w-3.5 h-3.5" />
+                                  <span>Add New Coach</span>
+                                </button>
+                              </div>
                             </div>
-                            <button
-                              onClick={() => onAddStationToPeriod(pIdx)}
-                              className="px-2 py-1 bg-slate-900 hover:bg-slate-700 border border-slate-700 text-sky-300 text-[10px] font-bold rounded-lg flex items-center gap-0.5 transition-colors cursor-pointer"
-                            >
-                              <Plus className="w-2.5 h-2.5 text-sky-400" />
-                              <span>Station</span>
-                            </button>
-                            <button
-                              onClick={() => onRemovePeriod(pIdx)}
-                              title="Delete Period"
-                              className="p-1 text-rose-400 hover:bg-rose-950/50 rounded-lg cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                          )}
+                        </td>
+
+                        {/* Coaching Focus Column */}
+                        <td className="py-3 px-3.5 align-top border-r border-slate-700">
+                          <textarea
+                            rows={2}
+                            value={safeStation.focus || ''}
+                            disabled={userRole !== 'admin'}
+                            onChange={(e) =>
+                              onUpdateStation(pIdx, sIdx, 'focus', e.target.value)
+                            }
+                            placeholder="Key coaching cues & assignments..."
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs font-semibold text-slate-200 leading-tight focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-500 print:hidden"
+                          />
+                          <div className="hidden print:block font-medium text-black whitespace-pre-wrap leading-relaxed print-text-body">
+                            {safeStation.focus || '—'}
                           </div>
                         </td>
-                      )}
-                    </tr>
-                  );
-                });
 
-                currentStartMinutes = periodEndMin;
-                return element;
-              })}
+                        {/* Period Actions (Only on first station row in the period) */}
+                        {userRole === 'admin' && isFirstStationInPeriod && (
+                          <td
+                            rowSpan={numStations}
+                            className="py-3.5 px-2 align-top text-center print:hidden"
+                          >
+                            <div className="flex flex-col items-center gap-1.5">
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => onMovePeriod(pIdx, -1)}
+                                  title="Move Period Up"
+                                  className="p-1 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-slate-100 cursor-pointer"
+                                >
+                                  <ArrowUp className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => onMovePeriod(pIdx, 1)}
+                                  title="Move Period Down"
+                                  className="p-1 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-slate-100 cursor-pointer"
+                                >
+                                  <ArrowDown className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                              <button
+                                onClick={() => onAddStationToPeriod(pIdx)}
+                                className="px-2 py-1 bg-slate-900 hover:bg-slate-700 border border-slate-700 text-sky-300 text-[10px] font-bold rounded-lg flex items-center gap-0.5 transition-colors cursor-pointer"
+                              >
+                                <Plus className="w-2.5 h-2.5 text-sky-400" />
+                                <span>Station</span>
+                              </button>
+                              <button
+                                onClick={() => onRemovePeriod(pIdx)}
+                                title="Delete Period"
+                                className="p-1 text-rose-400 hover:bg-rose-950/50 rounded-lg cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  });
+
+                  currentStartMinutes = periodEndMin;
+                  return element;
+                })}
             </tbody>
           </table>
         </div>

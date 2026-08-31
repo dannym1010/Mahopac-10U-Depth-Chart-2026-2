@@ -113,19 +113,13 @@ export default function App() {
     let plansToUse: PracticePlan[] = [];
     if (saved && Array.isArray(saved) && saved.length > 0) {
       plansToUse = [...saved];
-      // Ensure all standard season practices from DEFAULT_INITIAL_PRACTICES are present
-      DEFAULT_INITIAL_PRACTICES.forEach((defP) => {
-        const exists = plansToUse.some(
-          (p) => p && (p.id === defP.id || (p.date && defP.date && p.date === defP.date))
-        );
-        if (!exists) {
-          plansToUse.push(defP);
-        }
-      });
     } else {
       plansToUse = [...DEFAULT_INITIAL_PRACTICES];
     }
-    const sanitized = sanitizePracticePlans(plansToUse, DEFAULT_SCHEDULE_EVENTS);
+    const sanitized = sanitizePracticePlans(
+      plansToUse,
+      safeJSONParse('footballScheduleEvents', DEFAULT_SCHEDULE_EVENTS)
+    );
     safeJSONSet('footballPracticeData', sanitized);
     return sanitized;
   });
@@ -162,32 +156,6 @@ export default function App() {
   const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>(() => {
     const saved = safeJSONParse('footballScheduleEvents', null);
     if (saved && Array.isArray(saved) && saved.length > 0) {
-      const has831 = saved.some((e: ScheduleEvent) => e.date === '2026-08-31');
-      if (!has831) {
-        const mondayEvent: ScheduleEvent = {
-          id: 'evt_w1_p0',
-          type: 'practice',
-          title: 'Week 1 Prep - Monday Installation & Fundamentals',
-          week: '1',
-          date: '2026-08-31',
-          startTime: '17:30',
-          endTime: '19:00',
-          location: 'Crane Road',
-          locationType: 'home',
-          arrivalMinutesBefore: 15,
-          focusOrNotes:
-            'Full Pads. Monday game-week install: Carmel defensive front keys, punt coverage lanes, 11-person offense wristband test.',
-          linkedPracticePlanId: 'p_pre_monday_831',
-          createdAt: 1724900000000,
-          lastEdited: 1724900000000,
-        };
-        const updated = [...saved, mondayEvent].sort((a, b) => {
-          if (a.date !== b.date) return a.date.localeCompare(b.date);
-          return (a.startTime || '').localeCompare(b.startTime || '');
-        });
-        safeJSONSet('footballScheduleEvents', updated);
-        return updated;
-      }
       return saved;
     }
     return DEFAULT_SCHEDULE_EVENTS;
@@ -447,9 +415,13 @@ export default function App() {
       safeJSONSet('footballDefaultFormations', data.defaultFormations);
     }
     if (data.practiceData && Array.isArray(data.practiceData)) {
-      setPracticeData(data.practiceData);
-      latestStateRef.current.practiceData = data.practiceData;
-      safeJSONSet('footballPracticeData', data.practiceData);
+      const sanitized = sanitizePracticePlans(
+        data.practiceData,
+        data.scheduleEvents || latestStateRef.current.scheduleEvents || DEFAULT_SCHEDULE_EVENTS
+      );
+      setPracticeData(sanitized);
+      latestStateRef.current.practiceData = sanitized;
+      safeJSONSet('footballPracticeData', sanitized);
     }
     if (data.practiceTemplates) {
       const normalizedTemplates = normalizePracticeTemplates(data.practiceTemplates);
@@ -3434,10 +3406,15 @@ export default function App() {
       guideTree,
       guideOrder,
       savedCoaches,
+      teamSavedCoaches,
       staffList,
       masterPlayLibrary,
       collapsedFolders,
       scheduleEvents,
+      roster,
+      teams,
+      seasonConfig,
+      attendanceLogs,
     };
     const dataStr =
       'data:text/json;charset=utf-8,' +
@@ -3485,6 +3462,9 @@ export default function App() {
       const importedSavedCoaches = shouldImport('staffList')
         ? parsed.savedCoaches || parsed.savedCoachesList || null
         : null;
+      const importedTeamSavedCoaches = shouldImport('staffList')
+        ? parsed.teamSavedCoaches || null
+        : null;
       const importedStaffList = shouldImport('staffList')
         ? parsed.staffList || parsed.teamCoachesList || null
         : null;
@@ -3498,6 +3478,9 @@ export default function App() {
         ? parsed.scheduleEvents || null
         : null;
       const importedRoster = shouldImport('roster') ? parsed.roster || null : null;
+      const importedTeams = shouldImport('roster') ? parsed.teams || null : null;
+      const importedSeasonConfig = shouldImport('scheduleEvents') ? parsed.seasonConfig || null : null;
+      const importedAttendance = shouldImport('scheduleEvents') ? parsed.attendanceLogs || null : null;
 
       if (importedWeekly) {
         setWeeklyData(importedWeekly);
@@ -3510,8 +3493,12 @@ export default function App() {
         restoredList.push('📐 Formations & Alignments');
       }
       if (importedPractice) {
-        setPracticeData(importedPractice);
-        safeJSONSet('footballPracticeData', importedPractice);
+        const sanitized = sanitizePracticePlans(
+          importedPractice,
+          importedSchedule || scheduleEvents
+        );
+        setPracticeData(sanitized);
+        safeJSONSet('footballPracticeData', sanitized);
         restoredList.push('📋 Practice Plans');
       }
       if (importedTemplates) {
@@ -3540,6 +3527,10 @@ export default function App() {
         safeJSONSet('footballSavedCoaches', importedSavedCoaches);
         restoredList.push('🧢 Coaching Directory');
       }
+      if (importedTeamSavedCoaches) {
+        setTeamSavedCoaches(importedTeamSavedCoaches);
+        safeJSONSet('footballTeamSavedCoaches', importedTeamSavedCoaches);
+      }
       if (importedStaffList) {
         setStaffList(importedStaffList);
         safeJSONSet('footballTeamCoaches', importedStaffList);
@@ -3560,8 +3551,20 @@ export default function App() {
       }
       if (importedRoster) {
         setRoster(importedRoster);
-        safeJSONSet('footballMasterRoster', importedRoster);
+        safeJSONSet('footballRoster', importedRoster);
         restoredList.push('👥 Team Roster');
+      }
+      if (importedTeams) {
+        setTeams(importedTeams);
+        safeJSONSet('footballTeams', importedTeams);
+      }
+      if (importedSeasonConfig) {
+        setSeasonConfig(importedSeasonConfig);
+        safeJSONSet('footballSeasonConfig', importedSeasonConfig);
+      }
+      if (importedAttendance) {
+        setAttendanceLogs(importedAttendance);
+        safeJSONSet('footballAttendanceLogs', importedAttendance);
       }
 
       // Direct synchronous push to Cloud Firestore keeping unselected fields intact

@@ -88,12 +88,41 @@ export function safeJSONSet(key: string, data: any) {
 // Client session identification for sync loop prevention
 export const CLIENT_ID = 'client_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
 
+function sanitizeTemplatePeriods(periods: any[]): PracticePeriod[] {
+  if (!Array.isArray(periods)) return [];
+  return periods
+    .filter((p) => Boolean(p && typeof p === 'object'))
+    .map((p) => {
+      const rawStations = Array.isArray(p.stations) ? p.stations : [];
+      const validStations = rawStations
+        .filter((st: any) => Boolean(st && typeof st === 'object'))
+        .map((st: any) => ({
+          name: st?.name || '',
+          desc: st?.desc || '',
+          focus: st?.focus || '',
+          coach: (st?.coach || '').trim(),
+        }));
+      return {
+        time: Number(p.time) || 0,
+        category: p.category || '',
+        format: p.format || 'static',
+        stations: validStations.length > 0 ? validStations : [{ name: '', desc: '', coach: '', focus: '' }],
+      };
+    });
+}
+
 /**
  * Normalizes practice templates into a clean Record<string, PracticePeriod[]> map,
  * handling legacy { name, plan } wrapper objects, arrays, and standard maps.
  */
 export function normalizePracticeTemplates(raw: any): Record<string, PracticePeriod[]> {
-  const result: Record<string, PracticePeriod[]> = { ...DEFAULT_PRACTICE_TEMPLATES };
+  const result: Record<string, PracticePeriod[]> = {};
+  
+  // Seed defaults first
+  Object.entries(DEFAULT_PRACTICE_TEMPLATES).forEach(([k, v]) => {
+    result[k] = sanitizeTemplatePeriods(v);
+  });
+
   if (!raw) return result;
 
   if (Array.isArray(raw)) {
@@ -101,7 +130,7 @@ export function normalizePracticeTemplates(raw: any): Record<string, PracticePer
       if (item && typeof item === 'object') {
         const name = item.name || `Template ${idx + 1}`;
         if (Array.isArray(item.plan)) {
-          result[name] = item.plan;
+          result[name] = sanitizeTemplatePeriods(item.plan);
         }
       }
     });
@@ -111,10 +140,10 @@ export function normalizePracticeTemplates(raw: any): Record<string, PracticePer
   if (typeof raw === 'object') {
     Object.entries(raw).forEach(([key, val]: [string, any]) => {
       if (Array.isArray(val)) {
-        result[key] = val;
+        result[key] = sanitizeTemplatePeriods(val);
       } else if (val && typeof val === 'object' && Array.isArray(val.plan)) {
         const name = val.name || (key !== '0' && key !== 'default' ? key : 'Base Practice Plan');
-        result[name] = val.plan;
+        result[name] = sanitizeTemplatePeriods(val.plan);
       }
     });
   }
