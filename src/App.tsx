@@ -60,6 +60,12 @@ import {
   subscribeServerEvents,
   CLIENT_ID,
 } from './services/storageService';
+import {
+  calculateWeekFolderForDate,
+  getDayOfWeekForDate,
+  getFormattedDayFolder,
+  sanitizePracticePlans,
+} from './utils/practiceUtils';
 
 import { Header } from './components/Header';
 import { NavigationTabs } from './components/NavigationTabs';
@@ -97,18 +103,20 @@ export default function App() {
   const [practiceData, setPracticeData] = useState<PracticePlan[]>(() => {
     const saved = safeJSONParse('footballPracticeData', null);
     if (saved && Array.isArray(saved) && saved.length > 0) {
-      const has831Plan = saved.some((p: PracticePlan) => p.date === '2026-08-31');
+      const sanitized = sanitizePracticePlans(saved, DEFAULT_SCHEDULE_EVENTS);
+      const has831Plan = sanitized.some((p: PracticePlan) => p.date === '2026-08-31');
       if (!has831Plan) {
         const default831Plan = DEFAULT_INITIAL_PRACTICES.find((p) => p.date === '2026-08-31');
         if (default831Plan) {
-          const updated = [...saved, default831Plan];
+          const updated = sanitizePracticePlans([...sanitized, default831Plan], DEFAULT_SCHEDULE_EVENTS);
           safeJSONSet('footballPracticeData', updated);
           return updated;
         }
       }
-      return saved;
+      safeJSONSet('footballPracticeData', sanitized);
+      return sanitized;
     }
-    return DEFAULT_INITIAL_PRACTICES;
+    return sanitizePracticePlans(DEFAULT_INITIAL_PRACTICES, DEFAULT_SCHEDULE_EVENTS);
   });
   const [practiceTemplates, setPracticeTemplates] = useState<
     Record<string, PracticePeriod[]>
@@ -2183,24 +2191,42 @@ export default function App() {
      PRACTICE PLAN ACTIONS
      ========================================================================= */
   const handleOpenNewPracticeModal = () => {
-    const title = prompt('Enter Practice Title (e.g. Practice #2 - Game Prep):', `Practice #${practiceData.length + 1}`);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const dateStr = prompt('Enter Date (YYYY-MM-DD):', todayStr);
+    if (!dateStr || !dateStr.trim()) return;
+
+    const cleanDate = dateStr.trim();
+    const dayOfWeek = getDayOfWeekForDate(cleanDate);
+    const dayFolder = getFormattedDayFolder(cleanDate);
+    const weekFolder = calculateWeekFolderForDate(cleanDate, scheduleEvents);
+
+    // Calculate next sequential practice number among non-cancelled practices
+    const activeCount = practiceData.filter((p) => !p.isCancelled).length;
+    const defaultTitle = `Practice #${activeCount + 1} - ${dayOfWeek} (${weekFolder})`;
+    const title = prompt('Enter Practice Title:', defaultTitle);
     if (!title || !title.trim()) return;
-    const dateStr = prompt('Enter Date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
 
     const newPrac: PracticePlan = {
-      id: `prac_${Date.now()}`,
+      id: `prac_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       teamId: activeTeamId,
-      year: '2026',
-      weekFolder: `Week ${currentWeek}`,
+      year: cleanDate.includes('-') ? cleanDate.split('-')[0] : '2026',
+      weekFolder: weekFolder,
+      dayFolder: dayFolder,
       title: title.trim(),
-      date: dateStr || new Date().toISOString().split('T')[0],
-      day: 'Wednesday',
+      date: cleanDate,
+      day: dayOfWeek,
       startTime: '17:05',
+      endTime: '19:00',
+      location: 'Crane Road',
       lastEdited: Date.now(),
       plan: deepClone(DEFAULT_PRACTICE_TEMPLATES['Standard Practice']),
     };
 
-    setPracticeData((prev) => [...prev, newPrac]);
+    setPracticeData((prev) => {
+      const next = [...prev, newPrac];
+      safeJSONSet('footballPracticeData', next);
+      return next;
+    });
     setCurrentPracticeId(newPrac.id);
   };
 
@@ -2209,26 +2235,84 @@ export default function App() {
     if (!cur) return;
     const yr = prompt('Edit Season Year:', cur.year || '2026');
     if (yr === null) return;
-    const wk = prompt('Edit Week Folder:', cur.weekFolder || 'Week 1');
-    if (wk === null) return;
-    const title = prompt('Edit Practice Title:', cur.title);
-    if (title === null) return;
     const dt = prompt('Edit Date (YYYY-MM-DD):', cur.date);
     if (dt === null) return;
 
-    setPracticeData((prev) =>
-      prev.map((p) =>
+    const cleanDate = dt.trim();
+    const autoWeek = calculateWeekFolderForDate(cleanDate, scheduleEvents);
+    const autoDay = getDayOfWeekForDate(cleanDate);
+    const autoDayFolder = getFormattedDayFolder(cleanDate);
+
+    const wk = prompt('Edit Week Folder:', autoWeek || cur.weekFolder || 'Week 1');
+    if (wk === null) return;
+    const title = prompt('Edit Practice Title:', cur.title);
+    if (title === null) return;
+
+    setPracticeData((prev) => {
+      const next = prev.map((p) =>
         p.id === currentPracticeId
           ? {
               ...p,
               year: yr.trim(),
               weekFolder: wk.trim(),
               title: title.trim(),
-              date: dt.trim(),
+              date: cleanDate,
+              day: autoDay,
+              dayFolder: autoDayFolder,
+              lastEdited: Date.now(),
             }
           : p
-      )
-    );
+      );
+      safeJSONSet('footballPracticeData', next);
+      return next;
+    });
+  };
+
+  const handleTogglePracticeCancelled = (
+    practiceId: string,
+    isCancelled?: boolean,
+    reason?: string
+  ) => {
+    let targetDate = '';
+    setPracticeData((prev) => {
+      const next = prev.map((p) => {
+        if (p.id === practiceId) {
+          targetDate = p.date || '';
+          const newStatus = isCancelled !== undefined ? isCancelled : !p.isCancelled;
+          return {
+            ...p,
+            isCancelled: newStatus,
+            cancellationReason: reason !== undefined ? reason : (newStatus ? 'Cancelled' : ''),
+            lastEdited: Date.now(),
+          };
+        }
+        return p;
+      });
+      safeJSONSet('footballPracticeData', next);
+      return next;
+    });
+
+    // Also sync to matching ScheduleEvent if any
+    setScheduleEvents((prev) => {
+      const curPlan = practiceData.find((p) => p.id === practiceId);
+      const next = prev.map((ev) => {
+        if (
+          ev.linkedPracticePlanId === practiceId ||
+          (ev.date && targetDate && ev.date === targetDate && (ev.type === 'practice' || ev.type === 'scrimmage'))
+        ) {
+          const newStatus = isCancelled !== undefined ? isCancelled : !ev.isCancelled;
+          return {
+            ...ev,
+            isCancelled: newStatus,
+            cancellationReason: reason !== undefined ? reason : (curPlan?.cancellationReason || (newStatus ? 'Cancelled' : '')),
+            lastEdited: Date.now(),
+          };
+        }
+        return ev;
+      });
+      safeJSONSet('footballScheduleEvents', next);
+      return next;
+    });
   };
 
   const handleQuickCreatePlanFromSchedule = (evt: ScheduleEvent) => {
@@ -2251,10 +2335,53 @@ export default function App() {
   };
 
   const handleAutoNumberPractices = () => {
-    if (confirm('Auto-number practice plans sequentially?')) {
-      setPracticeData((prev) =>
-        prev.map((p, idx) => ({ ...p, title: `Practice #${idx + 1}` }))
-      );
+    if (
+      confirm(
+        'Auto-number non-cancelled practice plans sequentially by date? (Cancelled practices will be excluded from the practice count and subsequent plans will be re-numbered)'
+      )
+    ) {
+      setPracticeData((prev) => {
+        // Sort chronologically
+        const sorted = [...prev].sort((a, b) => {
+          const dateA = a.date || '1970-01-01';
+          const dateB = b.date || '1970-01-01';
+          if (dateA !== dateB) return dateA.localeCompare(dateB);
+          return (a.startTime || '00:00').localeCompare(b.startTime || '00:00');
+        });
+
+        let seqNum = 0;
+        const newTitleMap: Record<string, string> = {};
+        sorted.forEach((p) => {
+          if (p.isCancelled) {
+            newTitleMap[p.id] = p.title.startsWith('[Cancelled]')
+              ? p.title
+              : `[Cancelled] ${p.title.replace(/^Practice #\d+\s*[:-]?\s*/i, '')}`;
+          } else {
+            seqNum++;
+            const dayName = p.day || getDayOfWeekForDate(p.date);
+            const wk = p.weekFolder || calculateWeekFolderForDate(p.date, scheduleEvents);
+            
+            // Check if there is existing custom focus text in the title (after " - ")
+            const dashIdx = p.title.indexOf(' - ');
+            const hasCustomText =
+              dashIdx !== -1 &&
+              !p.title.substring(dashIdx + 3).startsWith('Practice #');
+            const customFocus = hasCustomText
+              ? p.title.substring(dashIdx + 3).trim()
+              : `${dayName} (${wk})`;
+
+            newTitleMap[p.id] = `Practice #${seqNum} - ${customFocus}`;
+          }
+        });
+
+        const next = prev.map((p) => ({
+          ...p,
+          title: newTitleMap[p.id] || p.title,
+          lastEdited: Date.now(),
+        }));
+        safeJSONSet('footballPracticeData', next);
+        return next;
+      });
     }
   };
 

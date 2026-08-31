@@ -76,6 +76,8 @@ export interface ScheduleEvent {
   arrivalMinutesBefore?: number; // e.g. 60 min before game, 15 min before practice
   focusOrNotes?: string;
   linkedPracticePlanId?: string; // Links directly to a PracticePlan.id
+  isCancelled?: boolean;
+  cancellationReason?: string;
   result?: {
     teamScore?: number;
     opponentScore?: number;
@@ -339,6 +341,8 @@ export interface PracticePlan {
   startTime?: string;
   endTime?: string;
   location?: string;
+  isCancelled?: boolean; // When true, excluded from practice number/held count
+  cancellationReason?: string;
   lastEdited?: number;
   plan?: PracticePeriod[];
   periods?: PracticePeriod[];

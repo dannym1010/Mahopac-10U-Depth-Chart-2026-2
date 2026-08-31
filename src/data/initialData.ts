@@ -1061,7 +1061,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
   {
     id: "p_pre_monday_831",
     year: "2026",
-    weekFolder: "Preseason Wk 2",
+    weekFolder: "Week 1",
     dayFolder: "Monday 8/31",
     date: "2026-08-31",
     title: "Week 1 Monday Installation & Base Fundamentals",
@@ -1143,10 +1143,10 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
   {
     id: "p_pre_3",
     year: "2026",
-    weekFolder: "Preseason Wk 2",
+    weekFolder: "Week 1",
     dayFolder: "Tuesday 9/01",
     date: "2026-09-01",
-    title: "Shells & Fundamentals / Redzone Prep",
+    title: "Week 1 Shells & Fundamentals / Redzone Prep",
     location: "Main Field",
     periods: [
       {
@@ -1212,10 +1212,10 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
   {
     id: "p_pre_4",
     year: "2026",
-    weekFolder: "Preseason Wk 2",
+    weekFolder: "Week 1",
     dayFolder: "Thursday 9/03",
     date: "2026-09-03",
-    title: "Full Padded Scrimmage Dress Rehearsal",
+    title: "Week 1 Full Padded Scrimmage Dress Rehearsal",
     location: "Main Field",
     periods: [
       {

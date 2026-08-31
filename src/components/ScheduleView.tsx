@@ -2394,6 +2394,24 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                   className="w-full bg-slate-900 text-slate-100 font-medium p-2 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
                 />
               </div>
+
+              <div className="flex items-center justify-between p-3 bg-slate-900/80 rounded-xl border border-slate-700">
+                <div>
+                  <div className="text-xs font-bold text-slate-200">Event Cancellation Status</div>
+                  <div className="text-[11px] text-slate-400">Cancelled practices are excluded from practice day counts</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingEvent({ ...editingEvent, isCancelled: !editingEvent.isCancelled })}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all border ${
+                    editingEvent.isCancelled
+                      ? 'bg-rose-950 border-rose-500/60 text-rose-300'
+                      : 'bg-slate-800 border-slate-600 text-slate-300 hover:text-white'
+                  }`}
+                >
+                  {editingEvent.isCancelled ? '🚫 CANCELLED' : 'Active Event'}
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-700">
