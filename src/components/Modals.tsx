@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   X,
   Copy,
@@ -13,8 +13,27 @@ import {
   LogOut,
   Check,
   AlertTriangle,
+  Upload,
+  FileJson,
+  CheckSquare,
+  Square,
+  CheckCircle2,
+  Layers,
+  Dumbbell,
+  Calendar,
+  Users,
+  BookOpen,
+  Shield,
+  Activity,
+  FileText,
+  Sparkles,
+  RefreshCw,
+  FolderTree,
+  ChevronRight,
+  Database,
+  ArrowLeft,
 } from 'lucide-react';
-import { FormationBoard, PracticePeriod, StaffCoach, Team } from '../types';
+import { FormationBoard, PracticePeriod, StaffCoach, Team, DrillFolder } from '../types';
 
 /* =========================================================================
    1. AUTH OVERLAY & APPROVAL PENDING
@@ -764,25 +783,288 @@ export const TemplatesManagerModal: React.FC<TemplatesManagerModalProps> = ({
 };
 
 /* =========================================================================
-   6. IMPORT / RESTORE BACKUP MODAL
+   6. SELECTIVE IMPORT / RESTORE BACKUP MODAL
    ========================================================================= */
+interface ModuleInfo {
+  key: string;
+  name: string;
+  category: string;
+  icon: React.ReactNode;
+  countLabel: string;
+  description: string;
+  isAvailable: boolean;
+}
+
+export function inspectBackupModules(parsed: any): ModuleInfo[] {
+  if (!parsed || typeof parsed !== 'object') return [];
+
+  // Weekly data
+  const hasWeekly = Boolean(
+    parsed.weeklyData ||
+      (parsed['0'] && parsed['0'].depthChart) ||
+      (parsed.wk1 && parsed.wk1.depthChart)
+  );
+  const weeklySource = parsed.weeklyData || (hasWeekly ? parsed : null);
+  const weekCount = weeklySource
+    ? Object.keys(weeklySource).filter(
+        (k) =>
+          k.toLowerCase().includes('week') ||
+          k.toLowerCase().includes('wk') ||
+          !isNaN(Number(k))
+      ).length || Object.keys(weeklySource).length
+    : 0;
+
+  // Practice plans
+  const hasPractice = Array.isArray(parsed.practiceData) && parsed.practiceData.length > 0;
+  const practiceCount = hasPractice ? parsed.practiceData.length : 0;
+
+  // Practice templates
+  const hasTemplates = Boolean(
+    parsed.practiceTemplates &&
+      typeof parsed.practiceTemplates === 'object' &&
+      Object.keys(parsed.practiceTemplates).length > 0
+  );
+  const templateCount = hasTemplates ? Object.keys(parsed.practiceTemplates).length : 0;
+
+  // Cascading drills
+  const hasDrills = Array.isArray(parsed.cascadingDrills) && parsed.cascadingDrills.length > 0;
+  let totalDrills = 0;
+  let folderCount = 0;
+  if (hasDrills) {
+    const countDrills = (folders: DrillFolder[]) => {
+      folders.forEach((f) => {
+        folderCount++;
+        totalDrills += f.drills?.length || 0;
+        if (f.subfolders) countDrills(f.subfolders);
+      });
+    };
+    countDrills(parsed.cascadingDrills);
+  }
+
+  // Default Formations
+  const hasDefaults = Array.isArray(parsed.defaultFormations) && parsed.defaultFormations.length > 0;
+  const defaultCount = hasDefaults ? parsed.defaultFormations.length : 0;
+
+  // Guides
+  const hasGuides = Boolean(
+    parsed.guideTree ||
+      parsed.pdfGuidesTree ||
+      parsed.guideOrder ||
+      parsed.pdfGuidesOrder
+  );
+
+  // Staff & Coaches
+  const hasStaff = Boolean(
+    (Array.isArray(parsed.savedCoaches) && parsed.savedCoaches.length > 0) ||
+      (Array.isArray(parsed.staffList) && parsed.staffList.length > 0) ||
+      (Array.isArray(parsed.savedCoachesList) && parsed.savedCoachesList.length > 0)
+  );
+  const staffCount =
+    (parsed.savedCoaches?.length || 0) +
+    (parsed.staffList?.length || 0) +
+    (parsed.savedCoachesList?.length || 0);
+
+  // Master Plays
+  const hasPlays = Boolean(
+    parsed.masterPlayLibrary &&
+      typeof parsed.masterPlayLibrary === 'object' &&
+      Object.keys(parsed.masterPlayLibrary).length > 0
+  );
+  const playCount = hasPlays ? Object.keys(parsed.masterPlayLibrary).length : 0;
+
+  // Schedule Events
+  const hasSchedule = Array.isArray(parsed.scheduleEvents) && parsed.scheduleEvents.length > 0;
+  const scheduleCount = hasSchedule ? parsed.scheduleEvents.length : 0;
+
+  // Roster
+  const hasRoster = Array.isArray(parsed.roster) && parsed.roster.length > 0;
+  const rosterCount = hasRoster ? parsed.roster.length : 0;
+
+  return [
+    {
+      key: 'cascadingDrills',
+      name: '💥 Master Drill Library',
+      category: 'Training & Drills',
+      icon: <Dumbbell className="w-5 h-5 text-emerald-400" />,
+      countLabel: hasDrills ? `${totalDrills} drills • ${folderCount} categories` : 'Not found in file',
+      description: 'All categorized exercises, agility circuits, tackling & blocking progressions',
+      isAvailable: hasDrills,
+    },
+    {
+      key: 'practiceData',
+      name: '📋 Practice Plans & Schedules',
+      category: 'Practice & Schedule',
+      icon: <Calendar className="w-5 h-5 text-amber-400" />,
+      countLabel: hasPractice ? `${practiceCount} practice plans` : 'Not found in file',
+      description: 'Full timeline practices, station coaches, drill allocations, & notes',
+      isAvailable: hasPractice,
+    },
+    {
+      key: 'practiceTemplates',
+      name: '⚡ Practice Period Templates',
+      category: 'Practice & Schedule',
+      icon: <Activity className="w-5 h-5 text-purple-400" />,
+      countLabel: hasTemplates ? `${templateCount} period templates` : 'Not found in file',
+      description: 'Saved custom period formats (e.g. 5-Station Tackle Circuit, Indy, Specials)',
+      isAvailable: hasTemplates,
+    },
+    {
+      key: 'weeklyData',
+      name: '🏈 Weekly Game Plans & Depth Charts',
+      category: 'Playbook Core',
+      icon: <Layers className="w-5 h-5 text-indigo-400" />,
+      countLabel: hasWeekly ? `${weekCount} game weeks` : 'Not found in file',
+      description: 'Weekly offensive/defensive formation charts, player spot assignments, & notes',
+      isAvailable: hasWeekly,
+    },
+    {
+      key: 'defaultFormations',
+      name: '📐 Default Formations & Alignments',
+      category: 'Playbook Core',
+      icon: <Shield className="w-5 h-5 text-sky-400" />,
+      countLabel: hasDefaults ? `${defaultCount} base formations` : 'Not found in file',
+      description: 'Base offensive and defensive field coordinates, positions, and alignments',
+      isAvailable: hasDefaults,
+    },
+    {
+      key: 'guideTree',
+      name: '📖 Playbook PDF Guides & Structure',
+      category: 'Playbook Core',
+      icon: <BookOpen className="w-5 h-5 text-pink-400" />,
+      countLabel: hasGuides ? 'Guides tree & order' : 'Not found in file',
+      description: 'Playbook PDF documents, folder hierarchy, and custom manual ordering',
+      isAvailable: hasGuides,
+    },
+    {
+      key: 'staffList',
+      name: '🧢 Coaching Staff & Directory',
+      category: 'Administration',
+      icon: <Users className="w-5 h-5 text-teal-400" />,
+      countLabel: hasStaff ? `${staffCount} coaches/staff` : 'Not found in file',
+      description: 'Saved coach names, station assignments, and team staff directory',
+      isAvailable: hasStaff,
+    },
+    {
+      key: 'masterPlayLibrary',
+      name: '🎯 Master Play Library',
+      category: 'Playbook Core',
+      icon: <FileText className="w-5 h-5 text-cyan-400" />,
+      countLabel: hasPlays ? `${playCount} play collections` : 'Not found in file',
+      description: 'Offensive run/pass plays, defensive coverages, and play call sheets',
+      isAvailable: hasPlays,
+    },
+    {
+      key: 'scheduleEvents',
+      name: '📅 Season Schedule & Calendar',
+      category: 'Administration',
+      icon: <Calendar className="w-5 h-5 text-rose-400" />,
+      countLabel: hasSchedule ? `${scheduleCount} calendar events` : 'Not found in file',
+      description: 'Games, practices, scrimmages, and location details',
+      isAvailable: hasSchedule,
+    },
+    {
+      key: 'roster',
+      name: '👥 Team Roster',
+      category: 'Administration',
+      icon: <Users className="w-5 h-5 text-blue-400" />,
+      countLabel: hasRoster ? `${rosterCount} players` : 'Not found in file',
+      description: 'Player roster names, jersey numbers, and primary position slots',
+      isAvailable: hasRoster,
+    },
+  ];
+}
+
 interface ImportBackupModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectFile: () => void;
-  onPasteImport: (jsonString: string) => void;
+  onApplySelectiveImport: (
+    parsedData: any,
+    selectedOptions: Record<string, boolean>
+  ) => void;
 }
 
 export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
   isOpen,
   onClose,
-  onSelectFile,
-  onPasteImport,
+  onApplySelectiveImport,
 }) => {
+  const [step, setStep] = useState<'upload' | 'select'>('upload');
+  const [parsedData, setParsedData] = useState<any>(null);
+  const [fileName, setFileName] = useState<string>('');
+  const [fileSize, setFileSize] = useState<string>('');
   const [pastedText, setPastedText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [selectedModules, setSelectedModules] = useState<Record<string, boolean>>({});
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   if (!isOpen) return null;
+
+  const handleProcessParsedData = (data: any, name = 'Backup File', sizeStr = '') => {
+    try {
+      if (!data || typeof data !== 'object') {
+        throw new Error('Parsed backup file is empty or not a valid object.');
+      }
+      const modules = inspectBackupModules(data);
+      const availableModules = modules.filter((m) => m.isAvailable);
+
+      if (availableModules.length === 0) {
+        throw new Error('No compatible playbook modules found in this JSON backup.');
+      }
+
+      // Default all available modules to checked
+      const initialSelection: Record<string, boolean> = {};
+      modules.forEach((m) => {
+        initialSelection[m.key] = m.isAvailable;
+      });
+
+      setParsedData(data);
+      setFileName(name);
+      setFileSize(sizeStr);
+      setSelectedModules(initialSelection);
+      setError(null);
+      setStep('select');
+    } catch (err: any) {
+      setError(err.message || 'Failed to process backup file.');
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const sizeStr = `${(file.size / 1024).toFixed(1)} KB`;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const text = evt.target?.result as string;
+        const parsed = JSON.parse(text);
+        handleProcessParsedData(parsed, file.name, sizeStr);
+      } catch (err: any) {
+        setError(`Invalid JSON file: ${err.message}`);
+      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    const sizeStr = `${(file.size / 1024).toFixed(1)} KB`;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const text = evt.target?.result as string;
+        const parsed = JSON.parse(text);
+        handleProcessParsedData(parsed, file.name, sizeStr);
+      } catch (err: any) {
+        setError(`Invalid JSON file: ${err.message}`);
+      }
+    };
+    reader.readAsText(file);
+  };
 
   const handleApplyPaste = () => {
     setError(null);
@@ -791,63 +1073,297 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
       return;
     }
     try {
-      JSON.parse(pastedText.trim());
-      onPasteImport(pastedText.trim());
-      onClose();
+      const parsed = JSON.parse(pastedText.trim());
+      handleProcessParsedData(parsed, 'Pasted Backup Code', `${(pastedText.length / 1024).toFixed(1)} KB`);
     } catch (e: any) {
       setError(`Invalid JSON: ${e.message}`);
     }
   };
 
+  const handleToggleModule = (key: string) => {
+    setSelectedModules((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const handleSelectAll = (modules: ModuleInfo[]) => {
+    const next: Record<string, boolean> = {};
+    modules.forEach((m) => {
+      if (m.isAvailable) next[m.key] = true;
+    });
+    setSelectedModules(next);
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedModules({});
+  };
+
+  const handleConfirmRestore = () => {
+    if (!parsedData) return;
+    const selectedKeys = Object.keys(selectedModules).filter((k) => selectedModules[k]);
+    if (selectedKeys.length === 0) {
+      setError('Please select at least one module to restore.');
+      return;
+    }
+    onApplySelectiveImport(parsedData, selectedModules);
+    onClose();
+  };
+
+  const modules = parsedData ? inspectBackupModules(parsedData) : [];
+  const availableCount = modules.filter((m) => m.isAvailable).length;
+  const selectedCount = Object.keys(selectedModules).filter((k) => selectedModules[k]).length;
+
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-800/95 border border-slate-700/80 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-700 pb-3">
-          <h3 className="font-black text-base text-slate-100 flex items-center gap-2">
-            Import / Restore Playbook Backup
-          </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-200">
+    <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept=".json"
+        onChange={handleFileChange}
+      />
+
+      <div className="bg-slate-800/98 border border-slate-700/80 rounded-3xl max-w-2xl w-full p-5 md:p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between border-b border-slate-700 pb-3.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 flex items-center justify-center font-black">
+              <Database className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-black text-base md:text-lg text-slate-100 flex items-center gap-2">
+                Selective Playbook Restore
+              </h3>
+              <p className="text-xs text-slate-300 font-medium">
+                {step === 'upload'
+                  ? 'Choose a backup file or paste JSON to choose what to restore'
+                  : 'Select specific modules you want to import into your workspace'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-all"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="space-y-4 text-xs text-slate-300">
-          <div>
-            <label className="font-bold text-slate-200 block mb-1">Option 1: Choose .JSON File</label>
-            <button
-              onClick={() => {
-                onClose();
-                onSelectFile();
+        {/* STEP 1: Upload / Paste File */}
+        {step === 'upload' && (
+          <div className="space-y-4 text-xs text-slate-300 overflow-y-auto pr-1">
+            {/* Drag & Drop File Zone */}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
               }}
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition-all shadow-md active:scale-95"
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-3xl p-6 md:p-8 text-center cursor-pointer transition-all ${
+                isDragging
+                  ? 'border-indigo-500 bg-indigo-500/10'
+                  : 'border-slate-700 hover:border-indigo-500/70 bg-slate-900/60 hover:bg-slate-900/90'
+              }`}
             >
-              Browse & Upload .JSON File
-            </button>
-          </div>
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 flex items-center justify-center mb-3">
+                <Upload className="w-6 h-6" />
+              </div>
+              <p className="font-bold text-sm text-slate-100">
+                Click to browse or drag &amp; drop your backup .JSON file
+              </p>
+              <p className="text-xs text-slate-300 font-medium mt-1">
+                You will be able to review and select individual modules before restoring.
+              </p>
+              <div className="mt-4">
+                <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-md">
+                  <FileJson className="w-4 h-4" />
+                  <span>Choose .JSON Backup File</span>
+                </span>
+              </div>
+            </div>
 
-          <div className="border-t border-slate-700 pt-3">
-            <label className="font-bold text-slate-200 block mb-1">Option 2: Paste Backup JSON</label>
-            <textarea
-              value={pastedText}
-              onChange={(e) => {
-                setPastedText(e.target.value);
-                setError(null);
-              }}
-              placeholder='Paste JSON backup code here (e.g. {"weeklyData": ...})...'
-              rows={6}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-[11px] font-mono text-slate-200 focus:outline-none focus:border-indigo-500"
-            />
-            {error && <div className="text-rose-400 font-bold mt-1 text-[11px]">{error}</div>}
-            <div className="flex justify-end gap-2 mt-2">
-              <button
-                onClick={handleApplyPaste}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all shadow-md active:scale-95"
-              >
-                Restore Pasted Backup
-              </button>
+            {/* Paste Option */}
+            <div className="border-t border-slate-700/80 pt-3">
+              <label className="font-bold text-slate-200 block mb-1.5 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-slate-400" />
+                <span>Or Paste Backup JSON Directly</span>
+              </label>
+              <textarea
+                value={pastedText}
+                onChange={(e) => {
+                  setPastedText(e.target.value);
+                  setError(null);
+                }}
+                placeholder='Paste raw backup JSON code here (e.g. {"cascadingDrills": [...], "practiceData": [...]})...'
+                rows={4}
+                className="w-full bg-slate-900 border border-slate-700 rounded-2xl p-3 text-[11px] font-mono text-slate-200 focus:outline-none focus:border-indigo-500 shadow-inner"
+              />
+
+              {error && (
+                <div className="flex items-center gap-1.5 text-rose-400 font-bold mt-2 text-xs bg-rose-950/40 border border-rose-800/60 p-2.5 rounded-xl">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <div className="flex justify-end mt-2.5">
+                <button
+                  type="button"
+                  onClick={handleApplyPaste}
+                  disabled={!pastedText.trim()}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs transition-all shadow-md active:scale-95 flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Inspect &amp; Select Modules</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* STEP 2: Selective Module Inspector */}
+        {step === 'select' && (
+          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+            {/* Backup Info & Quick Select Toolbar */}
+            <div className="bg-slate-900/90 rounded-2xl p-3 border border-slate-700/80 flex flex-wrap items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2">
+                <FileJson className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="font-bold text-xs text-slate-200 truncate max-w-[200px] md:max-w-xs">
+                  {fileName}
+                </span>
+                {fileSize && (
+                  <span className="text-[11px] text-slate-300 px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700">
+                    {fileSize}
+                  </span>
+                )}
+                <span className="text-[11px] font-bold text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-950/60 border border-emerald-500/30">
+                  {availableCount} items found
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleSelectAll(modules)}
+                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 flex items-center gap-1 transition-all"
+                >
+                  <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Select All</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeselectAll}
+                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 flex items-center gap-1 transition-all"
+                >
+                  <Square className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Deselect All</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Modules Checkbox List */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[420px]">
+              {modules.map((m) => {
+                const isChecked = Boolean(selectedModules[m.key]);
+                return (
+                  <div
+                    key={m.key}
+                    onClick={() => m.isAvailable && handleToggleModule(m.key)}
+                    className={`p-3 rounded-2xl border transition-all flex items-start justify-between gap-3 ${
+                      !m.isAvailable
+                        ? 'opacity-40 border-slate-800 bg-slate-900/30 cursor-not-allowed'
+                        : isChecked
+                        ? 'bg-indigo-950/40 border-indigo-500/80 shadow-md cursor-pointer hover:bg-indigo-950/60'
+                        : 'bg-slate-900/60 border-slate-700/80 hover:border-slate-600 cursor-pointer'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        disabled={!m.isAvailable}
+                        onChange={() => {}} // Handled by container click
+                        className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900 w-4 h-4 cursor-pointer"
+                      />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-xs md:text-sm text-slate-100 truncate">
+                            {m.name}
+                          </span>
+                          {m.isAvailable ? (
+                            <span className="text-[10.5px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              {m.countLabel}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-500 border border-slate-700">
+                              Not in backup
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-300 font-medium mt-0.5 line-clamp-1">
+                          {m.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Non-destructive notice */}
+            <div className="bg-slate-900/80 border border-slate-700/80 rounded-2xl p-3 text-[11px] text-slate-300 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>
+                <strong>Safe Selective Restore:</strong> Only the checked modules above will be updated. All your other current playbook data will remain completely untouched.
+              </span>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-1.5 text-rose-400 font-bold text-xs bg-rose-950/40 border border-rose-800/60 p-2.5 rounded-xl">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* Footer Buttons */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-700/80">
+              <button
+                type="button"
+                onClick={() => {
+                  setStep('upload');
+                  setParsedData(null);
+                  setError(null);
+                }}
+                className="px-3 py-2 text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 rounded-xl hover:bg-slate-700/50 transition-all"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Upload Different File</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-750 text-slate-300 font-bold text-xs rounded-xl border border-slate-700 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmRestore}
+                  disabled={selectedCount === 0}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black rounded-xl text-xs transition-all shadow-lg active:scale-95 flex items-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Restore Selected ({selectedCount} Module{selectedCount === 1 ? '' : 's'})</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -3349,48 +3349,88 @@ export default function App() {
     a.click();
   };
 
-  const applyImportDataObject = (parsed: any) => {
+  const applyImportDataObject = (
+    parsed: any,
+    selectedOptions?: Record<string, boolean>
+  ) => {
     try {
       isImportingRef.current = true;
+      const shouldImport = (key: string) => {
+        if (!selectedOptions) return true;
+        return Boolean(selectedOptions[key]);
+      };
 
-      const importedWeekly = parsed.weeklyData || (parsed['0'] && parsed['0'].depthChart ? parsed : null);
-      const importedDefaults = parsed.defaultFormations || null;
-      const importedPractice = parsed.practiceData || null;
-      const importedTemplates = parsed.practiceTemplates || null;
-      const importedDrills = parsed.cascadingDrills || null;
-      const importedGuideTree = parsed.guideTree || parsed.pdfGuidesTree || null;
-      const importedGuideOrder = parsed.guideOrder || parsed.pdfGuidesOrder || null;
-      const importedSavedCoaches = parsed.savedCoaches || parsed.savedCoachesList || null;
-      const importedStaffList = parsed.staffList || parsed.teamCoachesList || null;
-      const importedPlays = parsed.masterPlayLibrary || null;
-      const importedCollapsed = parsed.collapsedFolders || {};
-      const importedSchedule = parsed.scheduleEvents || null;
+      const restoredList: string[] = [];
+
+      const importedWeekly = shouldImport('weeklyData')
+        ? parsed.weeklyData || (parsed['0'] && parsed['0'].depthChart ? parsed : null)
+        : null;
+      const importedDefaults = shouldImport('defaultFormations')
+        ? parsed.defaultFormations || null
+        : null;
+      const importedPractice = shouldImport('practiceData')
+        ? parsed.practiceData || null
+        : null;
+      const importedTemplates = shouldImport('practiceTemplates')
+        ? parsed.practiceTemplates || null
+        : null;
+      const importedDrills = shouldImport('cascadingDrills')
+        ? parsed.cascadingDrills || null
+        : null;
+      const importedGuideTree = shouldImport('guideTree')
+        ? parsed.guideTree || parsed.pdfGuidesTree || null
+        : null;
+      const importedGuideOrder = shouldImport('guideTree')
+        ? parsed.guideOrder || parsed.pdfGuidesOrder || null
+        : null;
+      const importedSavedCoaches = shouldImport('staffList')
+        ? parsed.savedCoaches || parsed.savedCoachesList || null
+        : null;
+      const importedStaffList = shouldImport('staffList')
+        ? parsed.staffList || parsed.teamCoachesList || null
+        : null;
+      const importedPlays = shouldImport('masterPlayLibrary')
+        ? parsed.masterPlayLibrary || null
+        : null;
+      const importedCollapsed = shouldImport('cascadingDrills')
+        ? parsed.collapsedFolders || {}
+        : null;
+      const importedSchedule = shouldImport('scheduleEvents')
+        ? parsed.scheduleEvents || null
+        : null;
+      const importedRoster = shouldImport('roster') ? parsed.roster || null : null;
 
       if (importedWeekly) {
         setWeeklyData(importedWeekly);
         safeJSONSet('footballWeeklyData', importedWeekly);
+        restoredList.push('🏈 Game Plans & Depth Charts');
       }
       if (importedDefaults) {
         setDefaultFormations(importedDefaults);
         safeJSONSet('footballDefaultFormations', importedDefaults);
+        restoredList.push('📐 Formations & Alignments');
       }
       if (importedPractice) {
         setPracticeData(importedPractice);
         safeJSONSet('footballPracticeData', importedPractice);
+        restoredList.push('📋 Practice Plans');
       }
       if (importedTemplates) {
         const normalized = normalizePracticeTemplates(importedTemplates);
         setPracticeTemplates(normalized);
         safeJSONSet('footballPracticeTemplates', normalized);
+        restoredList.push('⚡ Practice Templates');
       }
       if (importedDrills) {
         const normalizedDrills = normalizeCascadingDrills(importedDrills);
         setCascadingDrills(normalizedDrills);
         safeJSONSet('footballCascadingDrills', normalizedDrills);
+        restoredList.push('💥 Drill Library');
       }
       if (importedGuideTree) {
         setGuideTree(importedGuideTree);
         safeJSONSet('footballPdfGuidesTree', importedGuideTree);
+        restoredList.push('📖 Playbook Guides');
       }
       if (importedGuideOrder) {
         setGuideOrder(importedGuideOrder);
@@ -3399,6 +3439,7 @@ export default function App() {
       if (importedSavedCoaches) {
         setSavedCoaches(importedSavedCoaches);
         safeJSONSet('footballSavedCoaches', importedSavedCoaches);
+        restoredList.push('🧢 Coaching Directory');
       }
       if (importedStaffList) {
         setStaffList(importedStaffList);
@@ -3407,6 +3448,7 @@ export default function App() {
       if (importedPlays) {
         setMasterPlayLibrary(importedPlays);
         safeJSONSet('footballMasterPlays', importedPlays);
+        restoredList.push('🎯 Play Library');
       }
       if (importedCollapsed) {
         setCollapsedFolders(importedCollapsed);
@@ -3415,24 +3457,32 @@ export default function App() {
       if (importedSchedule) {
         setScheduleEvents(importedSchedule);
         safeJSONSet('footballScheduleEvents', importedSchedule);
+        restoredList.push('📅 Season Calendar');
+      }
+      if (importedRoster) {
+        setRoster(importedRoster);
+        safeJSONSet('footballMasterRoster', importedRoster);
+        restoredList.push('👥 Team Roster');
       }
 
-      // Direct synchronous push to Cloud Firestore
+      // Direct synchronous push to Cloud Firestore keeping unselected fields intact
       const { db } = getFirebaseServices();
       if (db) {
-        setSyncStatus({ text: '☁️ Uploading Backup to Cloud...', color: '#f59e0b' });
+        setSyncStatus({ text: '☁️ Uploading Restored Data to Cloud...', color: '#f59e0b' });
         const payload = deepClone({
           weeklyData: importedWeekly || weeklyData,
           defaultFormations: importedDefaults || defaultFormations,
           practiceData: importedPractice || practiceData,
           practiceTemplates: importedTemplates || practiceTemplates,
-          cascadingDrills: importedDrills || cascadingDrills,
+          cascadingDrills: importedDrills
+            ? normalizeCascadingDrills(importedDrills)
+            : cascadingDrills,
           guideTree: importedGuideTree || guideTree,
           guideOrder: importedGuideOrder || guideOrder,
           savedCoaches: importedSavedCoaches || savedCoaches,
           staffList: importedStaffList || staffList,
           masterPlayLibrary: importedPlays || masterPlayLibrary,
-          collapsedFolders: importedCollapsed,
+          collapsedFolders: importedCollapsed || collapsedFolders,
           scheduleEvents: importedSchedule || scheduleEvents,
         });
 
@@ -3441,7 +3491,8 @@ export default function App() {
           .set(
             {
               ...payload,
-              updatedAt: window.firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
+              updatedAt:
+                window.firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
             },
             { merge: true }
           )
@@ -3463,7 +3514,9 @@ export default function App() {
         }, 3000);
       }
 
-      alert('Complete team backup imported and saved to cloud successfully!');
+      const summary =
+        restoredList.length > 0 ? restoredList.join(', ') : 'Selected modules';
+      alert(`Successfully restored: ${summary}\nAll changes saved and synchronized!`);
     } catch (err: any) {
       isImportingRef.current = false;
       alert(`Error importing backup: ${err.message}`);
@@ -4907,8 +4960,9 @@ export default function App() {
       <ImportBackupModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
-        onSelectFile={() => fileInputRef.current?.click()}
-        onPasteImport={handlePasteImport}
+        onApplySelectiveImport={(parsedData, selectedOptions) =>
+          applyImportDataObject(parsedData, selectedOptions)
+        }
       />
 
       <RosterManagerModal
