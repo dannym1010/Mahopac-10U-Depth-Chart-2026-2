@@ -88,6 +88,40 @@ export function safeJSONSet(key: string, data: any) {
 // Client session identification for sync loop prevention
 export const CLIENT_ID = 'client_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
 
+/**
+ * Normalizes practice templates into a clean Record<string, PracticePeriod[]> map,
+ * handling legacy { name, plan } wrapper objects, arrays, and standard maps.
+ */
+export function normalizePracticeTemplates(raw: any): Record<string, PracticePeriod[]> {
+  const result: Record<string, PracticePeriod[]> = { ...DEFAULT_PRACTICE_TEMPLATES };
+  if (!raw) return result;
+
+  if (Array.isArray(raw)) {
+    raw.forEach((item: any, idx: number) => {
+      if (item && typeof item === 'object') {
+        const name = item.name || `Template ${idx + 1}`;
+        if (Array.isArray(item.plan)) {
+          result[name] = item.plan;
+        }
+      }
+    });
+    return result;
+  }
+
+  if (typeof raw === 'object') {
+    Object.entries(raw).forEach(([key, val]: [string, any]) => {
+      if (Array.isArray(val)) {
+        result[key] = val;
+      } else if (val && typeof val === 'object' && Array.isArray(val.plan)) {
+        const name = val.name || (key !== '0' && key !== 'default' ? key : 'Base Practice Plan');
+        result[name] = val.plan;
+      }
+    });
+  }
+
+  return result;
+}
+
 // Track server state availability to avoid 404 polling loops on static deployments (e.g. Vercel)
 let isServerApiAvailable: boolean | null = null;
 

@@ -62,6 +62,7 @@ import {
   fetchServerState,
   saveServerState,
   subscribeServerEvents,
+  normalizePracticeTemplates,
   CLIENT_ID,
 } from './services/storageService';
 import {
@@ -130,7 +131,9 @@ export default function App() {
   const [practiceTemplates, setPracticeTemplates] = useState<
     Record<string, PracticePeriod[]>
   >(() =>
-    safeJSONParse('footballPracticeTemplates', DEFAULT_PRACTICE_TEMPLATES)
+    normalizePracticeTemplates(
+      safeJSONParse('footballPracticeTemplates', DEFAULT_PRACTICE_TEMPLATES)
+    )
   );
   const [cascadingDrills, setCascadingDrills] = useState<DrillFolder[]>(() =>
     safeJSONParse('footballCascadingDrills', DEFAULT_CASCADING_DRILLS)
@@ -446,9 +449,10 @@ export default function App() {
       safeJSONSet('footballPracticeData', data.practiceData);
     }
     if (data.practiceTemplates) {
-      setPracticeTemplates(data.practiceTemplates);
-      latestStateRef.current.practiceTemplates = data.practiceTemplates;
-      safeJSONSet('footballPracticeTemplates', data.practiceTemplates);
+      const normalizedTemplates = normalizePracticeTemplates(data.practiceTemplates);
+      setPracticeTemplates(normalizedTemplates);
+      latestStateRef.current.practiceTemplates = normalizedTemplates;
+      safeJSONSet('footballPracticeTemplates', normalizedTemplates);
     }
     if (data.cascadingDrills) {
       setCascadingDrills(data.cascadingDrills);
@@ -2704,7 +2708,10 @@ export default function App() {
   };
 
   const handleApplyPracticeTemplate = (templateName: string) => {
-    if (!practiceTemplates[templateName]) return;
+    const tmpl = practiceTemplates[templateName];
+    if (!tmpl) return;
+    const planToApply = Array.isArray(tmpl) ? tmpl : (tmpl as any).plan;
+    if (!Array.isArray(planToApply)) return;
     if (
       confirm(
         `Apply template "${templateName}"? This will replace current practice periods.`
@@ -2715,7 +2722,7 @@ export default function App() {
           p.id === currentPracticeId
             ? {
                 ...p,
-                plan: deepClone(practiceTemplates[templateName]),
+                plan: deepClone(planToApply),
               }
             : p
         )
@@ -3368,8 +3375,9 @@ export default function App() {
         safeJSONSet('footballPracticeData', importedPractice);
       }
       if (importedTemplates) {
-        setPracticeTemplates(importedTemplates);
-        safeJSONSet('footballPracticeTemplates', importedTemplates);
+        const normalized = normalizePracticeTemplates(importedTemplates);
+        setPracticeTemplates(normalized);
+        safeJSONSet('footballPracticeTemplates', normalized);
       }
       if (importedDrills) {
         setCascadingDrills(importedDrills);
