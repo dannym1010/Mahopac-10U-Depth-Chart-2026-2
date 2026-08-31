@@ -355,6 +355,17 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
     );
   };
 
+  // Open practice plan from schedule, auto-populating date, time, week folder, day, and title
+  const handleOpenPracticeForEvent = (evt: ScheduleEvent) => {
+    if (onSyncPracticeToPlan) {
+      const planId = onSyncPracticeToPlan(evt);
+      onNavigateToWeek(evt.week, 'practice', planId);
+    } else {
+      const linkedPlan = getLinkedPracticePlan(evt);
+      onNavigateToWeek(evt.week, 'practice', linkedPlan?.id);
+    }
+  };
+
   // Handle Save Game
   const handleSaveGame = () => {
     if (!gameOpponent.trim()) {
@@ -948,13 +959,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
               </>
             ) : (
               <button
-                onClick={() =>
-                  onNavigateToWeek(
-                    nextEvent.week,
-                    'practice',
-                    nextEvent.linkedPracticePlanId || getLinkedPracticePlan(nextEvent)?.id
-                  )
-                }
+                onClick={() => handleOpenPracticeForEvent(nextEvent)}
                 className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1 transition-all"
               >
                 <ClipboardList className="w-3.5 h-3.5" />
@@ -1132,7 +1137,12 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              onNavigateToWeek(weekKey, 'practice');
+                              const firstPrac = weekPractices[0];
+                              if (firstPrac) {
+                                handleOpenPracticeForEvent(firstPrac);
+                              } else {
+                                onNavigateToWeek(weekKey, 'practice');
+                              }
                             }}
                             className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all"
                             title="Open practice plans for this week"
@@ -1385,16 +1395,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                                   ) : (
                                     <>
                                       <button
-                                        onClick={() => {
-                                          if (linkedPlan) {
-                                            onNavigateToWeek(evt.week, 'practice', linkedPlan.id);
-                                          } else if (onSyncPracticeToPlan) {
-                                            const planId = onSyncPracticeToPlan(evt);
-                                            onNavigateToWeek(evt.week, 'practice', planId);
-                                          } else {
-                                            onNavigateToWeek(evt.week, 'practice');
-                                          }
-                                        }}
+                                        onClick={() => handleOpenPracticeForEvent(evt)}
                                         className="flex-1 px-3 py-1.5 bg-indigo-600/80 hover:bg-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs"
                                       >
                                         <ClipboardList className="w-3.5 h-3.5" />
@@ -1530,11 +1531,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                             if (isGame) {
                               onNavigateToWeek(evt.week, 'scouting');
                             } else {
-                              onNavigateToWeek(
-                                evt.week,
-                                'practice',
-                                evt.linkedPracticePlanId || getLinkedPracticePlan(evt)?.id
-                              );
+                              handleOpenPracticeForEvent(evt);
                             }
                           }}
                           className={`px-1.5 py-1 rounded-lg text-[10px] font-bold truncate cursor-pointer transition-transform active:scale-95 flex items-center justify-between gap-1 ${
@@ -1661,13 +1658,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                             </button>
                           ) : (
                             <button
-                              onClick={() =>
-                                onNavigateToWeek(
-                                  evt.week,
-                                  'practice',
-                                  evt.linkedPracticePlanId || linkedPlan?.id
-                                )
-                              }
+                              onClick={() => handleOpenPracticeForEvent(evt)}
                               className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-300 font-bold text-xs rounded-lg border border-slate-700 transition-all"
                             >
                               Practice Plan

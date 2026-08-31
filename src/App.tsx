@@ -2214,25 +2214,13 @@ export default function App() {
   };
 
   const handleQuickCreatePlanFromSchedule = (evt: ScheduleEvent) => {
-    const newPrac: PracticePlan = {
-      id: `prac_sched_${evt.id}_${Date.now()}`,
-      teamId: evt.teamId || activeTeamId,
-      year: '2026',
-      weekFolder: `Week ${evt.week}`,
-      title: evt.title || `Practice - ${evt.date}`,
-      date: evt.date,
-      day: evt.dayOfWeek || 'Wednesday',
-      startTime: evt.time || '17:30',
-      lastEdited: Date.now(),
-      plan: deepClone(DEFAULT_PRACTICE_TEMPLATES['Standard Practice'] || []),
-    };
-
-    setPracticeData((prev) => {
-      const next = [...prev, newPrac];
-      safeJSONSet('footballPracticeData', next);
-      return next;
-    });
-    setCurrentPracticeId(newPrac.id);
+    const planId = handleSyncPracticeToPlan(evt);
+    const rawWeek = String(evt.week !== undefined ? evt.week : '1');
+    const match = rawWeek.match(/Week\s*(\d+)/i);
+    const weekNum = match ? match[1] : rawWeek.replace(/\D/g, '') || '1';
+    ensureWeekExists(weekNum);
+    setCurrentWeek(weekNum);
+    setCurrentPracticeId(planId);
     setActiveUnit('practice');
   };
 
@@ -2304,11 +2292,34 @@ export default function App() {
     field: keyof PracticePlan,
     value: any
   ) => {
-    setPracticeData((prev) =>
-      prev.map((p) =>
-        p.id === currentPracticeId ? { ...p, [field]: value } : p
-      )
-    );
+    setPracticeData((prev) => {
+      const next = prev.map((p) => {
+        if (p.id === currentPracticeId) {
+          const updated = { ...p, [field]: value, lastEdited: Date.now() };
+          if (field === 'date' && value) {
+            const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const parts = String(value).split('-');
+            if (parts.length === 3) {
+              const y = parseInt(parts[0], 10);
+              const m = parseInt(parts[1], 10);
+              const d = parseInt(parts[2], 10);
+              if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+                const dt = new Date(y, m - 1, d, 12, 0, 0);
+                const dayOfWeek = dayNames[dt.getDay()];
+                if (dayOfWeek) {
+                  updated.day = dayOfWeek;
+                  updated.dayFolder = dayOfWeek;
+                }
+              }
+            }
+          }
+          return updated;
+        }
+        return p;
+      });
+      safeJSONSet('footballPracticeData', next);
+      return next;
+    });
   };
 
   const handleAddPeriod = () => {
@@ -3137,58 +3148,139 @@ export default function App() {
   };
 
   const handleSyncPracticeToPlan = (event: ScheduleEvent, templateName?: string): string => {
+    // 1. Calculate Day of week
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const eventDateObj = new Date(event.date + 'T12:00:00');
-    const dayOfWeek = isNaN(eventDateObj.getDay()) ? 'Wednesday' : dayNames[eventDateObj.getDay()];
-
-    if (event.linkedPracticePlanId) {
-      const existing = practiceData.find((p) => p.id === event.linkedPracticePlanId);
-      if (existing) {
-        setPracticeData((prev) =>
-          prev.map((p) =>
-            p.id === event.linkedPracticePlanId
-              ? {
-                  ...p,
-                  title: event.title,
-                  date: event.date,
-                  day: dayOfWeek,
-                  startTime: event.startTime || '17:05',
-                  weekFolder: `Week ${event.week}`,
-                  year: '2026',
-                  lastEdited: Date.now(),
-                }
-              : p
-          )
-        );
-        setCurrentPracticeId(event.linkedPracticePlanId);
-        return event.linkedPracticePlanId;
+    let dayOfWeek = event.dayOfWeek;
+    if (!dayOfWeek && event.date) {
+      const parts = event.date.split('-');
+      if (parts.length === 3) {
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        const d = parseInt(parts[2], 10);
+        if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+          const dt = new Date(y, m - 1, d, 12, 0, 0);
+          dayOfWeek = dayNames[dt.getDay()];
+        }
       }
     }
+    if (!dayOfWeek) dayOfWeek = 'Wednesday';
 
-    const newPracticeId = 'prac_' + Date.now();
-    const planTemplate = (templateName && DEFAULT_PRACTICE_TEMPLATES[templateName])
-      ? DEFAULT_PRACTICE_TEMPLATES[templateName]
-      : DEFAULT_PRACTICE_TEMPLATES['Standard Practice'] || [];
+    // 2. Calculate Week Folder
+    const rawWeek = String(event.week !== undefined ? event.week : '1').trim();
+    let weekFolder = `Week ${rawWeek}`;
+    if (rawWeek === '0' || rawWeek.toLowerCase().includes('pre-1') || rawWeek.toLowerCase().includes('pre1')) {
+      weekFolder = 'Preseason Wk 1';
+    } else if (rawWeek.toLowerCase().includes('pre-2') || rawWeek.toLowerCase().includes('pre2')) {
+      weekFolder = 'Preseason Wk 2';
+    } else if (rawWeek.toLowerCase().startsWith('week')) {
+      weekFolder = rawWeek;
+    } else if (rawWeek.toLowerCase().includes('pre')) {
+      weekFolder = 'Preseason Wk 1';
+    } else {
+      weekFolder = `Week ${rawWeek}`;
+    }
+
+    // 3. Year, Time, Location & Title
+    const year = event.date && event.date.includes('-') ? event.date.split('-')[0] : '2026';
+    const startTime = event.startTime || event.time || '17:30';
+    const endTime = event.endTime || '19:00';
+    const location = event.location || 'Crane Road';
+    const title = event.title || `${weekFolder} Practice`;
+
+    // 4. Find existing practice plan
+    let existing = event.linkedPracticePlanId
+      ? practiceData.find((p) => p && p.id === event.linkedPracticePlanId)
+      : undefined;
+
+    if (!existing) {
+      existing = practiceData.find(
+        (p) =>
+          p &&
+          ((event.date && p.date === event.date) ||
+            p.id === event.id ||
+            (p.title &&
+              event.title &&
+              p.title.trim().toLowerCase() === event.title.trim().toLowerCase() &&
+              (p.weekFolder === weekFolder || p.weekFolder === `Week ${event.week}`)))
+      );
+    }
+
+    if (existing) {
+      const existingId = existing.id;
+      setPracticeData((prev) => {
+        const next = prev.map((p) =>
+          p.id === existingId
+            ? {
+                ...p,
+                title: title,
+                date: event.date || p.date,
+                day: dayOfWeek,
+                dayFolder: dayOfWeek,
+                startTime: startTime,
+                endTime: endTime,
+                weekFolder: weekFolder,
+                year: year,
+                location: location,
+                lastEdited: Date.now(),
+              }
+            : p
+        );
+        safeJSONSet('footballPracticeData', next);
+        return next;
+      });
+
+      if (event.linkedPracticePlanId !== existingId) {
+        setScheduleEvents((prev) => {
+          const next = prev.map((ev) =>
+            ev.id === event.id ? { ...ev, linkedPracticePlanId: existingId } : ev
+          );
+          safeJSONSet('footballScheduleEvents', next);
+          return next;
+        });
+      }
+
+      setCurrentPracticeId(existingId);
+      return existingId;
+    }
+
+    // 5. Create new plan auto-populated with date, time, week folder, and day
+    const newPracticeId = 'prac_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+    const planTemplate =
+      templateName && DEFAULT_PRACTICE_TEMPLATES[templateName]
+        ? DEFAULT_PRACTICE_TEMPLATES[templateName]
+        : DEFAULT_PRACTICE_TEMPLATES['Standard Practice'] || [];
 
     const newPlan: PracticePlan = {
       id: newPracticeId,
       teamId: event.teamId || activeTeamId,
-      year: '2026',
-      weekFolder: `Week ${event.week}`,
-      title: event.title,
-      date: event.date,
+      year: year,
+      weekFolder: weekFolder,
+      dayFolder: dayOfWeek,
+      title: title,
+      date: event.date || '',
       day: dayOfWeek,
-      startTime: event.startTime || '17:05',
+      startTime: startTime,
+      endTime: endTime,
+      location: location,
       lastEdited: Date.now(),
       plan: deepClone(planTemplate),
     };
 
-    setPracticeData((prev) => [...prev, newPlan]);
-    setCurrentPracticeId(newPracticeId);
+    setPracticeData((prev) => {
+      const next = [...prev, newPlan];
+      safeJSONSet('footballPracticeData', next);
+      return next;
+    });
 
-    setScheduleEvents((prev) =>
-      prev.map((ev) => (ev.id === event.id ? { ...ev, linkedPracticePlanId: newPracticeId } : ev))
-    );
+    setScheduleEvents((prev) => {
+      const next = prev.map((ev) =>
+        ev.id === event.id ? { ...ev, linkedPracticePlanId: newPracticeId } : ev
+      );
+      safeJSONSet('footballScheduleEvents', next);
+      return next;
+    });
+
+    setCurrentPracticeId(newPracticeId);
     return newPracticeId;
   };
 
