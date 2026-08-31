@@ -1175,6 +1175,12 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                           positionPickerTarget.pIdx,
                           val
                         );
+                      } else if (onAddPositionDirect) {
+                        onAddPositionDirect(
+                          positionPickerTarget.formId,
+                          positionPickerTarget.rIdx,
+                          val
+                        );
                       }
                     }
                     setPositionPickerTarget(null);

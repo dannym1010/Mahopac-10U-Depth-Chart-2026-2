@@ -868,12 +868,30 @@ export default function App() {
       .filter((f): f is FormationBoard => Boolean(f && typeof f === 'object' && f.id))
       .map((f) => ({
         ...f,
-        rows: (f.rows || []).map((r, rIdx) => ({
-          ...r,
-          id: r.id || `row_${rIdx}`,
-          label: r.label || `Level ${rIdx + 1}`,
-          positions: (r.positions || []).filter(Boolean),
-        })),
+        rows: (f.rows || []).map((r, rIdx) => {
+          const rawPositions = Array.isArray(r.positions) ? r.positions : [];
+          // Preserve valid position objects and nulls (empty spacing slots)
+          const positions: (PositionSlot | null)[] = rawPositions.map((pos) =>
+            pos && typeof pos === 'object' && pos.id && pos.name
+              ? { id: String(pos.id), name: String(pos.name) }
+              : null
+          );
+          const targetCount = Math.max(
+            positions.length,
+            typeof r.slotCount === 'number' ? r.slotCount : 0,
+            1
+          );
+          while (positions.length < targetCount) {
+            positions.push(null);
+          }
+          return {
+            ...r,
+            id: r.id || `row_${rIdx}`,
+            label: r.label || `Level ${rIdx + 1}`,
+            slotCount: positions.length,
+            positions,
+          };
+        }),
       }));
   }, [rawFormations]);
   const currentDepthChart = currentWeekState.depthChart || {};

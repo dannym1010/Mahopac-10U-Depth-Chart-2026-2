@@ -88,6 +88,9 @@ export function safeJSONSet(key: string, data: any) {
 // Client session identification for sync loop prevention
 export const CLIENT_ID = 'client_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
 
+// Track server state availability to avoid 404 polling loops on static deployments (e.g. Vercel)
+let isServerApiAvailable: boolean | null = null;
+
 // Server-side state sync methods
 export async function fetchServerState(): Promise<{
   success: boolean;
@@ -96,16 +99,22 @@ export async function fetchServerState(): Promise<{
   updatedAt: number;
   state: any;
 } | null> {
+  if (isServerApiAvailable === false) return null;
   try {
     const res = await fetch('/api/state', {
       headers: { Accept: 'application/json' },
     });
     if (res.ok) {
+      isServerApiAvailable = true;
       const data = await res.json();
       return data;
+    } else {
+      if (res.status === 404) {
+        isServerApiAvailable = false;
+      }
     }
   } catch (err) {
-    console.warn('Could not connect to server state API:', err);
+    isServerApiAvailable = false;
   }
   return null;
 }
@@ -114,6 +123,7 @@ export async function saveServerState(
   state: any,
   author: string = 'coach'
 ): Promise<{ success: boolean; version?: number; updatedAt?: number } | null> {
+  if (isServerApiAvailable === false) return null;
   try {
     const res = await fetch('/api/state', {
       method: 'POST',
@@ -127,27 +137,38 @@ export async function saveServerState(
       }),
     });
     if (res.ok) {
+      isServerApiAvailable = true;
       return await res.json();
+    } else {
+      if (res.status === 404) {
+        isServerApiAvailable = false;
+      }
     }
   } catch (err) {
-    console.warn('Failed to save state to server API:', err);
+    isServerApiAvailable = false;
   }
   return null;
 }
 
 export function subscribeServerEvents(onMessage: (eventData: any) => void): () => void {
-  if (typeof window === 'undefined' || typeof EventSource === 'undefined') {
+  if (typeof window === 'undefined' || typeof EventSource === 'undefined' || isServerApiAvailable === false) {
     return () => {};
   }
 
   let eventSource: EventSource | null = null;
   let reconnectTimer: any = null;
   let isClosed = false;
+  let failCount = 0;
 
   function connect() {
-    if (isClosed) return;
+    if (isClosed || isServerApiAvailable === false) return;
     try {
       eventSource = new EventSource('/api/state/events');
+
+      eventSource.onopen = () => {
+        failCount = 0;
+        isServerApiAvailable = true;
+      };
 
       eventSource.onmessage = (e) => {
         try {
@@ -164,13 +185,24 @@ export function subscribeServerEvents(onMessage: (eventData: any) => void): () =
           eventSource.close();
           eventSource = null;
         }
+        failCount++;
+        // If server SSE endpoint is not found (e.g. 404 on static deployment), stop reconnecting after 2 fails
+        if (failCount >= 2) {
+          isServerApiAvailable = false;
+          return;
+        }
         if (!isClosed) {
-          reconnectTimer = setTimeout(connect, 4000);
+          reconnectTimer = setTimeout(connect, 6000);
         }
       };
     } catch (err) {
+      failCount++;
+      if (failCount >= 2) {
+        isServerApiAvailable = false;
+        return;
+      }
       if (!isClosed) {
-        reconnectTimer = setTimeout(connect, 5000);
+        reconnectTimer = setTimeout(connect, 6000);
       }
     }
   }
