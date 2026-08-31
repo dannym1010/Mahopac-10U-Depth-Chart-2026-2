@@ -41,6 +41,9 @@ import {
   CONDITIONING_HOURS_REQUIRED,
   PADDED_HOURS_REQUIRED,
 } from '../types';
+import { getSeasonWeekList } from '../utils/seasonWeekUtils';
+import { DEFAULT_SEASON_CONFIG } from '../data/initialData';
+import { SeasonConfigModal } from './SeasonConfigModal';
 
 interface PlayerHoursTrackerProps {
   roster: RosterPlayer[];
@@ -995,13 +998,9 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
                     onChange={(e) => setSelectedWeekForLog(e.target.value)}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-amber-400 focus:outline-none focus:border-amber-400 cursor-pointer"
                   >
-                    <option value="0">Preseason Wk 1 (Conditioning)</option>
-                    <option value="pre-2">Preseason Wk 2 (Conditioning & Shells)</option>
-                    <option value="pre-3">Preseason Wk 3 (Pads & Fundamentals)</option>
-                    <option value="pre-4">Preseason Wk 4 (Pads & Scrimmage)</option>
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((w) => (
-                      <option key={w} value={String(w)}>
-                        Regular Season • Week {w}
+                    {getSeasonWeekList(seasonConfig).map((w) => (
+                      <option key={w.key} value={w.key}>
+                        {w.label}
                       </option>
                     ))}
                   </select>
@@ -1129,92 +1128,16 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
         </div>
       )}
 
-      {/* MODAL 2: Preseason Weeks Configuration */}
-      {showSeasonConfigModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-850">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-400">
-                  <Settings className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-black text-slate-100 text-base">Configure Pre-Season Duration</h3>
-                  <p className="text-xs text-slate-400">Set how many weeks are considered pre-season acclimatization</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowSeasonConfigModal(false)}
-                className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="p-5 space-y-4">
-              <div>
-                <label className="block font-bold text-slate-200 text-xs mb-1.5">
-                  Number of Pre-Season Weeks (This year: 4 weeks):
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {[1, 2, 3, 4, 5, 6].map((num) => (
-                    <button
-                      key={num}
-                      type="button"
-                      onClick={() => setEditPreseasonCount(num)}
-                      className={`p-3 rounded-2xl border text-center font-bold text-xs transition-all ${
-                        editPreseasonCount === num
-                          ? 'bg-amber-500 text-slate-950 border-amber-400 font-black shadow-lg shadow-amber-500/20 scale-105'
-                          : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-750'
-                      }`}
-                    >
-                      {num} {num === 1 ? 'Week' : 'Weeks'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Preview */}
-              <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-2">
-                <div className="text-[11px] font-black uppercase text-amber-400 tracking-wider">
-                  Season Structure Preview:
-                </div>
-                <div className="space-y-1 text-xs text-slate-300">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-amber-400" />
-                    <span><strong>Pre-Season (Weeks 1 – {editPreseasonCount}):</strong> Conditioning &amp; Scrimmage Acclimatization</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-indigo-400" />
-                    <span><strong>Regular Season:</strong> Weeks {editPreseasonCount + 1}+</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 border-t border-slate-800 bg-slate-850 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowSeasonConfigModal(false)}
-                className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveSeasonConfig}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
-              >
-                <Check className="w-4 h-4" />
-                <span>Save Season Settings</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* MODAL 2: Comprehensive Season Weeks & Dropdown Configuration */}
+      <SeasonConfigModal
+        isOpen={showSeasonConfigModal}
+        onClose={() => setShowSeasonConfigModal(false)}
+        seasonConfig={seasonConfig || DEFAULT_SEASON_CONFIG}
+        onSaveSeasonConfig={(newCfg) => {
+          if (onUpdateSeasonConfig) onUpdateSeasonConfig(newCfg);
+        }}
+        scheduleEvents={scheduleEvents}
+      />
     </div>
   );
 };

@@ -22,7 +22,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { UserRole, SeasonConfig, Team, formatWeekLabel } from '../types';
-import { getAutoActiveWeek } from '../utils/seasonWeekUtils';
+import { getAutoActiveWeek, getSeasonWeekList, getWeekDisplayLabelWithOpponent } from '../utils/seasonWeekUtils';
 
 interface HeaderProps {
   currentWeek: string;
@@ -42,6 +42,7 @@ interface HeaderProps {
   activeUnit?: string;
   onNavigateToSchedule?: () => void;
   seasonConfig?: SeasonConfig;
+  onOpenSeasonConfigModal?: () => void;
   teams?: Team[];
   activeTeamId?: string;
   defaultTeamId?: string;
@@ -73,6 +74,7 @@ export const Header: React.FC<HeaderProps> = ({
   activeUnit,
   onNavigateToSchedule,
   seasonConfig,
+  onOpenSeasonConfigModal,
   teams = [],
   activeTeamId,
   defaultTeamId,
@@ -385,27 +387,69 @@ export const Header: React.FC<HeaderProps> = ({
               <select
                 value={currentWeek}
                 onChange={(e) => onWeekChange(e.target.value)}
-                className="bg-slate-800 border border-slate-700/90 text-slate-200 font-bold text-[11px] rounded-lg px-2 py-1 focus:outline-none cursor-pointer hover:bg-slate-750 transition-colors"
+                className="bg-slate-800 border border-slate-700/90 text-slate-200 font-bold text-[11px] rounded-lg px-2 py-1 focus:outline-none cursor-pointer hover:bg-slate-750 transition-colors max-w-[260px] truncate"
                 title="Change active depth chart week"
               >
-                <optgroup label="⚡ Pre-Season">
-                  <option value="0">Pre-Season (Week 0)</option>
-                  <option value="pre-2">Pre-Season Wk 2</option>
-                  <option value="pre-3">Pre-Season Wk 3</option>
-                  <option value="pre-4">Pre-Season Wk 4</option>
-                </optgroup>
-                <optgroup label="🏈 Regular Season">
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((wk) => (
-                    <option key={wk} value={String(wk)}>
-                      Week {wk} {wk === 1 ? '(Game 1 vs Carmel)' : wk === 2 ? '(Game 2 @ Somers)' : wk === 3 ? '(Game 3 vs Yorktown)' : wk === 4 ? '(Game 4 vs Brewster)' : wk === 5 ? '(Game 5 @ John Jay)' : wk === 6 ? '(Game 6 vs Lakeland)' : wk === 7 ? '(Game 7 @ Arlington)' : '(Game 8 - Playoffs Rd 1)'}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="🏆 Post-Season">
-                  <option value="playoffs">Playoffs Round 1</option>
-                  <option value="championship">Championship</option>
-                </optgroup>
+                {(() => {
+                  const allWeeks = getSeasonWeekList(seasonConfig);
+                  const preWeeks = allWeeks.filter((w) => w.phase === 'preseason');
+                  const regWeeks = allWeeks.filter((w) => w.phase === 'regular');
+                  const postWeeks = allWeeks.filter((w) => w.phase === 'postseason');
+                  const customWeeks = allWeeks.filter((w) => w.phase === 'custom');
+
+                  return (
+                    <>
+                      {preWeeks.length > 0 && (
+                        <optgroup label="⚡ Pre-Season">
+                          {preWeeks.map((w) => (
+                            <option key={w.key} value={w.key}>
+                              {getWeekDisplayLabelWithOpponent(w.key, w.label, scheduleEvents, activeTeamId)}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {regWeeks.length > 0 && (
+                        <optgroup label="🏈 Regular Season">
+                          {regWeeks.map((w) => (
+                            <option key={w.key} value={w.key}>
+                              {getWeekDisplayLabelWithOpponent(w.key, w.label, scheduleEvents, activeTeamId)}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {postWeeks.length > 0 && (
+                        <optgroup label="🏆 Post-Season">
+                          {postWeeks.map((w) => (
+                            <option key={w.key} value={w.key}>
+                              {getWeekDisplayLabelWithOpponent(w.key, w.label, scheduleEvents, activeTeamId)}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {customWeeks.length > 0 && (
+                        <optgroup label="📌 Special Weeks">
+                          {customWeeks.map((w) => (
+                            <option key={w.key} value={w.key}>
+                              {getWeekDisplayLabelWithOpponent(w.key, w.label, scheduleEvents, activeTeamId)}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </>
+                  );
+                })()}
               </select>
+
+              {userRole === 'admin' && onOpenSeasonConfigModal && (
+                <button
+                  type="button"
+                  onClick={onOpenSeasonConfigModal}
+                  className="p-1 ml-1 text-slate-400 hover:text-amber-300 hover:bg-slate-700/80 rounded-lg transition-colors cursor-pointer"
+                  title="Customize Season Weeks & Dropdown Text (Admin)"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             {currentWeek !== getAutoActiveWeek(scheduleEvents).activeWeek && (

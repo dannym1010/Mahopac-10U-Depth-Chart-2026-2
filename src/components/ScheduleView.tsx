@@ -44,7 +44,10 @@ import {
   UserRole,
   PracticePeriod,
   Team,
+  SeasonConfig,
+  formatWeekLabel,
 } from '../types';
+import { getSeasonWeekList, getWeekDisplayLabelWithOpponent } from '../utils/seasonWeekUtils';
 import { PracticeWizardModal, PracticeWizardGeneratedResult } from './PracticeWizardModal';
 import { TeamSnapSyncModal } from './TeamSnapSyncModal';
 
@@ -56,6 +59,8 @@ interface ScheduleViewProps {
   userRole: UserRole;
   activeTeam?: Team;
   practiceTemplates?: Record<string, PracticePeriod[]>;
+  seasonConfig?: SeasonConfig;
+  onOpenSeasonConfigModal?: () => void;
   onAddEvent: (event: Omit<ScheduleEvent, 'id' | 'createdAt' | 'lastEdited'>) => void;
   onUpdateEvent: (id: string, updates: Partial<ScheduleEvent>) => void;
   onDeleteEvent: (id: string) => void;
@@ -79,6 +84,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   userRole,
   activeTeam,
   practiceTemplates = {},
+  seasonConfig,
+  onOpenSeasonConfigModal,
   onAddEvent,
   onUpdateEvent,
   onDeleteEvent,
@@ -330,12 +337,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   const getWeekName = (weekVal: string): string => {
-    if (!weekVal) return 'Regular Season • Week 1';
-    if (weekVal === '0' || weekVal === 'pre-1' || weekVal === 'pre1') return 'Pre-Season • Week 1 (Conditioning)';
-    if (weekVal === 'pre-2' || weekVal === 'pre2') return 'Pre-Season • Week 2 (Pads & Scrimmage)';
-    if (weekVal === '8') return 'Regular Season • Week 8 (Playoffs)';
-    if (weekVal === 'playoffs') return 'Post-Season • Playoffs';
-    return `Regular Season • Week ${weekVal}`;
+    return formatWeekLabel(weekVal, seasonConfig);
   };
 
   // Get matching practice plan for an event
@@ -848,30 +850,74 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
               </button>
             </div>
 
-            <select
-              value={weekFilter}
-              onChange={(e) => setWeekFilter(e.target.value)}
-              className="bg-slate-900 text-slate-200 font-bold text-xs px-2.5 py-1.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 shrink-0"
-            >
-              <option value="all">All Weeks</option>
-              <optgroup label="⚡ Pre-Season Weeks">
-                <option value="0">Pre-Season Wk 1 (Conditioning)</option>
-                <option value="pre-2">Pre-Season Wk 2 (Conditioning &amp; Shells)</option>
-                <option value="pre-3">Pre-Season Wk 3 (Pads &amp; Fundamentals)</option>
-                <option value="pre-4">Pre-Season Wk 4 (Pads &amp; Scrimmage)</option>
-              </optgroup>
-              <optgroup label="🏈 Regular Season Weeks">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((w) => (
-                  <option key={w} value={String(w)}>
-                    Regular Season • Week {w}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="🏆 Post-Season / Playoffs">
-                <option value="playoffs">Post-Season • Playoffs</option>
-                <option value="championship">Championship Game</option>
-              </optgroup>
-            </select>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <select
+                value={weekFilter}
+                onChange={(e) => setWeekFilter(e.target.value)}
+                className="bg-slate-900 text-slate-200 font-bold text-xs px-2.5 py-1.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 shrink-0"
+              >
+                <option value="all">All Weeks</option>
+                {(() => {
+                  const allWeeks = getSeasonWeekList(seasonConfig);
+                  const preWeeks = allWeeks.filter((w) => w.phase === 'preseason');
+                  const regWeeks = allWeeks.filter((w) => w.phase === 'regular');
+                  const postWeeks = allWeeks.filter((w) => w.phase === 'postseason');
+                  const customWeeks = allWeeks.filter((w) => w.phase === 'custom');
+
+                  return (
+                    <>
+                      {preWeeks.length > 0 && (
+                        <optgroup label="⚡ Pre-Season Weeks">
+                          {preWeeks.map((w) => (
+                            <option key={w.key} value={w.key}>
+                              {w.label}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {regWeeks.length > 0 && (
+                        <optgroup label="🏈 Regular Season Weeks">
+                          {regWeeks.map((w) => (
+                            <option key={w.key} value={w.key}>
+                              {w.label}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {postWeeks.length > 0 && (
+                        <optgroup label="🏆 Post-Season / Playoffs">
+                          {postWeeks.map((w) => (
+                            <option key={w.key} value={w.key}>
+                              {w.label}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {customWeeks.length > 0 && (
+                        <optgroup label="📌 Special Weeks">
+                          {customWeeks.map((w) => (
+                            <option key={w.key} value={w.key}>
+                              {w.label}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </>
+                  );
+                })()}
+              </select>
+
+              {userRole === 'admin' && onOpenSeasonConfigModal && (
+                <button
+                  type="button"
+                  onClick={onOpenSeasonConfigModal}
+                  className="p-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-amber-400 border border-slate-700 rounded-xl transition-all cursor-pointer"
+                  title="Customize Season Weeks & Dropdown Text"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
 
             <div className="relative flex-1 min-w-[140px]">
               <input
@@ -1796,20 +1842,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                     onChange={(e) => setGameWeek(e.target.value)}
                     className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:border-amber-400 focus:outline-none"
                   >
-                    <optgroup label="⚡ Pre-Season">
-                      <option value="0">Pre-Season Wk 1 (Conditioning)</option>
-                      <option value="pre-2">Pre-Season Wk 2 (Pads & Scrimmage)</option>
-                    </optgroup>
-                    <optgroup label="🏈 Regular Season">
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((w) => (
-                        <option key={w} value={String(w)}>
-                          Regular Season • Week {w}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="🏆 Post-Season">
-                      <option value="playoffs">Post-Season • Playoffs</option>
-                    </optgroup>
+                    {getSeasonWeekList(seasonConfig).map((w) => (
+                      <option key={w.key} value={w.key}>
+                        {w.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -1966,20 +2003,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                     onChange={(e) => setPracticeWeek(e.target.value)}
                     className="w-full bg-slate-900 text-slate-100 font-bold p-2 rounded-xl border border-slate-700 focus:border-indigo-400 focus:outline-none"
                   >
-                    <optgroup label="⚡ Pre-Season">
-                      <option value="0">Pre-Season Wk 1 (Conditioning)</option>
-                      <option value="pre-2">Pre-Season Wk 2 (Pads & Scrimmage)</option>
-                    </optgroup>
-                    <optgroup label="🏈 Regular Season">
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((w) => (
-                        <option key={w} value={String(w)}>
-                          Regular Season • Week {w}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="🏆 Post-Season">
-                      <option value="playoffs">Post-Season • Playoffs</option>
-                    </optgroup>
+                    {getSeasonWeekList(seasonConfig).map((w) => (
+                      <option key={w.key} value={w.key}>
+                        {w.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -2252,18 +2280,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                     onChange={(e) => setEditingEvent({ ...editingEvent, week: e.target.value })}
                     className="w-full bg-slate-900 text-slate-100 font-bold p-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
                   >
-                    <option value="pre-1">Pre-Season 1</option>
-                    <option value="pre-2">Pre-Season 2</option>
-                    <option value="1">Week 1</option>
-                    <option value="2">Week 2</option>
-                    <option value="3">Week 3</option>
-                    <option value="4">Week 4</option>
-                    <option value="5">Week 5</option>
-                    <option value="6">Week 6</option>
-                    <option value="7">Week 7</option>
-                    <option value="8">Week 8</option>
-                    <option value="playoffs">Playoffs</option>
-                    <option value="championship">Championship</option>
+                    {getSeasonWeekList(seasonConfig).map((w) => (
+                      <option key={w.key} value={w.key}>
+                        {w.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

@@ -1,10 +1,104 @@
-import { ScheduleEvent, FormationBoard, PlacedPlayer, WeekState } from '../types';
+import { ScheduleEvent, FormationBoard, PlacedPlayer, WeekState, SeasonConfig, WeekOption, formatWeekLabel } from '../types';
 
 export interface AutoWeekResult {
   activeWeek: string;
   reason: string;
   priorWeek?: string;
   isAutoCalculated: boolean;
+}
+
+/**
+ * Returns the list of season weeks based on SeasonConfig or standard defaults:
+ * Pre-season weeks (e.g. Pre-Season Week 1, 2, 3, 4), Regular season weeks (Week 1, 2, 3, 4, 5, 6, 7, 8), Playoffs, Championship
+ */
+export function getSeasonWeekList(config?: SeasonConfig): WeekOption[] {
+  if (config?.customWeeks && config.customWeeks.length > 0) {
+    return config.customWeeks.map((w) => ({
+      ...w,
+      label: config.customWeekLabels?.[w.key] || w.label || formatWeekLabel(w.key, config),
+    }));
+  }
+
+  const preCount = config?.preseasonWeeksCount ?? 4;
+  const regCount = config?.regularSeasonWeeksCount ?? 8;
+  const list: WeekOption[] = [];
+
+  // Pre-season weeks
+  for (let i = 1; i <= preCount; i++) {
+    const key = i === 1 ? '0' : `pre-${i}`;
+    const defaultLabel = `Pre-Season Week ${i}`;
+    list.push({
+      key,
+      label: config?.customWeekLabels?.[key] || defaultLabel,
+      phase: 'preseason',
+    });
+  }
+
+  // Regular season weeks
+  for (let i = 1; i <= regCount; i++) {
+    const key = String(i);
+    const defaultLabel = `Week ${i}`;
+    list.push({
+      key,
+      label: config?.customWeekLabels?.[key] || defaultLabel,
+      phase: 'regular',
+    });
+  }
+
+  // Post season weeks
+  if (config?.hasPlayoffs !== false) {
+    list.push({
+      key: 'playoffs',
+      label: config?.customWeekLabels?.['playoffs'] || 'Playoffs',
+      phase: 'postseason',
+    });
+  }
+  if (config?.hasChampionship !== false) {
+    list.push({
+      key: 'championship',
+      label: config?.customWeekLabels?.['championship'] || 'Championship',
+      phase: 'postseason',
+    });
+  }
+
+  return list;
+}
+
+/**
+ * Returns dropdown label dynamically displaying the scheduled opponent if one is scheduled for this week & team
+ */
+export function getWeekDisplayLabelWithOpponent(
+  weekKey: string,
+  baseLabel: string,
+  scheduleEvents?: ScheduleEvent[],
+  activeTeamId?: string
+): string {
+  if (!scheduleEvents || scheduleEvents.length === 0) return baseLabel;
+
+  const cleanKey = weekKey.replace(/^Week\s+/i, '').trim();
+  const game = scheduleEvents.find((e) => {
+    if (activeTeamId && e.teamId && e.teamId !== activeTeamId && activeTeamId !== 'all') {
+      return false;
+    }
+    if (e.type !== 'game' && e.type !== 'scrimmage') return false;
+    const evWeek = (e.week || '').replace(/^Week\s+/i, '').trim();
+    if (evWeek === cleanKey) return true;
+    if (cleanKey === '0' && (evWeek.startsWith('pre') || evWeek === '0')) return true;
+    if (cleanKey === 'playoffs' && (evWeek === 'playoffs' || evWeek === 'post')) return true;
+    return false;
+  });
+
+  if (game) {
+    const rawOpp = game.opponent || game.title || '';
+    if (rawOpp) {
+      const isAway = game.locationType === 'away' || rawOpp.trim().startsWith('@');
+      const cleanOpp = rawOpp.replace(/^vs\.?\s*/i, '').replace(/^@\s*/i, '').trim();
+      const symbol = isAway ? '@' : 'vs';
+      return `${baseLabel} (${symbol} ${cleanOpp})`;
+    }
+  }
+
+  return baseLabel;
 }
 
 /**
@@ -71,7 +165,8 @@ export function getAutoActiveWeek(
 
   // 2. Iterate through each game sequentially
   let determinedWeek = String(firstGame.week || '1');
-  let reason = `Week 1 Active (Lead-up to Game 1 vs ${firstGame.opponent || firstGame.title || 'Carmel'})`;
+  const firstGameOpponent = firstGame.opponent || firstGame.title || 'Game 1';
+  let reason = `Week 1 Active (Lead-up to Game 1 vs ${firstGameOpponent})`;
   let priorWeek: string | undefined = '0';
 
   for (let i = 0; i < games.length; i++) {

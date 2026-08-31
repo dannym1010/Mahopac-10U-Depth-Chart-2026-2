@@ -21,7 +21,8 @@ import {
   Edit2,
   ExternalLink,
 } from 'lucide-react';
-import { ScheduleEvent, Team, ScheduleEventType } from '../types';
+import { ScheduleEvent, Team, ScheduleEventType, SeasonConfig } from '../types';
+import { getSeasonWeekList } from '../utils/seasonWeekUtils';
 import {
   parseTeamSnapICS,
   parseTeamSnapCSV,
@@ -36,6 +37,7 @@ interface TeamSnapSyncModalProps {
   onClose: () => void;
   activeTeam: Team;
   existingEvents: ScheduleEvent[];
+  seasonConfig?: SeasonConfig;
   onImportEvents: (newEvents: Omit<ScheduleEvent, 'id' | 'createdAt' | 'lastEdited'>[], replaceExisting?: boolean) => void;
   onUpdateTeamCalendarUrl?: (teamId: string, url: string) => void;
 }
@@ -73,6 +75,7 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
   onClose,
   activeTeam,
   existingEvents = [],
+  seasonConfig,
   onImportEvents,
   onUpdateTeamCalendarUrl,
 }) => {
@@ -827,17 +830,11 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
                               onClick={(e) => e.stopPropagation()}
                               className="text-[10px] text-slate-300 bg-slate-900 border border-slate-700 px-1.5 py-0.5 rounded cursor-pointer focus:outline-none focus:border-indigo-500"
                             >
-                              <option value="pre-1">Pre-Season</option>
-                              <option value="1">Week 1</option>
-                              <option value="2">Week 2</option>
-                              <option value="3">Week 3</option>
-                              <option value="4">Week 4</option>
-                              <option value="5">Week 5</option>
-                              <option value="6">Week 6</option>
-                              <option value="7">Week 7</option>
-                              <option value="8">Week 8</option>
-                              <option value="playoffs">Playoffs</option>
-                              <option value="championship">Championship</option>
+                              {getSeasonWeekList(seasonConfig).map((w) => (
+                                <option key={w.key} value={w.key}>
+                                  {w.label}
+                                </option>
+                              ))}
                             </select>
 
                             {/* Editable Title */}

@@ -88,6 +88,7 @@ import { PlayerHoursTracker } from './components/PlayerHoursTracker';
 import { RosterManagerModal } from './components/RosterManagerModal';
 import { PracticeWizardGeneratedResult } from './components/PracticeWizardModal';
 import { PreferencesModal } from './components/PreferencesModal';
+import { SeasonConfigModal } from './components/SeasonConfigModal';
 import {
   AuthModal,
   CopyWeekModal,
@@ -274,6 +275,7 @@ export default function App() {
 
   // Modal Dialog States
   const [isPreferencesModalOpen, setIsPreferencesModalOpen] = useState(false);
+  const [isSeasonConfigModalOpen, setIsSeasonConfigModalOpen] = useState(false);
   const [isCopyWeekModalOpen, setIsCopyWeekModalOpen] = useState(false);
   const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
   const [editingPlayerForModal, setEditingPlayerForModal] = useState<RosterPlayer | null>(null);
@@ -4024,6 +4026,7 @@ export default function App() {
         onResetData={handleResetData}
         onOpenCopyWeekModal={() => setIsCopyWeekModalOpen(true)}
         seasonConfig={seasonConfig}
+        onOpenSeasonConfigModal={() => setIsSeasonConfigModalOpen(true)}
         teams={teams}
         activeTeamId={activeTeamId}
         defaultTeamId={defaultTeamId}
@@ -4653,6 +4656,8 @@ export default function App() {
                 practicePlans={practiceData}
                 weeklyData={weeklyData}
                 practiceTemplates={practiceTemplates}
+                seasonConfig={seasonConfig}
+                onOpenSeasonConfigModal={() => setIsSeasonConfigModalOpen(true)}
                 onAddEvent={handleAddScheduleEvent}
                 onUpdateEvent={handleUpdateScheduleEvent}
                 onDeleteEvent={handleDeleteScheduleEvent}
@@ -4926,6 +4931,19 @@ export default function App() {
         onSetDefaultScreen={handleSetDefaultScreen}
         userRole={userRole}
         currentUserEmail={currentUser?.email || 'dannym1010@gmail.com'}
+      />
+
+      <SeasonConfigModal
+        isOpen={isSeasonConfigModalOpen}
+        onClose={() => setIsSeasonConfigModalOpen(false)}
+        seasonConfig={seasonConfig}
+        onSaveSeasonConfig={(newCfg) => {
+          setSeasonConfig(newCfg);
+          safeJSONSet('footballSeasonConfig', newCfg);
+        }}
+        scheduleEvents={scheduleEvents}
+        activeTeamId={activeTeamId}
+        teams={teams}
       />
     </div>
   );

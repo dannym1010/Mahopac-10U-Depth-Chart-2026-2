@@ -27,11 +27,20 @@ export interface Team {
   notes?: string;
 }
 
+export interface WeekOption {
+  key: string;
+  label: string;
+  phase: 'preseason' | 'regular' | 'postseason' | 'custom';
+}
+
 export interface SeasonConfig {
   preseasonWeeksCount: number; // e.g. 4 (first 4 weeks are preseason)
-  preseasonWeekKeys?: string[]; // e.g. ["0", "pre-2", "pre-3", "pre-4"] or ["1", "2", "3", "4"]
+  preseasonWeekKeys?: string[]; // e.g. ["0", "pre-2", "pre-3", "pre-4"]
   regularSeasonWeeksCount: number; // e.g. 8
+  hasPlayoffs?: boolean;
+  hasChampionship?: boolean;
   customWeekLabels?: Record<string, string>;
+  customWeeks?: WeekOption[];
 }
 
 export interface AttendanceRecord {
@@ -166,7 +175,7 @@ export function calculatePlayerCompliance(player: Partial<RosterPlayer>): Player
 }
 
 export function formatWeekLabel(weekKey: string, config?: SeasonConfig): string {
-  if (!weekKey) return 'Regular Season • Week 1';
+  if (!weekKey) return 'Week 1';
   const clean = weekKey.toLowerCase().trim();
   
   if (config?.customWeekLabels && config.customWeekLabels[weekKey]) {
@@ -174,30 +183,30 @@ export function formatWeekLabel(weekKey: string, config?: SeasonConfig): string 
   }
 
   if (clean === '0' || clean === 'pre-1' || clean === 'pre1' || clean === 'preseason-1') {
-    return 'Pre-Season • Wk 1 (Conditioning)';
+    return 'Pre-Season Week 1';
   }
   if (clean === 'pre-2' || clean === 'pre2' || clean === 'preseason-2') {
-    return 'Pre-Season • Wk 2 (Conditioning & Shells)';
+    return 'Pre-Season Week 2';
   }
   if (clean === 'pre-3' || clean === 'pre3' || clean === 'preseason-3') {
-    return 'Pre-Season • Wk 3 (Pads & Fundamentals)';
+    return 'Pre-Season Week 3';
   }
   if (clean === 'pre-4' || clean === 'pre4' || clean === 'preseason-4') {
-    return 'Pre-Season • Wk 4 (Pads & Scrimmage)';
+    return 'Pre-Season Week 4';
   }
   if (clean === 'playoffs' || clean === 'playoff' || clean === 'post') {
-    return 'Post-Season • Playoffs';
+    return 'Playoffs';
   }
   if (clean === 'championship') {
-    return 'Super Bowl / Championship';
+    return 'Championship';
   }
 
   const numeric = parseInt(clean.replace(/\D/g, ''), 10);
   if (!isNaN(numeric)) {
     if (clean.startsWith('pre')) {
-      return `Pre-Season • Wk ${numeric}`;
+      return `Pre-Season Week ${numeric}`;
     }
-    return `Regular Season • Week ${numeric}`;
+    return `Week ${numeric}`;
   }
   return `Week ${weekKey}`;
 }
