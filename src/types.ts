@@ -103,6 +103,7 @@ export interface RosterPlayer {
   num: string;
   firstName: string;
   lastName: string;
+  rosterName?: string; // Name displayed on Depth Chart, Formations & Positions (defaults to lastName)
   primaryPosition?: string; // e.g. "QB", "RB", "WR", "TE", "C", "LT", "DE", "MLB", etc.
   secondaryPosition?: string; // e.g. "FS", "CB", "DT", "OLB", etc.
   offensivePosition?: string;

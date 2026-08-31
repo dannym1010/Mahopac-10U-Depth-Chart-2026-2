@@ -1725,12 +1725,13 @@ export default function App() {
     player: RosterPlayer
   ) => {
     if (userRole !== 'admin') return;
+    const rosterDisplayName = (player.rosterName || player.lastName || `${player.firstName} ${player.lastName}`).trim();
     draggedPlayerRef.current = {
       type: 'roster',
-      name: `${player.firstName} ${player.lastName}`.trim(),
+      name: rosterDisplayName,
       num: player.num,
     };
-    e.dataTransfer.setData('text/plain', player.lastName || player.firstName);
+    e.dataTransfer.setData('text/plain', rosterDisplayName);
   };
 
   const handleDragStartPlacedPlayer = (
@@ -2640,12 +2641,110 @@ export default function App() {
     setActiveUnit('practice');
   };
 
-  const handleUpdatePlayerInRoster = (updatedPlayer: RosterPlayer) => {
-    setRoster((prev) => {
-      const next = prev.map((p) => (p.id === updatedPlayer.id ? updatedPlayer : p));
-      safeJSONSet('footballRoster', next);
-      return next;
+  const handleUpdateRoster = (newRoster: RosterPlayer[]) => {
+    setRoster(newRoster);
+    safeJSONSet('footballRoster', newRoster);
+
+    // Build map of jersey number -> display name
+    const nameMap = new Map<string, string>();
+    newRoster.forEach((p) => {
+      const displayName = (p.rosterName || p.lastName || `${p.firstName} ${p.lastName}`).trim();
+      nameMap.set(p.num.trim(), displayName);
     });
+
+    // Cascade updated names to placed players in depth charts and scrimmage charts
+    setWeeklyData((prev) => {
+      let changed = false;
+      const nextWeekly = { ...prev };
+      Object.keys(nextWeekly).forEach((wKey) => {
+        const wState = nextWeekly[wKey];
+        if (!wState) return;
+        let weekChanged = false;
+        let newDC = wState.depthChart;
+        let newSC = wState.scrimmageChart;
+
+        if (newDC) {
+          const updatedDC: Record<string, PlacedPlayer[]> = {};
+          let dcChanged = false;
+          Object.entries(newDC).forEach(([posId, players]) => {
+            if (Array.isArray(players)) {
+              let posChanged = false;
+              const nextPlayers = players.map((p) => {
+                if (p && p.num && nameMap.has(p.num.trim())) {
+                  const mappedName = nameMap.get(p.num.trim())!;
+                  if (p.name !== mappedName) {
+                    posChanged = true;
+                    return { ...p, name: mappedName };
+                  }
+                }
+                return p;
+              });
+              if (posChanged) {
+                dcChanged = true;
+                updatedDC[posId] = nextPlayers;
+              } else {
+                updatedDC[posId] = players;
+              }
+            } else {
+              updatedDC[posId] = players;
+            }
+          });
+          if (dcChanged) {
+            newDC = updatedDC;
+            weekChanged = true;
+          }
+        }
+
+        if (newSC) {
+          const updatedSC: Record<string, PlacedPlayer[]> = {};
+          let scChanged = false;
+          Object.entries(newSC).forEach(([posId, players]) => {
+            if (Array.isArray(players)) {
+              let posChanged = false;
+              const nextPlayers = players.map((p) => {
+                if (p && p.num && nameMap.has(p.num.trim())) {
+                  const mappedName = nameMap.get(p.num.trim())!;
+                  if (p.name !== mappedName) {
+                    posChanged = true;
+                    return { ...p, name: mappedName };
+                  }
+                }
+                return p;
+              });
+              if (posChanged) {
+                scChanged = true;
+                updatedSC[posId] = nextPlayers;
+              } else {
+                updatedSC[posId] = players;
+              }
+            } else {
+              updatedSC[posId] = players;
+            }
+          });
+          if (scChanged) {
+            newSC = updatedSC;
+            weekChanged = true;
+          }
+        }
+
+        if (weekChanged) {
+          changed = true;
+          nextWeekly[wKey] = {
+            ...wState,
+            depthChart: newDC,
+            scrimmageChart: newSC,
+          };
+        }
+      });
+      return changed ? nextWeekly : prev;
+    });
+  };
+
+  const handleUpdatePlayerInRoster = (updatedPlayer: RosterPlayer) => {
+    const next = roster.map((p) =>
+      p.id === updatedPlayer.id || p.num === updatedPlayer.num ? updatedPlayer : p
+    );
+    handleUpdateRoster(next);
   };
 
   const handleAutoNumberPractices = () => {
@@ -4747,10 +4846,7 @@ export default function App() {
                 seasonConfig={seasonConfig}
                 attendanceLogs={attendanceLogs}
                 onUpdatePlayer={handleUpdatePlayerInRoster}
-                onUpdateRoster={(newRoster) => {
-                  setRoster(newRoster);
-                  safeJSONSet('footballRoster', newRoster);
-                }}
+                onUpdateRoster={handleUpdateRoster}
                 onOpenAddPlayerModal={() => {
                   setEditingPlayerForModal(null);
                   setIsRosterModalOpen(true);
@@ -4972,10 +5068,7 @@ export default function App() {
           setEditingPlayerForModal(null);
         }}
         roster={roster}
-        onUpdateRoster={(newRoster) => {
-          setRoster(newRoster);
-          safeJSONSet('footballRoster', newRoster);
-        }}
+        onUpdateRoster={handleUpdateRoster}
         userRole={userRole}
         editingPlayer={editingPlayerForModal}
         onClearEditingPlayer={() => setEditingPlayerForModal(null)}

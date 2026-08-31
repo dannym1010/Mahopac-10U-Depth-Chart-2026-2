@@ -71,6 +71,8 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
   const [num, setNum] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [rosterName, setRosterName] = useState('');
+  const [isRosterNameCustomized, setIsRosterNameCustomized] = useState(false);
   const [assignedTeamId, setAssignedTeamId] = useState<string>(activeTeamId || (teams[0]?.id || ''));
   const [primaryPos, setPrimaryPos] = useState('RB');
   const [secondaryPos, setSecondaryPos] = useState('CB');
@@ -127,6 +129,8 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     setNum('');
     setFirstName('');
     setLastName('');
+    setRosterName('');
+    setIsRosterNameCustomized(false);
     const targetTeam = selectedTeamFilter !== 'all' ? selectedTeamFilter : activeTeamId || (teams[0]?.id || '');
     setAssignedTeamId(targetTeam);
     setPrimaryPos('RB');
@@ -146,6 +150,8 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     setNum(player.num);
     setFirstName(player.firstName);
     setLastName(player.lastName);
+    setRosterName(player.rosterName || player.lastName || '');
+    setIsRosterNameCustomized(Boolean(player.rosterName && player.rosterName !== player.lastName));
     setAssignedTeamId(player.teamId || activeTeamId || (teams[0]?.id || ''));
     setPrimaryPos(player.primaryPosition || 'RB');
     setSecondaryPos(player.secondaryPosition || 'CB');
@@ -227,10 +233,13 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
       return;
     }
 
+    const finalRosterName = (rosterName.trim() || lastName.trim() || firstName.trim()).trim();
+
     const newPlayer: RosterPlayer = {
       num: cleanNum,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
+      rosterName: finalRosterName,
       teamId: assignedTeamId || undefined,
       primaryPosition: primaryPos,
       secondaryPosition: secondaryPos,
@@ -378,6 +387,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     let colJersey = 0;
     let colFirst = 1;
     let colLast = 2;
+    let colRosterName = -1;
     let colPrimary = 3;
     let colSecondary = 4;
     let colNotes = -1;
@@ -390,6 +400,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
         if (['jersey', 'number', '#', 'no', 'num', 'jersey#', 'jersey_num'].includes(col)) colJersey = idx;
         else if (['first', 'firstname', 'first_name', 'f_name', 'player_name', 'name'].includes(col)) colFirst = idx;
         else if (['last', 'lastname', 'last_name', 'l_name'].includes(col)) colLast = idx;
+        else if (['rostername', 'roster_name', 'roster name', 'displayname', 'display_name'].includes(col)) colRosterName = idx;
         else if (['pos', 'position', 'primary', 'primary_pos', 'primarypos', 'offense', 'off_pos'].includes(col)) colPrimary = idx;
         else if (['secondary', 'sec_pos', 'secondary_pos', 'defense', 'def_pos'].includes(col)) colSecondary = idx;
         else if (['note', 'notes', 'comments'].includes(col)) colNotes = idx;
@@ -413,6 +424,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
           lName = nameParts.slice(1).join(' ') || '';
         }
 
+        const rName = colRosterName >= 0 && parts[colRosterName] ? parts[colRosterName].trim() : (lName || fName);
         const pPos = (parts[colPrimary] || 'ATH').toUpperCase();
         const sPos = (colSecondary >= 0 && parts[colSecondary] ? parts[colSecondary] : 'ATH').toUpperCase();
         const noteVal = colNotes >= 0 ? parts[colNotes] || '' : '';
@@ -423,6 +435,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
             num: rawNum,
             firstName: fName,
             lastName: lName,
+            rosterName: rName,
             teamId: targetTeam,
             primaryPosition: pPos,
             secondaryPosition: sPos,
@@ -503,11 +516,12 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
 
   // CSV Export
   const handleExportCSV = () => {
-    const header = 'Jersey,FirstName,LastName,Team,PrimaryPos,SecondaryPos,Captain,Notes\n';
+    const header = 'Jersey,FirstName,LastName,RosterName,Team,PrimaryPos,SecondaryPos,Captain,Notes\n';
     const rows = filteredRoster
       .map((p) => {
         const teamName = teams.find((t) => t.id === p.teamId)?.name || 'Default';
-        return `${p.num},"${p.firstName}","${p.lastName}","${teamName}","${p.primaryPosition || ''}","${
+        const rName = p.rosterName || p.lastName || p.firstName;
+        return `${p.num},"${p.firstName}","${p.lastName}","${rName}","${teamName}","${p.primaryPosition || ''}","${
           p.secondaryPosition || ''
         }","${p.isCaptain ? 'Yes' : 'No'}","${p.notes || ''}"`;
       })
@@ -528,13 +542,13 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
 
   // Download Sample Template CSV
   const handleDownloadSampleCSV = () => {
-    const template = `Jersey,FirstName,LastName,PrimaryPos,SecondaryPos,Captain,Notes
-10,Alex,Smith,QB,FS,Yes,Team leader and play caller
-2,Jordan,Taylor,RB,CB,No,Fast outside runner
-56,Sam,Johnson,LT,DE,No,Strong run blocker
-88,Marcus,Davis,WR,CB,No,Great hands
-52,Ethan,Miller,C,MLB,Yes,Defensive captain
-12,Lucas,Brown,TE,OLB,No,Physical blocker`;
+    const template = `Jersey,FirstName,LastName,RosterName,PrimaryPos,SecondaryPos,Captain,Notes
+10,Alex,Smith,Smith,QB,FS,Yes,Team leader and play caller
+2,Jordan,Taylor,Taylor,RB,CB,No,Fast outside runner
+56,Sam,Johnson,Johnson,LT,DE,No,Strong run blocker
+88,Marcus,Davis,M. Davis,WR,CB,No,Great hands
+52,Ethan,Miller,Miller,C,MLB,Yes,Defensive captain
+12,Lucas,Brown,Brown,TE,OLB,No,Physical blocker`;
 
     const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -566,6 +580,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
       p.num.includes(term) ||
       p.firstName.toLowerCase().includes(term) ||
       p.lastName.toLowerCase().includes(term) ||
+      (p.rosterName || '').toLowerCase().includes(term) ||
       (p.primaryPosition || '').toLowerCase().includes(term) ||
       (p.secondaryPosition || '').toLowerCase().includes(term)
     );
@@ -749,6 +764,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                     <tr className="border-b border-slate-800 bg-slate-850 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
                       <th className="py-2.5 px-3">#</th>
                       <th className="py-2.5 px-3">Player Name</th>
+                      <th className="py-2.5 px-3">Roster / Position Name</th>
                       <th className="py-2.5 px-3">Team</th>
                       <th className="py-2.5 px-3">Offense Pos</th>
                       <th className="py-2.5 px-3">Defense Pos</th>
@@ -761,6 +777,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                     {filteredRoster.map((player, idx) => {
                       const playerTeam = teams.find((t) => t.id === player.teamId);
                       const depthInfo = depthChartPositionsMap.get(player.num.trim());
+                      const displayRosterName = player.rosterName || player.lastName || player.firstName;
 
                       return (
                         <tr key={`${player.num}-${idx}`} className="hover:bg-slate-850/60 transition-colors">
@@ -781,6 +798,11 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                                 </span>
                               )}
                             </div>
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span className="px-2 py-0.5 rounded-md bg-indigo-950/60 border border-indigo-500/30 text-indigo-200 font-mono font-bold text-[11px]" title="Display name in Depth Chart and Formations">
+                              {displayRosterName}
+                            </span>
                           </td>
                           <td className="py-2.5 px-3">
                             <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold">
@@ -897,47 +919,86 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                   </div>
                 )}
 
-                {/* Jersey & Name */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-300 mb-1">
-                      Jersey # *
-                    </label>
-                    <input
-                      type="text"
-                      value={num}
-                      onChange={(e) => setNum(e.target.value)}
-                      placeholder="e.g. 10"
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-indigo-300 focus:outline-none focus:border-indigo-500"
-                      required
-                    />
+                {/* Jersey & Names */}
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-slate-300 mb-1">
+                        Jersey # *
+                      </label>
+                      <input
+                        type="text"
+                        value={num}
+                        onChange={(e) => setNum(e.target.value)}
+                        placeholder="e.g. 10"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-indigo-300 focus:outline-none focus:border-indigo-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-slate-300 mb-1">
+                        First Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={firstName}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFirstName(val);
+                          if (!isRosterNameCustomized && !lastName.trim()) {
+                            setRosterName(val);
+                          }
+                        }}
+                        placeholder="Alex"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-indigo-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-slate-300 mb-1">
+                        Last Name
+                      </label>
+                      <input
+                        type="text"
+                        value={lastName}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setLastName(val);
+                          if (!isRosterNameCustomized) {
+                            setRosterName(val || firstName);
+                          }
+                        }}
+                        placeholder="Smith"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-300 mb-1">
-                      First Name *
-                    </label>
+                  {/* Roster Name Field */}
+                  <div className="bg-indigo-950/30 border border-indigo-500/30 rounded-xl p-2.5 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-indigo-300">
+                        Roster Name (Position / Depth Chart Display Name)
+                      </label>
+                      <span className="text-[9px] font-bold text-indigo-400/80">
+                        Defaults to Last Name
+                      </span>
+                    </div>
                     <input
                       type="text"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="Alex"
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-indigo-500"
-                      required
+                      value={rosterName}
+                      onChange={(e) => {
+                        setRosterName(e.target.value);
+                        setIsRosterNameCustomized(true);
+                      }}
+                      placeholder={lastName || firstName || 'e.g. Smith or J. Smith'}
+                      className="w-full bg-slate-900 border border-indigo-500/50 rounded-lg px-3 py-1.5 text-xs font-bold text-indigo-200 focus:outline-none focus:ring-1 focus:ring-indigo-400 placeholder:text-slate-600"
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-300 mb-1">
-                      Last Name
-                    </label>
-                    <input
-                      type="text"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      placeholder="Smith"
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-indigo-500"
-                    />
+                    <p className="text-[10px] text-slate-400">
+                      This is the name that appears when placing the player into positions on depth charts and formation spots.
+                    </p>
                   </div>
                 </div>
 
@@ -1225,7 +1286,8 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                         <thead className="bg-slate-900 text-slate-400 sticky top-0 border-b border-slate-800">
                           <tr>
                             <th className="py-1.5 px-2.5">#</th>
-                            <th className="py-1.5 px-2.5">Name</th>
+                            <th className="py-1.5 px-2.5">Player Name</th>
+                            <th className="py-1.5 px-2.5">Roster Name</th>
                             <th className="py-1.5 px-2.5">Offense</th>
                             <th className="py-1.5 px-2.5">Defense</th>
                             <th className="py-1.5 px-2.5">Captain</th>
@@ -1237,6 +1299,9 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                               <td className="py-1 px-2.5 font-mono font-bold text-indigo-300">#{p.num}</td>
                               <td className="py-1 px-2.5 font-bold text-slate-200">
                                 {p.firstName} {p.lastName}
+                              </td>
+                              <td className="py-1 px-2.5 font-bold text-indigo-300">
+                                {p.rosterName || p.lastName || p.firstName}
                               </td>
                               <td className="py-1 px-2.5 text-indigo-300 font-bold">{p.primaryPosition || 'ATH'}</td>
                               <td className="py-1 px-2.5 text-amber-300 font-bold">{p.secondaryPosition || 'ATH'}</td>

@@ -116,10 +116,11 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
     if (!term) return true;
     const fName = p.firstName.toLowerCase();
     const lName = p.lastName.toLowerCase();
+    const rName = (p.rosterName || '').toLowerCase();
     const num = p.num.toLowerCase();
     const pos = (p.primaryPosition || '').toLowerCase();
     const secPos = (p.secondaryPosition || '').toLowerCase();
-    return fName.includes(term) || lName.includes(term) || num.includes(term) || pos.includes(term) || secPos.includes(term);
+    return fName.includes(term) || lName.includes(term) || rName.includes(term) || num.includes(term) || pos.includes(term) || secPos.includes(term);
   });
 
   const isScrimmageTab = activeUnit === 'scrimmage';
