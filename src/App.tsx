@@ -6,6 +6,9 @@ import {
   Users,
   Swords,
   ClipboardList,
+  Copy,
+  Check,
+  Sparkles,
 } from 'lucide-react';
 import {
   UnitType,
@@ -29,6 +32,7 @@ import {
   SeasonConfig,
   AttendanceRecord,
   Team,
+  formatWeekLabel,
 } from './types';
 import {
   MASTER_ROSTER,
@@ -66,6 +70,7 @@ import {
   getFormattedDayFolder,
   sanitizePracticePlans,
 } from './utils/practiceUtils';
+import { getAutoActiveWeek } from './utils/seasonWeekUtils';
 
 import { Header } from './components/Header';
 import { NavigationTabs } from './components/NavigationTabs';
@@ -212,9 +217,14 @@ export default function App() {
     return safeJSONParse('footballActiveTeamId', DEFAULT_TEAMS[0]?.id || 'team_10u');
   });
 
-  const [currentWeek, setCurrentWeek] = useState<string>(() =>
-    safeJSONParse('footballCurrentWeek', '0')
-  );
+  const [currentWeek, setCurrentWeek] = useState<string>(() => {
+    const saved = safeJSONParse('footballCurrentWeek', null);
+    if (saved) return saved;
+    const events = safeJSONParse('footballScheduleEvents', DEFAULT_SCHEDULE_EVENTS);
+    const auto = getAutoActiveWeek(events);
+    return auto.activeWeek || '1';
+  });
+  const [dismissedCopyPrompts, setDismissedCopyPrompts] = useState<Set<string>>(new Set());
   const [activeUnit, setActiveUnit] = useState<UnitType>(() => {
     const savedDefault = safeJSONParse('footballDefaultScreen', null);
     if (savedDefault) return savedDefault;
@@ -340,44 +350,67 @@ export default function App() {
     };
   });
 
-  // Ensure current week object exists
-  const ensureWeekExists = (week: string) => {
+  // Ensure current week object exists and copies formations from source week
+  const ensureWeekExists = (week: string, sourceWeek?: string) => {
     setWeeklyData((prev) => {
-      if (prev[week] && prev[week].formations && prev[week].formations.length > 0) return prev;
+      const scopedKey = getScopedWeekKey(activeTeamId, week);
+      const existing = prev[scopedKey] || prev[week];
+      if (existing && existing.formations && existing.formations.length > 0) return prev;
+
+      // Determine source week to copy formations from
+      let srcWk = sourceWeek;
+      if (!srcWk) {
+        const num = parseInt(week, 10);
+        if (!isNaN(num) && num > 1) {
+          srcWk = String(num - 1);
+        } else if (week === '1') {
+          srcWk = '0';
+        } else {
+          srcWk = '0';
+        }
+      }
+
+      const srcScopedKey = getScopedWeekKey(activeTeamId, srcWk);
+      const srcState = prev[srcScopedKey] || prev[srcWk];
 
       const templateForms =
-        prev['0']?.formations && prev['0'].formations.length > 0
-          ? prev['0'].formations
-          : defaultFormations && defaultFormations.length > 0
-            ? defaultFormations
-            : INITIAL_DEFAULT_FORMATIONS;
+        srcState?.formations && srcState.formations.length > 0
+          ? srcState.formations
+          : prev['0']?.formations && prev['0'].formations.length > 0
+            ? prev['0'].formations
+            : defaultFormations && defaultFormations.length > 0
+              ? defaultFormations
+              : INITIAL_DEFAULT_FORMATIONS;
+
+      const newWeekState: WeekState = {
+        formations: deepClone(templateForms),
+        depthChart: existing?.depthChart || {},
+        scrimmageChart: existing?.scrimmageChart || {},
+        opponent: existing?.opponent || '',
+        wristbandData: existing?.wristbandData || {
+          rows: 10,
+          columns: [{ color: 'blue', plays: [] }],
+        },
+        scouting: existing?.scouting || {
+          year: '2026',
+          week: `Week ${week}`,
+          opponent: '',
+          gameDate: '',
+          gameLocation: '',
+          teamOverview: '',
+          offensiveTendencies: '',
+          defensiveFronts: '',
+          specialTeamsNotes: '',
+          keysToVictory: [],
+          keyPlayersList: [],
+          coachNotes: [],
+        },
+      };
 
       return {
         ...prev,
-        [week]: {
-          formations: deepClone(templateForms),
-          depthChart: prev[week]?.depthChart || {},
-          scrimmageChart: prev[week]?.scrimmageChart || {},
-          opponent: prev[week]?.opponent || '',
-          wristbandData: prev[week]?.wristbandData || {
-            rows: 10,
-            columns: [{ color: 'blue', plays: [] }],
-          },
-          scouting: prev[week]?.scouting || {
-            year: '2026',
-            week: `Week ${week}`,
-            opponent: '',
-            gameDate: '',
-            gameLocation: '',
-            teamOverview: '',
-            offensiveTendencies: '',
-            defensiveFronts: '',
-            specialTeamsNotes: '',
-            keysToVictory: [],
-            keyPlayersList: [],
-            coachNotes: [],
-          },
-        },
+        [scopedKey]: newWeekState,
+        [week]: newWeekState,
       };
     });
   };
@@ -824,6 +857,21 @@ export default function App() {
     }
   }, [currentWeek]);
 
+  // Auto-advance depth chart week after game score is entered or day after game is scheduled
+  useEffect(() => {
+    const auto = getAutoActiveWeek(scheduleEvents);
+    if (auto.activeWeek) {
+      const lastRecordedAutoWeek = safeJSONParse('footballLastAutoWeek', null);
+      if (lastRecordedAutoWeek && auto.activeWeek !== lastRecordedAutoWeek) {
+        safeJSONSet('footballLastAutoWeek', auto.activeWeek);
+        setCurrentWeek(auto.activeWeek);
+        ensureWeekExists(auto.activeWeek, auto.priorWeek);
+      } else if (!lastRecordedAutoWeek) {
+        safeJSONSet('footballLastAutoWeek', auto.activeWeek);
+      }
+    }
+  }, [scheduleEvents]);
+
   // Sync state changes
   useEffect(() => {
     debouncedSave('all');
@@ -904,6 +952,44 @@ export default function App() {
   }, [rawFormations]);
   const currentDepthChart = currentWeekState.depthChart || {};
   const currentScrimmageChart = currentWeekState.scrimmageChart || {};
+
+  // Check if current week needs prompt to copy players from previous week
+  const depthChartCopyCandidate = useMemo(() => {
+    if (dismissedCopyPrompts.has(currentWeek)) return null;
+    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+    const targetState = weeklyData[scopedKey] || weeklyData[currentWeek];
+    const targetDepthCount = targetState?.depthChart
+      ? Object.values(targetState.depthChart).reduce((acc, list) => acc + (list?.length || 0), 0)
+      : 0;
+    if (targetDepthCount > 0) return null;
+
+    let srcWk = '0';
+    const num = parseInt(currentWeek, 10);
+    if (!isNaN(num) && num > 1) {
+      srcWk = String(num - 1);
+    } else if (currentWeek === '1') {
+      srcWk = '0';
+    } else if (currentWeek === 'playoffs') {
+      srcWk = '8';
+    } else if (currentWeek === '0') {
+      return null;
+    }
+
+    const srcScopedKey = getScopedWeekKey(activeTeamId, srcWk);
+    const srcState = weeklyData[srcScopedKey] || weeklyData[srcWk];
+    const srcCount = srcState?.depthChart
+      ? Object.values(srcState.depthChart).reduce((acc, list) => acc + (list?.length || 0), 0)
+      : 0;
+
+    if (srcCount > 0) {
+      return {
+        targetWeek: currentWeek,
+        sourceWeek: srcWk,
+        sourceCount: srcCount,
+      };
+    }
+    return null;
+  }, [weeklyData, activeTeamId, currentWeek, dismissedCopyPrompts]);
 
   // Team Access Control & Data Filtering
   const currentUserCoach = staffList.find(
@@ -3184,7 +3270,12 @@ export default function App() {
   };
 
   // 1-Click Copy Week Execution
-  const handleExecuteCopyWeek = (srcWeek: string, targetWeek: string) => {
+  const handleExecuteCopyWeek = (
+    srcWeek: string,
+    targetWeek: string,
+    copyPlayerSpots: boolean = true,
+    showAlert: boolean = false
+  ) => {
     ensureWeekExists(srcWeek);
     ensureWeekExists(targetWeek);
 
@@ -3202,21 +3293,31 @@ export default function App() {
       [targetScopedKey]: {
         ...(prev[targetScopedKey] || prev[targetWeek]),
         formations: deepClone(src.formations || defaultFormations),
-        depthChart: deepClone(src.depthChart || {}),
-        scrimmageChart: deepClone(src.scrimmageChart || {}),
+        ...(copyPlayerSpots
+          ? {
+              depthChart: deepClone(src.depthChart || {}),
+              scrimmageChart: deepClone(src.scrimmageChart || {}),
+            }
+          : {}),
       },
       [targetWeek]: {
         ...prev[targetWeek],
         formations: deepClone(src.formations || defaultFormations),
-        depthChart: deepClone(src.depthChart || {}),
-        scrimmageChart: deepClone(src.scrimmageChart || {}),
+        ...(copyPlayerSpots
+          ? {
+              depthChart: deepClone(src.depthChart || {}),
+              scrimmageChart: deepClone(src.scrimmageChart || {}),
+            }
+          : {}),
       },
     }));
 
     setCurrentWeek(targetWeek);
-    alert(
-      `Successfully copied all formations and starter/sub depth chart assignments from Week ${srcWeek} to Week ${targetWeek}!`
-    );
+    if (showAlert) {
+      alert(
+        `Successfully copied all formations ${copyPlayerSpots ? 'and player depth chart assignments ' : ''}from Week ${srcWeek} to Week ${targetWeek}!`
+      );
+    }
   };
 
   /* =========================================================================
@@ -3734,7 +3835,58 @@ export default function App() {
 
             {/* 1. Formations View (Offense, Defense, Special Teams, Depth Chart Groups) */}
             {['offense', 'defense', 'st', 'groups', 'depth_chart'].includes(activeUnit) && (
-              <FormationsView
+              <>
+                {depthChartCopyCandidate && (
+                  <div className="mb-4 p-4 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border border-indigo-500/50 shadow-xl flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center shrink-0">
+                        <Copy className="w-5 h-5 text-indigo-300" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-black text-indigo-300 uppercase tracking-wider">
+                            ⚡ {formatWeekLabel(depthChartCopyCandidate.targetWeek)} Depth Chart Ready
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
+                            Formations Auto-Copied
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-200 font-medium mt-0.5">
+                          Formations from <strong className="text-white font-bold">{formatWeekLabel(depthChartCopyCandidate.sourceWeek)}</strong> were automatically copied over. Would you like to copy all player depth chart spots ({depthChartCopyCandidate.sourceCount} player assignments) as well?
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => {
+                          handleExecuteCopyWeek(
+                            depthChartCopyCandidate.sourceWeek,
+                            depthChartCopyCandidate.targetWeek,
+                            true,
+                            true
+                          );
+                          setDismissedCopyPrompts((prev) => new Set(prev).add(depthChartCopyCandidate.targetWeek));
+                        }}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black rounded-xl shadow-lg shadow-indigo-600/30 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Copy Player Spots from {formatWeekLabel(depthChartCopyCandidate.sourceWeek)}</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setDismissedCopyPrompts((prev) => new Set(prev).add(depthChartCopyCandidate.targetWeek));
+                        }}
+                        className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold rounded-xl border border-slate-700 active:scale-95 transition-all cursor-pointer"
+                      >
+                        Keep Formations Only (Fresh Lineup)
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <FormationsView
                 unit={
                   activeUnit === 'depth_chart'
                     ? (depthSubUnit === 'scrimmage' ? 'offense' : (depthSubUnit || 'offense'))
@@ -3786,6 +3938,7 @@ export default function App() {
                 onMovePositionDirect={handleMovePositionDirect}
                 onCopyPositionDirect={handleCopyPositionDirect}
               />
+              </>
             )}
 
             {/* 2. Practice / Scrimmage Rotation */}

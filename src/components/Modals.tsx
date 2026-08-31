@@ -307,7 +307,7 @@ interface CopyWeekModalProps {
   isOpen: boolean;
   currentWeek: string;
   onClose: () => void;
-  onExecuteCopy: (srcWeek: string, targetWeek: string) => void;
+  onExecuteCopy: (srcWeek: string, targetWeek: string, copyPlayerSpots?: boolean) => void;
 }
 
 export const CopyWeekModal: React.FC<CopyWeekModalProps> = ({
@@ -320,6 +320,7 @@ export const CopyWeekModal: React.FC<CopyWeekModalProps> = ({
     parseInt(currentWeek, 10) > 0 ? String(parseInt(currentWeek, 10) - 1) : '0'
   );
   const [targetWeek, setTargetWeek] = useState(currentWeek);
+  const [copyPlayerSpots, setCopyPlayerSpots] = useState(true);
 
   if (!isOpen) return null;
 
@@ -373,10 +374,24 @@ export const CopyWeekModal: React.FC<CopyWeekModalProps> = ({
             </select>
           </div>
 
+          <label className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-900/80 border border-slate-700/80 cursor-pointer hover:bg-slate-900 transition-colors">
+            <input
+              type="checkbox"
+              checked={copyPlayerSpots}
+              onChange={(e) => setCopyPlayerSpots(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-600 text-indigo-600 focus:ring-indigo-500 bg-slate-800"
+            />
+            <div className="text-left">
+              <span className="block text-slate-200 font-bold text-xs">Copy player spots in depth chart</span>
+              <span className="block text-slate-400 text-[10px]">Copies starter and backup player assignments along with all formations</span>
+            </div>
+          </label>
+
           <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 text-[11px] leading-relaxed flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
             <span>
-              This will duplicate all formations, position card layouts, and starter/sub depth chart assignments from Week {srcWeek} into Week {targetWeek}.
+              All formations from Week {srcWeek} will be copied to Week {targetWeek}.
+              {copyPlayerSpots ? ' Player depth chart assignments will also be cloned.' : ' Depth chart slots will start blank.'}
             </span>
           </div>
         </div>
@@ -394,7 +409,7 @@ export const CopyWeekModal: React.FC<CopyWeekModalProps> = ({
                 alert('Source week and Target week cannot be the same.');
                 return;
               }
-              onExecuteCopy(srcWeek, targetWeek);
+              onExecuteCopy(srcWeek, targetWeek, copyPlayerSpots);
               onClose();
             }}
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/30 active:scale-95"

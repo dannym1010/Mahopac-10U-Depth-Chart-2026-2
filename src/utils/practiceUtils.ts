@@ -236,18 +236,28 @@ export function sanitizePracticePlans(
     const correctWeek = calculateWeekFolderForDate(dateStr, scheduleEvents);
     const correctDayFolder = getFormattedDayFolder(dateStr);
 
+    const periodsList = Array.isArray(p.plan) && p.plan.length > 0
+      ? p.plan
+      : Array.isArray(p.periods) && p.periods.length > 0
+      ? p.periods
+      : [];
+
     let needsUpdate = false;
     if (p.day !== correctDay && dateStr) needsUpdate = true;
     if (p.weekFolder !== correctWeek && dateStr) needsUpdate = true;
     if (p.dayFolder !== correctDayFolder && dateStr) needsUpdate = true;
+    if (!p.plan || !p.periods || !p.teamId) needsUpdate = true;
 
     if (!needsUpdate) return p;
 
     return {
       ...p,
+      teamId: p.teamId || 'team-10u',
       day: correctDay,
       dayFolder: correctDayFolder,
       weekFolder: correctWeek,
+      plan: periodsList,
+      periods: periodsList,
     };
   });
 }
