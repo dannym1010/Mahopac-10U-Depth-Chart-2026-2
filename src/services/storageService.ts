@@ -252,7 +252,8 @@ export async function fetchServerState(): Promise<{
 
 export async function saveServerState(
   state: any,
-  author: string = 'coach'
+  author: string = 'coach',
+  metadata?: any
 ): Promise<{ success: boolean; version?: number; updatedAt?: number } | null> {
   try {
     const res = await fetch('/api/state', {
@@ -264,6 +265,7 @@ export async function saveServerState(
         state,
         author,
         clientId: CLIENT_ID,
+        metadata,
       }),
     });
     if (res.ok) {

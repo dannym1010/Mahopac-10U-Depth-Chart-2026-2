@@ -22,6 +22,202 @@ let cachedState: any = null;
 let stateUpdatedAt = Date.now();
 let stateVersion = 1;
 
+function getFormationUnitPosIds(formations: any[], unit: string): Set<string> {
+  const ids = new Set<string>();
+  if (Array.isArray(formations)) {
+    formations.forEach((f) => {
+      if (f && f.unit === unit && Array.isArray(f.rows)) {
+        f.rows.forEach((r: any) => {
+          if (r && Array.isArray(r.positions)) {
+            r.positions.forEach((p: any) => {
+              if (p && p.id) ids.add(p.id);
+            });
+          }
+        });
+      }
+    });
+  }
+  return ids;
+}
+
+function mergeServerState(current: any, incoming: any, metadata?: any): any {
+  if (!current || typeof current !== 'object') return incoming;
+  if (!incoming || typeof incoming !== 'object') return current;
+
+  const merged: any = { ...current };
+
+  // 1. Merge weeklyData deeply per week and per unit
+  if (incoming.weeklyData && typeof incoming.weeklyData === 'object') {
+    merged.weeklyData = { ...(current.weeklyData || {}) };
+
+    for (const [weekKey, incWeekState] of Object.entries<any>(incoming.weeklyData)) {
+      const curWeekState = merged.weeklyData[weekKey];
+      if (!curWeekState) {
+        merged.weeklyData[weekKey] = incWeekState;
+        continue;
+      }
+
+      // Merge formations array by formation ID
+      let mergedFormations = curWeekState.formations || [];
+      if (Array.isArray(incWeekState.formations) && incWeekState.formations.length > 0) {
+        const formMap = new Map<string, any>();
+        (curWeekState.formations || []).forEach((f: any) => {
+          if (f && f.id) formMap.set(f.id, f);
+        });
+        incWeekState.formations.forEach((f: any) => {
+          if (f && f.id) formMap.set(f.id, f);
+        });
+        mergedFormations = Array.from(formMap.values());
+      }
+
+      // Merge Depth Chart per position ID (Offense & Defense positions coexist safely)
+      const curDC = curWeekState.depthChart || {};
+      const incDC = incWeekState.depthChart || {};
+      const mergedDC: Record<string, any> = { ...curDC };
+
+      for (const [posId, players] of Object.entries(incDC)) {
+        mergedDC[posId] = players;
+      }
+
+      // Merge Scrimmage Chart per position ID
+      const curSC = curWeekState.scrimmageChart || {};
+      const incSC = incWeekState.scrimmageChart || {};
+      const mergedSC: Record<string, any> = { ...curSC, ...incSC };
+
+      merged.weeklyData[weekKey] = {
+        ...curWeekState,
+        ...incWeekState,
+        formations: mergedFormations,
+        depthChart: mergedDC,
+        scrimmageChart: mergedSC,
+        opponent: incWeekState.opponent || curWeekState.opponent || '',
+        wristbandData: incWeekState.wristbandData || curWeekState.wristbandData,
+        scouting: incWeekState.scouting || curWeekState.scouting,
+      };
+    }
+  }
+
+  // 2. Merge Default Formations
+  if (Array.isArray(incoming.defaultFormations) && incoming.defaultFormations.length > 0) {
+    const formMap = new Map<string, any>();
+    (current.defaultFormations || []).forEach((f: any) => {
+      if (f && f.id) formMap.set(f.id, f);
+    });
+    incoming.defaultFormations.forEach((f: any) => {
+      if (f && f.id) formMap.set(f.id, f);
+    });
+    merged.defaultFormations = Array.from(formMap.values());
+  }
+
+  // 3. Merge Roster
+  if (Array.isArray(incoming.roster) && incoming.roster.length > 0) {
+    const rosterMap = new Map<string, any>();
+    (current.roster || []).forEach((p: any) => {
+      const key = String(p.id || p.num || p.rosterName || p.name);
+      if (key) rosterMap.set(key, p);
+    });
+    incoming.roster.forEach((p: any) => {
+      const key = String(p.id || p.num || p.rosterName || p.name);
+      if (key) {
+        const existing = rosterMap.get(key);
+        rosterMap.set(key, existing ? { ...existing, ...p } : p);
+      }
+    });
+    merged.roster = Array.from(rosterMap.values());
+  }
+
+  // 4. Merge TeamSavedCoaches & SavedCoaches
+  if (incoming.teamSavedCoaches && typeof incoming.teamSavedCoaches === 'object') {
+    merged.teamSavedCoaches = {
+      ...(current.teamSavedCoaches || {}),
+      ...incoming.teamSavedCoaches,
+    };
+  }
+  if (Array.isArray(incoming.savedCoaches)) {
+    merged.savedCoaches = Array.from(
+      new Set([...(current.savedCoaches || []), ...incoming.savedCoaches])
+    );
+  }
+  if (Array.isArray(incoming.staffList)) {
+    const staffMap = new Map<string, any>();
+    (current.staffList || []).forEach((s: any) => {
+      const key = s.email || s.id;
+      if (key) staffMap.set(key, s);
+    });
+    incoming.staffList.forEach((s: any) => {
+      const key = s.email || s.id;
+      if (key) staffMap.set(key, s);
+    });
+    merged.staffList = Array.from(staffMap.values());
+  }
+
+  // 5. Merge Practice Plans, Templates, Drills
+  if (Array.isArray(incoming.practiceData)) {
+    const planMap = new Map<string, any>();
+    (current.practiceData || []).forEach((p: any) => {
+      if (p.id) planMap.set(p.id, p);
+    });
+    incoming.practiceData.forEach((p: any) => {
+      if (p.id) planMap.set(p.id, p);
+    });
+    merged.practiceData = Array.from(planMap.values());
+  }
+  if (incoming.practiceTemplates && typeof incoming.practiceTemplates === 'object') {
+    merged.practiceTemplates = {
+      ...(current.practiceTemplates || {}),
+      ...incoming.practiceTemplates,
+    };
+  }
+  if (incoming.cascadingDrills && Array.isArray(incoming.cascadingDrills)) {
+    merged.cascadingDrills = incoming.cascadingDrills;
+  }
+
+  // 6. Merge Schedule & Attendance
+  if (Array.isArray(incoming.scheduleEvents)) {
+    const evtMap = new Map<string, any>();
+    (current.scheduleEvents || []).forEach((e: any) => {
+      if (e.id) evtMap.set(e.id, e);
+    });
+    incoming.scheduleEvents.forEach((e: any) => {
+      if (e.id) evtMap.set(e.id, e);
+    });
+    merged.scheduleEvents = Array.from(evtMap.values());
+  }
+  if (Array.isArray(incoming.attendanceLogs)) {
+    const logMap = new Map<string, any>();
+    (current.attendanceLogs || []).forEach((l: any) => {
+      const key = l.id || `${l.date}_${l.teamId}_${l.type}`;
+      logMap.set(key, l);
+    });
+    incoming.attendanceLogs.forEach((l: any) => {
+      const key = l.id || `${l.date}_${l.teamId}_${l.type}`;
+      logMap.set(key, l);
+    });
+    merged.attendanceLogs = Array.from(logMap.values());
+  }
+
+  if (Array.isArray(incoming.teams) && incoming.teams.length > 0) {
+    const teamMap = new Map<string, any>();
+    (current.teams || []).forEach((t: any) => {
+      if (t.id) teamMap.set(t.id, t);
+    });
+    incoming.teams.forEach((t: any) => {
+      if (t.id) teamMap.set(t.id, t);
+    });
+    merged.teams = Array.from(teamMap.values());
+  }
+
+  if (incoming.seasonConfig) {
+    merged.seasonConfig = { ...(current.seasonConfig || {}), ...incoming.seasonConfig };
+  }
+  if (incoming.guideTree) merged.guideTree = incoming.guideTree;
+  if (incoming.guideOrder) merged.guideOrder = incoming.guideOrder;
+  if (incoming.masterPlayLibrary) merged.masterPlayLibrary = incoming.masterPlayLibrary;
+  if (incoming.collapsedFolders) merged.collapsedFolders = incoming.collapsedFolders;
+
+  return merged;
+}
+
 function loadStateFromDisk() {
   ensureDataDir();
   if (fs.existsSync(STATE_FILE)) {
@@ -40,10 +236,11 @@ function loadStateFromDisk() {
   }
 }
 
-function saveStateToDisk(state: any, author: string = 'coach') {
+function saveStateToDisk(state: any, author: string = 'coach', metadata?: any) {
   ensureDataDir();
   try {
-    cachedState = state;
+    // Smart granular merge with existing cached state to prevent multi-coach race conditions
+    cachedState = mergeServerState(cachedState, state, metadata);
     stateUpdatedAt = Date.now();
     stateVersion += 1;
 
@@ -113,12 +310,12 @@ async function startServer() {
   // State Persistence: Save full or scoped state from any coach
   app.post('/api/state', (req, res) => {
     try {
-      const { state, author, clientId } = req.body;
+      const { state, author, clientId, metadata } = req.body;
       if (!state || typeof state !== 'object') {
         return res.status(400).json({ error: 'Missing or invalid state payload.' });
       }
 
-      const saveResult = saveStateToDisk(state, author || 'coach');
+      const saveResult = saveStateToDisk(state, author || 'coach', metadata);
       if (!saveResult.success) {
         return res.status(500).json({ error: 'Failed to save state to server disk.' });
       }
@@ -130,6 +327,7 @@ async function startServer() {
         lastAuthor: author,
         state: cachedState,
         senderClientId: clientId,
+        metadata,
       });
 
       return res.json({

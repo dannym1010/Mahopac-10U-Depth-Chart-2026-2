@@ -287,6 +287,14 @@ export default function App() {
   const lastSavedPayloadRef = useRef<string>('');
   const localServerVersionRef = useRef<number>(0);
   const localServerUpdatedAtRef = useRef<number>(0);
+  const lastLocalEditTimeRef = useRef<number>(0);
+  const activeUnitRef = useRef<string>(activeUnit);
+  const activeTeamIdRef = useRef<string>(activeTeamId);
+  const currentWeekRef = useRef<string>(currentWeek);
+
+  activeUnitRef.current = activeUnit;
+  activeTeamIdRef.current = activeTeamId;
+  currentWeekRef.current = currentWeek;
 
   const latestStateRef = useRef({
     weeklyData,
@@ -496,6 +504,132 @@ export default function App() {
     });
   };
 
+// Helper to extract all position IDs belonging to a formation unit
+function getUnitPositionIds(formations: FormationBoard[], unit: string): Set<string> {
+  const ids = new Set<string>();
+  if (Array.isArray(formations)) {
+    formations.forEach((f) => {
+      if (f && f.unit === unit && Array.isArray(f.rows)) {
+        f.rows.forEach((r) => {
+          if (r && Array.isArray(r.positions)) {
+            r.positions.forEach((p) => {
+              if (p && p.id) ids.add(p.id);
+            });
+          }
+        });
+      }
+    });
+  }
+  return ids;
+}
+
+// Multi-Coach state merger that prevents Offense/Defense/Special Teams overwrites
+function mergeRemoteWeeklyData(
+  localWeekly: Record<string, WeekState>,
+  remoteWeekly: Record<string, WeekState>,
+  activeTeamId: string,
+  currentWeek: string,
+  activeUnit: string,
+  lastLocalEditTime: number
+): Record<string, WeekState> {
+  if (!localWeekly || Object.keys(localWeekly).length === 0) return remoteWeekly;
+  if (!remoteWeekly || Object.keys(remoteWeekly).length === 0) return localWeekly;
+
+  const merged: Record<string, WeekState> = { ...remoteWeekly };
+  const scopedKey = `${activeTeamId}__week_${currentWeek}`;
+  const isActivelyEditingLocally = Date.now() - lastLocalEditTime < 15000;
+
+  for (const weekKey of Object.keys(localWeekly)) {
+    const localState = localWeekly[weekKey];
+    const remoteState = remoteWeekly[weekKey];
+
+    if (!remoteState) {
+      merged[weekKey] = localState;
+      continue;
+    }
+
+    if (!localState) {
+      merged[weekKey] = remoteState;
+      continue;
+    }
+
+    const isCurrentActiveWeek = weekKey === scopedKey || weekKey === currentWeek;
+
+    if (isCurrentActiveWeek && isActivelyEditingLocally) {
+      // Local coach is actively editing this week & unit (e.g. offense or defense).
+      // Keep local coach's active unit formations and depth chart slots.
+      // Accept remote coach's updates for all other units!
+      const localFormations = Array.isArray(localState.formations) ? localState.formations : [];
+      const remoteFormations = Array.isArray(remoteState.formations) ? remoteState.formations : [];
+
+      const formMap = new Map<string, FormationBoard>();
+      remoteFormations.forEach((rf) => {
+        if (rf && rf.id) formMap.set(rf.id, rf);
+      });
+
+      localFormations.forEach((lf) => {
+        if (lf && lf.id) {
+          if (lf.unit === activeUnit) {
+            formMap.set(lf.id, lf);
+          } else if (!formMap.has(lf.id)) {
+            formMap.set(lf.id, lf);
+          }
+        }
+      });
+      const mergedFormations = Array.from(formMap.values());
+
+      const localActiveUnitPosIds = getUnitPositionIds(localFormations, activeUnit);
+
+      const localDC = localState.depthChart || {};
+      const remoteDC = remoteState.depthChart || {};
+      const mergedDC: Record<string, PlacedPlayer[]> = { ...remoteDC };
+
+      for (const posId of Object.keys(localDC)) {
+        if (localActiveUnitPosIds.has(posId)) {
+          mergedDC[posId] = localDC[posId];
+        }
+      }
+
+      const localSC = localState.scrimmageChart || {};
+      const remoteSC = remoteState.scrimmageChart || {};
+      const mergedSC: Record<string, PlacedPlayer[]> = { ...remoteSC };
+      if (activeUnit === 'scrimmage') {
+        for (const posId of Object.keys(localSC)) {
+          mergedSC[posId] = localSC[posId];
+        }
+      }
+
+      merged[weekKey] = {
+        ...remoteState,
+        formations: mergedFormations,
+        depthChart: mergedDC,
+        scrimmageChart: mergedSC,
+        opponent: remoteState.opponent || localState.opponent || '',
+        wristbandData: remoteState.wristbandData || localState.wristbandData,
+        scouting: remoteState.scouting || localState.scouting,
+      };
+    } else {
+      // Not actively editing locally: merge depthChart per position key seamlessly
+      const localDC = localState.depthChart || {};
+      const remoteDC = remoteState.depthChart || {};
+      const mergedDC: Record<string, PlacedPlayer[]> = { ...localDC, ...remoteDC };
+
+      const localSC = localState.scrimmageChart || {};
+      const remoteSC = remoteState.scrimmageChart || {};
+      const mergedSC: Record<string, PlacedPlayer[]> = { ...localSC, ...remoteSC };
+
+      merged[weekKey] = {
+        ...localState,
+        ...remoteState,
+        depthChart: mergedDC,
+        scrimmageChart: mergedSC,
+      };
+    }
+  }
+
+  return merged;
+}
+
   // Centralized helper to apply remote state updates cleanly without race conditions
   const applyRemoteState = (
     data: any,
@@ -519,9 +653,17 @@ export default function App() {
         data.weeklyData,
         data.defaultFormations || latestStateRef.current.defaultFormations
       );
-      setWeeklyData(normalizedWeekly);
-      latestStateRef.current.weeklyData = normalizedWeekly;
-      safeJSONSet('footballWeeklyData', normalizedWeekly);
+      const mergedWeekly = mergeRemoteWeeklyData(
+        latestStateRef.current.weeklyData,
+        normalizedWeekly,
+        activeTeamIdRef.current,
+        currentWeekRef.current,
+        activeUnitRef.current,
+        lastLocalEditTimeRef.current
+      );
+      setWeeklyData(mergedWeekly);
+      latestStateRef.current.weeklyData = mergedWeekly;
+      safeJSONSet('footballWeeklyData', mergedWeekly);
     }
     if (
       data.defaultFormations &&
@@ -682,7 +824,14 @@ export default function App() {
 
     // 2. Persistent Server Sync
     try {
-      const sResult = await saveServerState(payload, authorEmail);
+      const metadata = {
+        activeTeamId: activeTeamIdRef.current,
+        currentWeek: currentWeekRef.current,
+        activeUnit: activeUnitRef.current,
+        scope,
+        timestamp: Date.now(),
+      };
+      const sResult = await saveServerState(payload, authorEmail, metadata);
       if (sResult && typeof sResult.version === 'number') {
         localServerVersionRef.current = sResult.version;
       }
@@ -1756,6 +1905,7 @@ export default function App() {
     newFormations: FormationBoard[],
     syncToDefaults = false
   ) => {
+    lastLocalEditTimeRef.current = Date.now();
     const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
     setWeeklyData((prev) => {
       const existing = resolveWeekState(prev, activeTeamId, currentWeek);
@@ -1778,6 +1928,7 @@ export default function App() {
   const updateCurrentWeekDepthChart = (
     newDepthChart: Record<string, PlacedPlayer[]>
   ) => {
+    lastLocalEditTimeRef.current = Date.now();
     const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
     setWeeklyData((prev) => {
       const existing = resolveWeekState(prev, activeTeamId, currentWeek);
@@ -1797,6 +1948,7 @@ export default function App() {
   const updateCurrentWeekScrimmageChart = (
     newScrimChart: Record<string, PlacedPlayer[]>
   ) => {
+    lastLocalEditTimeRef.current = Date.now();
     const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
     setWeeklyData((prev) => {
       const existing = resolveWeekState(prev, activeTeamId, currentWeek);
