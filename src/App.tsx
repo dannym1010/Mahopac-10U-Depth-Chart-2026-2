@@ -3740,13 +3740,15 @@ export default function App() {
   const handleExecuteCopyWeek = (
     srcWeek: string,
     targetWeek: string,
-    copyPlayerSpots: boolean = true,
+    copyModeOrPlayerSpots: 'both' | 'formations_only' | 'positions_only' | boolean = 'both',
+    srcTeamIdParam?: string,
     showAlert: boolean = false
   ) => {
+    const srcTeamId = srcTeamIdParam || activeTeamId;
     ensureWeekExists(srcWeek);
     ensureWeekExists(targetWeek);
 
-    const srcScopedKey = getScopedWeekKey(activeTeamId, srcWeek);
+    const srcScopedKey = getScopedWeekKey(srcTeamId, srcWeek);
     const targetScopedKey = getScopedWeekKey(activeTeamId, targetWeek);
 
     const src = weeklyData[srcScopedKey] || weeklyData[srcWeek] || {
@@ -3755,34 +3757,68 @@ export default function App() {
       scrimmageChart: {},
     };
 
-    setWeeklyData((prev) => ({
-      ...prev,
-      [targetScopedKey]: {
-        ...(prev[targetScopedKey] || prev[targetWeek]),
-        formations: deepClone(src.formations || defaultFormations),
-        ...(copyPlayerSpots
-          ? {
-              depthChart: deepClone(src.depthChart || {}),
-              scrimmageChart: deepClone(src.scrimmageChart || {}),
-            }
-          : {}),
-      },
-      [targetWeek]: {
-        ...prev[targetWeek],
-        formations: deepClone(src.formations || defaultFormations),
-        ...(copyPlayerSpots
-          ? {
-              depthChart: deepClone(src.depthChart || {}),
-              scrimmageChart: deepClone(src.scrimmageChart || {}),
-            }
-          : {}),
-      },
-    }));
+    const targetExisting = weeklyData[targetScopedKey] || weeklyData[targetWeek] || {
+      formations: defaultFormations,
+      depthChart: {},
+      scrimmageChart: {},
+    };
+
+    // Determine copy mode
+    let mode: 'both' | 'formations_only' | 'positions_only' = 'both';
+    if (typeof copyModeOrPlayerSpots === 'boolean') {
+      mode = copyModeOrPlayerSpots ? 'both' : 'formations_only';
+    } else if (copyModeOrPlayerSpots) {
+      mode = copyModeOrPlayerSpots;
+    }
+
+    let updatedFormations = targetExisting.formations || defaultFormations;
+    let updatedDepthChart = targetExisting.depthChart || {};
+    let updatedScrimmageChart = targetExisting.scrimmageChart || {};
+
+    if (mode === 'both') {
+      updatedFormations = deepClone(src.formations || defaultFormations);
+      updatedDepthChart = deepClone(src.depthChart || {});
+      updatedScrimmageChart = deepClone(src.scrimmageChart || {});
+    } else if (mode === 'formations_only') {
+      updatedFormations = deepClone(src.formations || defaultFormations);
+      updatedDepthChart = {};
+      updatedScrimmageChart = {};
+    } else if (mode === 'positions_only') {
+      // Retain target formations layout, clone player assignments from source
+      updatedDepthChart = deepClone(src.depthChart || {});
+      updatedScrimmageChart = deepClone(src.scrimmageChart || {});
+    }
+
+    const updatedState: WeekState = {
+      formations: updatedFormations,
+      depthChart: updatedDepthChart,
+      scrimmageChart: updatedScrimmageChart,
+    };
+
+    setWeeklyData((prev) => {
+      const nextWeekly = {
+        ...prev,
+        [targetScopedKey]: updatedState,
+        [targetWeek]: updatedState,
+      };
+      latestStateRef.current.weeklyData = nextWeekly;
+      return nextWeekly;
+    });
 
     setCurrentWeek(targetWeek);
+
+    // Save and sync immediately to local and cloud
+    saveStateToStorage('force');
+
     if (showAlert) {
       alert(
-        `Successfully copied all formations ${copyPlayerSpots ? 'and player depth chart assignments ' : ''}from Week ${srcWeek} to Week ${targetWeek}!`
+        `Successfully copied ${
+          mode === 'both'
+            ? 'formations and player depth chart assignments'
+            : mode === 'formations_only'
+            ? 'formations only'
+            : 'player depth chart positions only'
+        } from Week ${srcWeek} to Week ${targetWeek}!`
       );
     }
   };
@@ -4383,7 +4419,8 @@ export default function App() {
                           handleExecuteCopyWeek(
                             depthChartCopyCandidate.sourceWeek,
                             depthChartCopyCandidate.targetWeek,
-                            true,
+                            'both',
+                            undefined,
                             true
                           );
                           setDismissedCopyPrompts((prev) => new Set(prev).add(depthChartCopyCandidate.targetWeek));
@@ -4439,6 +4476,7 @@ export default function App() {
                 onOpenSelectivePrintModal={(unit) =>
                   setSelectivePrintUnit(unit)
                 }
+                onOpenCopyWeekModal={() => setIsCopyWeekModalOpen(true)}
                 onDragStartPlacedPlayer={handleDragStartPlacedPlayer}
                 onPositionCardDragStart={handlePositionCardDragStart}
                 onPositionCardDropOnSlot={handlePositionCardDropOnSlot}
@@ -5084,6 +5122,11 @@ export default function App() {
       <CopyWeekModal
         isOpen={isCopyWeekModalOpen}
         currentWeek={currentWeek}
+        activeTeamId={activeTeamId}
+        teams={teams}
+        seasonConfig={seasonConfig}
+        scheduleEvents={scheduleEvents}
+        weeklyData={weeklyData}
         onClose={() => setIsCopyWeekModalOpen(false)}
         onExecuteCopy={handleExecuteCopyWeek}
       />

@@ -1,4 +1,5 @@
 import { ScheduleEvent, FormationBoard, PlacedPlayer, WeekState, SeasonConfig, WeekOption, formatWeekLabel } from '../types';
+export { formatWeekLabel } from '../types';
 import { INITIAL_DEFAULT_FORMATIONS } from '../data/initialData';
 
 export interface AutoWeekResult {

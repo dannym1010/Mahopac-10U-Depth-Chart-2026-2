@@ -182,11 +182,11 @@ body {
     font-weight: 900 !important;
   }
 
-  /* Player Badges - Team Colors (Black, Gold, Blue) */
+  /* Player Badges - Sideline Depth Chart Hierarchy: Starter=Black, 2nd=Gold, 3rd=Blue, 4th+=White */
   .print-player-badge-starter {
-    background-color: #fefce8 !important; /* Light Gold */
-    color: #000000 !important;
-    border: 1.5px solid #000000 !important; /* Team Black border */
+    background-color: #000000 !important; /* 1st String / Starter: Solid Black (No Gold) */
+    color: #ffffff !important; /* Crisp White Text */
+    border: 1.5px solid #000000 !important;
     font-size: 8.5px !important;
     font-weight: 900 !important;
     padding: 1.5px 3px !important;
@@ -197,9 +197,9 @@ body {
   }
 
   .print-tag-st {
-    background-color: #facc15 !important; /* Rich Team Gold */
-    color: #000000 !important;
-    border: 1px solid #ca8a04 !important;
+    background-color: #27272a !important; /* Dark Tag Pill */
+    color: #ffffff !important; /* Crisp White ST Tag Text - NO GOLD */
+    border: 1px solid #52525b !important;
     font-size: 7.5px !important;
     font-weight: 900 !important;
     -webkit-print-color-adjust: exact !important;
@@ -207,11 +207,11 @@ body {
   }
 
   .print-player-badge-d2 {
-    background-color: #eff6ff !important; /* Light Team Blue */
-    color: #1e3a8a !important; /* Deep Blue text */
-    border: 1.5px solid #2563eb !important; /* Team Blue border */
+    background-color: #facc15 !important; /* 2nd String: Rich Gold */
+    color: #000000 !important; /* Solid Black Text */
+    border: 1.5px solid #ca8a04 !important; /* Deep Gold Border */
     font-size: 8px !important;
-    font-weight: 800 !important;
+    font-weight: 900 !important;
     padding: 1px 3px !important;
     border-radius: 3px !important;
     margin-bottom: 1px !important;
@@ -220,9 +220,9 @@ body {
   }
 
   .print-tag-d2 {
-    background-color: #2563eb !important; /* Solid Team Blue */
-    color: #ffffff !important;
-    border: 1px solid #1d4ed8 !important;
+    background-color: #000000 !important; /* Black Pill */
+    color: #facc15 !important; /* Gold D2 Text */
+    border: 1px solid #000000 !important;
     font-size: 7.5px !important;
     font-weight: 900 !important;
     -webkit-print-color-adjust: exact !important;
@@ -230,11 +230,11 @@ body {
   }
 
   .print-player-badge-d3 {
-    background-color: #f8fafc !important;
-    color: #0f172a !important;
-    border: 1.5px solid #0f172a !important; /* Team Navy/Black border */
+    background-color: #1d4ed8 !important; /* 3rd String: Royal Blue */
+    color: #ffffff !important; /* White Text */
+    border: 1.5px solid #1e40af !important; /* Deep Blue Border */
     font-size: 8px !important;
-    font-weight: 800 !important;
+    font-weight: 900 !important;
     padding: 1px 3px !important;
     border-radius: 3px !important;
     margin-bottom: 1px !important;
@@ -243,19 +243,19 @@ body {
   }
 
   .print-tag-d3 {
-    background-color: #0f172a !important; /* Team Navy/Black */
-    color: #facc15 !important; /* Gold text */
-    border: 1px solid #000000 !important;
-    font-size: 7px !important;
-    font-weight: 800 !important;
+    background-color: #ffffff !important; /* White Tag */
+    color: #1d4ed8 !important; /* Blue D3 Text */
+    border: 1px solid #93c5fd !important;
+    font-size: 7.5px !important;
+    font-weight: 900 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
   .print-player-badge-d4 {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    border: 1px solid #94a3b8 !important;
+    background-color: #ffffff !important; /* 4th+ String / Additional: Pure White */
+    color: #000000 !important; /* Black Text */
+    border: 1.5px solid #94a3b8 !important; /* Slate Border */
     font-size: 7.5px !important;
     font-weight: 800 !important;
     padding: 1px 3px !important;
@@ -266,8 +266,8 @@ body {
   }
 
   .print-tag-d4 {
-    background-color: #f1f5f9 !important;
-    color: #0f172a !important;
+    background-color: #f1f5f9 !important; /* Light Slate Tag */
+    color: #0f172a !important; /* Dark Tag Text */
     border: 1px solid #cbd5e1 !important;
     font-size: 7px !important;
     font-weight: 800 !important;

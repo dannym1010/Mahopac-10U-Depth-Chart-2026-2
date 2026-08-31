@@ -66,6 +66,7 @@ interface FormationsViewProps {
   ) => void;
   onRemovePlayerFromCard: (posId: string, playerIndex: number) => void;
   onOpenSelectivePrintModal: (unit: 'offense' | 'defense' | 'st' | 'groups') => void;
+  onOpenCopyWeekModal?: () => void;
   onDragStartPlacedPlayer: (
     e: React.DragEvent,
     posId: string,
@@ -186,6 +187,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
   onDropPlayerOnCard,
   onRemovePlayerFromCard,
   onOpenSelectivePrintModal,
+  onOpenCopyWeekModal,
   onDragStartPlacedPlayer,
   onPositionCardDragStart,
   onPositionCardDropOnSlot,
@@ -395,6 +397,16 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {userRole === 'admin' && onOpenCopyWeekModal && (
+            <button
+              onClick={onOpenCopyWeekModal}
+              className="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer border border-indigo-500/40"
+              title="Copy any week formations and/or player positions to any other week"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span>Copy Week...</span>
+            </button>
+          )}
           <button
             onClick={() => window.print()}
             className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-100 font-bold text-xs rounded-xl border border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
@@ -426,8 +438,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
           Formation Sheets
         </h1>
         <p className="text-[10px] font-bold text-black mt-0.5">
-          High-Visibility Sideline Depth Chart &bull; Starters (ST) &bull; 2nd String (D2)
-          &bull; 3rd String (D3) &bull; 4th+ String (D4+)
+          High-Visibility Sideline Depth Chart &bull; Starters / 1st String (Black) &bull; 2nd String (Gold)
+          &bull; 3rd String (Blue) &bull; 4th+ String (White)
         </p>
       </div>
 
@@ -894,19 +906,19 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                           }
                                           className={`px-2 py-1 print:px-1 print:py-0.5 rounded-xl print:rounded-sm border text-[10.5px] print:text-[8.5px] font-bold flex items-center justify-between transition-all select-none ${
                                             isStarter
-                                              ? 'bg-slate-950 text-indigo-300 border-indigo-500/40 shadow-xs print-player-badge-starter'
+                                              ? 'bg-black text-white border-zinc-700 shadow-xs print-player-badge-starter'
                                               : isD2
                                               ? 'bg-amber-400 text-slate-950 border-amber-500 font-extrabold shadow-xs print-player-badge-d2'
                                               : isD3
-                                              ? 'bg-blue-700 text-white border-blue-500 font-extrabold shadow-xs print-player-badge-d3'
-                                              : 'bg-white text-slate-900 border-slate-300 font-extrabold shadow-xs print-player-badge-d4'
+                                              ? 'bg-blue-600 text-white border-blue-500 font-extrabold shadow-xs print-player-badge-d3'
+                                              : 'bg-white text-slate-950 border-slate-300 font-extrabold shadow-xs print-player-badge-d4'
                                           } ${userRole === 'admin' ? 'cursor-grab active:cursor-grabbing' : ''}`}
                                         >
                                           <div className="flex items-center gap-1.5 min-w-0 truncate">
                                             <span
                                               className={`text-[8.5px] print:text-[7.5px] font-black uppercase px-1 py-0.2 rounded-md ${
                                                 isStarter
-                                                  ? 'bg-indigo-500/20 text-indigo-300 print-tag-st'
+                                                  ? 'bg-zinc-800 text-white border border-zinc-700 print-tag-st'
                                                   : isD2
                                                   ? 'bg-black/20 text-black print-tag-d2'
                                                   : isD3
@@ -932,7 +944,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                               }}
                                               className={`ml-1 opacity-70 hover:opacity-100 print:hidden text-xs cursor-pointer ${
                                                 isStarter
-                                                  ? 'text-indigo-300 hover:text-rose-300'
+                                                  ? 'text-zinc-400 hover:text-rose-400'
                                                   : isD2
                                                   ? 'text-slate-900 hover:text-rose-700'
                                                   : isD3
