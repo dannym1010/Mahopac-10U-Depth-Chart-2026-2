@@ -696,30 +696,95 @@ export default function App() {
     };
   }, []);
 
+  // Apply favorite team & start screen associated with the user login
+  const applyUserPreferencesOnLogin = (email: string) => {
+    if (!email) return;
+    const cleanEmail = email.toLowerCase().trim();
+
+    // 1. Check user-specific localStorage preference
+    const savedUserPref = safeJSONParse('footballUserPref_' + cleanEmail, null);
+
+    // 2. Check staff list / initial coaches entry
+    const coachEntry =
+      latestStateRef.current.staffList.find(
+        (c) => c.email.toLowerCase().trim() === cleanEmail
+      ) ||
+      DEFAULT_TEAM_COACHES.find(
+        (c) => c.email.toLowerCase().trim() === cleanEmail
+      );
+
+    const targetTeamId =
+      savedUserPref?.favoriteTeamId ||
+      coachEntry?.favoriteTeamId ||
+      safeJSONParse('footballDefaultTeamId', null);
+
+    const targetScreen =
+      savedUserPref?.startScreen ||
+      coachEntry?.startScreen ||
+      safeJSONParse('footballDefaultScreen', null);
+
+    const targetSubUnit =
+      savedUserPref?.startDepthSubUnit ||
+      coachEntry?.startDepthSubUnit ||
+      safeJSONParse('footballDefaultDepthSubUnit', null);
+
+    if (targetTeamId) {
+      const existingTeam = latestStateRef.current.teams.find(
+        (t) =>
+          t.id === targetTeamId ||
+          t.id.replace(/-/g, '_') === targetTeamId.replace(/-/g, '_')
+      );
+      const finalTeamId = existingTeam ? existingTeam.id : targetTeamId;
+      setActiveTeamId(finalTeamId);
+      setDefaultTeamId(finalTeamId);
+      safeJSONSet('footballActiveTeamId', finalTeamId);
+      safeJSONSet('footballDefaultTeamId', finalTeamId);
+    }
+
+    if (targetScreen) {
+      setActiveUnit(targetScreen);
+      setDefaultScreen(targetScreen);
+      safeJSONSet('footballActiveUnit', targetScreen);
+      safeJSONSet('footballDefaultScreen', targetScreen);
+      if (targetSubUnit) {
+        setDepthSubUnit(targetSubUnit);
+        setDefaultDepthSubUnit(targetSubUnit);
+        safeJSONSet('footballDefaultDepthSubUnit', targetSubUnit);
+      }
+    }
+  };
+
   // Initial Firebase Auth Listener & Cloud Sync Subscription
   useEffect(() => {
     const { auth, db } = getFirebaseServices();
 
     if (auth) {
       // Process any pending redirect auth results from Google Sign-in
-      auth.getRedirectResult().then((result: any) => {
-        if (result?.user) {
-          setCurrentUser(result.user);
-          setIsAuthModalOpen(false);
-        }
-      }).catch((err: any) => {
-        console.warn('Redirect auth result error:', err);
-      });
+      auth
+        .getRedirectResult()
+        .then((result: any) => {
+          if (result?.user) {
+            setCurrentUser(result.user);
+            setIsAuthModalOpen(false);
+            applyUserPreferencesOnLogin(result.user.email);
+          }
+        })
+        .catch((err: any) => {
+          console.warn('Redirect auth result error:', err);
+        });
 
       const unsubscribeAuth = auth.onAuthStateChanged((user: any) => {
         if (user) {
           setCurrentUser(user);
           setIsAuthModalOpen(false);
+          applyUserPreferencesOnLogin(user.email);
 
           // Check if coach is approved or master admin
           const cleanEmail = (user.email || '').toLowerCase().trim();
-          const isDannySuperAdmin = cleanEmail.includes('dannym1010') || cleanEmail === 'dannym1010@gmail.com';
-          
+          const isDannySuperAdmin =
+            cleanEmail.includes('dannym1010') ||
+            cleanEmail === 'dannym1010@gmail.com';
+
           setStaffList((prevStaff) => {
             const isFirstUser = prevStaff.length === 0;
             const existingIdx = prevStaff.findIndex(
@@ -756,10 +821,10 @@ export default function App() {
               };
               const updatedStaff = [...prevStaff, newEntry];
               if (db) {
-                db.collection('teamData').doc('depthChartData').set(
-                  { staffList: updatedStaff },
-                  { merge: true }
-                ).catch((err: any) => console.warn('Staff update error:', err));
+                db.collection('teamData')
+                  .doc('depthChartData')
+                  .set({ staffList: updatedStaff }, { merge: true })
+                  .catch((err: any) => console.warn('Staff update error:', err));
               }
               return updatedStaff;
             }
@@ -769,13 +834,27 @@ export default function App() {
           const coachEntry = staffList.find(
             (c) => c.email.toLowerCase().trim() === cleanEmail
           );
-          const isMaster = isDannySuperAdmin || cleanEmail.includes('admin') || coachEntry?.role?.toLowerCase().includes('head coach');
+          const isMaster =
+            isDannySuperAdmin ||
+            cleanEmail.includes('admin') ||
+            coachEntry?.role?.toLowerCase().includes('head coach');
 
-          if (isDannySuperAdmin || isMaster || coachEntry?.status === 'Active' || staffList.length <= 1) {
+          if (
+            isDannySuperAdmin ||
+            isMaster ||
+            coachEntry?.status === 'Active' ||
+            staffList.length <= 1
+          ) {
             setIsPendingApproval(false);
-            const isHead = isDannySuperAdmin || isMaster || coachEntry?.role?.includes('Admin');
+            const isHead =
+              isDannySuperAdmin ||
+              isMaster ||
+              coachEntry?.role?.includes('Admin');
             setUserRole(isHead ? 'admin' : 'assistant');
-            setSyncStatus({ text: '✅ Live Multi-Coach Connected', color: '#22c55e' });
+            setSyncStatus({
+              text: '✅ Live Multi-Coach Connected',
+              color: '#22c55e',
+            });
           } else {
             setIsPendingApproval(true);
             setSyncStatus({ text: 'Approval Pending', color: '#f59e0b' });
@@ -1118,18 +1197,13 @@ export default function App() {
       return updatedTeams;
     });
 
-    // Seed default practice coaches for this new team
+    // Seed default practice coaches for this new team with specific coaching staff
     let updatedCoaches: Record<string, string[]> = {};
+    const baseCoaches = savedCoaches && savedCoaches.length > 0 ? savedCoaches : DEFAULT_SAVED_COACHES;
     setTeamSavedCoaches((prev) => {
       updatedCoaches = {
         ...prev,
-        [newTeam.id]: [
-          newTeamData.headCoachName || 'Head Coach',
-          'Offensive Coordinator',
-          'Defensive Coordinator',
-          'Line Coach',
-          'Special Teams Coach',
-        ],
+        [newTeam.id]: [...baseCoaches],
       };
       safeJSONSet('footballTeamSavedCoaches', updatedCoaches);
       latestStateRef.current.teamSavedCoaches = updatedCoaches;
@@ -1193,7 +1267,7 @@ export default function App() {
                 ageGroup: '10U',
                 season: '2026 Season',
                 color: 'amber',
-                headCoachName: 'Head Coach',
+                headCoachName: 'Coach Danny',
                 notes: 'Primary program team',
               },
             ];
@@ -1276,6 +1350,27 @@ export default function App() {
     safeJSONSet('footballDefaultTeamId', teamId);
     setActiveTeamId(teamId);
     safeJSONSet('footballActiveTeamId', teamId);
+
+    // Save to current user's preferences
+    const cleanEmail = (currentUser?.email || 'dannym1010@gmail.com').toLowerCase().trim();
+    if (cleanEmail) {
+      const existingPref = safeJSONParse('footballUserPref_' + cleanEmail, {});
+      const updatedPref = { ...existingPref, favoriteTeamId: teamId };
+      safeJSONSet('footballUserPref_' + cleanEmail, updatedPref);
+
+      // Also update in staffList so it syncs across devices/cloud
+      setStaffList((prev) => {
+        const idx = prev.findIndex((c) => c.email.toLowerCase().trim() === cleanEmail);
+        if (idx !== -1) {
+          const copy = [...prev];
+          copy[idx] = { ...copy[idx], favoriteTeamId: teamId };
+          safeJSONSet('footballTeamCoaches', copy);
+          latestStateRef.current.staffList = copy;
+          return copy;
+        }
+        return prev;
+      });
+    }
   };
 
   const handleSetDefaultScreen = (
@@ -1291,12 +1386,97 @@ export default function App() {
     }
     setActiveUnit(screen);
     safeJSONSet('footballActiveUnit', screen);
+
+    // Save to current user's preferences
+    const cleanEmail = (currentUser?.email || 'dannym1010@gmail.com').toLowerCase().trim();
+    if (cleanEmail) {
+      const existingPref = safeJSONParse('footballUserPref_' + cleanEmail, {});
+      const updatedPref = {
+        ...existingPref,
+        startScreen: screen,
+        startDepthSubUnit: subUnit,
+      };
+      safeJSONSet('footballUserPref_' + cleanEmail, updatedPref);
+
+      // Also update in staffList so it syncs across devices/cloud
+      setStaffList((prev) => {
+        const idx = prev.findIndex((c) => c.email.toLowerCase().trim() === cleanEmail);
+        if (idx !== -1) {
+          const copy = [...prev];
+          copy[idx] = {
+            ...copy[idx],
+            startScreen: screen,
+            startDepthSubUnit: subUnit,
+          };
+          safeJSONSet('footballTeamCoaches', copy);
+          latestStateRef.current.staffList = copy;
+          return copy;
+        }
+        return prev;
+      });
+    }
+  };
+
+  const handleUpdateStaffPreferences = (
+    idx: number,
+    favoriteTeamId?: string,
+    startScreen?: UnitType
+  ) => {
+    let updated: StaffCoach[] = [];
+    setStaffList((prev) => {
+      if (!prev[idx]) return prev;
+      updated = [...prev];
+      updated[idx] = {
+        ...updated[idx],
+        ...(favoriteTeamId ? { favoriteTeamId } : {}),
+        ...(startScreen ? { startScreen } : {}),
+      };
+      safeJSONSet('footballTeamCoaches', updated);
+      latestStateRef.current.staffList = updated;
+
+      const coachEmail = updated[idx].email.toLowerCase().trim();
+      const currentPref = safeJSONParse('footballUserPref_' + coachEmail, {});
+      safeJSONSet('footballUserPref_' + coachEmail, {
+        ...currentPref,
+        ...(favoriteTeamId ? { favoriteTeamId } : {}),
+        ...(startScreen ? { startScreen } : {}),
+      });
+
+      // If updating the currently logged in coach, apply active changes
+      const currentEmail = (currentUser?.email || '').toLowerCase().trim();
+      if (coachEmail === currentEmail) {
+        if (favoriteTeamId) {
+          setDefaultTeamId(favoriteTeamId);
+          setActiveTeamId(favoriteTeamId);
+          safeJSONSet('footballDefaultTeamId', favoriteTeamId);
+          safeJSONSet('footballActiveTeamId', favoriteTeamId);
+        }
+        if (startScreen) {
+          setDefaultScreen(startScreen);
+          setActiveUnit(startScreen);
+          safeJSONSet('footballDefaultScreen', startScreen);
+          safeJSONSet('footballActiveUnit', startScreen);
+        }
+      }
+
+      return updated;
+    });
+
+    const { db } = getFirebaseServices();
+    if (db) {
+      db.collection('teamData')
+        .doc('depthChartData')
+        .set({ staffList: updated, updatedAt: Date.now() }, { merge: true })
+        .catch((err: any) => console.warn('Firestore staff pref update sync error:', err));
+    }
   };
 
   const handleAddStaffCoach = (
     email: string,
-    role: string = 'Assistant Coach',
-    assignedTeamIds: string[] = [activeTeamId]
+    role: string = 'Coach Danny',
+    assignedTeamIds: string[] = [activeTeamId],
+    favoriteTeamId: string = activeTeamId || 'team_10u',
+    startScreen: UnitType = 'schedule'
   ) => {
     const cleanEmail = email.toLowerCase().trim();
     if (staffList.some((c) => c.email.toLowerCase().trim() === cleanEmail)) {
@@ -1305,9 +1485,11 @@ export default function App() {
     }
     const newEntry: StaffCoach = {
       email: cleanEmail,
-      role: role || 'Assistant Coach',
+      role: role || 'Coach Danny',
       status: 'Active',
       assignedTeamIds: assignedTeamIds && assignedTeamIds.length > 0 ? assignedTeamIds : [activeTeamId],
+      favoriteTeamId,
+      startScreen,
     };
     let updatedStaff: StaffCoach[] = [];
     setStaffList((prev) => {
@@ -3685,9 +3867,15 @@ export default function App() {
     setScheduleEvents((prev) => {
       let nextEvents: ScheduleEvent[];
       if (replaceExisting) {
-        // Replace only active team's schedule
+        // Completely replace schedule for active team (accounting for team_10u / team-10u aliases)
+        const isCurrentTeam = (tid?: string) =>
+          !tid ||
+          tid === activeTeamId ||
+          (tid === 'team_10u' && (activeTeamId === 'team_10u' || activeTeamId === 'team-10u')) ||
+          (tid === 'team-10u' && (activeTeamId === 'team_10u' || activeTeamId === 'team-10u'));
+
         nextEvents = [
-          ...prev.filter((ev) => (ev.teamId || 'team-10u') !== activeTeamId),
+          ...prev.filter((ev) => !isCurrentTeam(ev.teamId)),
           ...created,
         ];
       } else {
@@ -3696,6 +3884,17 @@ export default function App() {
       safeJSONSet('footballScheduleEvents', nextEvents);
       return nextEvents;
     });
+
+    // Auto-sync practice plans and games for imported events
+    created.forEach((evt) => {
+      if (evt.type === 'practice' || !evt.type) {
+        handleSyncPracticeToPlan(evt);
+      } else if (evt.type === 'game') {
+        handleSyncGameToWeeklyData(evt);
+      }
+    });
+
+    debouncedSave('all');
   };
 
   const handlePracticeWizardGenerate = (result: PracticeWizardGeneratedResult) => {
@@ -4436,6 +4635,8 @@ export default function App() {
                   }
                 }}
                 onUpdateStaffAssignedTeams={handleUpdateStaffAssignedTeams}
+                onUpdateStaffPreferences={handleUpdateStaffPreferences}
+                currentUserEmail={currentUser?.email || 'dannym1010@gmail.com'}
                 onAddNewSavedCoach={handleAddNewSavedCoach}
                 onDeleteSavedCoach={handleDeleteSavedCoach}
                 onCopyCoachesFromTeam={handleCopyCoachesFromTeam}
@@ -4565,19 +4766,45 @@ export default function App() {
         onGoogleSignInRedirect={async () => {
           const { auth } = getFirebaseServices();
           if (!auth) {
-            setCurrentUser({ email: 'coach@google.com' });
+            setCurrentUser({ email: 'dannym1010@gmail.com', displayName: 'Coach Danny' });
             setIsAuthModalOpen(false);
+            applyUserPreferencesOnLogin('dannym1010@gmail.com');
             return;
           }
           const provider = new window.firebase.auth.GoogleAuthProvider();
           provider.setCustomParameters({ prompt: 'select_account' });
           await auth.signInWithRedirect(provider);
         }}
+        staffList={staffList}
+        teams={teams}
+        onSelectQuickCoach={(coachEmail) => {
+          const cleanEmail = coachEmail.toLowerCase().trim();
+          const coach =
+            staffList.find((c) => c.email.toLowerCase().trim() === cleanEmail) ||
+            DEFAULT_TEAM_COACHES.find((c) => c.email.toLowerCase().trim() === cleanEmail);
+          setCurrentUser({
+            email: cleanEmail,
+            displayName: coach?.role || 'Coach',
+          });
+          setIsAuthModalOpen(false);
+          setIsPendingApproval(false);
+          const isHead =
+            cleanEmail.includes('dannym1010') ||
+            coach?.role?.toLowerCase().includes('head coach') ||
+            coach?.role?.toLowerCase().includes('admin') ||
+            coach?.role?.includes('Danny');
+          setUserRole(isHead ? 'admin' : 'assistant');
+          applyUserPreferencesOnLogin(cleanEmail);
+        }}
         onBypassLogin={() => {
-          setCurrentUser({ email: 'Head Coach (Offline)' });
+          setCurrentUser({
+            email: 'dannym1010@gmail.com',
+            displayName: 'Coach Danny (Offline)',
+          });
           setIsAuthModalOpen(false);
           setIsPendingApproval(false);
           setUserRole('admin');
+          applyUserPreferencesOnLogin('dannym1010@gmail.com');
         }}
         onSignOut={() => {
           const { auth } = getFirebaseServices();
@@ -4701,6 +4928,7 @@ export default function App() {
         defaultDepthSubUnit={defaultDepthSubUnit}
         onSetDefaultScreen={handleSetDefaultScreen}
         userRole={userRole}
+        currentUserEmail={currentUser?.email || 'dannym1010@gmail.com'}
       />
     </div>
   );

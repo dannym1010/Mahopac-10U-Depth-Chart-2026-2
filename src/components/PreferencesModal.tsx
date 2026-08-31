@@ -36,6 +36,7 @@ interface PreferencesModalProps {
     subUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage'
   ) => void;
   userRole: UserRole;
+  currentUserEmail?: string;
 }
 
 interface ScreenOption {
@@ -160,6 +161,7 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
   defaultDepthSubUnit = 'offense',
   onSetDefaultScreen,
   userRole,
+  currentUserEmail,
 }) => {
   const [activeTab, setActiveTab] = useState<'screen' | 'team'>('screen');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -221,13 +223,19 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
                 </span>
               </h3>
               <p className="text-xs text-slate-400 font-medium">
-                Choose your default team and landing screen when launching the application
+                {currentUserEmail ? (
+                  <span>
+                    Saving startup preferences for <strong className="text-indigo-300 font-bold">{currentUserEmail}</strong>
+                  </span>
+                ) : (
+                  <span>Choose your default team and landing screen when launching the application</span>
+                )}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>

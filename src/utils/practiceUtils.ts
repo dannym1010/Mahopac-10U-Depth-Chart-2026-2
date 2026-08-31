@@ -219,11 +219,39 @@ export function getPracticeSequenceMap(
   return result;
 }
 
+const GENERIC_COACH_MAP: Record<string, string> = {
+  'head coach': 'Coach Danny',
+  'offensive coordinator': 'Coach Gangemi',
+  'defensive coordinator': 'Coach DeMatteo',
+  'line coach': 'Coach Mike',
+  'special teams coach': 'Coach Ryan',
+  'skills coach': 'Coach Ryan',
+  'coach': 'Coach Danny',
+  'coach / assistant': 'Coach Gangemi',
+  'all coaches': 'Coach Danny & Staff',
+  'staff': 'Coach Danny & Staff',
+  'coaching staff': 'Coach Danny & Staff',
+};
+
+function normalizeCoachName(coach?: string): string {
+  if (!coach) return 'Coach Danny';
+  const clean = coach.trim();
+  const lower = clean.toLowerCase();
+  if (GENERIC_COACH_MAP[lower]) return GENERIC_COACH_MAP[lower];
+  if (lower === 'head coach' || lower === 'hc') return 'Coach Danny';
+  if (lower.includes('line coach') || lower.includes('ol/dl')) return 'Coach Mike';
+  if (lower.includes('defensive coord') || lower.includes('dc')) return 'Coach DeMatteo';
+  if (lower.includes('offensive coord') || lower.includes('oc')) return 'Coach Gangemi';
+  if (lower.includes('special teams') || lower.includes('st')) return 'Coach Ryan';
+  return clean;
+}
+
 /**
  * Sanitizes and repairs practice plan entries so that:
  * 1. Dates match their true weekFolder (e.g. 2026-08-31 -> Week 1)
  * 2. Days of week match the actual calendar date
  * 3. Day folders match format "Day M/DD"
+ * 4. Generic coach names are replaced with actual coaching staff
  */
 export function sanitizePracticePlans(
   plans: PracticePlan[],
@@ -236,19 +264,21 @@ export function sanitizePracticePlans(
     const correctWeek = calculateWeekFolderForDate(dateStr, scheduleEvents);
     const correctDayFolder = getFormattedDayFolder(dateStr);
 
-    const periodsList = Array.isArray(p.plan) && p.plan.length > 0
+    const rawPeriods = Array.isArray(p.plan) && p.plan.length > 0
       ? p.plan
       : Array.isArray(p.periods) && p.periods.length > 0
       ? p.periods
       : [];
 
-    let needsUpdate = false;
-    if (p.day !== correctDay && dateStr) needsUpdate = true;
-    if (p.weekFolder !== correctWeek && dateStr) needsUpdate = true;
-    if (p.dayFolder !== correctDayFolder && dateStr) needsUpdate = true;
-    if (!p.plan || !p.periods || !p.teamId) needsUpdate = true;
-
-    if (!needsUpdate) return p;
+    const sanitizedPeriods = rawPeriods.map((period) => ({
+      ...period,
+      stations: Array.isArray(period.stations)
+        ? period.stations.map((st) => ({
+            ...st,
+            coach: normalizeCoachName(st.coach),
+          }))
+        : [],
+    }));
 
     return {
       ...p,
@@ -256,8 +286,8 @@ export function sanitizePracticePlans(
       day: correctDay,
       dayFolder: correctDayFolder,
       weekFolder: correctWeek,
-      plan: periodsList,
-      periods: periodsList,
+      plan: sanitizedPeriods,
+      periods: sanitizedPeriods,
     };
   });
 }

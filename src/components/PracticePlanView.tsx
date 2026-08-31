@@ -221,6 +221,24 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
     practiceTree[yr][wk].push(p);
   });
 
+  const sortWeekKeys = (keys: string[]) => {
+    return [...keys].sort((a, b) => {
+      const getWeight = (w: string) => {
+        const lower = w.toLowerCase();
+        if (lower.includes('pre-1') || lower.includes('preseason wk 1') || lower.includes('preseason week 1')) return 1;
+        if (lower.includes('pre-2') || lower.includes('preseason wk 2') || lower.includes('preseason week 2')) return 2;
+        if (lower.includes('pre-3') || lower.includes('preseason wk 3')) return 3;
+        if (lower.includes('pre-4') || lower.includes('preseason wk 4')) return 4;
+        const numMatch = w.match(/\d+/);
+        if (numMatch) return 10 + parseInt(numMatch[0], 10);
+        if (lower.includes('playoff')) return 90;
+        if (lower.includes('champ')) return 95;
+        return 50;
+      };
+      return getWeight(a) - getWeight(b);
+    });
+  };
+
   const currentIndex = sortedPractices.findIndex((p) => p.id === currentPlan?.id);
   const prevPractice = currentIndex > 0 ? sortedPractices[currentIndex - 1] : null;
   const nextPractice =
@@ -977,10 +995,10 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                     </div>
                   )}
 
-                  {Object.keys(practiceTree).map((yr) => {
+                  {Object.keys(practiceTree).sort().reverse().map((yr) => {
                     const yrKey = `yr_${yr}`;
                     const isYrCollapsed = collapsedTreeFolders[yrKey];
-                    const weekKeys = Object.keys(practiceTree[yr]);
+                    const weekKeys = sortWeekKeys(Object.keys(practiceTree[yr]));
                     const totalSeasonPlans = weekKeys.reduce(
                       (acc, wk) => acc + practiceTree[yr][wk].length,
                       0

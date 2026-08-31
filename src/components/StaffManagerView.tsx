@@ -15,8 +15,9 @@ import {
   Copy,
   ChevronDown,
   Star,
+  Sparkles,
 } from 'lucide-react';
-import { StaffCoach, UserRole, Team } from '../types';
+import { StaffCoach, UserRole, Team, UnitType } from '../types';
 
 interface StaffManagerViewProps {
   staffList: StaffCoach[];
@@ -26,16 +27,18 @@ interface StaffManagerViewProps {
   teams: Team[];
   activeTeamId: string;
   defaultTeamId?: string;
+  currentUserEmail?: string;
   onSelectTeam: (teamId: string) => void;
   onSetDefaultTeam?: (teamId: string) => void;
   onAddTeam: (team: Omit<Team, 'id'>) => void;
   onUpdateTeam: (teamId: string, updated: Partial<Team>) => void;
   onDeleteTeam: (teamId: string) => void;
-  onAddStaffCoach: (email: string, role?: string, assignedTeamIds?: string[]) => void;
+  onAddStaffCoach: (email: string, role?: string, assignedTeamIds?: string[], favoriteTeamId?: string, startScreen?: UnitType) => void;
   onUpdateStaffRole: (idx: number, role: string) => void;
   onToggleStaffApproval: (idx: number) => void;
   onRemoveStaffCoach: (idx: number) => void;
   onUpdateStaffAssignedTeams: (idx: number, teamIds: string[]) => void;
+  onUpdateStaffPreferences?: (idx: number, favoriteTeamId?: string, startScreen?: UnitType) => void;
   onAddNewSavedCoach: (name: string, teamId?: string) => void;
   onDeleteSavedCoach: (name: string, teamId?: string) => void;
   onCopyCoachesFromTeam?: (sourceTeamId: string, targetTeamId: string) => void;
@@ -49,6 +52,7 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
   teams = [],
   activeTeamId,
   defaultTeamId,
+  currentUserEmail,
   onSelectTeam,
   onSetDefaultTeam,
   onAddTeam,
@@ -59,6 +63,7 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
   onToggleStaffApproval,
   onRemoveStaffCoach,
   onUpdateStaffAssignedTeams,
+  onUpdateStaffPreferences,
   onAddNewSavedCoach,
   onDeleteSavedCoach,
   onCopyCoachesFromTeam,
@@ -106,7 +111,7 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
       ageGroup: newTeamAge.trim() || 'Youth',
       season: newTeamSeason.trim() || '2026',
       color: newTeamColor,
-      headCoachName: 'Head Coach',
+      headCoachName: savedCoaches[0] || 'Coach Danny',
       calendarUrl: newTeamCalendarUrl.trim() || undefined,
     });
     setNewTeamName('');
@@ -367,6 +372,7 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
                   <th className="py-3 px-3 text-left">Email / User</th>
                   <th className="py-3 px-3 text-left">Role Assigned</th>
                   <th className="py-3 px-3 text-left">Allowed Teams</th>
+                  <th className="py-3 px-3 text-left">Favorite Team &amp; Start Screen</th>
                   <th className="py-3 px-3 text-center">Status</th>
                   {userRole === 'admin' && (
                     <th className="py-3 px-3 text-right">Actions</th>
@@ -436,8 +442,8 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
                               onClick={() => setAllTeamsForCoach(idx)}
                               className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
                                 isAssignedAll
-                                  ? 'bg-indigo-600 text-white shadow-xs'
-                                  : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-700'
+                                    ? 'bg-indigo-600 text-white shadow-xs'
+                                    : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-700'
                               }`}
                               title="Grant access to all teams"
                             >
@@ -477,6 +483,52 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
                                   .join(', ') || 'No Teams Assigned'}
                           </span>
                         )}
+                      </td>
+
+                      {/* Favorite Team & Start Screen */}
+                      <td className="py-3.5 px-3">
+                        <div className="flex flex-col gap-1 min-w-[170px]">
+                          <div className="flex items-center gap-1 text-[10.5px]">
+                            <Star className="w-3 h-3 text-amber-400 shrink-0" />
+                            <select
+                              value={coach.favoriteTeamId || defaultTeamId || (teams[0]?.id || '')}
+                              onChange={(e) => {
+                                onUpdateStaffPreferences?.(idx, e.target.value, coach.startScreen);
+                              }}
+                              className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-[11px] font-semibold text-amber-300 focus:outline-none w-full"
+                              title="Favorite team linked to this coach login"
+                            >
+                              {teams.map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {t.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="flex items-center gap-1 text-[10.5px]">
+                            <Sparkles className="w-3 h-3 text-indigo-400 shrink-0" />
+                            <select
+                              value={coach.startScreen || 'schedule'}
+                              onChange={(e) => {
+                                onUpdateStaffPreferences?.(idx, coach.favoriteTeamId, e.target.value as UnitType);
+                              }}
+                              className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-[11px] font-semibold text-indigo-300 focus:outline-none w-full"
+                              title="Start screen linked to this coach login"
+                            >
+                              <option value="schedule">Season Schedule</option>
+                              <option value="depth_chart">Depth Chart (Offense)</option>
+                              <option value="practice">Practice Plans</option>
+                              <option value="playbook">Playbooks &amp; Wristband</option>
+                              <option value="gameday">Game Day Command</option>
+                              <option value="scouting">Scouting &amp; Film</option>
+                              <option value="stats">Game Stats</option>
+                              <option value="callsheet">Live Play Callsheet</option>
+                              <option value="compliance">Mandatory Play Tracker</option>
+                              <option value="staff">Staff &amp; Teams Portal</option>
+                            </select>
+                          </div>
+                        </div>
                       </td>
 
                       <td className="py-3.5 px-3 text-center">
@@ -1014,7 +1066,7 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
                   required
                   value={newPracticeCoachName}
                   onChange={(e) => setNewPracticeCoachName(e.target.value)}
-                  placeholder="e.g. Coach Davis, Line Coach, Offensive Coordinator"
+                  placeholder="e.g. Coach Danny, Coach Gangemi, Coach DeMatteo, Coach Mike, Coach Ryan"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-emerald-500"
                   autoFocus
                 />

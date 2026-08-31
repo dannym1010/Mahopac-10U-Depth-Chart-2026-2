@@ -109,7 +109,7 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
 
   const [syncResult, setSyncResult] = useState<TeamSnapSyncResult | null>(null);
   const [selectedEventIds, setSelectedEventIds] = useState<Record<string, boolean>>({});
-  const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
+  const [importMode, setImportMode] = useState<'append' | 'replace'>('replace');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 

@@ -14,7 +14,7 @@ import {
   Check,
   AlertTriangle,
 } from 'lucide-react';
-import { FormationBoard, PracticePeriod } from '../types';
+import { FormationBoard, PracticePeriod, StaffCoach, Team } from '../types';
 
 /* =========================================================================
    1. AUTH OVERLAY & APPROVAL PENDING
@@ -28,6 +28,9 @@ interface AuthModalProps {
   onGoogleSignInRedirect?: () => Promise<void>;
   onBypassLogin: () => void;
   onSignOut: () => void;
+  staffList?: StaffCoach[];
+  teams?: Team[];
+  onSelectQuickCoach?: (coachEmail: string) => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -39,6 +42,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onGoogleSignInRedirect,
   onBypassLogin,
   onSignOut,
+  staffList = [],
+  teams = [],
+  onSelectQuickCoach,
 }) => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
@@ -286,11 +292,66 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
         </form>
 
+        {/* Quick Coach Profiles (One-click Login with Favorite Team & Startup Screen) */}
+        {staffList && staffList.length > 0 && (
+          <div className="pt-2 border-t border-slate-700/80 space-y-2">
+            <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400">
+              <span>Fast Coach Sign-In &amp; Preferences</span>
+              <span className="text-amber-400">Auto-loads Favorite Team</span>
+            </div>
+            <div className="grid grid-cols-1 gap-1.5 max-h-36 overflow-y-auto pr-1">
+              {staffList.map((coach, cIdx) => {
+                const favTeam = teams.find((t) => t.id === coach.favoriteTeamId);
+                return (
+                  <button
+                    key={cIdx}
+                    type="button"
+                    onClick={() => {
+                      if (onSelectQuickCoach) {
+                        onSelectQuickCoach(coach.email);
+                      } else {
+                        setEmail(coach.email);
+                        setPassword('password123');
+                      }
+                    }}
+                    className="w-full px-2.5 py-1.5 bg-slate-900/90 hover:bg-slate-750 border border-slate-700/80 hover:border-indigo-500 rounded-xl text-left flex items-center justify-between transition-all group cursor-pointer"
+                  >
+                    <div className="min-w-0 flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded-md bg-indigo-500/20 text-indigo-300 font-black text-[10px] flex items-center justify-center shrink-0">
+                        {coach.role.charAt(0) || 'C'}
+                      </div>
+                      <div className="truncate">
+                        <div className="font-bold text-[11px] text-slate-100 group-hover:text-indigo-300 transition-colors truncate">
+                          {coach.role}
+                        </div>
+                        <div className="text-[9.5px] text-slate-400 font-mono truncate">
+                          {coach.email}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {favTeam && (
+                        <span className="px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-300 text-[9px] font-bold border border-amber-400/25">
+                          🏈 {favTeam.ageGroup || favTeam.name}
+                        </span>
+                      )}
+                      <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-300 text-[9px] font-mono capitalize">
+                        {coach.startScreen || 'Schedule'}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="pt-2 border-t border-slate-700 text-center">
           <button
             type="button"
             onClick={onBypassLogin}
-            className="text-xs font-bold text-slate-400 hover:text-indigo-300 transition-colors"
+            className="text-xs font-bold text-slate-400 hover:text-indigo-300 transition-colors cursor-pointer"
           >
             Continue in Offline Mode (No Login)
           </button>

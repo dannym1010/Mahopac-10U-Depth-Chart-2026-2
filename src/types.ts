@@ -358,6 +358,9 @@ export interface StaffCoach {
   role: string;
   status: 'Active' | 'Pending';
   assignedTeamIds?: string[]; // IDs of teams this coach has access to. If undefined or includes 'all', coach has access to all teams.
+  favoriteTeamId?: string; // Startup / favorite team linked to this user login
+  startScreen?: UnitType; // Startup screen linked to this user login
+  startDepthSubUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage';
 }
 
 export interface PlaybookGuideTree {
