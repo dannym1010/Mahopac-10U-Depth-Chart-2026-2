@@ -20,6 +20,10 @@ import {
   ChevronRight,
   Sparkles,
   HelpCircle,
+  Eraser,
+  SquarePlus,
+  ArrowLeft,
+  ArrowRight,
 } from 'lucide-react';
 import {
   FormationBoard,
@@ -84,6 +88,8 @@ interface FormationsViewProps {
   onSetRowSlots?: (formId: string, rIdx: number, count: number) => void;
   onAddSlotToRow?: (formId: string, rIdx: number) => void;
   onRemoveSlotFromRow?: (formId: string, rIdx: number, pIdx?: number) => void;
+  onInsertSlotAt?: (formId: string, rIdx: number, pIdx: number) => void;
+  onClearPositionToEmpty?: (formId: string, rIdx: number, pIdx: number) => void;
   onAssignPositionToSlot?: (formId: string, rIdx: number, pIdx: number, posName: string) => void;
   onAddPositionDirect?: (formId: string, rIdx: number, posName: string) => void;
   onRenamePositionDirect?: (formId: string, rIdx: number, pIdx: number, newName: string) => void;
@@ -187,6 +193,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
   onSetRowSlots,
   onAddSlotToRow,
   onRemoveSlotFromRow,
+  onInsertSlotAt,
+  onClearPositionToEmpty,
   onAssignPositionToSlot,
   onAddPositionDirect,
   onRenamePositionDirect,
@@ -636,6 +644,17 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                               </button>
                             </div>
 
+                            {/* Add Empty Slot Button */}
+                            <button
+                              onClick={() => handleQuickAddSlot(form.id, rIdx, positionsList.length)}
+                              disabled={positionsList.length >= 12}
+                              title="Add an empty spacing slot to this row"
+                              className="px-2.5 py-1 text-[10.5px] font-bold bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 rounded-xl flex items-center gap-1 transition-all cursor-pointer shadow-xs disabled:opacity-40"
+                            >
+                              <SquarePlus className="w-3 h-3 text-indigo-400" />
+                              <span>+ Empty Slot</span>
+                            </button>
+
                             {/* Add Position Button */}
                             <button
                               onClick={() => {
@@ -767,9 +786,48 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                     {/* Position Header Actions */}
                                     {userRole === 'admin' && (
                                       <div
-                                        className="flex items-center gap-1 print:hidden"
+                                        className="flex items-center gap-0.5 print:hidden"
                                         onClick={(e) => e.stopPropagation()}
                                       >
+                                        <button
+                                          onClick={() => {
+                                            if (onInsertSlotAt) {
+                                              onInsertSlotAt(form.id, rIdx, pIdx);
+                                            } else {
+                                              handleQuickAddSlot(form.id, rIdx, positionsList.length);
+                                            }
+                                          }}
+                                          title="Insert empty slot to the left (←)"
+                                          className="p-1 text-slate-400 hover:text-indigo-300 rounded hover:bg-slate-800 cursor-pointer"
+                                        >
+                                          <ArrowLeft className="w-2.5 h-2.5" />
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            if (onInsertSlotAt) {
+                                              onInsertSlotAt(form.id, rIdx, pIdx + 1);
+                                            } else {
+                                              handleQuickAddSlot(form.id, rIdx, positionsList.length);
+                                            }
+                                          }}
+                                          title="Insert empty slot to the right (→)"
+                                          className="p-1 text-slate-400 hover:text-indigo-300 rounded hover:bg-slate-800 cursor-pointer"
+                                        >
+                                          <ArrowRight className="w-2.5 h-2.5" />
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            if (onClearPositionToEmpty) {
+                                              onClearPositionToEmpty(form.id, rIdx, pIdx);
+                                            } else {
+                                              onDeletePosition(form.id, rIdx, pIdx);
+                                            }
+                                          }}
+                                          title="Clear position name (make this slot empty for spacing)"
+                                          className="p-1 text-amber-400 hover:text-amber-300 rounded hover:bg-amber-950/40 cursor-pointer"
+                                        >
+                                          <Eraser className="w-2.5 h-2.5" />
+                                        </button>
                                         <button
                                           onClick={() => {
                                             setSelectedTargetRowIdx(
@@ -783,7 +841,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                             });
                                           }}
                                           title="Move position to another row"
-                                          className="p-0.5 text-slate-500 hover:text-indigo-400 rounded hover:bg-slate-800 cursor-pointer"
+                                          className="p-1 text-slate-400 hover:text-indigo-400 rounded hover:bg-slate-800 cursor-pointer"
                                         >
                                           <Move className="w-2.5 h-2.5" />
                                         </button>
@@ -799,14 +857,20 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                             });
                                           }}
                                           title="Copy position to another formation"
-                                          className="p-0.5 text-slate-500 hover:text-indigo-400 rounded hover:bg-slate-800 cursor-pointer"
+                                          className="p-1 text-slate-400 hover:text-indigo-400 rounded hover:bg-slate-800 cursor-pointer"
                                         >
                                           <Copy className="w-2.5 h-2.5" />
                                         </button>
                                         <button
-                                          onClick={() => onDeletePosition(form.id, rIdx, pIdx)}
-                                          title="Delete position"
-                                          className="p-0.5 text-rose-400 hover:text-rose-300 rounded hover:bg-rose-950/40 cursor-pointer"
+                                          onClick={() => {
+                                            if (onRemoveSlotFromRow) {
+                                              onRemoveSlotFromRow(form.id, rIdx, pIdx);
+                                            } else {
+                                              onDeletePosition(form.id, rIdx, pIdx);
+                                            }
+                                          }}
+                                          title="Delete slot completely from row"
+                                          className="p-1 text-rose-400 hover:text-rose-300 rounded hover:bg-rose-950/40 cursor-pointer"
                                         >
                                           <X className="w-3 h-3" />
                                         </button>
@@ -905,26 +969,109 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                       });
                                     }
                                   }}
-                                  className={`flex-1 flex flex-col items-center justify-center p-3 text-center transition-all ${
+                                  className={`flex-1 flex flex-col items-center justify-between p-2.5 text-center transition-all ${
                                     userRole === 'admin'
                                       ? 'cursor-pointer hover:bg-indigo-950/30 group'
                                       : ''
                                   }`}
                                 >
-                                  <div className="w-7 h-7 rounded-xl bg-slate-800/80 border border-slate-700/80 group-hover:border-indigo-500/60 group-hover:bg-indigo-600/20 text-slate-400 group-hover:text-indigo-300 flex items-center justify-center transition-all shadow-inner">
-                                    <Plus className="w-3.5 h-3.5" />
+                                  {/* Top label / slot indicator */}
+                                  <div className="w-full flex items-center justify-between text-[8.5px] font-bold text-slate-400">
+                                    <span>Empty Slot #{pIdx + 1}</span>
+                                    <span className="opacity-0 group-hover:opacity-100 text-indigo-400 font-bold transition-opacity">
+                                      + Pos
+                                    </span>
                                   </div>
-                                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 group-hover:text-indigo-300 mt-1.5 transition-colors">
-                                    + Add Pos
-                                  </span>
-                                  <span className="text-[8.5px] text-slate-400 font-medium">
-                                    Slot #{pIdx + 1}
-                                  </span>
+
+                                  {/* Center Add Position Icon */}
+                                  <div className="my-1.5 flex flex-col items-center">
+                                    <div className="w-7 h-7 rounded-xl bg-slate-800/80 border border-slate-700/80 group-hover:border-indigo-500/60 group-hover:bg-indigo-600/20 text-slate-400 group-hover:text-indigo-300 flex items-center justify-center transition-all shadow-inner">
+                                      <Plus className="w-3.5 h-3.5" />
+                                    </div>
+                                    <span className="text-[9.5px] font-black uppercase tracking-wider text-slate-400 group-hover:text-indigo-300 mt-1 transition-colors">
+                                      + Position
+                                    </span>
+                                  </div>
+
+                                  {/* Bottom Slot Action Bar */}
+                                  {userRole === 'admin' && (
+                                    <div
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="w-full flex items-center justify-center gap-1.5 pt-1 border-t border-slate-800/80 opacity-60 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (onInsertSlotAt) {
+                                            onInsertSlotAt(form.id, rIdx, pIdx);
+                                          } else {
+                                            handleQuickAddSlot(form.id, rIdx, positionsList.length);
+                                          }
+                                        }}
+                                        title="Insert empty slot left (←)"
+                                        className="p-1 rounded-md bg-slate-800 hover:bg-indigo-600 text-slate-400 hover:text-white transition-all text-[9px] flex items-center gap-0.5"
+                                      >
+                                        <ArrowLeft className="w-2.5 h-2.5" />
+                                        <span className="text-[8px] font-bold">Slot</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (onInsertSlotAt) {
+                                            onInsertSlotAt(form.id, rIdx, pIdx + 1);
+                                          } else {
+                                            handleQuickAddSlot(form.id, rIdx, positionsList.length);
+                                          }
+                                        }}
+                                        title="Insert empty slot right (→)"
+                                        className="p-1 rounded-md bg-slate-800 hover:bg-indigo-600 text-slate-400 hover:text-white transition-all text-[9px] flex items-center gap-0.5"
+                                      >
+                                        <span className="text-[8px] font-bold">Slot</span>
+                                        <ArrowRight className="w-2.5 h-2.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (onRemoveSlotFromRow) {
+                                            onRemoveSlotFromRow(form.id, rIdx, pIdx);
+                                          } else {
+                                            handleQuickRemoveSlot(form.id, rIdx, positionsList.length);
+                                          }
+                                        }}
+                                        title="Delete this empty slot"
+                                        className="p-1 rounded-md bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white transition-all text-[9px]"
+                                      >
+                                        <X className="w-2.5 h-2.5" />
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>
                           );
                         })}
+
+                        {/* Direct "+ Add Slot" card at end of row for 1-click slot insertion */}
+                        {userRole === 'admin' && positionsList.length < 12 && (
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleQuickAddSlot(form.id, rIdx, positionsList.length);
+                            }}
+                            title="Add an empty slot to the end of this row"
+                            className="min-h-[115px] print:hidden rounded-2xl border-2 border-dashed border-slate-700/60 hover:border-indigo-500/80 hover:bg-indigo-950/20 flex flex-col items-center justify-center p-3 text-center transition-all cursor-pointer group"
+                          >
+                            <div className="w-8 h-8 rounded-xl bg-slate-800/80 border border-slate-700/80 group-hover:border-indigo-500/80 group-hover:bg-indigo-600/30 text-slate-400 group-hover:text-indigo-300 flex items-center justify-center transition-all shadow-inner">
+                              <SquarePlus className="w-4 h-4" />
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 group-hover:text-indigo-300 mt-1.5 transition-colors">
+                              + Empty Slot
+                            </span>
+                            <span className="text-[8px] text-slate-400 font-medium">
+                              Slot #{positionsList.length + 1}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -1087,23 +1234,54 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
             </div>
 
             {/* Footer Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-              {!positionPickerTarget.isEdit && (
+            <div className="flex items-center justify-between pt-3 border-t border-slate-800 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
-                    handleQuickRemoveSlot(
-                      positionPickerTarget.formId,
-                      positionPickerTarget.rIdx,
-                      positionPickerTarget.pIdx + 1
-                    );
+                    if (onClearPositionToEmpty) {
+                      onClearPositionToEmpty(
+                        positionPickerTarget.formId,
+                        positionPickerTarget.rIdx,
+                        positionPickerTarget.pIdx
+                      );
+                    } else if (onRemoveSlotFromRow) {
+                      onRemoveSlotFromRow(
+                        positionPickerTarget.formId,
+                        positionPickerTarget.rIdx,
+                        positionPickerTarget.pIdx
+                      );
+                    }
                     setPositionPickerTarget(null);
                   }}
-                  className="text-xs font-bold text-rose-400 hover:text-rose-300 cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-amber-500/30"
                 >
-                  Delete This Slot
+                  <Eraser className="w-3.5 h-3.5" />
+                  <span>Make Slot Empty</span>
                 </button>
-              )}
-              {positionPickerTarget.isEdit && <div />}
+
+                <button
+                  onClick={() => {
+                    if (onRemoveSlotFromRow) {
+                      onRemoveSlotFromRow(
+                        positionPickerTarget.formId,
+                        positionPickerTarget.rIdx,
+                        positionPickerTarget.pIdx
+                      );
+                    } else {
+                      handleQuickRemoveSlot(
+                        positionPickerTarget.formId,
+                        positionPickerTarget.rIdx,
+                        positionPickerTarget.pIdx + 1
+                      );
+                    }
+                    setPositionPickerTarget(null);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 text-xs font-bold flex items-center gap-1 cursor-pointer border border-rose-500/30"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Delete Slot</span>
+                </button>
+              </div>
 
               <div className="flex items-center gap-2">
                 <button

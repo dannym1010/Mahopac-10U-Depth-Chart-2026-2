@@ -1572,6 +1572,40 @@ export default function App() {
     updateCurrentWeekFormations(forms, true);
   };
 
+  const handleInsertSlotAt = (formId: string, rIdx: number, pIdx: number) => {
+    const forms = currentFormations.map((f) => {
+      if (f.id === formId) {
+        const rows = [...f.rows];
+        if (!rows[rIdx]) return f;
+        const positions = [...rows[rIdx].positions];
+        if (positions.length >= 12) return f;
+        const insertIdx = Math.max(0, Math.min(positions.length, pIdx));
+        positions.splice(insertIdx, 0, null);
+        rows[rIdx] = { ...rows[rIdx], slotCount: positions.length, positions };
+        return { ...f, rows };
+      }
+      return f;
+    });
+    updateCurrentWeekFormations(forms, true);
+  };
+
+  const handleClearPositionToEmpty = (formId: string, rIdx: number, pIdx: number) => {
+    const forms = currentFormations.map((f) => {
+      if (f.id === formId) {
+        const rows = [...f.rows];
+        if (!rows[rIdx]) return f;
+        const positions = [...rows[rIdx].positions];
+        if (pIdx >= 0 && pIdx < positions.length) {
+          positions[pIdx] = null;
+        }
+        rows[rIdx] = { ...rows[rIdx], positions };
+        return { ...f, rows };
+      }
+      return f;
+    });
+    updateCurrentWeekFormations(forms, true);
+  };
+
   const handleAssignPositionToSlot = (
     formId: string,
     rIdx: number,
@@ -3502,6 +3536,8 @@ export default function App() {
                 onSetRowSlots={handleSetRowSlots}
                 onAddSlotToRow={handleAddSlotToRow}
                 onRemoveSlotFromRow={handleRemoveSlotFromRow}
+                onInsertSlotAt={handleInsertSlotAt}
+                onClearPositionToEmpty={handleClearPositionToEmpty}
                 onAssignPositionToSlot={handleAssignPositionToSlot}
                 onAddPositionDirect={handleAddPositionDirect}
                 onRenamePositionDirect={handleRenamePositionDirect}
