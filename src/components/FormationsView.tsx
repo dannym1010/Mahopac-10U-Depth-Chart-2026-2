@@ -476,7 +476,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
               {/* Formation Card Header */}
               <div className="formation-card-header flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-slate-700/80 mb-4 print:pb-2 print:mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-black text-xs print:w-7 print:h-7 print:bg-black print:text-white print:border-black print:text-xs print:font-black print:rounded-md">
+                  <div className="formation-unit-badge w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-black text-xs print:w-7 print:h-7 print:bg-black print:text-amber-400 print:border-black print:text-xs print:font-black print:rounded-md">
                     {unit === 'offense'
                       ? 'OFF'
                       : unit === 'defense'

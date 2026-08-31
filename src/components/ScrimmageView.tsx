@@ -259,7 +259,7 @@ export const ScrimmageView: React.FC<ScrimmageViewProps> = ({
                               })}
 
                               {players.length === 0 && (
-                                <div className="flex-1 flex items-center justify-center text-[9.5px] print:text-[8px] text-slate-500 print:text-slate-300 font-medium italic">
+                                <div className="flex-1 flex items-center justify-center text-[9.5px] text-slate-500 font-medium italic print:hidden">
                                   Drop Sub
                                 </div>
                               )}

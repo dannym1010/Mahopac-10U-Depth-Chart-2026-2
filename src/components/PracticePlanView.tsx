@@ -29,6 +29,7 @@ import {
   AlertTriangle,
   Users,
   CheckCircle2,
+  Filter,
 } from 'lucide-react';
 import {
   PracticePlan,
@@ -138,6 +139,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   const [activeCoachPopup, setActiveCoachPopup] = useState<string | null>(null);
   const [coachSearchTerm, setCoachSearchTerm] = useState('');
   const [collapsedTreeFolders, setCollapsedTreeFolders] = useState<Record<string, boolean>>({});
+  const [stationGroupFilters, setStationGroupFilters] = useState<Record<string, string>>({});
 
   const currentPlan =
     practices.find((p) => p.id === currentPracticeId) || practices[0];
@@ -183,6 +185,106 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isPlanLibraryOpen, activeCoachPopup]);
+
+  // Helper to extract category folder info and its position/subgroup hierarchy
+  const getCategoryFolderInfo = (
+    catName: string,
+    drillTree: DrillFolder[]
+  ): {
+    folderName: string;
+    directDrills: DrillItem[];
+    subfolders: { name: string; drills: DrillItem[] }[];
+    allCategoryDrills: DrillItem[];
+  } => {
+    const clean = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const target = clean(catName);
+
+    if (!target) {
+      return {
+        folderName: '',
+        directDrills: [],
+        subfolders: [],
+        allCategoryDrills: [],
+      };
+    }
+
+    let matchedFolder: DrillFolder | null = null;
+
+    const findFolder = (list: DrillFolder[]): DrillFolder | null => {
+      for (const f of list) {
+        const fClean = clean(f.name);
+        if (fClean === target || fClean.includes(target) || target.includes(fClean)) {
+          return f;
+        }
+        if (f.subfolders && f.subfolders.length > 0) {
+          const sub = findFolder(f.subfolders);
+          if (sub) return sub;
+        }
+      }
+      return null;
+    };
+
+    matchedFolder = findFolder(drillTree);
+
+    if (!matchedFolder) {
+      const flatDrills: DrillItem[] = [];
+      const collectMatching = (list: DrillFolder[]) => {
+        list.forEach((f) => {
+          (f.drills || []).forEach((d) => {
+            if (clean(d.name).includes(target) || clean(f.name).includes(target)) {
+              flatDrills.push(d);
+            }
+          });
+          if (f.subfolders) collectMatching(f.subfolders);
+        });
+      };
+      collectMatching(drillTree);
+
+      return {
+        folderName: catName,
+        directDrills: flatDrills,
+        subfolders: [],
+        allCategoryDrills: flatDrills,
+      };
+    }
+
+    const directDrills = matchedFolder.drills || [];
+    const subfolders: { name: string; drills: DrillItem[] }[] = [];
+    const allCategoryDrills: DrillItem[] = [...directDrills];
+
+    if (matchedFolder.subfolders && matchedFolder.subfolders.length > 0) {
+      if (directDrills.length > 0) {
+        subfolders.push({
+          name: `Base / General`,
+          drills: directDrills,
+        });
+      }
+
+      const collectSubgroups = (sf: DrillFolder, prefix = '') => {
+        const fullName = prefix ? `${prefix} ➔ ${sf.name}` : sf.name;
+        const sDrills = sf.drills || [];
+        if (sDrills.length > 0) {
+          subfolders.push({
+            name: fullName,
+            drills: sDrills,
+          });
+          allCategoryDrills.push(...sDrills);
+        }
+        if (sf.subfolders) {
+          sf.subfolders.forEach((child) => collectSubgroups(child, fullName));
+        }
+      };
+
+      matchedFolder.subfolders.forEach((sf) => collectSubgroups(sf));
+    }
+
+    return {
+      folderName: matchedFolder.name,
+      directDrills,
+      subfolders,
+      allCategoryDrills,
+    };
+  };
 
   // Helper to flat list drills from matching category or all
   const getDrillsForCategory = (catName: string): DrillItem[] => {
@@ -1510,7 +1612,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                       ? rowDuration / numStations
                       : rowDuration;
 
-                  const categoryDrills = getDrillsForCategory(row.category);
+                  const catInfo = getCategoryFolderInfo(row.category, cascadingDrills);
                   const isNearBottom = pIdx >= allPeriods.length - 2;
 
                   const element = stationsList.map((station, sIdx) => {
@@ -1518,6 +1620,11 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                     const isFirstStationInPeriod = sIdx === 0;
                     const coachPopupId = `coach_popup_${pIdx}_${sIdx}`;
                     const isCoachPopupOpen = activeCoachPopup === coachPopupId;
+                    const stationFilterKey = `${pIdx}_${sIdx}`;
+                    const currentGroupFilter = stationGroupFilters[stationFilterKey] || '';
+                    const selectedSubfolderObj = catInfo.subfolders.find(
+                      (sf) => sf.name === currentGroupFilter
+                    );
 
                     const assignedCoachTokens = (safeStation.coach || '')
                       .split(',')
@@ -1639,16 +1746,51 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                             </div>
                           )}
 
-                          {/* Drill Quick Select Dropdown */}
-                          <div className="print:hidden">
+                          {/* Position / Group & Drill Selectors */}
+                          <div className="space-y-1.5 print:hidden">
+                            {/* Position / Subgroup Filter Pill (Shown if category has multiple subfolders/positions) */}
+                            {catInfo.subfolders.length > 0 && (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <div className="flex items-center gap-1 text-[10.5px] font-black text-slate-400 uppercase tracking-wider shrink-0">
+                                  <Filter className="w-3 h-3 text-indigo-400" />
+                                  <span>Position / Group:</span>
+                                </div>
+                                <select
+                                  value={currentGroupFilter}
+                                  disabled={userRole !== 'admin'}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setStationGroupFilters((prev) => ({
+                                      ...prev,
+                                      [stationFilterKey]: val,
+                                    }));
+                                  }}
+                                  className="bg-slate-900 border border-slate-700 hover:border-slate-600 rounded-lg px-2 py-0.5 text-[11px] font-bold text-indigo-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all cursor-pointer truncate max-w-full"
+                                >
+                                  <option value="">
+                                    📁 All {row.category} ({catInfo.allCategoryDrills.length} drills)
+                                  </option>
+                                  {catInfo.subfolders.map((sf) => (
+                                    <option key={sf.name} value={sf.name}>
+                                      🏈 {sf.name} ({sf.drills.length} drills)
+                                    </option>
+                                  ))}
+                                  <option value="__ALL_CATEGORIES__">
+                                    🌐 Browse All Library Categories (120+ drills)
+                                  </option>
+                                </select>
+                              </div>
+                            )}
+
+                            {/* Truncated Drill Select Dropdown */}
                             <select
                               defaultValue=""
                               disabled={userRole !== 'admin'}
                               onChange={(e) => {
                                 const drillName = e.target.value;
                                 if (!drillName) return;
-                                // Check in categoryDrills first, then allCategorizedDrills
-                                let found = categoryDrills.find((d) => d.name === drillName);
+                                // Search in catInfo first, then allCategorizedDrills
+                                let found = catInfo.allCategoryDrills.find((d) => d.name === drillName);
                                 if (!found) {
                                   for (const grp of allCategorizedDrills) {
                                     found = grp.drills.find((d) => d.name === drillName);
@@ -1662,25 +1804,49 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                               }}
                               className="w-full bg-slate-900/90 border border-slate-700 hover:border-slate-600 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-indigo-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all cursor-pointer"
                             >
-                              <option value="">-- Choose Drill from Library (120+ drills) --</option>
-                              {categoryDrills.length > 0 && (
-                                <optgroup label={`⭐ Matching Category Drills (${categoryDrills.length})`}>
-                                  {categoryDrills.map((d, dIdx) => (
-                                    <option key={`cat_${dIdx}`} value={d.name}>
-                                      {d.name}
-                                    </option>
-                                  ))}
-                                </optgroup>
+                              <option value="">
+                                {selectedSubfolderObj
+                                  ? `-- Choose ${selectedSubfolderObj.name} Drill (${selectedSubfolderObj.drills.length}) --`
+                                  : currentGroupFilter === '__ALL_CATEGORIES__'
+                                  ? `-- Choose Drill from Entire Library (120+ drills) --`
+                                  : catInfo.allCategoryDrills.length > 0
+                                  ? `-- Choose ${row.category} Drill (${catInfo.allCategoryDrills.length} drills) --`
+                                  : `-- Choose Drill from Library --`}
+                              </option>
+
+                              {selectedSubfolderObj ? (
+                                selectedSubfolderObj.drills.map((d, dIdx) => (
+                                  <option key={`sub_${dIdx}`} value={d.name}>
+                                    {d.name}
+                                  </option>
+                                ))
+                              ) : currentGroupFilter === '__ALL_CATEGORIES__' ? (
+                                allCategorizedDrills.map((grp, gIdx) => (
+                                  <optgroup key={`grp_${gIdx}`} label={`📁 ${grp.category} (${grp.drills.length})`}>
+                                    {grp.drills.map((d, dIdx) => (
+                                      <option key={`all_${gIdx}_${dIdx}`} value={d.name}>
+                                        {d.name}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                ))
+                              ) : catInfo.subfolders.length > 0 ? (
+                                catInfo.subfolders.map((sf, sfIdx) => (
+                                  <optgroup key={`sf_${sfIdx}`} label={`📁 ${sf.name} (${sf.drills.length})`}>
+                                    {sf.drills.map((d, dIdx) => (
+                                      <option key={`sf_drill_${sfIdx}_${dIdx}`} value={d.name}>
+                                        {d.name}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                ))
+                              ) : (
+                                catInfo.directDrills.map((d, dIdx) => (
+                                  <option key={`dir_${dIdx}`} value={d.name}>
+                                    {d.name}
+                                  </option>
+                                ))
                               )}
-                              {allCategorizedDrills.map((grp, gIdx) => (
-                                <optgroup key={`grp_${gIdx}`} label={`📁 ${grp.category} (${grp.drills.length})`}>
-                                  {grp.drills.map((d, dIdx) => (
-                                    <option key={`all_${gIdx}_${dIdx}`} value={d.name}>
-                                      {d.name}
-                                    </option>
-                                  ))}
-                                </optgroup>
-                              ))}
                             </select>
                           </div>
 

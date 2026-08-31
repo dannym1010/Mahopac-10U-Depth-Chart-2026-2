@@ -85,7 +85,7 @@ body {
 
   /* Printable formation cards: crisp white, clean borders, fits 2 per letter page cleanly */
   .formation-container {
-    border: 1.5px solid #334155 !important;
+    border: 1.5px solid #0f172a !important;
     border-radius: 6px !important;
     box-shadow: none !important;
     padding: 6px 8px !important;
@@ -95,36 +95,52 @@ body {
     break-inside: avoid !important;
     color: #0f172a !important;
     overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .formation-card-header {
-    border-bottom: 2px solid #0f172a !important;
-    padding-bottom: 5px !important;
-    margin-bottom: 8px !important;
+    border-bottom: 2.5px solid #000000 !important;
+    padding-bottom: 4px !important;
+    margin-bottom: 6px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .formation-card-header h2 {
-    font-size: 16pt !important;
+    font-size: 15pt !important;
     font-weight: 900 !important;
     letter-spacing: 0.03em !important;
     color: #000000 !important;
     text-transform: uppercase !important;
   }
 
+  .formation-unit-badge {
+    background-color: #000000 !important;
+    color: #facc15 !important; /* Team Gold */
+    border: 1.5px solid #000000 !important;
+    font-weight: 900 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   .formation-row-header {
     background-color: #f8fafc !important;
-    border: 1px solid #e2e8f0 !important;
+    border: 1.5px solid #0f172a !important;
+    border-left: 5px solid #0f172a !important;
     color: #0f172a !important;
     font-size: 8.5px !important;
     font-weight: 900 !important;
     padding: 2px 5px !important;
     margin-bottom: 3px !important;
     border-radius: 4px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .formation-grid-row {
     background-color: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
+    border: 1px solid #cbd5e1 !important;
     padding: 3px !important;
     gap: 4px !important;
     overflow: visible !important;
@@ -133,10 +149,12 @@ body {
   }
 
   .position-slot-card {
-    border: 1px solid #cbd5e1 !important;
+    border: 1.5px solid #0f172a !important;
     background-color: #ffffff !important;
     border-radius: 4px !important;
     min-height: 48px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .position-slot-empty {
@@ -146,73 +164,92 @@ body {
   }
 
   .position-card-title {
-    background-color: #e0e7ff !important;
-    color: #1e1b4b !important;
+    background-color: #000000 !important; /* Team Black */
+    color: #facc15 !important; /* Team Gold */
     font-size: 9.5px !important;
     font-weight: 900 !important;
     padding: 1.5px 3px !important;
-    border-bottom: 1px solid #cbd5e1 !important;
+    border-bottom: 1.5px solid #000000 !important;
     text-align: center !important;
     border-top-left-radius: 3px !important;
     border-top-right-radius: 3px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  /* Player Badges - White with highlighted tags */
+  .position-card-title span {
+    color: #facc15 !important;
+    font-weight: 900 !important;
+  }
+
+  /* Player Badges - Team Colors (Black, Gold, Blue) */
   .print-player-badge-starter {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    border: 1.5px solid #0f172a !important;
+    background-color: #fefce8 !important; /* Light Gold */
+    color: #000000 !important;
+    border: 1.5px solid #000000 !important; /* Team Black border */
     font-size: 8.5px !important;
     font-weight: 900 !important;
     padding: 1.5px 3px !important;
     border-radius: 3px !important;
     margin-bottom: 1px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .print-tag-st {
-    background-color: #fef08a !important;
-    color: #713f12 !important;
-    border: 1px solid #eab308 !important;
+    background-color: #facc15 !important; /* Rich Team Gold */
+    color: #000000 !important;
+    border: 1px solid #ca8a04 !important;
     font-size: 7.5px !important;
     font-weight: 900 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .print-player-badge-d2 {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    border: 1px solid #94a3b8 !important;
+    background-color: #eff6ff !important; /* Light Team Blue */
+    color: #1e3a8a !important; /* Deep Blue text */
+    border: 1.5px solid #2563eb !important; /* Team Blue border */
     font-size: 8px !important;
     font-weight: 800 !important;
     padding: 1px 3px !important;
     border-radius: 3px !important;
     margin-bottom: 1px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .print-tag-d2 {
-    background-color: #e0f2fe !important;
-    color: #0369a1 !important;
-    border: 1px solid #7dd3fc !important;
+    background-color: #2563eb !important; /* Solid Team Blue */
+    color: #ffffff !important;
+    border: 1px solid #1d4ed8 !important;
     font-size: 7.5px !important;
     font-weight: 900 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .print-player-badge-d3 {
-    background-color: #eff6ff !important;
-    color: #1e3a8a !important;
-    border: 1px solid #3b82f6 !important;
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+    border: 1.5px solid #0f172a !important; /* Team Navy/Black border */
     font-size: 8px !important;
     font-weight: 800 !important;
     padding: 1px 3px !important;
     border-radius: 3px !important;
     margin-bottom: 1px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .print-tag-d3 {
-    background-color: #1d4ed8 !important;
-    color: #ffffff !important;
-    border: 1px solid #1e40af !important;
+    background-color: #0f172a !important; /* Team Navy/Black */
+    color: #facc15 !important; /* Gold text */
+    border: 1px solid #000000 !important;
     font-size: 7px !important;
     font-weight: 800 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .print-player-badge-d4 {
@@ -224,6 +261,8 @@ body {
     padding: 1px 3px !important;
     border-radius: 3px !important;
     margin-bottom: 1px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .print-tag-d4 {
@@ -232,64 +271,78 @@ body {
     border: 1px solid #cbd5e1 !important;
     font-size: 7px !important;
     font-weight: 800 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  /* Scrimmage Badges */
+  /* Scrimmage Badges - Team Colors (Gold & Blue) */
   .print-scrimmage-gold {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
+    background-color: #fefce8 !important;
+    color: #000000 !important;
     border: 1.5px solid #ca8a04 !important;
     font-size: 8.5px !important;
     font-weight: 900 !important;
     padding: 1.5px 3px !important;
     border-radius: 3px !important;
     margin-bottom: 1px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .print-tag-gold {
-    background-color: #fef08a !important;
-    color: #713f12 !important;
-    border: 1px solid #eab308 !important;
+    background-color: #facc15 !important; /* Team Gold */
+    color: #000000 !important;
+    border: 1px solid #ca8a04 !important;
     font-size: 7.5px !important;
     font-weight: 900 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .print-scrimmage-blue {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    border: 1.5px solid #1d4ed8 !important;
+    background-color: #eff6ff !important;
+    color: #1e3a8a !important;
+    border: 1.5px solid #2563eb !important;
     font-size: 8.5px !important;
     font-weight: 800 !important;
     padding: 1.5px 3px !important;
     border-radius: 3px !important;
     margin-bottom: 1px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .print-tag-blue {
-    background-color: #1d4ed8 !important;
+    background-color: #2563eb !important; /* Team Blue */
     color: #ffffff !important;
-    border: 1px solid #1e40af !important;
+    border: 1px solid #1d4ed8 !important;
     font-size: 7.5px !important;
     font-weight: 900 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .print-scrimmage-white {
     background-color: #ffffff !important;
     color: #0f172a !important;
-    border: 1px solid #94a3b8 !important;
+    border: 1.5px solid #000000 !important;
     font-size: 8px !important;
     font-weight: 800 !important;
     padding: 1px 3px !important;
     border-radius: 3px !important;
     margin-bottom: 1px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .print-tag-white {
-    background-color: #f1f5f9 !important;
-    color: #0f172a !important;
-    border: 1px solid #cbd5e1 !important;
+    background-color: #000000 !important;
+    color: #facc15 !important;
+    border: 1px solid #000000 !important;
     font-size: 7px !important;
     font-weight: 800 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   /* Wristband 4.5" x 2.25" Print Card Formatting */
