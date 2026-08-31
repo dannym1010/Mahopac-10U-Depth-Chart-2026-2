@@ -53,24 +53,19 @@ body {
     background: #ffffff !important;
     color: #000000 !important;
     font-size: var(--print-font-size, 12px) !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
     width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
   }
 
-  /* Force all background containers to transparent or white for clean printing */
+  /* Force background color preservation across all browsers */
   * {
-    background-image: none !important;
-  }
-
-  div, main, section, table, tbody, thead, tr, td, th {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    border-color: #cbd5e1 !important;
-    box-shadow: none !important;
-    backdrop-filter: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
 
   /* Hide navigation, toolbars, buttons, modals in print */
@@ -85,12 +80,13 @@ body {
 
   /* Printable formation cards: crisp white, clean borders, fits 2 per letter page cleanly */
   .formation-container {
-    border: 1.5px solid #0f172a !important;
+    border: 2px solid #000000 !important;
     border-radius: 6px !important;
     box-shadow: none !important;
     padding: 6px 8px !important;
-    margin-bottom: 10px !important;
+    margin-bottom: 12px !important;
     background: #ffffff !important;
+    background-color: #ffffff !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     color: #0f172a !important;
@@ -103,6 +99,7 @@ body {
     border-bottom: 2.5px solid #000000 !important;
     padding-bottom: 4px !important;
     margin-bottom: 6px !important;
+    background-color: #ffffff !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -120,20 +117,24 @@ body {
     color: #facc15 !important; /* Team Gold */
     border: 1.5px solid #000000 !important;
     font-weight: 900 !important;
+    font-size: 10px !important;
+    padding: 2px 6px !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
   .formation-row-header {
-    background-color: #f8fafc !important;
-    border: 1.5px solid #0f172a !important;
-    border-left: 5px solid #0f172a !important;
+    background-color: #f1f5f9 !important;
+    border: 1.5px solid #94a3b8 !important;
+    border-left: 6px solid #0f172a !important;
     color: #0f172a !important;
-    font-size: 8.5px !important;
+    font-size: 10.5px !important;
     font-weight: 900 !important;
-    padding: 2px 5px !important;
-    margin-bottom: 3px !important;
+    padding: 2.5px 6px !important;
+    margin-bottom: 4px !important;
     border-radius: 4px !important;
+    letter-spacing: 0.02em !important;
+    text-transform: uppercase !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -141,38 +142,41 @@ body {
   .formation-grid-row {
     background-color: #ffffff !important;
     border: 1px solid #cbd5e1 !important;
-    padding: 3px !important;
-    gap: 4px !important;
+    padding: 4px !important;
+    gap: 5px !important;
     overflow: visible !important;
     display: grid !important;
     border-radius: 4px !important;
   }
 
   .position-slot-card {
-    border: 1.5px solid #0f172a !important;
+    border: 2px solid #000000 !important;
     background-color: #ffffff !important;
     border-radius: 4px !important;
-    min-height: 48px !important;
+    min-height: 52px !important;
+    overflow: hidden !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
   .position-slot-empty {
-    border: 1px dashed #cbd5e1 !important;
+    border: 1.5px dashed #cbd5e1 !important;
     background-color: transparent !important;
-    min-height: 48px !important;
+    min-height: 52px !important;
   }
 
   .position-card-title {
     background-color: #000000 !important; /* Team Black */
     color: #facc15 !important; /* Team Gold */
-    font-size: 9.5px !important;
+    font-size: 11px !important;
     font-weight: 900 !important;
-    padding: 1.5px 3px !important;
-    border-bottom: 1.5px solid #000000 !important;
+    padding: 2.5px 4px !important;
+    border-bottom: 2px solid #000000 !important;
     text-align: center !important;
-    border-top-left-radius: 3px !important;
-    border-top-right-radius: 3px !important;
+    border-top-left-radius: 2px !important;
+    border-top-right-radius: 2px !important;
+    letter-spacing: 0.03em !important;
+    text-transform: uppercase !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -187,11 +191,22 @@ body {
     background-color: #000000 !important; /* 1st String / Starter: Solid Black (No Gold) */
     color: #ffffff !important; /* Crisp White Text */
     border: 1.5px solid #000000 !important;
-    font-size: 8.5px !important;
+    font-size: 10px !important;
     font-weight: 900 !important;
-    padding: 1.5px 3px !important;
+    padding: 2px 4px !important;
     border-radius: 3px !important;
-    margin-bottom: 1px !important;
+    margin-bottom: 2px !important;
+    min-height: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-player-badge-starter span,
+  .print-player-badge-starter div {
+    color: #ffffff !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -200,21 +215,34 @@ body {
     background-color: #27272a !important; /* Dark Tag Pill */
     color: #ffffff !important; /* Crisp White ST Tag Text - NO GOLD */
     border: 1px solid #52525b !important;
-    font-size: 7.5px !important;
+    font-size: 8.5px !important;
     font-weight: 900 !important;
+    padding: 1px 3.5px !important;
+    border-radius: 3px !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
   .print-player-badge-d2 {
-    background-color: #facc15 !important; /* 2nd String: Rich Gold */
+    background-color: #facc15 !important; /* 2nd String: Rich Team Gold */
     color: #000000 !important; /* Solid Black Text */
     border: 1.5px solid #ca8a04 !important; /* Deep Gold Border */
-    font-size: 8px !important;
+    font-size: 10px !important;
     font-weight: 900 !important;
-    padding: 1px 3px !important;
+    padding: 2px 4px !important;
     border-radius: 3px !important;
-    margin-bottom: 1px !important;
+    margin-bottom: 2px !important;
+    min-height: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-player-badge-d2 span,
+  .print-player-badge-d2 div {
+    color: #000000 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -223,21 +251,34 @@ body {
     background-color: #000000 !important; /* Black Pill */
     color: #facc15 !important; /* Gold D2 Text */
     border: 1px solid #000000 !important;
-    font-size: 7.5px !important;
+    font-size: 8.5px !important;
     font-weight: 900 !important;
+    padding: 1px 3.5px !important;
+    border-radius: 3px !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
   .print-player-badge-d3 {
-    background-color: #1d4ed8 !important; /* 3rd String: Royal Blue */
-    color: #ffffff !important; /* White Text */
+    background-color: #1d4ed8 !important; /* 3rd String: Royal Team Blue */
+    color: #ffffff !important; /* Pure White Text */
     border: 1.5px solid #1e40af !important; /* Deep Blue Border */
-    font-size: 8px !important;
+    font-size: 10px !important;
     font-weight: 900 !important;
-    padding: 1px 3px !important;
+    padding: 2px 4px !important;
     border-radius: 3px !important;
-    margin-bottom: 1px !important;
+    margin-bottom: 2px !important;
+    min-height: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-player-badge-d3 span,
+  .print-player-badge-d3 div {
+    color: #ffffff !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -246,31 +287,46 @@ body {
     background-color: #ffffff !important; /* White Tag */
     color: #1d4ed8 !important; /* Blue D3 Text */
     border: 1px solid #93c5fd !important;
-    font-size: 7.5px !important;
+    font-size: 8.5px !important;
     font-weight: 900 !important;
+    padding: 1px 3.5px !important;
+    border-radius: 3px !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
   .print-player-badge-d4 {
     background-color: #ffffff !important; /* 4th+ String / Additional: Pure White */
-    color: #000000 !important; /* Black Text */
-    border: 1.5px solid #94a3b8 !important; /* Slate Border */
-    font-size: 7.5px !important;
+    color: #000000 !important; /* Solid Black Text */
+    border: 1.5px solid #64748b !important; /* Slate Border */
+    font-size: 9.5px !important;
     font-weight: 800 !important;
-    padding: 1px 3px !important;
+    padding: 2px 4px !important;
     border-radius: 3px !important;
-    margin-bottom: 1px !important;
+    margin-bottom: 2px !important;
+    min-height: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-player-badge-d4 span,
+  .print-player-badge-d4 div {
+    color: #000000 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
   .print-tag-d4 {
-    background-color: #f1f5f9 !important; /* Light Slate Tag */
+    background-color: #e2e8f0 !important; /* Light Slate Tag */
     color: #0f172a !important; /* Dark Tag Text */
     border: 1px solid #cbd5e1 !important;
-    font-size: 7px !important;
+    font-size: 8px !important;
     font-weight: 800 !important;
+    padding: 1px 3px !important;
+    border-radius: 3px !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -280,11 +336,11 @@ body {
     background-color: #fefce8 !important;
     color: #000000 !important;
     border: 1.5px solid #ca8a04 !important;
-    font-size: 8.5px !important;
+    font-size: 9.5px !important;
     font-weight: 900 !important;
-    padding: 1.5px 3px !important;
+    padding: 2px 4px !important;
     border-radius: 3px !important;
-    margin-bottom: 1px !important;
+    margin-bottom: 2px !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -293,8 +349,10 @@ body {
     background-color: #facc15 !important; /* Team Gold */
     color: #000000 !important;
     border: 1px solid #ca8a04 !important;
-    font-size: 7.5px !important;
+    font-size: 8.5px !important;
     font-weight: 900 !important;
+    padding: 1px 3.5px !important;
+    border-radius: 3px !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -303,21 +361,23 @@ body {
     background-color: #eff6ff !important;
     color: #1e3a8a !important;
     border: 1.5px solid #2563eb !important;
-    font-size: 8.5px !important;
-    font-weight: 800 !important;
-    padding: 1.5px 3px !important;
+    font-size: 9.5px !important;
+    font-weight: 900 !important;
+    padding: 2px 4px !important;
     border-radius: 3px !important;
-    margin-bottom: 1px !important;
+    margin-bottom: 2px !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
   .print-tag-blue {
-    background-color: #2563eb !important; /* Team Blue */
+    background-color: #2563eb !important;
     color: #ffffff !important;
     border: 1px solid #1d4ed8 !important;
-    font-size: 7.5px !important;
+    font-size: 8.5px !important;
     font-weight: 900 !important;
+    padding: 1px 3.5px !important;
+    border-radius: 3px !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }

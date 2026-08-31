@@ -60,6 +60,7 @@ import {
   parseCSV,
   escapeCSV,
   fetchServerState,
+  checkServerHealth,
   saveServerState,
   subscribeServerEvents,
   normalizePracticeTemplates,
@@ -284,6 +285,8 @@ export default function App() {
   const isImportingRef = useRef<boolean>(false);
   const isRemoteSyncRef = useRef<boolean>(false);
   const lastSavedPayloadRef = useRef<string>('');
+  const localServerVersionRef = useRef<number>(0);
+  const localServerUpdatedAtRef = useRef<number>(0);
 
   const latestStateRef = useRef({
     weeklyData,
@@ -494,8 +497,20 @@ export default function App() {
   };
 
   // Centralized helper to apply remote state updates cleanly without race conditions
-  const applyRemoteState = (data: any, source: string = 'remote') => {
+  const applyRemoteState = (
+    data: any,
+    source: string = 'remote',
+    version?: number,
+    updatedAt?: number
+  ) => {
     if (!data || typeof data !== 'object') return;
+
+    if (typeof version === 'number' && version > localServerVersionRef.current) {
+      localServerVersionRef.current = version;
+    }
+    if (typeof updatedAt === 'number' && updatedAt > localServerUpdatedAtRef.current) {
+      localServerUpdatedAtRef.current = updatedAt;
+    }
 
     isRemoteSyncRef.current = true;
 
@@ -600,7 +615,14 @@ export default function App() {
       safeJSONSet('footballAttendanceLogs', data.attendanceLogs);
     }
 
+    lastSavedPayloadRef.current = safeJSONStringify(latestStateRef.current);
     initialCloudLoadDoneRef.current = true;
+
+    // Reset isRemoteSyncRef quickly after the React state cycle
+    setTimeout(() => {
+      isRemoteSyncRef.current = false;
+    }, 250);
+
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     setSyncStatus({ text: `✅ Live Synced (${timeStr})`, color: '#22c55e' });
   };
@@ -649,7 +671,7 @@ export default function App() {
     };
 
     const payloadJson = safeJSONStringify(payload);
-    if (payloadJson === lastSavedPayloadRef.current && scope !== 'force') {
+    if (payloadJson === lastSavedPayloadRef.current && scope !== 'force' && scope !== 'initial_seed') {
       return;
     }
     lastSavedPayloadRef.current = payloadJson;
@@ -660,7 +682,13 @@ export default function App() {
 
     // 2. Persistent Server Sync
     try {
-      await saveServerState(payload, authorEmail);
+      const sResult = await saveServerState(payload, authorEmail);
+      if (sResult && typeof sResult.version === 'number') {
+        localServerVersionRef.current = sResult.version;
+      }
+      if (sResult && typeof sResult.updatedAt === 'number') {
+        localServerUpdatedAtRef.current = sResult.updatedAt;
+      }
     } catch (err) {
       console.warn('Server save warning:', err);
     }
@@ -691,13 +719,13 @@ export default function App() {
 
   const debouncedSave = (scope: string = 'all') => {
     if (isRemoteSyncRef.current) {
-      isRemoteSyncRef.current = false;
       return;
     }
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
+      saveTimeoutRef.current = null;
       saveStateToStorage(scope);
-    }, 1000);
+    }, 600);
   };
 
   const handleForceSave = async () => {
@@ -711,7 +739,7 @@ export default function App() {
     try {
       const serverRes = await fetchServerState();
       if (serverRes && serverRes.hasData && serverRes.state) {
-        applyRemoteState(serverRes.state, 'manual_server_refresh');
+        applyRemoteState(serverRes.state, 'manual_server_refresh', serverRes.version, serverRes.updatedAt);
         return;
       }
       const { db } = getFirebaseServices();
@@ -748,7 +776,7 @@ export default function App() {
         if (!isMounted) return;
 
         if (serverRes && serverRes.hasData && serverRes.state) {
-          applyRemoteState(serverRes.state, 'server_init');
+          applyRemoteState(serverRes.state, 'server_init', serverRes.version, serverRes.updatedAt);
         } else {
           // Empty server on first launch: seed server with current local data
           initialCloudLoadDoneRef.current = true;
@@ -764,20 +792,64 @@ export default function App() {
         if (!isMounted) return;
         if (eventData.type === 'sync' && eventData.state) {
           if (eventData.senderClientId === CLIENT_ID) return;
-          if (saveTimeoutRef.current && initialCloudLoadDoneRef.current) return;
-          applyRemoteState(eventData.state, 'sse_live_update');
+          applyRemoteState(eventData.state, 'sse_live_update', eventData.version, eventData.updatedAt);
         }
       });
 
-      return unsubscribeSSE;
+      // 3. Resilient polling fallback every 4 seconds
+      const pollInterval = setInterval(async () => {
+        if (!isMounted) return;
+        try {
+          const health = await checkServerHealth();
+          if (health && health.hasCachedState) {
+            if (
+              (typeof health.stateVersion === 'number' && health.stateVersion > localServerVersionRef.current) ||
+              (typeof health.stateUpdatedAt === 'number' && health.stateUpdatedAt > localServerUpdatedAtRef.current)
+            ) {
+              const serverRes = await fetchServerState();
+              if (serverRes && serverRes.hasData && serverRes.state) {
+                applyRemoteState(serverRes.state, 'poll_sync', serverRes.version, serverRes.updatedAt);
+              }
+            }
+          }
+        } catch {
+          // silent catch during polling
+        }
+      }, 4000);
+
+      // 4. Check server on window focus / tab visibility change
+      const handleWindowFocus = async () => {
+        if (!isMounted) return;
+        try {
+          const serverRes = await fetchServerState();
+          if (serverRes && serverRes.hasData && serverRes.state) {
+            if (
+              (typeof serverRes.version === 'number' && serverRes.version > localServerVersionRef.current) ||
+              (typeof serverRes.updatedAt === 'number' && serverRes.updatedAt > localServerUpdatedAtRef.current)
+            ) {
+              applyRemoteState(serverRes.state, 'focus_sync', serverRes.version, serverRes.updatedAt);
+            }
+          }
+        } catch {}
+      };
+
+      window.addEventListener('focus', handleWindowFocus);
+      document.addEventListener('visibilitychange', handleWindowFocus);
+
+      return () => {
+        if (typeof unsubscribeSSE === 'function') unsubscribeSSE();
+        clearInterval(pollInterval);
+        window.removeEventListener('focus', handleWindowFocus);
+        document.removeEventListener('visibilitychange', handleWindowFocus);
+      };
     }
 
     const unsubPromise = initPersistence();
 
     return () => {
       isMounted = false;
-      unsubPromise.then((unsub) => {
-        if (typeof unsub === 'function') unsub();
+      unsubPromise.then((cleanup) => {
+        if (typeof cleanup === 'function') cleanup();
       });
     };
   }, []);
@@ -961,10 +1033,6 @@ export default function App() {
                 const remotePayloadJson = safeJSONStringify(data);
                 if (remotePayloadJson === lastSavedPayloadRef.current) {
                   initialCloudLoadDoneRef.current = true;
-                  return;
-                }
-
-                if (saveTimeoutRef.current && initialCloudLoadDoneRef.current) {
                   return;
                 }
 

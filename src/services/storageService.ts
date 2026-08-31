@@ -202,8 +202,29 @@ export function normalizeCascadingDrills(raw: any): DrillFolder[] {
   return Array.from(folderMap.values());
 }
 
-// Track server state availability to avoid 404 polling loops on static deployments (e.g. Vercel)
-let isServerApiAvailable: boolean | null = null;
+// Track server state availability
+let isServerApiAvailable: boolean | null = true;
+
+export async function checkServerHealth(): Promise<{
+  status: string;
+  stateVersion: number;
+  stateUpdatedAt: number;
+  hasCachedState: boolean;
+} | null> {
+  try {
+    const res = await fetch('/api/health', {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
+    if (res.ok) {
+      isServerApiAvailable = true;
+      return await res.json();
+    }
+  } catch {
+    // transient network error
+  }
+  return null;
+}
 
 // Server-side state sync methods
 export async function fetchServerState(): Promise<{
@@ -213,22 +234,18 @@ export async function fetchServerState(): Promise<{
   updatedAt: number;
   state: any;
 } | null> {
-  if (isServerApiAvailable === false) return null;
   try {
     const res = await fetch('/api/state', {
       headers: { Accept: 'application/json' },
+      cache: 'no-store',
     });
     if (res.ok) {
       isServerApiAvailable = true;
       const data = await res.json();
       return data;
-    } else {
-      if (res.status === 404) {
-        isServerApiAvailable = false;
-      }
     }
   } catch (err) {
-    isServerApiAvailable = false;
+    console.warn('fetchServerState warning:', err);
   }
   return null;
 }
@@ -237,7 +254,6 @@ export async function saveServerState(
   state: any,
   author: string = 'coach'
 ): Promise<{ success: boolean; version?: number; updatedAt?: number } | null> {
-  if (isServerApiAvailable === false) return null;
   try {
     const res = await fetch('/api/state', {
       method: 'POST',
@@ -253,34 +269,35 @@ export async function saveServerState(
     if (res.ok) {
       isServerApiAvailable = true;
       return await res.json();
-    } else {
-      if (res.status === 404) {
-        isServerApiAvailable = false;
-      }
     }
   } catch (err) {
-    isServerApiAvailable = false;
+    console.warn('saveServerState warning:', err);
   }
   return null;
 }
 
 export function subscribeServerEvents(onMessage: (eventData: any) => void): () => void {
-  if (typeof window === 'undefined' || typeof EventSource === 'undefined' || isServerApiAvailable === false) {
+  if (typeof window === 'undefined' || typeof EventSource === 'undefined') {
     return () => {};
   }
 
   let eventSource: EventSource | null = null;
   let reconnectTimer: any = null;
   let isClosed = false;
-  let failCount = 0;
 
   function connect() {
-    if (isClosed || isServerApiAvailable === false) return;
+    if (isClosed) return;
     try {
+      if (eventSource) {
+        try {
+          eventSource.close();
+        } catch {}
+        eventSource = null;
+      }
+
       eventSource = new EventSource('/api/state/events');
 
       eventSource.onopen = () => {
-        failCount = 0;
         isServerApiAvailable = true;
       };
 
@@ -296,27 +313,20 @@ export function subscribeServerEvents(onMessage: (eventData: any) => void): () =
 
       eventSource.onerror = () => {
         if (eventSource) {
-          eventSource.close();
+          try {
+            eventSource.close();
+          } catch {}
           eventSource = null;
         }
-        failCount++;
-        // If server SSE endpoint is not found (e.g. 404 on static deployment), stop reconnecting after 2 fails
-        if (failCount >= 2) {
-          isServerApiAvailable = false;
-          return;
-        }
         if (!isClosed) {
-          reconnectTimer = setTimeout(connect, 6000);
+          if (reconnectTimer) clearTimeout(reconnectTimer);
+          reconnectTimer = setTimeout(connect, 4000);
         }
       };
-    } catch (err) {
-      failCount++;
-      if (failCount >= 2) {
-        isServerApiAvailable = false;
-        return;
-      }
+    } catch {
       if (!isClosed) {
-        reconnectTimer = setTimeout(connect, 6000);
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(connect, 4000);
       }
     }
   }
@@ -327,7 +337,9 @@ export function subscribeServerEvents(onMessage: (eventData: any) => void): () =
     isClosed = true;
     if (reconnectTimer) clearTimeout(reconnectTimer);
     if (eventSource) {
-      eventSource.close();
+      try {
+        eventSource.close();
+      } catch {}
       eventSource = null;
     }
   };

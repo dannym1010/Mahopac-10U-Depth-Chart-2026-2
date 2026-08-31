@@ -787,7 +787,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                           : ''
                                       }`}
                                     >
-                                      <span className="font-black text-[11px] print:text-[10px] text-indigo-300 print:text-slate-950 tracking-tight">
+                                      <span className="font-black text-[11px] print:text-[11px] text-indigo-300 print:text-amber-400 tracking-tight">
                                         {pos.name}
                                       </span>
                                       {userRole === 'admin' && (
@@ -904,7 +904,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                           onDragStart={(e) =>
                                             onDragStartPlacedPlayer(e, pos.id, plIdx, player)
                                           }
-                                          className={`px-2 py-1 print:px-1 print:py-0.5 rounded-xl print:rounded-sm border text-[10.5px] print:text-[8.5px] font-bold flex items-center justify-between transition-all select-none ${
+                                          className={`px-2 py-1 print:px-1.5 print:py-0.5 rounded-xl print:rounded-sm border text-[10.5px] print:text-[10px] font-black flex items-center justify-between transition-all select-none print:min-h-[20px] ${
                                             isStarter
                                               ? 'bg-black text-white border-zinc-700 shadow-xs print-player-badge-starter'
                                               : isD2
@@ -916,7 +916,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         >
                                           <div className="flex items-center gap-1.5 min-w-0 truncate">
                                             <span
-                                              className={`text-[8.5px] print:text-[7.5px] font-black uppercase px-1 py-0.2 rounded-md ${
+                                              className={`text-[8.5px] print:text-[8.5px] font-black uppercase px-1 py-0.2 rounded-md ${
                                                 isStarter
                                                   ? 'bg-zinc-800 text-white border border-zinc-700 print-tag-st'
                                                   : isD2
@@ -928,10 +928,10 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                             >
                                               {isStarter ? 'ST' : isD2 ? 'D2' : isD3 ? 'D3' : `D${plIdx + 1}`}
                                             </span>
-                                            <span className="font-mono text-[10px] print:text-[8.5px] opacity-90 font-black">
+                                            <span className="font-mono text-[10px] print:text-[10.5px] opacity-90 font-black">
                                               #{player.num}
                                             </span>
-                                            <span className="truncate uppercase font-extrabold">
+                                            <span className="truncate uppercase font-black text-[10.5px] print:text-[10px] tracking-tight">
                                               {player.name}
                                             </span>
                                           </div>
