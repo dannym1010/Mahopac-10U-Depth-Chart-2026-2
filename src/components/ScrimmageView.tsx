@@ -157,9 +157,9 @@ export const ScrimmageView: React.FC<ScrimmageViewProps> = ({
                           return (
                             <div
                               key={pIdx}
-                              className="position-slot-card min-h-[95px] print:min-h-[50px] rounded-2xl bg-slate-900/40 border border-dashed border-slate-700/60 flex items-center justify-center text-[10px] print:text-[8px] text-slate-500 print:text-slate-300 italic"
+                              className="position-slot-card position-slot-empty min-h-[95px] print:min-h-[50px] rounded-2xl bg-slate-900/40 border border-dashed border-slate-700/60 flex items-center justify-center text-[10px] text-slate-500 italic"
                             >
-                              Empty
+                              <span className="print:hidden">Empty</span>
                             </div>
                           );
                         }

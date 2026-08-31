@@ -139,6 +139,12 @@ body {
     min-height: 48px !important;
   }
 
+  .position-slot-empty {
+    border: 1px dashed #cbd5e1 !important;
+    background-color: transparent !important;
+    min-height: 48px !important;
+  }
+
   .position-card-title {
     background-color: #e0e7ff !important;
     color: #1e1b4b !important;

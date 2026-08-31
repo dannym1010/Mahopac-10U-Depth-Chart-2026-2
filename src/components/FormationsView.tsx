@@ -719,7 +719,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                   ? 'bg-indigo-950/60 border-2 border-dashed border-indigo-400 ring-2 ring-indigo-500/40'
                                   : pos
                                   ? 'bg-slate-850/90 bg-slate-800/90'
-                                  : 'bg-slate-900/40 border border-dashed border-slate-700/60 hover:border-indigo-500/60 hover:bg-indigo-950/20'
+                                  : 'bg-slate-900/40 border border-dashed border-slate-700/60 hover:border-indigo-500/60 hover:bg-indigo-950/20 position-slot-empty'
                               }`}
                             >
                               {pos ? (
@@ -955,7 +955,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                   </div>
                                 </div>
                               ) : (
-                                /* Interactive Empty Slot */
+                                /* Interactive Empty Slot (Hidden in Print) */
                                 <div
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -969,7 +969,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                       });
                                     }
                                   }}
-                                  className={`flex-1 flex flex-col items-center justify-between p-2.5 text-center transition-all ${
+                                  className={`flex-1 flex flex-col items-center justify-between p-2.5 text-center transition-all print:hidden ${
                                     userRole === 'admin'
                                       ? 'cursor-pointer hover:bg-indigo-950/30 group'
                                       : ''
