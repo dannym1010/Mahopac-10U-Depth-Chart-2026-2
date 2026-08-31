@@ -76,8 +76,8 @@ body {
   }
 
   /* Flatten nested flex wrappers that cause physical printer spoolers to stall on cross-axis pagination */
-  .flex:not(.wristband-insert-print-box):not(.print-player-badge-starter):not(.print-player-badge-d2):not(.print-player-badge-d3):not(.print-player-badge-d4),
-  .flex-col:not(.wristband-insert-print-box),
+  .flex:not(.wristband-insert-print-box):not(.print-player-badge-starter):not(.print-player-badge-d2):not(.print-player-badge-d3):not(.print-player-badge-d4):not(.print\:hidden):not(.hidden-print):not([class*="print:hidden"]):not([class*="hidden-print"]),
+  .flex-col:not(.wristband-insert-print-box):not(.print\:hidden):not(.hidden-print):not([class*="print:hidden"]):not([class*="hidden-print"]),
   .lg\:flex-row {
     display: block !important;
   }
@@ -104,8 +104,20 @@ body {
   select,
   textarea,
   .print\:hidden,
-  .hidden-print {
+  .hidden-print,
+  [class*="print:hidden"],
+  [class*="hidden-print"] {
     display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    min-height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
   }
 
 
@@ -609,5 +621,27 @@ body {
     font-weight: 800 !important;
     color: #000000 !important;
     line-height: 1.2 !important;
+  }
+
+  /* Absolute print suppression guarantee for hidden-print and print:hidden */
+  .print\:hidden,
+  .hidden-print,
+  [class*="print:hidden"],
+  [class*="hidden-print"],
+  button,
+  input,
+  select,
+  textarea {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    max-height: 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
   }
 }

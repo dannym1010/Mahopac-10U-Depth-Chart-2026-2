@@ -82,8 +82,10 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
       }
 
       // Merge Depth Chart per position ID (Offense & Defense positions coexist safely without ghost retention)
-      const curDC = curWeekState.depthChart || {};
-      const incDC = incWeekState.depthChart || {};
+      const curDC: Record<string, any> = curWeekState.depthChart || {};
+      const incDC: Record<string, any> = incWeekState.depthChart || {};
+      const curDCCount: number = Object.values(curDC).reduce<number>((sum: number, list: any) => sum + (Array.isArray(list) ? list.length : 0), 0);
+      const incDCCount: number = Object.values(incDC).reduce<number>((sum: number, list: any) => sum + (Array.isArray(list) ? list.length : 0), 0);
       let mergedDC: Record<string, any> = {};
 
       if (metadata?.activeUnit && metadata.activeUnit !== 'all') {
@@ -103,18 +105,33 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
           }
         }
       } else {
-        // Full snapshot save or scope='all': incoming depthChart is authoritative
-        mergedDC = { ...incDC };
+        if (incDCCount > 0 && curDCCount === 0) {
+          mergedDC = { ...incDC };
+        } else if (curDCCount > 0 && incDCCount === 0) {
+          mergedDC = { ...curDC };
+        } else if (incDCCount > 0 && curDCCount > 0) {
+          mergedDC = { ...curDC, ...incDC };
+        } else {
+          mergedDC = { ...incDC };
+        }
       }
 
       // Merge Scrimmage Chart per position ID
-      const curSC = curWeekState.scrimmageChart || {};
-      const incSC = incWeekState.scrimmageChart || {};
+      const curSC: Record<string, any> = curWeekState.scrimmageChart || {};
+      const incSC: Record<string, any> = incWeekState.scrimmageChart || {};
+      const curSCCount: number = Object.values(curSC).reduce<number>((sum: number, list: any) => sum + (Array.isArray(list) ? list.length : 0), 0);
+      const incSCCount: number = Object.values(incSC).reduce<number>((sum: number, list: any) => sum + (Array.isArray(list) ? list.length : 0), 0);
       let mergedSC: Record<string, any> = {};
       if (metadata?.activeUnit === 'scrimmage') {
         mergedSC = { ...curSC, ...incSC };
       } else if (metadata?.scope === 'all' || !metadata?.activeUnit) {
-        mergedSC = { ...incSC };
+        if (incSCCount > 0 && curSCCount === 0) {
+          mergedSC = { ...incSC };
+        } else if (curSCCount > 0 && incSCCount === 0) {
+          mergedSC = { ...curSC };
+        } else {
+          mergedSC = { ...curSC, ...incSC };
+        }
       } else {
         mergedSC = { ...curSC, ...incSC };
       }

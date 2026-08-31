@@ -1912,7 +1912,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                               onUpdateStation(pIdx, sIdx, 'coach', e.target.value)
                             }
                             placeholder="Type or select coach names..."
-                            className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs font-bold text-slate-100 leading-tight focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-500 print:hidden"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs font-bold text-slate-100 leading-tight focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-500 print:hidden hidden-print"
                           />
 
                           <div
@@ -1922,7 +1922,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                                 isCoachPopupOpen ? null : coachPopupId
                               );
                             }}
-                            className="text-[11px] text-indigo-400 font-bold cursor-pointer mt-1.5 hover:underline print:hidden flex items-center gap-1 select-none"
+                            className="text-[11px] text-indigo-400 font-bold cursor-pointer mt-1.5 hover:underline print:hidden hidden-print flex items-center gap-1 select-none"
                           >
                             <Users className="w-3 h-3 text-indigo-400" />
                             <span>Select Coaches</span>
@@ -1936,7 +1936,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                           {/* Enhanced Coach Multi-select Popup with Upward Smart Flipping */}
                           {isCoachPopupOpen && (
                             <div
-                              className={`absolute left-0 w-72 bg-slate-850 border border-slate-600 rounded-2xl shadow-2xl p-3.5 z-50 space-y-2.5 print:hidden backdrop-blur-md ring-1 ring-slate-700/80 ${
+                              className={`absolute left-0 w-72 bg-slate-850 border border-slate-600 rounded-2xl shadow-2xl p-3.5 z-50 space-y-2.5 print:hidden hidden-print backdrop-blur-md ring-1 ring-slate-700/80 ${
                                 isNearBottom ? 'bottom-full mb-2' : 'top-full mt-1.5'
                               }`}
                               onClick={(e) => e.stopPropagation()}

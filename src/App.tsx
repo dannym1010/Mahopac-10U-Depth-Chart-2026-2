@@ -378,9 +378,27 @@ export default function App() {
           : INITIAL_DEFAULT_FORMATIONS;
     }
 
-    // Depth chart resolution: direct priority (never override existing scoped depth charts)
+    const countPlacedPlayers = (dc?: Record<string, PlacedPlayer[]>) => {
+      if (!dc || typeof dc !== 'object') return 0;
+      return Object.values(dc).reduce(
+        (sum, list) => sum + (Array.isArray(list) ? list.length : 0),
+        0
+      );
+    };
+
+    // Depth chart resolution: prioritize the state with real player assignments so empty stubs never wipe valid depth charts
     let depthChart: Record<string, PlacedPlayer[]> = {};
-    if (scopedState && scopedState.depthChart !== undefined) {
+    const scopedDCCount = countPlacedPlayers(scopedState?.depthChart);
+    const legacyDCCount = countPlacedPlayers(legacyState?.depthChart);
+    const defScopedDCCount = countPlacedPlayers(defScopedState?.depthChart);
+
+    if (scopedDCCount > 0) {
+      depthChart = scopedState!.depthChart!;
+    } else if (legacyDCCount > 0) {
+      depthChart = legacyState!.depthChart!;
+    } else if (defScopedDCCount > 0) {
+      depthChart = defScopedState!.depthChart!;
+    } else if (scopedState && scopedState.depthChart !== undefined) {
       depthChart = scopedState.depthChart;
     } else if (legacyState && legacyState.depthChart !== undefined) {
       depthChart = legacyState.depthChart;
@@ -390,9 +408,19 @@ export default function App() {
       depthChart = {};
     }
 
-    // Scrimmage chart resolution
+    // Scrimmage chart resolution: prioritize the state with real player assignments
     let scrimmageChart: Record<string, PlacedPlayer[]> = {};
-    if (scopedState && scopedState.scrimmageChart !== undefined) {
+    const scopedSCCount = countPlacedPlayers(scopedState?.scrimmageChart);
+    const legacySCCount = countPlacedPlayers(legacyState?.scrimmageChart);
+    const defScopedSCCount = countPlacedPlayers(defScopedState?.scrimmageChart);
+
+    if (scopedSCCount > 0) {
+      scrimmageChart = scopedState!.scrimmageChart!;
+    } else if (legacySCCount > 0) {
+      scrimmageChart = legacyState!.scrimmageChart!;
+    } else if (defScopedSCCount > 0) {
+      scrimmageChart = defScopedState!.scrimmageChart!;
+    } else if (scopedState && scopedState.scrimmageChart !== undefined) {
       scrimmageChart = scopedState.scrimmageChart;
     } else if (legacyState && legacyState.scrimmageChart !== undefined) {
       scrimmageChart = legacyState.scrimmageChart;
@@ -625,15 +653,55 @@ function mergeRemoteWeeklyData(
         }
       });
 
-      const mergedDC: Record<string, PlacedPlayer[]> =
-        remoteState.depthChart !== undefined
-          ? { ...remoteState.depthChart }
-          : { ...(localState.depthChart || {}) };
+      const localDC = localState.depthChart || {};
+      const remoteDC = remoteState.depthChart || {};
+      const localPlayerCount = Object.values(localDC).reduce(
+        (sum, list) => sum + (Array.isArray(list) ? list.length : 0),
+        0
+      );
+      const remotePlayerCount = Object.values(remoteDC).reduce(
+        (sum, list) => sum + (Array.isArray(list) ? list.length : 0),
+        0
+      );
 
-      const mergedSC: Record<string, PlacedPlayer[]> =
-        remoteState.scrimmageChart !== undefined
-          ? { ...remoteState.scrimmageChart }
-          : { ...(localState.scrimmageChart || {}) };
+      let mergedDC: Record<string, PlacedPlayer[]> = {};
+      if (remotePlayerCount > 0 && localPlayerCount === 0) {
+        mergedDC = { ...remoteDC };
+      } else if (localPlayerCount > 0 && remotePlayerCount === 0) {
+        mergedDC = { ...localDC };
+      } else if (remotePlayerCount > 0 && localPlayerCount > 0) {
+        mergedDC = { ...localDC, ...remoteDC };
+      } else {
+        mergedDC =
+          remoteState.depthChart !== undefined
+            ? { ...remoteState.depthChart }
+            : { ...(localState.depthChart || {}) };
+      }
+
+      const localSC = localState.scrimmageChart || {};
+      const remoteSC = remoteState.scrimmageChart || {};
+      const localSCCount = Object.values(localSC).reduce(
+        (sum, list) => sum + (Array.isArray(list) ? list.length : 0),
+        0
+      );
+      const remoteSCCount = Object.values(remoteSC).reduce(
+        (sum, list) => sum + (Array.isArray(list) ? list.length : 0),
+        0
+      );
+
+      let mergedSC: Record<string, PlacedPlayer[]> = {};
+      if (remoteSCCount > 0 && localSCCount === 0) {
+        mergedSC = { ...remoteSC };
+      } else if (localSCCount > 0 && remoteSCCount === 0) {
+        mergedSC = { ...localSC };
+      } else if (remoteSCCount > 0 && localSCCount > 0) {
+        mergedSC = { ...localSC, ...remoteSC };
+      } else {
+        mergedSC =
+          remoteState.scrimmageChart !== undefined
+            ? { ...remoteState.scrimmageChart }
+            : { ...(localState.scrimmageChart || {}) };
+      }
 
       merged[weekKey] = {
         ...localState,
