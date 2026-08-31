@@ -49,7 +49,12 @@ import {
   getFormattedDayFolder,
   findBestActivePracticeId,
 } from '../utils/practiceUtils';
-import { triggerPrint } from '../utils/printUtils';
+import {
+  triggerPrint,
+  printCleanHTML,
+  generatePracticePlanHTML,
+  openCleanPrintTab,
+} from '../utils/printUtils';
 
 interface PracticePlanViewProps {
   practices: PracticePlan[];
@@ -142,6 +147,18 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   const [coachSearchTerm, setCoachSearchTerm] = useState('');
   const [collapsedTreeFolders, setCollapsedTreeFolders] = useState<Record<string, boolean>>({});
   const [stationGroupFilters, setStationGroupFilters] = useState<Record<string, string>>({});
+  const [isPrintMenuOpen, setIsPrintMenuOpen] = useState(false);
+  const printMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (printMenuRef.current && !printMenuRef.current.contains(e.target as Node)) {
+        setIsPrintMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const currentPlan =
     practices.find((p) => p && p.id === currentPracticeId) ||
@@ -483,6 +500,25 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
     return true;
   });
 
+  const handleExecutePrint = (mode: 'clean' | 'tab' | 'direct' = 'clean') => {
+    setIsPrintMenuOpen(false);
+    const numSize = parseInt(printFontSize, 10) || 12;
+    const cleanHtml = generatePracticePlanHTML(
+      currentPlan,
+      currentPlanPeriods,
+      currentSeq,
+      numSize
+    );
+
+    if (mode === 'tab') {
+      openCleanPrintTab(cleanHtml, `Practice Plan - ${currentPlan?.title || 'Sheet'}`);
+    } else if (mode === 'direct') {
+      triggerPrint();
+    } else {
+      printCleanHTML(cleanHtml, `Practice Plan - ${currentPlan?.title || 'Sheet'}`);
+    }
+  };
+
   const handleToggleCancel = () => {
     if (!currentPlan) return;
     if (onTogglePracticeCancelled) {
@@ -780,13 +816,67 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
               </button>
             )}
 
-            <button
-              onClick={() => triggerPrint()}
-              className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-100 font-bold text-xs rounded-xl border border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print Plan</span>
-            </button>
+            {/* Multi-Mode Smart Print Button */}
+            <div className="relative inline-flex items-center" ref={printMenuRef}>
+              <button
+                type="button"
+                onClick={() => handleExecutePrint('clean')}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-100 font-bold text-xs rounded-l-xl border border-r-0 border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                title="Click to print this practice plan directly"
+              >
+                <Printer className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Print Plan</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPrintMenuOpen(!isPrintMenuOpen)}
+                className="px-2 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-r-xl border border-slate-700 shadow-md transition-all active:scale-95 cursor-pointer"
+                title="Print options & new-tab printable sheet"
+              >
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isPrintMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isPrintMenuOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-64 bg-slate-850 border border-slate-600 rounded-2xl shadow-2xl p-2 z-50 space-y-1 backdrop-blur-md ring-1 ring-slate-700/80 animate-in fade-in duration-150">
+                  <div className="px-2.5 py-1 text-[10px] font-black uppercase text-slate-400 border-b border-slate-700">
+                    Print Options
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleExecutePrint('clean')}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:bg-indigo-600 hover:text-white flex items-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <div>
+                      <div>Instant Clean Print</div>
+                      <div className="text-[10px] text-slate-400 group-hover:text-indigo-100 font-normal">Fast layout, avoids browser preview hangs</div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleExecutePrint('tab')}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:bg-indigo-600 hover:text-white flex items-center gap-2 transition-all cursor-pointer"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <div>
+                      <div>Open Printable Tab</div>
+                      <div className="text-[10px] text-slate-400 group-hover:text-indigo-100 font-normal">Best for saving PDF or Chrome iframe bypass</div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleExecutePrint('direct')}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:bg-slate-700 flex items-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                    <div>
+                      <div>Standard Full Page Print</div>
+                      <div className="text-[10px] text-slate-400 font-normal">Direct window.print()</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

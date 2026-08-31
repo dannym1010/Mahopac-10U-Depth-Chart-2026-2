@@ -187,7 +187,8 @@ export function normalizeCascadingDrills(raw: any): DrillFolder[] {
 }
 
 // Track server state availability
-let isServerApiAvailable: boolean | null = true;
+let isServerApiAvailable: boolean | null = null;
+let serverCheckFailedCount = 0;
 
 export async function checkServerHealth(): Promise<{
   status: string;
@@ -195,6 +196,8 @@ export async function checkServerHealth(): Promise<{
   stateUpdatedAt: number;
   hasCachedState: boolean;
 } | null> {
+  if (isServerApiAvailable === false) return null;
+
   try {
     const res = await fetch('/api/health', {
       headers: { Accept: 'application/json' },
@@ -202,10 +205,16 @@ export async function checkServerHealth(): Promise<{
     });
     if (res.ok) {
       isServerApiAvailable = true;
+      serverCheckFailedCount = 0;
       return await res.json();
+    } else if (res.status === 404) {
+      isServerApiAvailable = false;
     }
   } catch {
-    // transient network error
+    serverCheckFailedCount++;
+    if (serverCheckFailedCount > 2) {
+      isServerApiAvailable = false;
+    }
   }
   return null;
 }
@@ -218,6 +227,8 @@ export async function fetchServerState(): Promise<{
   updatedAt: number;
   state: any;
 } | null> {
+  if (isServerApiAvailable === false) return null;
+
   try {
     const res = await fetch('/api/state', {
       headers: { Accept: 'application/json' },
@@ -227,9 +238,14 @@ export async function fetchServerState(): Promise<{
       isServerApiAvailable = true;
       const data = await res.json();
       return data;
+    } else if (res.status === 404) {
+      isServerApiAvailable = false;
     }
   } catch (err) {
-    console.warn('fetchServerState warning:', err);
+    serverCheckFailedCount++;
+    if (serverCheckFailedCount > 2) {
+      isServerApiAvailable = false;
+    }
   }
   return null;
 }
@@ -239,6 +255,8 @@ export async function saveServerState(
   author: string = 'coach',
   metadata?: any
 ): Promise<{ success: boolean; version?: number; updatedAt?: number } | null> {
+  if (isServerApiAvailable === false) return null;
+
   try {
     const res = await fetch('/api/state', {
       method: 'POST',
@@ -255,24 +273,31 @@ export async function saveServerState(
     if (res.ok) {
       isServerApiAvailable = true;
       return await res.json();
+    } else if (res.status === 404) {
+      isServerApiAvailable = false;
     }
   } catch (err) {
-    console.warn('saveServerState warning:', err);
+    // Silently fail if server isn't available
   }
   return null;
 }
 
 export function subscribeServerEvents(onMessage: (eventData: any) => void): () => void {
-  if (typeof window === 'undefined' || typeof EventSource === 'undefined') {
+  if (
+    typeof window === 'undefined' ||
+    typeof EventSource === 'undefined' ||
+    isServerApiAvailable === false
+  ) {
     return () => {};
   }
 
   let eventSource: EventSource | null = null;
   let reconnectTimer: any = null;
   let isClosed = false;
+  let connectionErrors = 0;
 
   function connect() {
-    if (isClosed) return;
+    if (isClosed || isServerApiAvailable === false) return;
     try {
       if (eventSource) {
         try {
@@ -285,6 +310,7 @@ export function subscribeServerEvents(onMessage: (eventData: any) => void): () =
 
       eventSource.onopen = () => {
         isServerApiAvailable = true;
+        connectionErrors = 0;
       };
 
       eventSource.onmessage = (e) => {
@@ -298,21 +324,34 @@ export function subscribeServerEvents(onMessage: (eventData: any) => void): () =
       };
 
       eventSource.onerror = () => {
+        connectionErrors++;
         if (eventSource) {
           try {
             eventSource.close();
           } catch {}
           eventSource = null;
         }
-        if (!isClosed) {
+
+        // If the server returns continuous errors or 404s, stop reconnecting to avoid spam
+        if (connectionErrors >= 2) {
+          isServerApiAvailable = false;
+          return;
+        }
+
+        if (!isClosed && isServerApiAvailable) {
           if (reconnectTimer) clearTimeout(reconnectTimer);
-          reconnectTimer = setTimeout(connect, 4000);
+          reconnectTimer = setTimeout(connect, 6000);
         }
       };
     } catch {
-      if (!isClosed) {
+      connectionErrors++;
+      if (connectionErrors >= 2) {
+        isServerApiAvailable = false;
+        return;
+      }
+      if (!isClosed && isServerApiAvailable) {
         if (reconnectTimer) clearTimeout(reconnectTimer);
-        reconnectTimer = setTimeout(connect, 4000);
+        reconnectTimer = setTimeout(connect, 6000);
       }
     }
   }

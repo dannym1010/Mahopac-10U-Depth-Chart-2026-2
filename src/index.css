@@ -69,7 +69,9 @@ body {
 
   #root,
   #root > div,
-  main {
+  main,
+  .min-h-screen,
+  [class*="min-h-screen"] {
     background-color: #ffffff !important;
     background: #ffffff !important;
     color: #000000 !important;
