@@ -35,6 +35,7 @@ import {
   UserRole,
   ScheduleEvent,
 } from '../types';
+import { triggerPrint } from '../utils/printUtils';
 
 interface ScoutingViewProps {
   scouting: ScoutingData;
@@ -229,7 +230,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
   };
 
   const handlePrint = () => {
-    window.print();
+    triggerPrint();
   };
 
   const handleCopySummary = () => {

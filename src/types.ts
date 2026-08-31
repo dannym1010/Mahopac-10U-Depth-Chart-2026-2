@@ -314,6 +314,7 @@ export interface WeekState {
 }
 
 export interface DrillItem {
+  id?: string;
   name: string;
   desc: string;
   key: string;

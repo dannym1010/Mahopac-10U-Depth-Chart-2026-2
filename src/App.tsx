@@ -75,6 +75,7 @@ import {
 } from './utils/practiceUtils';
 import { getAutoActiveWeek, normalizeWeeklyData } from './utils/seasonWeekUtils';
 import { normalizeRoster } from './utils/depthChartUtils';
+import { triggerPrint } from './utils/printUtils';
 
 import { Header } from './components/Header';
 import { NavigationTabs } from './components/NavigationTabs';
@@ -291,10 +292,12 @@ export default function App() {
   const activeUnitRef = useRef<string>(activeUnit);
   const activeTeamIdRef = useRef<string>(activeTeamId);
   const currentWeekRef = useRef<string>(currentWeek);
+  const currentPracticeIdRef = useRef<string | null>(currentPracticeId);
 
   activeUnitRef.current = activeUnit;
   activeTeamIdRef.current = activeTeamId;
   currentWeekRef.current = currentWeek;
+  currentPracticeIdRef.current = currentPracticeId;
 
   const latestStateRef = useRef({
     weeklyData,
@@ -715,9 +718,43 @@ function mergeRemoteWeeklyData(
         data.practiceData,
         data.scheduleEvents || latestStateRef.current.scheduleEvents || DEFAULT_SCHEDULE_EVENTS
       );
-      setPracticeData(sanitized);
-      latestStateRef.current.practiceData = sanitized;
-      safeJSONSet('footballPracticeData', sanitized);
+      if (Date.now() - lastLocalEditTimeRef.current < 15000 && activeUnitRef.current === 'practice') {
+        // Local coach is actively editing practice plans, merge remote updates preserving recent local edits
+        const localPlans = latestStateRef.current.practiceData || [];
+        const localMap = new Map<string, PracticePlan>();
+        localPlans.forEach((lp) => {
+          if (lp && lp.id) localMap.set(lp.id, lp);
+        });
+
+        const mergedPlans: PracticePlan[] = [];
+        const seenIds = new Set<string>();
+
+        sanitized.forEach((rp) => {
+          if (rp && rp.id) {
+            seenIds.add(rp.id);
+            const localP = localMap.get(rp.id);
+            if (localP) {
+              mergedPlans.push((localP.lastEdited || 0) >= (rp.lastEdited || 0) ? localP : rp);
+            } else {
+              mergedPlans.push(rp);
+            }
+          }
+        });
+
+        localPlans.forEach((lp) => {
+          if (lp && lp.id && !seenIds.has(lp.id)) {
+            mergedPlans.push(lp);
+          }
+        });
+
+        setPracticeData(mergedPlans);
+        latestStateRef.current.practiceData = mergedPlans;
+        safeJSONSet('footballPracticeData', mergedPlans);
+      } else {
+        setPracticeData(sanitized);
+        latestStateRef.current.practiceData = sanitized;
+        safeJSONSet('footballPracticeData', sanitized);
+      }
     }
     if (data.practiceTemplates) {
       const normalizedTemplates = normalizePracticeTemplates(data.practiceTemplates);
@@ -726,10 +763,14 @@ function mergeRemoteWeeklyData(
       safeJSONSet('footballPracticeTemplates', normalizedTemplates);
     }
     if (data.cascadingDrills) {
-      const normalizedDrills = normalizeCascadingDrills(data.cascadingDrills);
-      setCascadingDrills(normalizedDrills);
-      latestStateRef.current.cascadingDrills = normalizedDrills;
-      safeJSONSet('footballCascadingDrills', normalizedDrills);
+      if (Date.now() - lastLocalEditTimeRef.current < 15000 && activeUnitRef.current === 'drills') {
+        // Local coach is actively editing drills, don't overwrite with remote pulse
+      } else {
+        const normalizedDrills = normalizeCascadingDrills(data.cascadingDrills);
+        setCascadingDrills(normalizedDrills);
+        latestStateRef.current.cascadingDrills = normalizedDrills;
+        safeJSONSet('footballCascadingDrills', normalizedDrills);
+      }
     }
     if (data.guideTree) {
       setGuideTree(data.guideTree);
@@ -2821,6 +2862,19 @@ function mergeRemoteWeeklyData(
   /* =========================================================================
      PRACTICE PLAN ACTIONS
      ========================================================================= */
+  const updatePracticeDataAndSave = (
+    updater: (prev: PracticePlan[]) => PracticePlan[]
+  ) => {
+    setPracticeData((prev) => {
+      const updated = updater(prev);
+      latestStateRef.current.practiceData = updated;
+      safeJSONSet('footballPracticeData', updated);
+      lastLocalEditTimeRef.current = Date.now();
+      return updated;
+    });
+    debouncedSave('practice');
+  };
+
   const handleOpenNewPracticeModal = () => {
     const todayStr = new Date().toISOString().split('T')[0];
     const dateStr = prompt('Enter Date (YYYY-MM-DD):', todayStr);
@@ -2853,11 +2907,7 @@ function mergeRemoteWeeklyData(
       plan: deepClone(DEFAULT_PRACTICE_TEMPLATES['Standard Practice']),
     };
 
-    setPracticeData((prev) => {
-      const next = [...prev, newPrac];
-      safeJSONSet('footballPracticeData', next);
-      return next;
-    });
+    updatePracticeDataAndSave((prev) => [...prev, newPrac]);
     setCurrentPracticeId(newPrac.id);
   };
 
@@ -2879,8 +2929,8 @@ function mergeRemoteWeeklyData(
     const title = prompt('Edit Practice Title:', cur.title);
     if (title === null) return;
 
-    setPracticeData((prev) => {
-      const next = prev.map((p) =>
+    updatePracticeDataAndSave((prev) =>
+      prev.map((p) =>
         p.id === currentPracticeId
           ? {
               ...p,
@@ -2893,10 +2943,8 @@ function mergeRemoteWeeklyData(
               lastEdited: Date.now(),
             }
           : p
-      );
-      safeJSONSet('footballPracticeData', next);
-      return next;
-    });
+      )
+    );
   };
 
   const handleTogglePracticeCancelled = (
@@ -2905,8 +2953,8 @@ function mergeRemoteWeeklyData(
     reason?: string
   ) => {
     let targetDate = '';
-    setPracticeData((prev) => {
-      const next = prev.map((p) => {
+    updatePracticeDataAndSave((prev) =>
+      prev.map((p) => {
         if (p.id === practiceId) {
           targetDate = p.date || '';
           const newStatus = isCancelled !== undefined ? isCancelled : !p.isCancelled;
@@ -2918,10 +2966,8 @@ function mergeRemoteWeeklyData(
           };
         }
         return p;
-      });
-      safeJSONSet('footballPracticeData', next);
-      return next;
-    });
+      })
+    );
 
     // Also sync to matching ScheduleEvent if any
     setScheduleEvents((prev) => {
@@ -2942,6 +2988,7 @@ function mergeRemoteWeeklyData(
         return ev;
       });
       safeJSONSet('footballScheduleEvents', next);
+      latestStateRef.current.scheduleEvents = next;
       return next;
     });
   };
@@ -3071,7 +3118,7 @@ function mergeRemoteWeeklyData(
         'Auto-number non-cancelled practice plans sequentially by date? (Cancelled practices will be excluded from the practice count and subsequent plans will be re-numbered)'
       )
     ) {
-      setPracticeData((prev) => {
+      updatePracticeDataAndSave((prev) => {
         // Sort chronologically
         const sorted = [...prev].sort((a, b) => {
           const dateA = a.date || '1970-01-01';
@@ -3105,13 +3152,11 @@ function mergeRemoteWeeklyData(
           }
         });
 
-        const next = prev.map((p) => ({
+        return prev.map((p) => ({
           ...p,
           title: newTitleMap[p.id] || p.title,
           lastEdited: Date.now(),
         }));
-        safeJSONSet('footballPracticeData', next);
-        return next;
       });
     }
   };
@@ -3123,8 +3168,8 @@ function mergeRemoteWeeklyData(
     }
     if (confirm('Delete current practice plan?')) {
       const remaining = practiceData.filter((p) => p.id !== currentPracticeId);
-      setPracticeData(remaining);
-      setCurrentPracticeId(remaining[0].id);
+      updatePracticeDataAndSave(() => remaining);
+      setCurrentPracticeId(remaining[0]?.id || null);
     }
   };
 
@@ -3138,12 +3183,13 @@ function mergeRemoteWeeklyData(
         `Apply template "${templateName}"? This will replace current practice periods.`
       )
     ) {
-      setPracticeData((prev) =>
+      updatePracticeDataAndSave((prev) =>
         prev.map((p) =>
           p.id === currentPracticeId
             ? {
                 ...p,
                 plan: deepClone(planToApply),
+                lastEdited: Date.now(),
               }
             : p
         )
@@ -3159,10 +3205,16 @@ function mergeRemoteWeeklyData(
     }
     const name = prompt('Enter a name for this practice template:');
     if (name && name.trim()) {
-      setPracticeTemplates((prev) => ({
-        ...prev,
-        [name.trim()]: deepClone(cur.plan),
-      }));
+      setPracticeTemplates((prev) => {
+        const next = {
+          ...prev,
+          [name.trim()]: deepClone(cur.plan),
+        };
+        latestStateRef.current.practiceTemplates = next;
+        safeJSONSet('footballPracticeTemplates', next);
+        return next;
+      });
+      debouncedSave('practice');
       alert(`Template "${name.trim()}" saved!`);
     }
   };
@@ -3171,8 +3223,8 @@ function mergeRemoteWeeklyData(
     field: keyof PracticePlan,
     value: any
   ) => {
-    setPracticeData((prev) => {
-      const next = prev.map((p) => {
+    updatePracticeDataAndSave((prev) =>
+      prev.map((p) => {
         if (p.id === currentPracticeId) {
           const updated = { ...p, [field]: value, lastEdited: Date.now() };
           if (field === 'date' && value) {
@@ -3195,20 +3247,19 @@ function mergeRemoteWeeklyData(
           return updated;
         }
         return p;
-      });
-      safeJSONSet('footballPracticeData', next);
-      return next;
-    });
+      })
+    );
   };
 
   const handleAddPeriod = () => {
-    setPracticeData((prev) =>
+    updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
           const defaultCat =
             cascadingDrills[0]?.name || '⚡ (Warm-up, Agility and Conditioning)';
           return {
             ...p,
+            lastEdited: Date.now(),
             plan: [
               ...p.plan,
               {
@@ -3234,12 +3285,12 @@ function mergeRemoteWeeklyData(
 
   const handleRemovePeriod = (pIdx: number) => {
     if (confirm('Delete this period?')) {
-      setPracticeData((prev) =>
+      updatePracticeDataAndSave((prev) =>
         prev.map((p) => {
           if (p.id === currentPracticeId) {
             const plan = [...p.plan];
             plan.splice(pIdx, 1);
-            return { ...p, plan };
+            return { ...p, plan, lastEdited: Date.now() };
           }
           return p;
         })
@@ -3248,7 +3299,7 @@ function mergeRemoteWeeklyData(
   };
 
   const handleMovePeriod = (pIdx: number, direction: number) => {
-    setPracticeData((prev) =>
+    updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
           const plan = [...p.plan];
@@ -3256,7 +3307,7 @@ function mergeRemoteWeeklyData(
           if (newIdx < 0 || newIdx >= plan.length) return p;
           const [moved] = plan.splice(pIdx, 1);
           plan.splice(newIdx, 0, moved);
-          return { ...p, plan };
+          return { ...p, plan, lastEdited: Date.now() };
         }
         return p;
       })
@@ -3264,12 +3315,12 @@ function mergeRemoteWeeklyData(
   };
 
   const handleUpdatePeriodTime = (pIdx: number, time: number) => {
-    setPracticeData((prev) =>
+    updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
           const plan = [...p.plan];
           plan[pIdx] = { ...plan[pIdx], time };
-          return { ...p, plan };
+          return { ...p, plan, lastEdited: Date.now() };
         }
         return p;
       })
@@ -3277,12 +3328,12 @@ function mergeRemoteWeeklyData(
   };
 
   const handleUpdatePeriodCategory = (pIdx: number, category: string) => {
-    setPracticeData((prev) =>
+    updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
           const plan = [...p.plan];
           plan[pIdx] = { ...plan[pIdx], category };
-          return { ...p, plan };
+          return { ...p, plan, lastEdited: Date.now() };
         }
         return p;
       })
@@ -3293,12 +3344,12 @@ function mergeRemoteWeeklyData(
     pIdx: number,
     format: 'static' | 'rotating'
   ) => {
-    setPracticeData((prev) =>
+    updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
           const plan = [...p.plan];
           plan[pIdx] = { ...plan[pIdx], format };
-          return { ...p, plan };
+          return { ...p, plan, lastEdited: Date.now() };
         }
         return p;
       })
@@ -3306,7 +3357,7 @@ function mergeRemoteWeeklyData(
   };
 
   const handleAddStationToPeriod = (pIdx: number) => {
-    setPracticeData((prev) =>
+    updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
           const plan = [...p.plan];
@@ -3322,7 +3373,7 @@ function mergeRemoteWeeklyData(
               },
             ],
           };
-          return { ...p, plan };
+          return { ...p, plan, lastEdited: Date.now() };
         }
         return p;
       })
@@ -3330,7 +3381,7 @@ function mergeRemoteWeeklyData(
   };
 
   const handleRemoveStationFromPeriod = (pIdx: number, sIdx: number) => {
-    setPracticeData((prev) =>
+    updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
           const plan = [...p.plan];
@@ -3341,7 +3392,7 @@ function mergeRemoteWeeklyData(
           const stations = [...plan[pIdx].stations];
           stations.splice(sIdx, 1);
           plan[pIdx] = { ...plan[pIdx], stations };
-          return { ...p, plan };
+          return { ...p, plan, lastEdited: Date.now() };
         }
         return p;
       })
@@ -3354,14 +3405,14 @@ function mergeRemoteWeeklyData(
     field: keyof PracticeStation,
     value: string
   ) => {
-    setPracticeData((prev) =>
+    updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
           const plan = [...p.plan];
           const stations = [...plan[pIdx].stations];
           stations[sIdx] = { ...stations[sIdx], [field]: value };
           plan[pIdx] = { ...plan[pIdx], stations };
-          return { ...p, plan };
+          return { ...p, plan, lastEdited: Date.now() };
         }
         return p;
       })
@@ -3373,7 +3424,7 @@ function mergeRemoteWeeklyData(
     sIdx: number,
     drill: DrillItem
   ) => {
-    setPracticeData((prev) =>
+    updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
           const plan = [...p.plan];
@@ -3385,7 +3436,7 @@ function mergeRemoteWeeklyData(
             focus: drill.key,
           };
           plan[pIdx] = { ...plan[pIdx], stations };
-          return { ...p, plan };
+          return { ...p, plan, lastEdited: Date.now() };
         }
         return p;
       })
@@ -3413,10 +3464,23 @@ function mergeRemoteWeeklyData(
     return null;
   };
 
+  const updateCascadingDrillsAndSave = (
+    updater: (prev: DrillFolder[]) => DrillFolder[]
+  ) => {
+    setCascadingDrills((prev) => {
+      const updated = updater(prev);
+      latestStateRef.current.cascadingDrills = updated;
+      safeJSONSet('footballCascadingDrills', updated);
+      lastLocalEditTimeRef.current = Date.now();
+      return updated;
+    });
+    debouncedSave('drills');
+  };
+
   const handleAddTopDrillFolder = () => {
     const name = prompt('Enter new Top-Level Folder Name (e.g. Special Teams):');
     if (name && name.trim()) {
-      setCascadingDrills((prev) => [
+      updateCascadingDrillsAndSave((prev) => [
         ...prev,
         { name: name.trim(), subfolders: [], drills: [] },
       ]);
@@ -3426,7 +3490,7 @@ function mergeRemoteWeeklyData(
   const handleAddSubfolder = (pathKey: string) => {
     const name = prompt('Enter Subfolder Name:');
     if (name && name.trim()) {
-      setCascadingDrills((prev) => {
+      updateCascadingDrillsAndSave((prev) => {
         const updated = deepClone(prev);
         const target = findFolderByPath(updated, pathKey);
         if (target) {
@@ -3443,15 +3507,17 @@ function mergeRemoteWeeklyData(
   };
 
   const handleAddDrill = (pathKey: string) => {
-    setCascadingDrills((prev) => {
+    const newDrillId = `drill_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    updateCascadingDrillsAndSave((prev) => {
       const updated = deepClone(prev);
       const target = findFolderByPath(updated, pathKey);
       if (target) {
         if (!target.drills) target.drills = [];
         target.drills.push({
+          id: newDrillId,
           name: 'New Drill',
-          desc: 'Instructions and setup...',
-          key: 'Coaching key...',
+          desc: '',
+          key: '',
         });
       }
       return updated;
@@ -3463,7 +3529,7 @@ function mergeRemoteWeeklyData(
     if (target) {
       const newName = prompt('Rename Folder:', target.name);
       if (newName && newName.trim()) {
-        setCascadingDrills((prev) => {
+        updateCascadingDrillsAndSave((prev) => {
           const updated = deepClone(prev);
           const t = findFolderByPath(updated, pathKey);
           if (t) {
@@ -3481,7 +3547,7 @@ function mergeRemoteWeeklyData(
     const idx = parseInt(parts.pop()!, 10);
     const parentPath = parts.join('_');
 
-    setCascadingDrills((prev) => {
+    updateCascadingDrillsAndSave((prev) => {
       const updated = deepClone(prev);
       if (parentPath === '') {
         updated.splice(idx, 1);
@@ -3500,7 +3566,7 @@ function mergeRemoteWeeklyData(
     const idx = parseInt(parts.pop()!, 10);
     const parentPath = parts.join('_');
 
-    setCascadingDrills((prev) => {
+    updateCascadingDrillsAndSave((prev) => {
       const updated = deepClone(prev);
       let list = updated;
       if (parentPath !== '') {
@@ -3522,7 +3588,7 @@ function mergeRemoteWeeklyData(
     field: keyof DrillItem,
     value: string
   ) => {
-    setCascadingDrills((prev) => {
+    updateCascadingDrillsAndSave((prev) => {
       const updated = deepClone(prev);
       const target = findFolderByPath(updated, pathKey);
       if (target && target.drills?.[drillIdx]) {
@@ -3534,7 +3600,7 @@ function mergeRemoteWeeklyData(
 
   const handleDeleteDrill = (pathKey: string, drillIdx: number) => {
     if (confirm('Delete this drill?')) {
-      setCascadingDrills((prev) => {
+      updateCascadingDrillsAndSave((prev) => {
         const updated = deepClone(prev);
         const target = findFolderByPath(updated, pathKey);
         if (target && target.drills) {
@@ -3551,7 +3617,7 @@ function mergeRemoteWeeklyData(
     targetPath: string
   ) => {
     if (sourcePath === targetPath) return;
-    setCascadingDrills((prev) => {
+    updateCascadingDrillsAndSave((prev) => {
       const updated = deepClone(prev);
       const source = findFolderByPath(updated, sourcePath);
       const target = findFolderByPath(updated, targetPath);
@@ -3645,6 +3711,7 @@ function mergeRemoteWeeklyData(
           }
           if (!targetFolder.drills) targetFolder.drills = [];
           targetFolder.drills.push({
+            id: `drill_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 7)}`,
             name: drillName,
             desc: drillDesc,
             key: drillKey,
@@ -3652,7 +3719,7 @@ function mergeRemoteWeeklyData(
         }
 
         if (newTree.length > 0) {
-          setCascadingDrills(newTree);
+          updateCascadingDrillsAndSave(() => newTree);
           alert('Drills CSV imported successfully!');
         }
       } catch (err: any) {
@@ -3681,7 +3748,8 @@ function mergeRemoteWeeklyData(
       try {
         const parsed = JSON.parse(evt.target?.result as string);
         if (Array.isArray(parsed)) {
-          setCascadingDrills(parsed);
+          const normalized = normalizeCascadingDrills(parsed);
+          updateCascadingDrillsAndSave(() => normalized);
           alert('Drills JSON imported successfully!');
         }
       } catch (err: any) {
@@ -4239,10 +4307,10 @@ function mergeRemoteWeeklyData(
     if (existing) {
       const existingId = existing.id;
       const existingPlan = existing;
-      setPracticeData((prev) => {
+      updatePracticeDataAndSave((prev) => {
         const alreadyInList = prev.some((p) => p.id === existingId);
         if (alreadyInList) {
-          const next = prev.map((p) =>
+          return prev.map((p) =>
             p.id === existingId
               ? {
                   ...p,
@@ -4260,10 +4328,8 @@ function mergeRemoteWeeklyData(
                 }
               : p
           );
-          safeJSONSet('footballPracticeData', next);
-          return next;
         } else {
-          const next = [
+          return [
             ...prev,
             {
               ...existingPlan,
@@ -4273,10 +4339,9 @@ function mergeRemoteWeeklyData(
               dayFolder: existingPlan.dayFolder || formattedDayFolder,
               weekFolder: weekFolder,
               year: year,
+              lastEdited: Date.now(),
             },
           ];
-          safeJSONSet('footballPracticeData', next);
-          return next;
         }
       });
 
@@ -4286,6 +4351,7 @@ function mergeRemoteWeeklyData(
             ev.id === event.id ? { ...ev, linkedPracticePlanId: existingId } : ev
           );
           safeJSONSet('footballScheduleEvents', next);
+          latestStateRef.current.scheduleEvents = next;
           return next;
         });
       }
@@ -4317,17 +4383,14 @@ function mergeRemoteWeeklyData(
       plan: deepClone(planTemplate),
     };
 
-    setPracticeData((prev) => {
-      const next = [...prev, newPlan];
-      safeJSONSet('footballPracticeData', next);
-      return next;
-    });
+    updatePracticeDataAndSave((prev) => [...prev, newPlan]);
 
     setScheduleEvents((prev) => {
       const next = prev.map((ev) =>
         ev.id === event.id ? { ...ev, linkedPracticePlanId: newPracticeId } : ev
       );
       safeJSONSet('footballScheduleEvents', next);
+      latestStateRef.current.scheduleEvents = next;
       return next;
     });
 
@@ -4454,8 +4517,9 @@ function mergeRemoteWeeklyData(
       const taggedPlans = result.practicePlans.map((p) => ({
         ...p,
         teamId: p.teamId || activeTeamId,
+        lastEdited: Date.now(),
       }));
-      setPracticeData((prev) => [...prev, ...taggedPlans]);
+      updatePracticeDataAndSave((prev) => [...prev, ...taggedPlans]);
       if (taggedPlans[0]?.id) {
         setCurrentPracticeId(taggedPlans[0].id);
       }
@@ -4469,7 +4533,12 @@ function mergeRemoteWeeklyData(
         createdAt: Date.now(),
         lastEdited: Date.now(),
       }));
-      setScheduleEvents((prev) => [...prev, ...created]);
+      setScheduleEvents((prev) => {
+        const next = [...prev, ...created];
+        safeJSONSet('footballScheduleEvents', next);
+        latestStateRef.current.scheduleEvents = next;
+        return next;
+      });
     }
 
     debouncedSave('all');
@@ -4777,7 +4846,7 @@ function mergeRemoteWeeklyData(
                 onOpenScrimmageFilterModal={() =>
                   setIsScrimmageFilterOpen(true)
                 }
-                onOpenScrimmagePrintModal={() => window.print()}
+                onOpenScrimmagePrintModal={() => triggerPrint()}
                 onDropPlayerOnScrimmageCard={handleDropPlayerOnCard}
                 onRemovePlayerFromScrimmageCard={handleRemovePlayerFromCard}
                 onDragStartPlacedPlayer={handleDragStartPlacedPlayer}
@@ -5086,7 +5155,7 @@ function mergeRemoteWeeklyData(
                 onForceSyncCloud={() => saveStateToStorage('all')}
                 onResetDefaults={() => {
                   if (confirm('Reset Drill Library to default categories?')) {
-                    setCascadingDrills(DEFAULT_CASCADING_DRILLS);
+                    updateCascadingDrillsAndSave(() => deepClone(DEFAULT_CASCADING_DRILLS));
                   }
                 }}
               />
@@ -5405,32 +5474,30 @@ function mergeRemoteWeeklyData(
           formations={currentFormations}
           onClose={() => setSelectivePrintUnit(null)}
           onPrintSelected={(selectedIds) => {
-            // Temporarily mark non-selected boards as hidden during print
-            document
-              .querySelectorAll('.formation-container')
-              .forEach((card: any) => {
-                const fId = card.getAttribute('data-form-id');
-                if (fId && !selectedIds.includes(fId)) {
-                  card.classList.add('hidden-print');
-                } else {
-                  card.classList.remove('hidden-print');
-                }
-              });
+            // Close the modal dialog first so backdrop or dialog traps do not block the print spooler
+            setSelectivePrintUnit(null);
 
-            const cleanup = () => {
-              document
-                .querySelectorAll('.formation-container')
-                .forEach((card: any) => {
-                  card.classList.remove('hidden-print');
-                });
-              window.removeEventListener('afterprint', cleanup);
-            };
-
-            window.addEventListener('afterprint', cleanup);
-            setTimeout(() => {
-              window.print();
-              setTimeout(cleanup, 2500);
-            }, 200);
+            triggerPrint({
+              beforePrint: () => {
+                document
+                  .querySelectorAll('.formation-container')
+                  .forEach((card: any) => {
+                    const fId = card.getAttribute('data-form-id');
+                    if (fId && !selectedIds.includes(fId)) {
+                      card.classList.add('hidden-print');
+                    } else {
+                      card.classList.remove('hidden-print');
+                    }
+                  });
+              },
+              afterPrint: () => {
+                document
+                  .querySelectorAll('.formation-container')
+                  .forEach((card: any) => {
+                    card.classList.remove('hidden-print');
+                  });
+              },
+            });
           }}
         />
       )}

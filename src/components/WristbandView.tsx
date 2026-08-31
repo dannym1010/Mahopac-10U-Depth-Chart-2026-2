@@ -17,6 +17,7 @@ import {
   Sliders,
 } from 'lucide-react';
 import { WristbandData, UserRole } from '../types';
+import { triggerPrint } from '../utils/printUtils';
 
 interface WristbandViewProps {
   wristbandData: WristbandData;
@@ -393,8 +394,8 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
             </button>
 
             <button
-              onClick={() => window.print()}
-              className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl border border-amber-500 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+              onClick={() => triggerPrint()}
+              className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl border border-amber-500 shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
             >
               <Printer className="w-4 h-4 text-slate-950" />
               <span>Print 4.5" &times; 2.25" Card</span>

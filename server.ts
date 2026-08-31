@@ -210,20 +210,19 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
 
   // 5. Merge Practice Plans, Templates, Drills
   if (Array.isArray(incoming.practiceData)) {
-    const seenIds = new Set<string>();
-    const result: any[] = [];
-    incoming.practiceData.forEach((p: any) => {
-      if (p.id) {
-        seenIds.add(p.id);
-        result.push(p);
-      }
-    });
+    const practiceMap = new Map<string, any>();
     (current.practiceData || []).forEach((p: any) => {
-      if (p.id && !seenIds.has(p.id)) {
-        result.push(p);
+      if (p && p.id) practiceMap.set(p.id, p);
+    });
+    incoming.practiceData.forEach((p: any) => {
+      if (p && p.id) {
+        const existing = practiceMap.get(p.id);
+        if (!existing || (p.lastEdited || 0) >= (existing.lastEdited || 0)) {
+          practiceMap.set(p.id, p);
+        }
       }
     });
-    merged.practiceData = result;
+    merged.practiceData = Array.from(practiceMap.values());
   }
   if (incoming.practiceTemplates && typeof incoming.practiceTemplates === 'object') {
     merged.practiceTemplates = {

@@ -41,42 +41,73 @@ body {
   page-break-inside: avoid;
 }
 
-/* Print Optimization */
+/* Print Optimization & Physical Printer Driver Reliability */
 @media print {
   @page {
     size: letter portrait;
-    margin: 0.18in;
+    margin: 0.2in;
   }
 
-  body, html, #root {
+  /* Reset container constraints so physical printer drivers can spool and paginate without memory or layout lockups */
+  html,
+  body,
+  #root,
+  #root > div,
+  main,
+  div,
+  section,
+  article {
     background-color: #ffffff !important;
     background: #ffffff !important;
     color: #000000 !important;
     font-size: var(--print-font-size, 12px) !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    color-adjust: exact !important;
     width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
     margin: 0 !important;
     padding: 0 !important;
+    overflow: visible !important;
+    position: static !important;
+    float: none !important;
+    transform: none !important;
   }
 
-  /* Force background color preservation across all browsers */
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    color-adjust: exact !important;
+  /* Flatten nested flex wrappers that cause physical printer spoolers to stall on cross-axis pagination */
+  .flex:not(.wristband-insert-print-box):not(.print-player-badge-starter):not(.print-player-badge-d2):not(.print-player-badge-d3):not(.print-player-badge-d4),
+  .flex-col:not(.wristband-insert-print-box),
+  .lg\:flex-row {
+    display: block !important;
   }
 
-  /* Hide navigation, toolbars, buttons, modals in print */
+  /* Disable transitions, animations, backdrop filters, and heavy shadows that hang hardware printer spoolers */
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+    will-change: auto !important;
+  }
+
+  /* Hide navigation, toolbars, buttons, inputs, and modals in print */
   header,
   nav,
   aside,
   button,
+  input,
+  select,
+  textarea,
   .print\:hidden,
   .hidden-print {
     display: none !important;
   }
+
 
   /* Printable formation cards: crisp white, clean borders, fits 2 per letter page cleanly */
   .formation-container {

@@ -34,6 +34,7 @@ import {
   UnitType,
   Team,
 } from '../types';
+import { triggerPrint } from '../utils/printUtils';
 
 interface FormationsViewProps {
   unit: 'offense' | 'defense' | 'st' | 'groups';
@@ -408,7 +409,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
             </button>
           )}
           <button
-            onClick={() => window.print()}
+            onClick={() => triggerPrint()}
             className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-100 font-bold text-xs rounded-xl border border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5 text-indigo-400" />

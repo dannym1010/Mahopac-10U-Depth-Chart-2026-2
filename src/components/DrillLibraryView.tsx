@@ -490,7 +490,7 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
 
                   return (
                     <DrillRowItem
-                      key={`${pathKey}_drill_${drillIndex}_${drill.name}`}
+                      key={drill.id || `${pathKey}_drill_${drillIndex}`}
                       drill={drill}
                       pathKey={pathKey}
                       drillIdx={drillIndex}

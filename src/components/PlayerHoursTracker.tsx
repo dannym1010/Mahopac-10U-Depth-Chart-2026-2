@@ -42,6 +42,7 @@ import {
   PADDED_HOURS_REQUIRED,
 } from '../types';
 import { getSeasonWeekList } from '../utils/seasonWeekUtils';
+import { triggerPrint } from '../utils/printUtils';
 import { DEFAULT_SEASON_CONFIG } from '../data/initialData';
 import { SeasonConfigModal } from './SeasonConfigModal';
 
@@ -340,7 +341,7 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
 
   // Print compliance summary
   const handlePrintCompliance = () => {
-    window.print();
+    triggerPrint();
   };
 
   return (

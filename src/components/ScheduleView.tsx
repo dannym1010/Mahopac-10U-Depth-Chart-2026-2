@@ -48,6 +48,7 @@ import {
   formatWeekLabel,
 } from '../types';
 import { getSeasonWeekList, getWeekDisplayLabelWithOpponent } from '../utils/seasonWeekUtils';
+import { triggerPrint } from '../utils/printUtils';
 import { PracticeWizardModal, PracticeWizardGeneratedResult } from './PracticeWizardModal';
 import { TeamSnapSyncModal } from './TeamSnapSyncModal';
 
@@ -720,8 +721,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             </button>
 
             <button
-              onClick={() => window.print()}
-              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-100 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
+              onClick={() => triggerPrint()}
+              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-100 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5 text-slate-300" />
               <span>Print</span>
