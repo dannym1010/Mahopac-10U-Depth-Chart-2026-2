@@ -57,17 +57,28 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
         continue;
       }
 
-      // Merge formations array by formation ID
+      // Merge formations array preserving the incoming requested order
       let mergedFormations = curWeekState.formations || [];
       if (Array.isArray(incWeekState.formations) && incWeekState.formations.length > 0) {
-        const formMap = new Map<string, any>();
-        (curWeekState.formations || []).forEach((f: any) => {
-          if (f && f.id) formMap.set(f.id, f);
-        });
+        const seenIds = new Set<string>();
+        const result: any[] = [];
+
+        // 1. Keep incoming formations in their exact received order
         incWeekState.formations.forEach((f: any) => {
-          if (f && f.id) formMap.set(f.id, f);
+          if (f && f.id) {
+            seenIds.add(f.id);
+            result.push(f);
+          }
         });
-        mergedFormations = Array.from(formMap.values());
+
+        // 2. Append any existing formations from other units not present in incoming
+        (curWeekState.formations || []).forEach((f: any) => {
+          if (f && f.id && !seenIds.has(f.id)) {
+            result.push(f);
+          }
+        });
+
+        mergedFormations = result;
       }
 
       // Merge Depth Chart per position ID (Offense & Defense positions coexist safely)
@@ -97,33 +108,55 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
     }
   }
 
-  // 2. Merge Default Formations
+  // 2. Merge Default Formations preserving incoming order
   if (Array.isArray(incoming.defaultFormations) && incoming.defaultFormations.length > 0) {
-    const formMap = new Map<string, any>();
-    (current.defaultFormations || []).forEach((f: any) => {
-      if (f && f.id) formMap.set(f.id, f);
-    });
+    const seenIds = new Set<string>();
+    const result: any[] = [];
+
     incoming.defaultFormations.forEach((f: any) => {
-      if (f && f.id) formMap.set(f.id, f);
+      if (f && f.id) {
+        seenIds.add(f.id);
+        result.push(f);
+      }
     });
-    merged.defaultFormations = Array.from(formMap.values());
+
+    (current.defaultFormations || []).forEach((f: any) => {
+      if (f && f.id && !seenIds.has(f.id)) {
+        result.push(f);
+      }
+    });
+
+    merged.defaultFormations = result;
   }
 
-  // 3. Merge Roster
+  // 3. Merge Roster preserving incoming order
   if (Array.isArray(incoming.roster) && incoming.roster.length > 0) {
     const rosterMap = new Map<string, any>();
     (current.roster || []).forEach((p: any) => {
       const key = String(p.id || p.num || p.rosterName || p.name);
       if (key) rosterMap.set(key, p);
     });
+
+    const seenKeys = new Set<string>();
+    const result: any[] = [];
+
     incoming.roster.forEach((p: any) => {
       const key = String(p.id || p.num || p.rosterName || p.name);
       if (key) {
+        seenKeys.add(key);
         const existing = rosterMap.get(key);
-        rosterMap.set(key, existing ? { ...existing, ...p } : p);
+        result.push(existing ? { ...existing, ...p } : p);
       }
     });
-    merged.roster = Array.from(rosterMap.values());
+
+    (current.roster || []).forEach((p: any) => {
+      const key = String(p.id || p.num || p.rosterName || p.name);
+      if (key && !seenKeys.has(key)) {
+        result.push(p);
+      }
+    });
+
+    merged.roster = result;
   }
 
   // 4. Merge TeamSavedCoaches & SavedCoaches
@@ -153,14 +186,20 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
 
   // 5. Merge Practice Plans, Templates, Drills
   if (Array.isArray(incoming.practiceData)) {
-    const planMap = new Map<string, any>();
-    (current.practiceData || []).forEach((p: any) => {
-      if (p.id) planMap.set(p.id, p);
-    });
+    const seenIds = new Set<string>();
+    const result: any[] = [];
     incoming.practiceData.forEach((p: any) => {
-      if (p.id) planMap.set(p.id, p);
+      if (p.id) {
+        seenIds.add(p.id);
+        result.push(p);
+      }
     });
-    merged.practiceData = Array.from(planMap.values());
+    (current.practiceData || []).forEach((p: any) => {
+      if (p.id && !seenIds.has(p.id)) {
+        result.push(p);
+      }
+    });
+    merged.practiceData = result;
   }
   if (incoming.practiceTemplates && typeof incoming.practiceTemplates === 'object') {
     merged.practiceTemplates = {
@@ -174,14 +213,20 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
 
   // 6. Merge Schedule & Attendance
   if (Array.isArray(incoming.scheduleEvents)) {
-    const evtMap = new Map<string, any>();
-    (current.scheduleEvents || []).forEach((e: any) => {
-      if (e.id) evtMap.set(e.id, e);
-    });
+    const seenIds = new Set<string>();
+    const result: any[] = [];
     incoming.scheduleEvents.forEach((e: any) => {
-      if (e.id) evtMap.set(e.id, e);
+      if (e.id) {
+        seenIds.add(e.id);
+        result.push(e);
+      }
     });
-    merged.scheduleEvents = Array.from(evtMap.values());
+    (current.scheduleEvents || []).forEach((e: any) => {
+      if (e.id && !seenIds.has(e.id)) {
+        result.push(e);
+      }
+    });
+    merged.scheduleEvents = result;
   }
   if (Array.isArray(incoming.attendanceLogs)) {
     const logMap = new Map<string, any>();
@@ -197,14 +242,20 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
   }
 
   if (Array.isArray(incoming.teams) && incoming.teams.length > 0) {
-    const teamMap = new Map<string, any>();
-    (current.teams || []).forEach((t: any) => {
-      if (t.id) teamMap.set(t.id, t);
-    });
+    const seenIds = new Set<string>();
+    const result: any[] = [];
     incoming.teams.forEach((t: any) => {
-      if (t.id) teamMap.set(t.id, t);
+      if (t.id) {
+        seenIds.add(t.id);
+        result.push(t);
+      }
     });
-    merged.teams = Array.from(teamMap.values());
+    (current.teams || []).forEach((t: any) => {
+      if (t.id && !seenIds.has(t.id)) {
+        result.push(t);
+      }
+    });
+    merged.teams = result;
   }
 
   if (incoming.seasonConfig) {

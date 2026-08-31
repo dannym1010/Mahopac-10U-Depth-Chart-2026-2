@@ -523,7 +523,7 @@ function getUnitPositionIds(formations: FormationBoard[], unit: string): Set<str
   return ids;
 }
 
-// Multi-Coach state merger that prevents Offense/Defense/Special Teams overwrites
+// Multi-Coach state merger that prevents Offense/Defense/Special Teams overwrites and respects formation ordering
 function mergeRemoteWeeklyData(
   localWeekly: Record<string, WeekState>,
   remoteWeekly: Record<string, WeekState>,
@@ -554,29 +554,39 @@ function mergeRemoteWeeklyData(
     }
 
     const isCurrentActiveWeek = weekKey === scopedKey || weekKey === currentWeek;
+    const localFormations = Array.isArray(localState.formations) ? localState.formations : [];
+    const remoteFormations = Array.isArray(remoteState.formations) ? remoteState.formations : [];
 
     if (isCurrentActiveWeek && isActivelyEditingLocally) {
       // Local coach is actively editing this week & unit (e.g. offense or defense).
-      // Keep local coach's active unit formations and depth chart slots.
-      // Accept remote coach's updates for all other units!
-      const localFormations = Array.isArray(localState.formations) ? localState.formations : [];
-      const remoteFormations = Array.isArray(remoteState.formations) ? remoteState.formations : [];
+      // Keep local coach's active unit formations and their exact ordering intact!
+      // Accept remote coach's updates for all other units.
+      const mergedFormations: FormationBoard[] = [];
+      const usedIds = new Set<string>();
 
-      const formMap = new Map<string, FormationBoard>();
-      remoteFormations.forEach((rf) => {
-        if (rf && rf.id) formMap.set(rf.id, rf);
-      });
-
+      // Keep local formations for activeUnit in exact local order
       localFormations.forEach((lf) => {
-        if (lf && lf.id) {
-          if (lf.unit === activeUnit) {
-            formMap.set(lf.id, lf);
-          } else if (!formMap.has(lf.id)) {
-            formMap.set(lf.id, lf);
-          }
+        if (lf && lf.id && lf.unit === activeUnit) {
+          mergedFormations.push(lf);
+          usedIds.add(lf.id);
         }
       });
-      const mergedFormations = Array.from(formMap.values());
+
+      // Keep remote formations for all other units in remote order
+      remoteFormations.forEach((rf) => {
+        if (rf && rf.id && !usedIds.has(rf.id)) {
+          mergedFormations.push(rf);
+          usedIds.add(rf.id);
+        }
+      });
+
+      // Keep any remaining local formations not yet included
+      localFormations.forEach((lf) => {
+        if (lf && lf.id && !usedIds.has(lf.id)) {
+          mergedFormations.push(lf);
+          usedIds.add(lf.id);
+        }
+      });
 
       const localActiveUnitPosIds = getUnitPositionIds(localFormations, activeUnit);
 
@@ -609,7 +619,25 @@ function mergeRemoteWeeklyData(
         scouting: remoteState.scouting || localState.scouting,
       };
     } else {
-      // Not actively editing locally: merge depthChart per position key seamlessly
+      // Not actively editing locally:
+      // Remote formations are authoritative and preserve server ordering.
+      // Retain any formations in local that might not have made it to remote yet.
+      const mergedFormations: FormationBoard[] = [];
+      const usedIds = new Set<string>();
+
+      remoteFormations.forEach((rf) => {
+        if (rf && rf.id && !usedIds.has(rf.id)) {
+          mergedFormations.push(rf);
+          usedIds.add(rf.id);
+        }
+      });
+      localFormations.forEach((lf) => {
+        if (lf && lf.id && !usedIds.has(lf.id)) {
+          mergedFormations.push(lf);
+          usedIds.add(lf.id);
+        }
+      });
+
       const localDC = localState.depthChart || {};
       const remoteDC = remoteState.depthChart || {};
       const mergedDC: Record<string, PlacedPlayer[]> = { ...localDC, ...remoteDC };
@@ -621,6 +649,7 @@ function mergeRemoteWeeklyData(
       merged[weekKey] = {
         ...localState,
         ...remoteState,
+        formations: mergedFormations.length > 0 ? mergedFormations : (localState.formations || remoteState.formations || []),
         depthChart: mergedDC,
         scrimmageChart: mergedSC,
       };
@@ -670,9 +699,30 @@ function mergeRemoteWeeklyData(
       Array.isArray(data.defaultFormations) &&
       data.defaultFormations.length > 0
     ) {
-      setDefaultFormations(data.defaultFormations);
-      latestStateRef.current.defaultFormations = data.defaultFormations;
-      safeJSONSet('footballDefaultFormations', data.defaultFormations);
+      if (Date.now() - lastLocalEditTimeRef.current < 15000) {
+        const localDefs = latestStateRef.current.defaultFormations || [];
+        const mergedDefs: FormationBoard[] = [];
+        const usedIds = new Set<string>();
+        localDefs.forEach((lf) => {
+          if (lf && lf.id && lf.unit === activeUnitRef.current) {
+            mergedDefs.push(lf);
+            usedIds.add(lf.id);
+          }
+        });
+        data.defaultFormations.forEach((rf: any) => {
+          if (rf && rf.id && !usedIds.has(rf.id)) {
+            mergedDefs.push(rf);
+            usedIds.add(rf.id);
+          }
+        });
+        setDefaultFormations(mergedDefs);
+        latestStateRef.current.defaultFormations = mergedDefs;
+        safeJSONSet('footballDefaultFormations', mergedDefs);
+      } else {
+        setDefaultFormations(data.defaultFormations);
+        latestStateRef.current.defaultFormations = data.defaultFormations;
+        safeJSONSet('footballDefaultFormations', data.defaultFormations);
+      }
     }
     if (data.practiceData && Array.isArray(data.practiceData)) {
       const sanitized = sanitizePracticePlans(
