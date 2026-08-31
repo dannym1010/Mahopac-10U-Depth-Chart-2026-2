@@ -1050,28 +1050,6 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                             </div>
                           );
                         })}
-
-                        {/* Direct "+ Add Slot" card at end of row for 1-click slot insertion */}
-                        {userRole === 'admin' && positionsList.length < 12 && (
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleQuickAddSlot(form.id, rIdx, positionsList.length);
-                            }}
-                            title="Add an empty slot to the end of this row"
-                            className="min-h-[115px] print:hidden rounded-2xl border-2 border-dashed border-slate-700/60 hover:border-indigo-500/80 hover:bg-indigo-950/20 flex flex-col items-center justify-center p-3 text-center transition-all cursor-pointer group"
-                          >
-                            <div className="w-8 h-8 rounded-xl bg-slate-800/80 border border-slate-700/80 group-hover:border-indigo-500/80 group-hover:bg-indigo-600/30 text-slate-400 group-hover:text-indigo-300 flex items-center justify-center transition-all shadow-inner">
-                              <SquarePlus className="w-4 h-4" />
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 group-hover:text-indigo-300 mt-1.5 transition-colors">
-                              + Empty Slot
-                            </span>
-                            <span className="text-[8px] text-slate-400 font-medium">
-                              Slot #{positionsList.length + 1}
-                            </span>
-                          </div>
-                        )}
                       </div>
                     </div>
                   );
