@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   X,
   UserPlus,
@@ -15,9 +15,17 @@ import {
   Sparkles,
   Users,
   Copy,
+  FileText,
+  CheckCircle2,
+  RefreshCw,
+  HelpCircle,
 } from 'lucide-react';
-import { RosterPlayer, UserRole, Team } from '../types';
+import { RosterPlayer, UserRole, Team, FormationBoard, PlacedPlayer } from '../types';
 import { MASTER_ROSTER } from '../data/initialData';
+import {
+  getPlayerPositionsFromDepthChart,
+  syncRosterPositionsFromDepthChart,
+} from '../utils/depthChartUtils';
 
 interface RosterManagerModalProps {
   isOpen: boolean;
@@ -29,6 +37,8 @@ interface RosterManagerModalProps {
   onClearEditingPlayer?: () => void;
   teams?: Team[];
   activeTeamId?: string;
+  formations?: FormationBoard[];
+  depthChart?: Record<string, PlacedPlayer[]>;
 }
 
 const COMMON_POSITIONS = [
@@ -49,6 +59,8 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
   onClearEditingPlayer,
   teams = [],
   activeTeamId,
+  formations = [],
+  depthChart = {},
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'list' | 'add' | 'csv' | 'copy'>('list');
@@ -70,10 +82,21 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
   const [notes, setNotes] = useState('');
   const [csvText, setCsvText] = useState('');
   const [formError, setFormError] = useState('');
+  const [csvPreviewPlayers, setCsvPreviewPlayers] = useState<RosterPlayer[]>([]);
+  const [csvFileName, setCsvFileName] = useState<string | null>(null);
+  const [csvImportMode, setCsvImportMode] = useState<'replace' | 'append'>('replace');
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Copy Team Roster State
   const [copySourceTeamId, setCopySourceTeamId] = useState<string>(teams[0]?.id || '');
   const [copyTargetTeamId, setCopyTargetTeamId] = useState<string>(activeTeamId || (teams[1]?.id || ''));
+
+  // Compute depth chart derived positions for every player
+  const depthChartPositionsMap = useMemo(() => {
+    return getPlayerPositionsFromDepthChart(formations, depthChart);
+  }, [formations, depthChart]);
 
   // Sync selected team filter if activeTeamId changes
   React.useEffect(() => {
@@ -86,7 +109,11 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
   // Handle opening directly in edit mode if editingPlayer prop is provided
   React.useEffect(() => {
     if (initialEditingPlayer) {
-      const idx = roster.findIndex((p) => p.num === initialEditingPlayer.num && (!initialEditingPlayer.teamId || p.teamId === initialEditingPlayer.teamId));
+      const idx = roster.findIndex(
+        (p) =>
+          p.num === initialEditingPlayer.num &&
+          (!initialEditingPlayer.teamId || p.teamId === initialEditingPlayer.teamId)
+      );
       if (idx >= 0) {
         startEditPlayer(initialEditingPlayer, idx);
       }
@@ -130,6 +157,44 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     setNotes(player.notes || '');
     setFormError('');
     setActiveTab('add');
+  };
+
+  // Helper to apply detected depth chart positions into Add/Edit form
+  const applyDepthChartToForm = (playerNumToLookup: string) => {
+    const derived = depthChartPositionsMap.get(playerNumToLookup.trim());
+    if (derived) {
+      if (derived.suggestedPrimary) setPrimaryPos(derived.suggestedPrimary);
+      if (derived.suggestedSecondary) setSecondaryPos(derived.suggestedSecondary);
+      if (derived.primaryOffense) setOffensivePos(derived.primaryOffense);
+      if (derived.primaryDefense) setDefensivePos(derived.primaryDefense);
+    }
+  };
+
+  // Bulk sync positions from Depth Charts for the whole team
+  const handleBulkSyncFromDepthCharts = () => {
+    const targetTeam = selectedTeamFilter !== 'all' ? selectedTeamFilter : activeTeamId || teams[0]?.id;
+    const targetTeamName = teams.find((t) => t.id === targetTeam)?.name || 'active team';
+
+    const { updatedRoster, countUpdated } = syncRosterPositionsFromDepthChart(
+      roster,
+      formations,
+      depthChart,
+      { targetTeamId: selectedTeamFilter }
+    );
+
+    if (countUpdated === 0) {
+      alert(`All player positions already match the active Depth Charts on ${targetTeamName}!`);
+      return;
+    }
+
+    if (
+      confirm(
+        `Automatically update primary, secondary, offensive, and defensive positions for ${countUpdated} players based on their starter/sub slots in the active Depth Charts for ${targetTeamName}?`
+      )
+    ) {
+      onUpdateRoster(updatedRoster);
+      alert(`Successfully synchronized ${countUpdated} player positions from the active Depth Charts!`);
+    }
   };
 
   const handleSavePlayer = (e: React.FormEvent) => {
@@ -198,11 +263,19 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
 
   const handleDeletePlayer = (playerToDelete: RosterPlayer) => {
     const teamName = teams.find((t) => t.id === playerToDelete.teamId)?.name || 'this team';
-    if (!window.confirm(`Are you sure you want to remove #${playerToDelete.num} ${playerToDelete.firstName} ${playerToDelete.lastName} from ${teamName}?`)) {
+    if (
+      !confirm(
+        `Are you sure you want to remove #${playerToDelete.num} ${playerToDelete.firstName} ${playerToDelete.lastName} from ${teamName}?`
+      )
+    ) {
       return;
     }
     const updated = roster.filter(
-      (p) => !(p.num === playerToDelete.num && (p.teamId === playerToDelete.teamId || (!p.teamId && !playerToDelete.teamId)))
+      (p) =>
+        !(
+          p.num === playerToDelete.num &&
+          (p.teamId === playerToDelete.teamId || (!p.teamId && !playerToDelete.teamId))
+        )
     );
     onUpdateRoster(updated);
   };
@@ -212,7 +285,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
       const targetTeam = teams.find((t) => t.id === selectedTeamFilter);
       const teamName = targetTeam ? targetTeam.name : selectedTeamFilter;
       if (
-        window.confirm(
+        confirm(
           `Are you sure you want to clear all players for ${teamName}? Players on other teams will remain intact.`
         )
       ) {
@@ -220,11 +293,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
         onUpdateRoster(updated);
       }
     } else {
-      if (
-        window.confirm(
-          'Are you sure you want to clear ALL players across ALL teams in the entire program?'
-        )
-      ) {
+      if (confirm('Are you sure you want to clear ALL players across ALL teams in the entire program?')) {
         onUpdateRoster([]);
       }
     }
@@ -247,7 +316,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     const targetTeam = teams.find((t) => t.id === copyTargetTeamId);
 
     if (
-      !window.confirm(
+      !confirm(
         `Copy ${sourcePlayers.length} players from ${sourceTeam?.name || 'Source'} into ${targetTeam?.name || 'Target'}?`
       )
     ) {
@@ -269,74 +338,209 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     alert(`Successfully copied ${clonedPlayers.length} players to ${targetTeam?.name}!`);
   };
 
-  // CSV Import Parser
-  const handleImportCSV = () => {
-    if (!csvText.trim()) return;
-    try {
-      const lines = csvText.trim().split('\n');
-      const targetTeamId = assignedTeamId || (selectedTeamFilter !== 'all' ? selectedTeamFilter : activeTeamId || teams[0]?.id);
-      const imported: RosterPlayer[] = [];
+  // Robust CSV / Text Parsing Engine supporting headers, quotes, commas, tabs
+  const parseCSVRawText = (rawContent: string, targetTeam: string): RosterPlayer[] => {
+    const lines = rawContent
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
 
-      lines.forEach((line) => {
-        const parts = line.split(',').map((s) => s.trim().replace(/^["']|["']$/g, ''));
-        if (parts.length >= 2) {
-          const rawNum = parts[0].replace(/\D/g, '');
-          const fName = parts[1] || '';
-          const lName = parts[2] || '';
-          const pPos = parts[3] || 'ATH';
-          const sPos = parts[4] || 'ATH';
+    if (lines.length === 0) return [];
 
-          if (rawNum && fName) {
-            imported.push({
-              num: rawNum,
-              firstName: fName,
-              lastName: lName,
-              teamId: targetTeamId,
-              primaryPosition: pPos,
-              secondaryPosition: sPos,
-              conditioningHours: 10,
-              paddedHours: 10,
-            });
-          }
+    // Helper to split a CSV line considering quotes
+    const splitCSVLine = (line: string): string[] => {
+      const result: string[] = [];
+      let current = '';
+      let inQuotes = false;
+      const delimiter = line.includes('\t') ? '\t' : ',';
+
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"' || char === "'") {
+          inQuotes = !inQuotes;
+        } else if (char === delimiter && !inQuotes) {
+          result.push(current.trim().replace(/^["']|["']$/g, ''));
+          current = '';
+        } else {
+          current += char;
         }
-      });
-
-      if (imported.length > 0) {
-        // Keep players belonging to other teams
-        const otherTeamsPlayers = roster.filter((p) => (p.teamId || teams[0]?.id) !== targetTeamId);
-        const updated = [...otherTeamsPlayers, ...imported];
-        updated.sort((a, b) => parseInt(a.num, 10) - parseInt(b.num, 10));
-        onUpdateRoster(updated);
-        alert(`Successfully imported ${imported.length} players to ${teams.find((t) => t.id === targetTeamId)?.name || 'the team'}!`);
-        setActiveTab('list');
-        setCsvText('');
-      } else {
-        alert('Could not parse any players from CSV. Ensure format is: Jersey#, FirstName, LastName, PrimaryPos, SecondaryPos');
       }
-    } catch (err) {
-      alert('Error parsing CSV');
+      result.push(current.trim().replace(/^["']|["']$/g, ''));
+      return result;
+    };
+
+    const firstLineCols = splitCSVLine(lines[0]).map((c) => c.toLowerCase().trim());
+    const isHeaderRow =
+      firstLineCols.some((c) =>
+        ['jersey', 'number', '#', 'no', 'num', 'first', 'firstname', 'name', 'pos', 'position', 'offense', 'defense'].includes(c)
+      );
+
+    let colJersey = 0;
+    let colFirst = 1;
+    let colLast = 2;
+    let colPrimary = 3;
+    let colSecondary = 4;
+    let colNotes = -1;
+    let colCaptain = -1;
+    let startIdx = 0;
+
+    if (isHeaderRow) {
+      startIdx = 1;
+      firstLineCols.forEach((col, idx) => {
+        if (['jersey', 'number', '#', 'no', 'num', 'jersey#', 'jersey_num'].includes(col)) colJersey = idx;
+        else if (['first', 'firstname', 'first_name', 'f_name', 'player_name', 'name'].includes(col)) colFirst = idx;
+        else if (['last', 'lastname', 'last_name', 'l_name'].includes(col)) colLast = idx;
+        else if (['pos', 'position', 'primary', 'primary_pos', 'primarypos', 'offense', 'off_pos'].includes(col)) colPrimary = idx;
+        else if (['secondary', 'sec_pos', 'secondary_pos', 'defense', 'def_pos'].includes(col)) colSecondary = idx;
+        else if (['note', 'notes', 'comments'].includes(col)) colNotes = idx;
+        else if (['captain', 'is_captain', 'c'].includes(col)) colCaptain = idx;
+      });
     }
+
+    const parsed: RosterPlayer[] = [];
+
+    for (let i = startIdx; i < lines.length; i++) {
+      const parts = splitCSVLine(lines[i]);
+      if (parts.length >= 2) {
+        const rawNum = (parts[colJersey] || '').replace(/\D/g, '');
+        let fName = parts[colFirst] || '';
+        let lName = colLast >= 0 && colLast < parts.length ? parts[colLast] || '' : '';
+
+        // If name was provided as single "First Last" in one column
+        if (colFirst === colLast || (!lName && fName.includes(' '))) {
+          const nameParts = fName.split(/\s+/);
+          fName = nameParts[0] || '';
+          lName = nameParts.slice(1).join(' ') || '';
+        }
+
+        const pPos = (parts[colPrimary] || 'ATH').toUpperCase();
+        const sPos = (colSecondary >= 0 && parts[colSecondary] ? parts[colSecondary] : 'ATH').toUpperCase();
+        const noteVal = colNotes >= 0 ? parts[colNotes] || '' : '';
+        const captVal = colCaptain >= 0 ? ['true', 'yes', '1', 'c'].includes((parts[colCaptain] || '').toLowerCase()) : false;
+
+        if (rawNum && fName) {
+          parsed.push({
+            num: rawNum,
+            firstName: fName,
+            lastName: lName,
+            teamId: targetTeam,
+            primaryPosition: pPos,
+            secondaryPosition: sPos,
+            offensivePosition: pPos,
+            defensivePosition: sPos,
+            conditioningHours: 10,
+            paddedHours: 10,
+            isCaptain: captVal,
+            notes: noteVal,
+          });
+        }
+      }
+    }
+
+    return parsed;
+  };
+
+  // File Upload Handler (via Drag/Drop or Browse)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvFileName(file.name);
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const content = evt.target?.result as string;
+      setCsvText(content);
+      const targetTeam = assignedTeamId || (selectedTeamFilter !== 'all' ? selectedTeamFilter : activeTeamId || teams[0]?.id);
+      const players = parseCSVRawText(content, targetTeam);
+      setCsvPreviewPlayers(players);
+    };
+    reader.readAsText(file);
+  };
+
+  // Textarea Change Handler
+  const handleCsvTextChange = (text: string) => {
+    setCsvText(text);
+    const targetTeam = assignedTeamId || (selectedTeamFilter !== 'all' ? selectedTeamFilter : activeTeamId || teams[0]?.id);
+    const players = parseCSVRawText(text, targetTeam);
+    setCsvPreviewPlayers(players);
+  };
+
+  // Execute CSV Import
+  const handleExecuteImportCSV = () => {
+    const targetTeamId = assignedTeamId || (selectedTeamFilter !== 'all' ? selectedTeamFilter : activeTeamId || teams[0]?.id);
+    const targetTeamName = teams.find((t) => t.id === targetTeamId)?.name || 'the team';
+
+    const playersToImport = csvPreviewPlayers.length > 0
+      ? csvPreviewPlayers
+      : parseCSVRawText(csvText, targetTeamId);
+
+    if (playersToImport.length === 0) {
+      alert('No valid player records found. Please ensure format contains at least Jersey # and First Name.');
+      return;
+    }
+
+    let updated: RosterPlayer[];
+    if (csvImportMode === 'replace') {
+      // Keep players from other teams, replace current team
+      const otherTeams = roster.filter((p) => (p.teamId || teams[0]?.id) !== targetTeamId);
+      updated = [...otherTeams, ...playersToImport];
+    } else {
+      // Append mode: merge, avoid exact duplicate jersey numbers on same team
+      const otherPlayers = roster.filter(
+        (p) => !(p.teamId === targetTeamId && playersToImport.some((imp) => imp.num === p.num))
+      );
+      updated = [...otherPlayers, ...playersToImport];
+    }
+
+    updated.sort((a, b) => parseInt(a.num, 10) - parseInt(b.num, 10));
+    onUpdateRoster(updated);
+    alert(`Successfully imported ${playersToImport.length} players to ${targetTeamName}!`);
+    setActiveTab('list');
+    setCsvText('');
+    setCsvPreviewPlayers([]);
+    setCsvFileName(null);
   };
 
   // CSV Export
   const handleExportCSV = () => {
-    const header = 'Jersey,FirstName,LastName,Team,PrimaryPos,SecondaryPos\n';
+    const header = 'Jersey,FirstName,LastName,Team,PrimaryPos,SecondaryPos,Captain,Notes\n';
     const rows = filteredRoster
-      .map(
-        (p) => {
-          const teamName = teams.find((t) => t.id === p.teamId)?.name || 'Default';
-          return `${p.num},"${p.firstName}","${p.lastName}","${teamName}","${p.primaryPosition || ''}","${
-            p.secondaryPosition || ''
-          }"`;
-        }
-      )
+      .map((p) => {
+        const teamName = teams.find((t) => t.id === p.teamId)?.name || 'Default';
+        return `${p.num},"${p.firstName}","${p.lastName}","${teamName}","${p.primaryPosition || ''}","${
+          p.secondaryPosition || ''
+        }","${p.isCaptain ? 'Yes' : 'No'}","${p.notes || ''}"`;
+      })
       .join('\n');
 
     const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `Roster_${selectedTeamFilter !== 'all' ? selectedTeamFilter : 'All_Teams'}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute(
+      'download',
+      `Roster_${selectedTeamFilter !== 'all' ? selectedTeamFilter : 'All_Teams'}_${new Date().toISOString().split('T')[0]}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Download Sample Template CSV
+  const handleDownloadSampleCSV = () => {
+    const template = `Jersey,FirstName,LastName,PrimaryPos,SecondaryPos,Captain,Notes
+10,Alex,Smith,QB,FS,Yes,Team leader and play caller
+2,Jordan,Taylor,RB,CB,No,Fast outside runner
+56,Sam,Johnson,LT,DE,No,Strong run blocker
+88,Marcus,Davis,WR,CB,No,Great hands
+52,Ethan,Miller,C,MLB,Yes,Defensive captain
+12,Lucas,Brown,TE,OLB,No,Physical blocker`;
+
+    const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'Roster_Import_Template.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -346,7 +550,6 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     if (selectedTeamFilter !== 'all') {
       const pTeam = p.teamId || teams[0]?.id || 'team_10u';
       if (pTeam !== selectedTeamFilter) {
-        // Handle team-10u vs team_10u alias
         if (
           (pTeam === 'team_10u' || pTeam === 'team-10u') &&
           (selectedTeamFilter === 'team_10u' || selectedTeamFilter === 'team-10u')
@@ -368,6 +571,9 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     );
   });
 
+  // Current editing player's depth chart position info
+  const activeEditingPlayerDepthInfo = num ? depthChartPositionsMap.get(num.trim()) : null;
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
       <div className="bg-slate-900 border border-slate-700/90 rounded-3xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden text-slate-100 animate-in fade-in zoom-in-95 duration-200">
@@ -385,7 +591,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                 </span>
               </h3>
               <p className="text-xs text-slate-400">
-                User-editable roster with multi-team assignment, custom positions, jersey numbers, and practice hours
+                Manage roster, CSV file import, and auto-assign positions from active depth charts
               </p>
             </div>
           </div>
@@ -395,7 +601,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
               if (onClearEditingPlayer) onClearEditingPlayer();
               onClose();
             }}
-            className="text-slate-400 hover:text-slate-100 p-2 rounded-xl hover:bg-slate-800 transition-colors"
+            className="text-slate-400 hover:text-slate-100 p-2 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -406,7 +612,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setActiveTab('list')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'list'
                   ? 'bg-indigo-600 text-white shadow-md'
                   : 'bg-slate-800 text-slate-400 hover:text-slate-200'
@@ -418,7 +624,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
               <>
                 <button
                   onClick={startAddPlayer}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                     activeTab === 'add' && editingIndex === null
                       ? 'bg-indigo-600 text-white shadow-md'
                       : 'bg-slate-800 text-slate-400 hover:text-slate-200'
@@ -429,19 +635,19 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('csv')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                     activeTab === 'csv'
                       ? 'bg-indigo-600 text-white shadow-md'
                       : 'bg-slate-800 text-slate-400 hover:text-slate-200'
                   }`}
                 >
                   <Upload className="w-3.5 h-3.5" />
-                  <span>CSV Import / Export</span>
+                  <span>CSV File Import / Export</span>
                 </button>
                 {teams.length > 1 && (
                   <button
                     onClick={() => setActiveTab('copy')}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                       activeTab === 'copy'
                         ? 'bg-indigo-600 text-white shadow-md'
                         : 'bg-slate-800 text-slate-400 hover:text-slate-200'
@@ -468,7 +674,11 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                 {teams.map((t) => {
                   const count = roster.filter((p) => {
                     const pTeam = p.teamId || teams[0]?.id || 'team_10u';
-                    return pTeam === t.id || ((pTeam === 'team_10u' || pTeam === 'team-10u') && (t.id === 'team_10u' || t.id === 'team-10u'));
+                    return (
+                      pTeam === t.id ||
+                      ((pTeam === 'team_10u' || pTeam === 'team-10u') &&
+                        (t.id === 'team_10u' || t.id === 'team-10u'))
+                    );
                   }).length;
                   return (
                     <option key={t.id} value={t.id}>
@@ -483,7 +693,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
           {userRole === 'admin' && activeTab === 'list' && roster.length > 0 && (
             <button
               onClick={handleClearRoster}
-              className="text-[11px] font-bold text-rose-400 hover:text-rose-300 flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-rose-950/40 border border-rose-900/30 transition-all"
+              className="text-[11px] font-bold text-rose-400 hover:text-rose-300 flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-rose-950/40 border border-rose-900/30 transition-all cursor-pointer"
               title="Clear all players from roster"
             >
               <RotateCcw className="w-3 h-3" />
@@ -497,25 +707,37 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
           {/* TAB 1: ALL PLAYERS LIST */}
           {activeTab === 'list' && (
             <div className="space-y-4">
-              {/* Search Bar */}
-              <div className="flex items-center justify-between gap-3">
-                <div className="relative flex-1 max-w-sm">
+              {/* Toolbar with Depth Chart Sync and Search */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-850 p-3 rounded-2xl border border-slate-800">
+                <div className="relative flex-1 min-w-[200px] max-w-sm">
                   <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
                   <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search by name, jersey, or position..."
-                    className="w-full pl-8 pr-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+                    className="w-full pl-8 pr-3 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
-                <div className="flex items-center gap-2">
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {userRole === 'admin' && (
+                    <button
+                      onClick={handleBulkSyncFromDepthCharts}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md shadow-indigo-600/30 border border-indigo-400/40 transition-all cursor-pointer active:scale-95"
+                      title="Automatically scan active depth charts and update player primary & secondary positions based on their starter/sub slots"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      <span>⚡ Auto-Assign Positions from Depth Charts</span>
+                    </button>
+                  )}
+
                   <button
                     onClick={handleExportCSV}
-                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-bold text-xs flex items-center gap-1.5 border border-slate-700 transition-all"
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-bold text-xs flex items-center gap-1.5 border border-slate-700 transition-all cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Download CSV</span>
+                    <span>Export CSV</span>
                   </button>
                 </div>
               </div>
@@ -530,6 +752,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                       <th className="py-2.5 px-3">Team</th>
                       <th className="py-2.5 px-3">Offense Pos</th>
                       <th className="py-2.5 px-3">Defense Pos</th>
+                      <th className="py-2.5 px-3">Depth Chart Slot</th>
                       <th className="py-2.5 px-3">Notes</th>
                       <th className="py-2.5 px-3 text-right">Actions</th>
                     </tr>
@@ -537,6 +760,8 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                   <tbody className="divide-y divide-slate-850">
                     {filteredRoster.map((player, idx) => {
                       const playerTeam = teams.find((t) => t.id === player.teamId);
+                      const depthInfo = depthChartPositionsMap.get(player.num.trim());
+
                       return (
                         <tr key={`${player.num}-${idx}`} className="hover:bg-slate-850/60 transition-colors">
                           <td className="py-2.5 px-3 font-mono font-black text-indigo-400">
@@ -544,9 +769,14 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                           </td>
                           <td className="py-2.5 px-3 font-bold text-slate-100">
                             <div className="flex items-center gap-1.5">
-                              <span>{player.firstName} {player.lastName}</span>
+                              <span>
+                                {player.firstName} {player.lastName}
+                              </span>
                               {player.isCaptain && (
-                                <span className="px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 font-black text-[9px]">
+                                <span
+                                  title="Team Captain"
+                                  className="px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 font-black text-[9px]"
+                                >
                                   C
                                 </span>
                               )}
@@ -554,7 +784,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                           </td>
                           <td className="py-2.5 px-3">
                             <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold">
-                              {playerTeam ? (playerTeam.ageGroup || playerTeam.name) : 'Assigned'}
+                              {playerTeam ? playerTeam.ageGroup || playerTeam.name : 'Assigned'}
                             </span>
                           </td>
                           <td className="py-2.5 px-3">
@@ -567,7 +797,29 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                               {player.secondaryPosition || 'ATH'}
                             </span>
                           </td>
-                          <td className="py-2.5 px-3 text-slate-400 max-w-[200px] truncate">
+                          <td className="py-2.5 px-3">
+                            {depthInfo && depthInfo.assignments.length > 0 ? (
+                              <div className="flex items-center gap-1 flex-wrap">
+                                {depthInfo.assignments.slice(0, 2).map((a, aIdx) => (
+                                  <span
+                                    key={aIdx}
+                                    title={`${a.formationName} (${a.unit}) - String ${a.depthString}`}
+                                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-black uppercase tracking-tight border ${
+                                      a.depthString === 1
+                                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                        : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                                    }`}
+                                  >
+                                    {a.positionName}
+                                    <span className="text-[8px] opacity-75 font-mono ml-0.5">{a.depthString}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 italic">Unplaced</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-400 max-w-[160px] truncate">
                             {player.notes || '—'}
                           </td>
                           <td className="py-2.5 px-3 text-right">
@@ -576,14 +828,14 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                                 <>
                                   <button
                                     onClick={() => startEditPlayer(player, idx)}
-                                    className="p-1.5 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 rounded-lg transition-all"
+                                    className="p-1.5 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 rounded-lg transition-all cursor-pointer"
                                     title="Edit player"
                                   >
                                     <Edit2 className="w-3.5 h-3.5" />
                                   </button>
                                   <button
                                     onClick={() => handleDeletePlayer(player)}
-                                    className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-all"
+                                    className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-all cursor-pointer"
                                     title="Delete player"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
@@ -612,7 +864,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setActiveTab('list')}
-                    className="text-xs text-slate-400 hover:text-slate-200"
+                    className="text-xs text-slate-400 hover:text-slate-200 cursor-pointer"
                   >
                     Back to List
                   </button>
@@ -689,6 +941,30 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                   </div>
                 </div>
 
+                {/* Depth Chart Position Detection Banner */}
+                {activeEditingPlayerDepthInfo && activeEditingPlayerDepthInfo.assignments.length > 0 && (
+                  <div className="p-3 bg-indigo-950/40 rounded-xl border border-indigo-500/30 flex items-center justify-between gap-3">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5 text-xs font-black text-indigo-300">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Depth Chart Placement Detected:</span>
+                      </div>
+                      <p className="text-[11px] text-slate-300">
+                        {activeEditingPlayerDepthInfo.assignments
+                          .map((a) => `${a.positionName}${a.depthString} (${a.formationName})`)
+                          .join(', ')}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => applyDepthChartToForm(num)}
+                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] rounded-lg shadow-sm shrink-0 cursor-pointer"
+                    >
+                      ⚡ Apply to Form
+                    </button>
+                  </div>
+                )}
+
                 {/* Positions */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -758,13 +1034,13 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveTab('list')}
-                  className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200"
+                  className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 active:scale-95"
+                  className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 active:scale-95 cursor-pointer"
                 >
                   <Check className="w-4 h-4" />
                   <span>{editingIndex !== null ? 'Update Player' : 'Add Player to Roster'}</span>
@@ -773,24 +1049,44 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
             </form>
           )}
 
-          {/* TAB 3: CSV IMPORT */}
+          {/* TAB 3: CSV FILE & TEXT IMPORT */}
           {activeTab === 'csv' && (
-            <div className="space-y-4 max-w-xl mx-auto">
-              <div className="bg-slate-850 p-4 rounded-2xl border border-slate-800 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-black text-sm text-slate-100">Bulk Import via CSV / Text</h4>
-                  <span className="text-[10px] font-bold text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full border border-indigo-500/30">
-                    Target: {teams.find((t) => t.id === assignedTeamId)?.name || 'Active Team'}
-                  </span>
+            <div className="space-y-4 max-w-2xl mx-auto">
+              <div className="bg-slate-850 p-5 rounded-2xl border border-slate-800 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Upload className="w-5 h-5 text-indigo-400" />
+                    <div>
+                      <h4 className="font-black text-sm text-slate-100">Import Roster from CSV File or Text</h4>
+                      <p className="text-xs text-slate-400">
+                        Upload a .csv / .tsv spreadsheet file or paste text directly
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleDownloadSampleCSV}
+                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-750 text-indigo-300 text-[11px] font-bold rounded-lg border border-indigo-500/30 flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Download a formatted sample spreadsheet"
+                  >
+                    <Download className="w-3 h-3 text-indigo-400" />
+                    <span>Sample CSV</span>
+                  </button>
                 </div>
-                {teams.length > 1 && (
+
+                {/* Target Team & Mode Selection */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
                       Import Into Team:
                     </label>
                     <select
                       value={assignedTeamId}
-                      onChange={(e) => setAssignedTeamId(e.target.value)}
+                      onChange={(e) => {
+                        setAssignedTeamId(e.target.value);
+                        if (csvText) {
+                          setCsvPreviewPlayers(parseCSVRawText(csvText, e.target.value));
+                        }
+                      }}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
                     >
                       {teams.map((t) => (
@@ -800,27 +1096,176 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                       ))}
                     </select>
                   </div>
-                )}
-                <p className="text-xs text-slate-400">
-                  Paste roster data. Format per line: <br/>
-                  <code className="text-indigo-300 font-mono text-[11px]">
-                    Jersey#, FirstName, LastName, PrimaryPos, SecondaryPos
-                  </code>
-                </p>
-                <textarea
-                  rows={6}
-                  value={csvText}
-                  onChange={(e) => setCsvText(e.target.value)}
-                  placeholder={`10, Alex, Smith, QB, FS\n2, Jordan, Taylor, RB, CB\n56, Sam, Johnson, LT, DE`}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 font-mono text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                      Import Mode:
+                    </label>
+                    <div className="flex items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-700">
+                      <button
+                        type="button"
+                        onClick={() => setCsvImportMode('replace')}
+                        className={`flex-1 py-1.5 rounded-lg font-bold text-[11px] transition-all cursor-pointer ${
+                          csvImportMode === 'replace'
+                            ? 'bg-indigo-600 text-white shadow-xs'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        Replace Team
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCsvImportMode('append')}
+                        className={`flex-1 py-1.5 rounded-lg font-bold text-[11px] transition-all cursor-pointer ${
+                          csvImportMode === 'append'
+                            ? 'bg-indigo-600 text-white shadow-xs'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        Append / Merge
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Drag & Drop File Upload Area */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept=".csv,.txt,.tsv"
+                  onChange={handleFileUpload}
+                  className="hidden"
                 />
+
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(true);
+                  }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) {
+                      setCsvFileName(file.name);
+                      const reader = new FileReader();
+                      reader.onload = (evt) => {
+                        const content = evt.target?.result as string;
+                        setCsvText(content);
+                        const targetTeam = assignedTeamId || activeTeamId || teams[0]?.id;
+                        setCsvPreviewPlayers(parseCSVRawText(content, targetTeam));
+                      };
+                      reader.readAsText(file);
+                    }
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`p-6 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+                    isDragOver
+                      ? 'border-indigo-400 bg-indigo-950/40 scale-[1.01]'
+                      : 'border-slate-700 bg-slate-900/60 hover:bg-slate-900 hover:border-slate-600'
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-2.5">
+                    <Upload className="w-6 h-6" />
+                  </div>
+                  <h5 className="font-bold text-xs text-slate-200">
+                    {csvFileName ? (
+                      <span className="text-emerald-400 font-mono">Selected: {csvFileName}</span>
+                    ) : (
+                      'Click to browse or drag and drop your CSV file here'
+                    )}
+                  </h5>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Supports .csv, .txt, and .tsv formats with column headers (Jersey, Name, Pos, Notes...)
+                  </p>
+                </div>
+
+                {/* Paste Textarea Alternative */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                      Or Paste CSV Text Directly:
+                    </label>
+                    {csvText && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCsvText('');
+                          setCsvPreviewPlayers([]);
+                          setCsvFileName(null);
+                        }}
+                        className="text-[10px] text-slate-400 hover:text-rose-300"
+                      >
+                        Clear Text
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={csvText}
+                    onChange={(e) => handleCsvTextChange(e.target.value)}
+                    placeholder="Jersey, FirstName, LastName, PrimaryPos, SecondaryPos&#10;10, Alex, Smith, QB, FS&#10;2, Jordan, Taylor, RB, CB"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 font-mono text-xs text-slate-200 focus:outline-none focus:border-indigo-500 placeholder:text-slate-600"
+                  />
+                </div>
+
+                {/* Live Parsed Preview Table */}
+                {csvPreviewPlayers.length > 0 && (
+                  <div className="space-y-2 border-t border-slate-800 pt-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-xs text-emerald-400 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Ready to Import: {csvPreviewPlayers.length} Players Found</span>
+                      </span>
+                    </div>
+
+                    <div className="max-h-40 overflow-y-auto border border-slate-800 rounded-xl bg-slate-950/60 text-[11px]">
+                      <table className="w-full text-left">
+                        <thead className="bg-slate-900 text-slate-400 sticky top-0 border-b border-slate-800">
+                          <tr>
+                            <th className="py-1.5 px-2.5">#</th>
+                            <th className="py-1.5 px-2.5">Name</th>
+                            <th className="py-1.5 px-2.5">Offense</th>
+                            <th className="py-1.5 px-2.5">Defense</th>
+                            <th className="py-1.5 px-2.5">Captain</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-850">
+                          {csvPreviewPlayers.slice(0, 8).map((p, i) => (
+                            <tr key={i}>
+                              <td className="py-1 px-2.5 font-mono font-bold text-indigo-300">#{p.num}</td>
+                              <td className="py-1 px-2.5 font-bold text-slate-200">
+                                {p.firstName} {p.lastName}
+                              </td>
+                              <td className="py-1 px-2.5 text-indigo-300 font-bold">{p.primaryPosition || 'ATH'}</td>
+                              <td className="py-1 px-2.5 text-amber-300 font-bold">{p.secondaryPosition || 'ATH'}</td>
+                              <td className="py-1 px-2.5">{p.isCaptain ? '★ Yes' : '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {csvPreviewPlayers.length > 8 && (
+                        <div className="py-1.5 text-center text-slate-500 text-[10px]">
+                          + {csvPreviewPlayers.length - 8} more players
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Import Action Button */}
                 <button
                   type="button"
-                  onClick={handleImportCSV}
-                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                  onClick={handleExecuteImportCSV}
+                  disabled={csvPreviewPlayers.length === 0 && !csvText.trim()}
+                  className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
                 >
                   <Upload className="w-4 h-4" />
-                  <span>Parse &amp; Import Roster</span>
+                  <span>
+                    Import {csvPreviewPlayers.length > 0 ? `${csvPreviewPlayers.length} Players` : 'Roster'} into{' '}
+                    {teams.find((t) => t.id === assignedTeamId)?.name || 'Team'}
+                  </span>
                 </button>
               </div>
             </div>
@@ -835,7 +1280,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                   <div>
                     <h4 className="font-black text-sm text-slate-100">Clone Roster Across Teams</h4>
                     <p className="text-xs text-slate-400">
-                      Quickly copy player profiles from one team to another (e.g. duplicating from 10U into 12U or a tournament squad).
+                      Quickly copy player profiles from one team to another.
                     </p>
                   </div>
                 </div>
@@ -888,7 +1333,8 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                     How this works:
                   </p>
                   <p className="text-[11px] text-slate-400 pl-3">
-                    All players from the source team will be cloned into the target team with the same jersey numbers, names, and position assignments. Existing players on other teams remain untouched.
+                    All players from the source team will be cloned into the target team with the same jersey numbers,
+                    names, and position assignments. Existing players on other teams remain untouched.
                   </p>
                 </div>
 
@@ -896,7 +1342,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setActiveTab('list')}
-                    className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200"
+                    className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -917,4 +1363,3 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     </div>
   );
 };
-

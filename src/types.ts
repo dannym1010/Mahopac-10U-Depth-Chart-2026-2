@@ -243,21 +243,26 @@ export interface WristbandData {
 
 export interface CoachScoutingNote {
   id: string;
-  coachEmail: string;
+  coachEmail?: string;
   coachName?: string;
-  category?: string; // e.g. "Defense / Fronts", "Offense / Redzone", "Special Teams", "O-Line & Blocking", "QB Reads", "Adjustments", "General"
+  author?: string;
+  authorRole?: string;
+  category?: string; // e.g. "Defense & Fronts", "Offense & Plays", "Special Teams", "O-Line & Blocking", "QB Reads", "Adjustments", "General"
   title: string;
   content: string;
-  createdAt: number;
-  lastEdited: number;
+  createdAt?: number;
+  timestamp?: number;
+  lastEdited?: number;
   lastEditedBy?: string;
 }
 
 export interface OpponentKeyPlayer {
   id: string;
-  num: string;
+  num?: string;
+  jersey?: string;
   name: string;
-  pos: string;
+  pos?: string;
+  position?: string;
   threatLevel: 'High' | 'Medium' | 'Low';
   notes: string;
 }
@@ -268,13 +273,22 @@ export interface ScoutingData {
   opponent?: string;
   gameDate?: string;
   gameLocation?: string;
+  overviewNotes?: string;
   teamOverview?: string;
   offensiveTendencies?: string;
+  offenseTendencies?: string;
+  offenseFormations?: string;
+  runPassRatio?: string;
+  gameplanDefense?: string;
   defensiveFronts?: string;
+  defenseFront?: string;
+  defenseCoverage?: string;
+  defenseTendencies?: string;
+  gameplanOffense?: string;
   specialTeamsNotes?: string;
   keysToVictory?: string[];
   keyPlayersList?: OpponentKeyPlayer[];
-  keyPlayers?: string; // legacy fallback
+  keyPlayers?: any;
   coachNotes?: CoachScoutingNote[];
 }
 

@@ -53,6 +53,10 @@ import {
   getFirebaseServices,
   parseCSV,
   escapeCSV,
+  fetchServerState,
+  saveServerState,
+  subscribeServerEvents,
+  CLIENT_ID,
 } from './services/storageService';
 
 import { Header } from './components/Header';
@@ -70,6 +74,7 @@ import { ScheduleView } from './components/ScheduleView';
 import { PlayerHoursTracker } from './components/PlayerHoursTracker';
 import { RosterManagerModal } from './components/RosterManagerModal';
 import { PracticeWizardGeneratedResult } from './components/PracticeWizardModal';
+import { PreferencesModal } from './components/PreferencesModal';
 import {
   AuthModal,
   CopyWeekModal,
@@ -139,20 +144,40 @@ export default function App() {
   const [teams, setTeams] = useState<Team[]>(() =>
     safeJSONParse('footballTeams', DEFAULT_TEAMS)
   );
-  const [activeTeamId, setActiveTeamId] = useState<string>(() =>
-    safeJSONParse('footballActiveTeamId', DEFAULT_TEAMS[0]?.id || 'team_10u')
-  );
 
-  // App Navigation & Session States
+  // User Default Preferences
+  const [defaultTeamId, setDefaultTeamId] = useState<string>(() =>
+    safeJSONParse('footballDefaultTeamId', DEFAULT_TEAMS[0]?.id || 'team_10u')
+  );
+  const [defaultScreen, setDefaultScreen] = useState<UnitType>(() =>
+    safeJSONParse('footballDefaultScreen', 'schedule')
+  );
+  const [defaultDepthSubUnit, setDefaultDepthSubUnit] = useState<
+    'offense' | 'defense' | 'st' | 'groups' | 'scrimmage'
+  >(() => safeJSONParse('footballDefaultDepthSubUnit', 'offense'));
+
+  // Active Session States (initializes to User Defaults if set)
+  const [activeTeamId, setActiveTeamId] = useState<string>(() => {
+    const savedDefault = safeJSONParse('footballDefaultTeamId', null);
+    if (savedDefault) return savedDefault;
+    return safeJSONParse('footballActiveTeamId', DEFAULT_TEAMS[0]?.id || 'team_10u');
+  });
+
   const [currentWeek, setCurrentWeek] = useState<string>(() =>
     safeJSONParse('footballCurrentWeek', '0')
   );
-  const [activeUnit, setActiveUnit] = useState<UnitType>(() =>
-    safeJSONParse('footballActiveUnit', 'offense')
-  );
+  const [activeUnit, setActiveUnit] = useState<UnitType>(() => {
+    const savedDefault = safeJSONParse('footballDefaultScreen', null);
+    if (savedDefault) return savedDefault;
+    return safeJSONParse('footballActiveUnit', 'schedule');
+  });
   const [depthSubUnit, setDepthSubUnit] = useState<
     'offense' | 'defense' | 'st' | 'groups' | 'scrimmage'
-  >('offense');
+  >(() => {
+    const savedDefault = safeJSONParse('footballDefaultDepthSubUnit', null);
+    if (savedDefault) return savedDefault;
+    return 'offense';
+  });
   const [selectedFormationId, setSelectedFormationId] = useState<string | null>(
     null
   );
@@ -186,6 +211,7 @@ export default function App() {
   });
 
   // Modal Dialog States
+  const [isPreferencesModalOpen, setIsPreferencesModalOpen] = useState(false);
   const [isCopyWeekModalOpen, setIsCopyWeekModalOpen] = useState(false);
   const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
   const [editingPlayerForModal, setEditingPlayerForModal] = useState<RosterPlayer | null>(null);
@@ -307,9 +333,112 @@ export default function App() {
     });
   };
 
-  // Trigger Save to LocalStorage and Firestore (if available)
-  const saveStateToStorage = (scope: string = 'all') => {
+  // Centralized helper to apply remote state updates cleanly without race conditions
+  const applyRemoteState = (data: any, source: string = 'remote') => {
+    if (!data || typeof data !== 'object') return;
+
+    isRemoteSyncRef.current = true;
+
+    if (data.weeklyData && Object.keys(data.weeklyData).length > 0) {
+      setWeeklyData(data.weeklyData);
+      latestStateRef.current.weeklyData = data.weeklyData;
+      safeJSONSet('footballWeeklyData', data.weeklyData);
+    }
+    if (
+      data.defaultFormations &&
+      Array.isArray(data.defaultFormations) &&
+      data.defaultFormations.length > 0
+    ) {
+      setDefaultFormations(data.defaultFormations);
+      latestStateRef.current.defaultFormations = data.defaultFormations;
+      safeJSONSet('footballDefaultFormations', data.defaultFormations);
+    }
+    if (data.practiceData && Array.isArray(data.practiceData)) {
+      setPracticeData(data.practiceData);
+      latestStateRef.current.practiceData = data.practiceData;
+      safeJSONSet('footballPracticeData', data.practiceData);
+    }
+    if (data.practiceTemplates) {
+      setPracticeTemplates(data.practiceTemplates);
+      latestStateRef.current.practiceTemplates = data.practiceTemplates;
+      safeJSONSet('footballPracticeTemplates', data.practiceTemplates);
+    }
+    if (data.cascadingDrills) {
+      setCascadingDrills(data.cascadingDrills);
+      latestStateRef.current.cascadingDrills = data.cascadingDrills;
+      safeJSONSet('footballCascadingDrills', data.cascadingDrills);
+    }
+    if (data.guideTree) {
+      setGuideTree(data.guideTree);
+      latestStateRef.current.guideTree = data.guideTree;
+      safeJSONSet('footballPdfGuidesTree', data.guideTree);
+    }
+    if (data.guideOrder) {
+      setGuideOrder(data.guideOrder);
+      latestStateRef.current.guideOrder = data.guideOrder;
+      safeJSONSet('footballPdfGuidesOrder', data.guideOrder);
+    }
+    if (data.savedCoaches && Array.isArray(data.savedCoaches)) {
+      setSavedCoaches(data.savedCoaches);
+      latestStateRef.current.savedCoaches = data.savedCoaches;
+      safeJSONSet('footballSavedCoaches', data.savedCoaches);
+    }
+    if (data.teamSavedCoaches && typeof data.teamSavedCoaches === 'object') {
+      setTeamSavedCoaches(data.teamSavedCoaches);
+      latestStateRef.current.teamSavedCoaches = data.teamSavedCoaches;
+      safeJSONSet('footballTeamSavedCoaches', data.teamSavedCoaches);
+    }
+    if (data.staffList && Array.isArray(data.staffList)) {
+      setStaffList(data.staffList);
+      latestStateRef.current.staffList = data.staffList;
+      safeJSONSet('footballTeamCoaches', data.staffList);
+    }
+    if (data.masterPlayLibrary) {
+      setMasterPlayLibrary(data.masterPlayLibrary);
+      latestStateRef.current.masterPlayLibrary = data.masterPlayLibrary;
+      safeJSONSet('footballMasterPlays', data.masterPlayLibrary);
+    }
+    if (data.collapsedFolders) {
+      setCollapsedFolders(data.collapsedFolders);
+      latestStateRef.current.collapsedFolders = data.collapsedFolders;
+      safeJSONSet('footballCollapsedFolders', data.collapsedFolders);
+    }
+    if (data.scheduleEvents && Array.isArray(data.scheduleEvents)) {
+      setScheduleEvents(data.scheduleEvents);
+      latestStateRef.current.scheduleEvents = data.scheduleEvents;
+      safeJSONSet('footballScheduleEvents', data.scheduleEvents);
+    }
+    if (data.roster && Array.isArray(data.roster)) {
+      setRoster(data.roster);
+      latestStateRef.current.roster = data.roster;
+      safeJSONSet('footballRoster', data.roster);
+    }
+    if (data.teams && Array.isArray(data.teams) && data.teams.length > 0) {
+      setTeams(data.teams);
+      latestStateRef.current.teams = data.teams;
+      safeJSONSet('footballTeams', data.teams);
+    }
+    if (data.seasonConfig) {
+      setSeasonConfig(data.seasonConfig);
+      latestStateRef.current.seasonConfig = data.seasonConfig;
+      safeJSONSet('footballSeasonConfig', data.seasonConfig);
+    }
+    if (data.attendanceLogs && Array.isArray(data.attendanceLogs)) {
+      setAttendanceLogs(data.attendanceLogs);
+      latestStateRef.current.attendanceLogs = data.attendanceLogs;
+      safeJSONSet('footballAttendanceLogs', data.attendanceLogs);
+    }
+
+    initialCloudLoadDoneRef.current = true;
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setSyncStatus({ text: `✅ Live Synced (${timeStr})`, color: '#22c55e' });
+  };
+
+  // Trigger Save to LocalStorage, Server API & Firestore
+  const saveStateToStorage = async (scope: string = 'all') => {
     const currentState = latestStateRef.current;
+
+    // 1. LocalStorage update
     safeJSONSet('footballWeeklyData', currentState.weeklyData);
     safeJSONSet('footballDefaultFormations', currentState.defaultFormations);
     safeJSONSet('footballPracticeData', currentState.practiceData);
@@ -328,54 +457,65 @@ export default function App() {
     safeJSONSet('footballSeasonConfig', currentState.seasonConfig);
     safeJSONSet('footballAttendanceLogs', currentState.attendanceLogs);
 
+    const payload = {
+      weeklyData: currentState.weeklyData,
+      defaultFormations: currentState.defaultFormations,
+      practiceData: currentState.practiceData,
+      practiceTemplates: currentState.practiceTemplates,
+      cascadingDrills: currentState.cascadingDrills,
+      guideTree: currentState.guideTree,
+      guideOrder: currentState.guideOrder,
+      savedCoaches: currentState.savedCoaches,
+      teamSavedCoaches: currentState.teamSavedCoaches,
+      staffList: currentState.staffList,
+      masterPlayLibrary: currentState.masterPlayLibrary,
+      collapsedFolders: currentState.collapsedFolders,
+      scheduleEvents: currentState.scheduleEvents,
+      roster: currentState.roster,
+      teams: currentState.teams,
+      seasonConfig: currentState.seasonConfig,
+      attendanceLogs: currentState.attendanceLogs,
+    };
+
+    const payloadJson = safeJSONStringify(payload);
+    if (payloadJson === lastSavedPayloadRef.current && scope !== 'force') {
+      return;
+    }
+    lastSavedPayloadRef.current = payloadJson;
+
+    setSyncStatus({ text: '☁️ Syncing...', color: '#f59e0b' });
+
+    const authorEmail = currentUser?.email || 'Coach';
+
+    // 2. Persistent Server Sync
+    try {
+      await saveServerState(payload, authorEmail);
+    } catch (err) {
+      console.warn('Server save warning:', err);
+    }
+
+    // 3. Firestore Sync
     const { db } = getFirebaseServices();
     if (db && initialCloudLoadDoneRef.current) {
-      const payload = {
-        weeklyData: currentState.weeklyData,
-        defaultFormations: currentState.defaultFormations,
-        practiceData: currentState.practiceData,
-        practiceTemplates: currentState.practiceTemplates,
-        cascadingDrills: currentState.cascadingDrills,
-        guideTree: currentState.guideTree,
-        guideOrder: currentState.guideOrder,
-        savedCoaches: currentState.savedCoaches,
-        teamSavedCoaches: currentState.teamSavedCoaches,
-        staffList: currentState.staffList,
-        masterPlayLibrary: currentState.masterPlayLibrary,
-        collapsedFolders: currentState.collapsedFolders,
-        scheduleEvents: currentState.scheduleEvents,
-        roster: currentState.roster,
-        teams: currentState.teams,
-        seasonConfig: currentState.seasonConfig,
-        attendanceLogs: currentState.attendanceLogs,
-      };
-
-      const payloadJson = safeJSONStringify(payload);
-      if (payloadJson === lastSavedPayloadRef.current) {
-        // No data change detected, skip Firestore set to prevent write loop
-        return;
+      try {
+        await db
+          .collection('teamData')
+          .doc('depthChartData')
+          .set(
+            {
+              ...payload,
+              updatedAt: Date.now(),
+              lastAuthor: authorEmail,
+            },
+            { merge: true }
+          );
+      } catch (err: any) {
+        console.warn('Firestore sync warning:', err);
       }
-      lastSavedPayloadRef.current = payloadJson;
-
-      setSyncStatus({ text: '☁️ Saving to Cloud...', color: '#f59e0b' });
-
-      db.collection('teamData')
-        .doc('depthChartData')
-        .set(
-          {
-            ...payload,
-            updatedAt: Date.now(),
-          },
-          { merge: true }
-        )
-        .then(() => {
-          setSyncStatus({ text: '✅ Live Cloud Synced', color: '#22c55e' });
-        })
-        .catch((err: any) => {
-          console.warn('Firestore sync warning:', err);
-          setSyncStatus({ text: 'Local Mode (Cloud offline)', color: '#22c55e' });
-        });
     }
+
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setSyncStatus({ text: `✅ Saved & Synced (${timeStr})`, color: '#22c55e' });
   };
 
   const debouncedSave = (scope: string = 'all') => {
@@ -386,7 +526,36 @@ export default function App() {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
       saveStateToStorage(scope);
-    }, 1200);
+    }, 1000);
+  };
+
+  const handleForceSave = async () => {
+    lastSavedPayloadRef.current = '';
+    setSyncStatus({ text: '☁️ Saving to Cloud & Server...', color: '#f59e0b' });
+    await saveStateToStorage('force');
+  };
+
+  const handleForceRefresh = async () => {
+    setSyncStatus({ text: '🔄 Fetching Latest Cloud Data...', color: '#f59e0b' });
+    try {
+      const serverRes = await fetchServerState();
+      if (serverRes && serverRes.hasData && serverRes.state) {
+        applyRemoteState(serverRes.state, 'manual_server_refresh');
+        return;
+      }
+      const { db } = getFirebaseServices();
+      if (db) {
+        const doc = await db.collection('teamData').doc('depthChartData').get();
+        if (doc.exists) {
+          applyRemoteState(doc.data(), 'manual_firestore_refresh');
+          return;
+        }
+      }
+      setSyncStatus({ text: '✅ Up to Date', color: '#22c55e' });
+    } catch (err) {
+      console.warn('Manual refresh error:', err);
+      setSyncStatus({ text: 'Sync Error', color: '#ef4444' });
+    }
   };
 
   // Update root CSS variable for print font size
@@ -396,6 +565,51 @@ export default function App() {
       `${printFontSize}px`
     );
   }, [printFontSize]);
+
+  // Initial Server Persistence & Live Real-Time Multi-Coach Subscription
+  useEffect(() => {
+    let isMounted = true;
+
+    async function initPersistence() {
+      try {
+        // 1. Fetch server state first
+        const serverRes = await fetchServerState();
+        if (!isMounted) return;
+
+        if (serverRes && serverRes.hasData && serverRes.state) {
+          applyRemoteState(serverRes.state, 'server_init');
+        } else {
+          // Empty server on first launch: seed server with current local data
+          initialCloudLoadDoneRef.current = true;
+          saveStateToStorage('initial_seed');
+        }
+      } catch (err) {
+        console.warn('Initial server state fetch warning:', err);
+        initialCloudLoadDoneRef.current = true;
+      }
+
+      // 2. Subscribe to real-time multi-coach updates via SSE
+      const unsubscribeSSE = subscribeServerEvents((eventData) => {
+        if (!isMounted) return;
+        if (eventData.type === 'sync' && eventData.state) {
+          if (eventData.senderClientId === CLIENT_ID) return;
+          if (saveTimeoutRef.current && initialCloudLoadDoneRef.current) return;
+          applyRemoteState(eventData.state, 'sse_live_update');
+        }
+      });
+
+      return unsubscribeSSE;
+    }
+
+    const unsubPromise = initPersistence();
+
+    return () => {
+      isMounted = false;
+      unsubPromise.then((unsub) => {
+        if (typeof unsub === 'function') unsub();
+      });
+    };
+  }, []);
 
   // Initial Firebase Auth Listener & Cloud Sync Subscription
   useEffect(() => {
@@ -476,7 +690,7 @@ export default function App() {
             setIsPendingApproval(false);
             const isHead = isDannySuperAdmin || isMaster || coachEntry?.role?.includes('Admin');
             setUserRole(isHead ? 'admin' : 'assistant');
-            setSyncStatus({ text: '✅ Live Cloud Synced', color: '#22c55e' });
+            setSyncStatus({ text: '✅ Live Multi-Coach Connected', color: '#22c55e' });
           } else {
             setIsPendingApproval(true);
             setSyncStatus({ text: 'Approval Pending', color: '#f59e0b' });
@@ -495,176 +709,27 @@ export default function App() {
           .onSnapshot(
             (doc: any) => {
               if (isImportingRef.current) {
-                // Ignore incoming snapshot during active local backup import
                 return;
               }
               if (doc && doc.exists) {
                 if (doc.metadata && doc.metadata.hasPendingWrites) {
-                  // Ignore optimistic local writes to prevent echo loops
                   return;
                 }
                 const data = doc.data();
                 if (!data) return;
 
-                const remotePayload = {
-                  weeklyData: data.weeklyData || latestStateRef.current.weeklyData,
-                  defaultFormations:
-                    data.defaultFormations &&
-                    Array.isArray(data.defaultFormations) &&
-                    data.defaultFormations.length > 0
-                      ? data.defaultFormations
-                      : latestStateRef.current.defaultFormations,
-                  practiceData:
-                    data.practiceData && Array.isArray(data.practiceData)
-                      ? data.practiceData
-                      : latestStateRef.current.practiceData,
-                  practiceTemplates:
-                    data.practiceTemplates ||
-                    latestStateRef.current.practiceTemplates,
-                  cascadingDrills:
-                    data.cascadingDrills ||
-                    latestStateRef.current.cascadingDrills,
-                  guideTree:
-                    data.guideTree || latestStateRef.current.guideTree,
-                  guideOrder:
-                    data.guideOrder || latestStateRef.current.guideOrder,
-                  savedCoaches:
-                    data.savedCoaches || latestStateRef.current.savedCoaches,
-                  teamSavedCoaches:
-                    data.teamSavedCoaches || latestStateRef.current.teamSavedCoaches,
-                  staffList:
-                    data.staffList || latestStateRef.current.staffList,
-                  masterPlayLibrary:
-                    data.masterPlayLibrary ||
-                    latestStateRef.current.masterPlayLibrary,
-                  collapsedFolders:
-                    data.collapsedFolders ||
-                    latestStateRef.current.collapsedFolders,
-                  scheduleEvents:
-                    data.scheduleEvents && Array.isArray(data.scheduleEvents)
-                      ? data.scheduleEvents
-                      : latestStateRef.current.scheduleEvents,
-                  roster:
-                    data.roster && Array.isArray(data.roster)
-                      ? data.roster
-                      : latestStateRef.current.roster,
-                  teams:
-                    data.teams && Array.isArray(data.teams) && data.teams.length > 0
-                      ? data.teams
-                      : latestStateRef.current.teams,
-                  seasonConfig:
-                    data.seasonConfig || latestStateRef.current.seasonConfig,
-                  attendanceLogs:
-                    data.attendanceLogs && Array.isArray(data.attendanceLogs)
-                      ? data.attendanceLogs
-                      : latestStateRef.current.attendanceLogs,
-                };
-                const remotePayloadJson = safeJSONStringify(remotePayload);
-
-                // If remote matches what we just sent or already have, do not reset state
+                const remotePayloadJson = safeJSONStringify(data);
                 if (remotePayloadJson === lastSavedPayloadRef.current) {
                   initialCloudLoadDoneRef.current = true;
-                  setSyncStatus({ text: '✅ Live Cloud Synced', color: '#22c55e' });
                   return;
                 }
 
-                // If local user is actively typing / debounce save is queued, don't clobber local edits
                 if (saveTimeoutRef.current && initialCloudLoadDoneRef.current) {
                   return;
                 }
 
-                isRemoteSyncRef.current = true;
-                lastSavedPayloadRef.current = remotePayloadJson;
-
-                if (data.weeklyData && Object.keys(data.weeklyData).length > 0) {
-                  setWeeklyData(data.weeklyData);
-                  latestStateRef.current.weeklyData = data.weeklyData;
-                }
-                if (
-                  data.defaultFormations &&
-                  Array.isArray(data.defaultFormations) &&
-                  data.defaultFormations.length > 0
-                ) {
-                  setDefaultFormations(data.defaultFormations);
-                  latestStateRef.current.defaultFormations = data.defaultFormations;
-                }
-                if (data.practiceData && Array.isArray(data.practiceData)) {
-                  setPracticeData(data.practiceData);
-                  latestStateRef.current.practiceData = data.practiceData;
-                }
-                if (data.practiceTemplates) {
-                  setPracticeTemplates(data.practiceTemplates);
-                  latestStateRef.current.practiceTemplates = data.practiceTemplates;
-                }
-                if (data.cascadingDrills) {
-                  setCascadingDrills(data.cascadingDrills);
-                  latestStateRef.current.cascadingDrills = data.cascadingDrills;
-                }
-                if (data.guideTree) {
-                  setGuideTree(data.guideTree);
-                  latestStateRef.current.guideTree = data.guideTree;
-                }
-                if (data.guideOrder) {
-                  setGuideOrder(data.guideOrder);
-                  latestStateRef.current.guideOrder = data.guideOrder;
-                }
-                if (data.savedCoaches && Array.isArray(data.savedCoaches)) {
-                  setSavedCoaches(data.savedCoaches);
-                  latestStateRef.current.savedCoaches = data.savedCoaches;
-                }
-                if (data.teamSavedCoaches && typeof data.teamSavedCoaches === 'object') {
-                  setTeamSavedCoaches(data.teamSavedCoaches);
-                  latestStateRef.current.teamSavedCoaches = data.teamSavedCoaches;
-                }
-                if (data.staffList && Array.isArray(data.staffList)) {
-                  setStaffList(data.staffList);
-                  latestStateRef.current.staffList = data.staffList;
-                }
-                if (data.masterPlayLibrary) {
-                  setMasterPlayLibrary(data.masterPlayLibrary);
-                  latestStateRef.current.masterPlayLibrary = data.masterPlayLibrary;
-                }
-                if (data.collapsedFolders) {
-                  setCollapsedFolders(data.collapsedFolders);
-                  latestStateRef.current.collapsedFolders = data.collapsedFolders;
-                }
-                if (
-                  data.scheduleEvents &&
-                  Array.isArray(data.scheduleEvents)
-                ) {
-                  setScheduleEvents(data.scheduleEvents);
-                  latestStateRef.current.scheduleEvents = data.scheduleEvents;
-                }
-                if (
-                  data.roster &&
-                  Array.isArray(data.roster)
-                ) {
-                  setRoster(data.roster);
-                  latestStateRef.current.roster = data.roster;
-                }
-                if (
-                  data.teams &&
-                  Array.isArray(data.teams) &&
-                  data.teams.length > 0
-                ) {
-                  setTeams(data.teams);
-                  latestStateRef.current.teams = data.teams;
-                }
-                if (data.seasonConfig) {
-                  setSeasonConfig(data.seasonConfig);
-                  latestStateRef.current.seasonConfig = data.seasonConfig;
-                }
-                if (
-                  data.attendanceLogs &&
-                  Array.isArray(data.attendanceLogs)
-                ) {
-                  setAttendanceLogs(data.attendanceLogs);
-                  latestStateRef.current.attendanceLogs = data.attendanceLogs;
-                }
-                initialCloudLoadDoneRef.current = true;
-                setSyncStatus({ text: '✅ Live Cloud Synced', color: '#22c55e' });
+                applyRemoteState(data, 'firestore_snapshot');
               } else {
-                // First time ever on this Firebase project - seed cloud with local data
                 initialCloudLoadDoneRef.current = true;
                 saveStateToStorage('all');
               }
@@ -672,10 +737,6 @@ export default function App() {
             (err: any) => {
               console.warn('Firestore subscription error:', err);
               initialCloudLoadDoneRef.current = true;
-              setSyncStatus({
-                text: '⚠️ Cloud Sync Error (Check Rules)',
-                color: '#f59e0b',
-              });
             }
           );
 
@@ -1019,6 +1080,28 @@ export default function App() {
         .set({ staffList: updated, updatedAt: Date.now() }, { merge: true })
         .catch((err: any) => console.warn('Firestore staff update sync error:', err));
     }
+  };
+
+  const handleSetDefaultTeam = (teamId: string) => {
+    setDefaultTeamId(teamId);
+    safeJSONSet('footballDefaultTeamId', teamId);
+    setActiveTeamId(teamId);
+    safeJSONSet('footballActiveTeamId', teamId);
+  };
+
+  const handleSetDefaultScreen = (
+    screen: UnitType,
+    subUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage'
+  ) => {
+    setDefaultScreen(screen);
+    safeJSONSet('footballDefaultScreen', screen);
+    if (subUnit) {
+      setDefaultDepthSubUnit(subUnit);
+      safeJSONSet('footballDefaultDepthSubUnit', subUnit);
+      setDepthSubUnit(subUnit);
+    }
+    setActiveUnit(screen);
+    safeJSONSet('footballActiveUnit', screen);
   };
 
   const handleAddStaffCoach = (
@@ -2661,7 +2744,8 @@ export default function App() {
     ensureWeekExists(weekKey);
 
     setWeeklyData((prev) => {
-      const existingWeek = prev[weekKey] || {
+      const scopedKey = getScopedWeekKey(activeTeamId, weekKey);
+      const existingWeek = prev[scopedKey] || prev[weekKey] || {
         formations: deepClone(defaultFormations),
         depthChart: {},
         scrimmageChart: {},
@@ -2682,20 +2766,23 @@ export default function App() {
         },
       };
 
+      const updatedWeekState = {
+        ...existingWeek,
+        opponent: oppName,
+        scouting: {
+          ...(existingWeek.scouting || {}),
+          opponent: oppName,
+          gameDate: gameDateTime,
+          gameLocation: location,
+          week: `Week ${weekKey}`,
+          year: '2026',
+        },
+      };
+
       return {
         ...prev,
-        [weekKey]: {
-          ...existingWeek,
-          opponent: oppName,
-          scouting: {
-            ...(existingWeek.scouting || {}),
-            opponent: oppName,
-            gameDate: gameDateTime,
-            gameLocation: location,
-            week: `Week ${weekKey}`,
-            year: '2026',
-          },
-        },
+        [scopedKey]: updatedWeekState,
+        [weekKey]: updatedWeekState,
       };
     });
   };
@@ -2933,14 +3020,30 @@ export default function App() {
         }}
         opponent={currentWeekState.opponent || ''}
         onOpponentChange={(opp) => {
-          setWeeklyData((prev) => ({
-            ...prev,
-            [currentWeek]: {
-              ...prev[currentWeek],
+          setWeeklyData((prev) => {
+            const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+            const existingWeek = prev[scopedKey] || prev[currentWeek] || {
+              formations: defaultFormations,
+              depthChart: {},
+              scrimmageChart: {},
               opponent: opp,
-            },
-          }));
+            };
+            const updatedWeek = {
+              ...existingWeek,
+              opponent: opp,
+              scouting: {
+                ...(existingWeek.scouting || {}),
+                opponent: opp,
+              },
+            };
+            return {
+              ...prev,
+              [scopedKey]: updatedWeek,
+              [currentWeek]: updatedWeek,
+            };
+          });
         }}
+        scheduleEvents={activeTeamScheduleEvents}
         userEmail={currentUser?.email || 'Head Coach'}
         userRole={userRole}
         onRoleChange={setUserRole}
@@ -2966,9 +3069,14 @@ export default function App() {
         seasonConfig={seasonConfig}
         teams={teams}
         activeTeamId={activeTeamId}
+        defaultTeamId={defaultTeamId}
         onSelectTeam={setActiveTeamId}
+        onSetDefaultTeam={handleSetDefaultTeam}
         userAssignedTeamIds={currentUserCoach?.assignedTeamIds}
         onOpenManageTeams={() => setActiveUnit('users')}
+        onOpenPreferencesModal={() => setIsPreferencesModalOpen(true)}
+        onForceSave={handleForceSave}
+        onForceRefresh={handleForceRefresh}
       />
 
       {/* Sticky Unit Navigation Tabs */}
@@ -2987,6 +3095,9 @@ export default function App() {
           setDepthSubUnit(sub);
           setActiveUnit(sub);
         }}
+        defaultScreen={defaultScreen}
+        onSetDefaultScreen={handleSetDefaultScreen}
+        onOpenPreferencesModal={() => setIsPreferencesModalOpen(true)}
       />
 
       {/* Main Layout Area */}
@@ -3208,17 +3319,32 @@ export default function App() {
                 currentUser={currentUser}
                 staffList={staffList}
                 savedCoaches={savedCoaches}
+                scheduleEvents={activeTeamScheduleEvents}
+                currentWeek={currentWeek}
                 onUpdateScouting={(field, val) => {
-                  setWeeklyData((prev) => ({
-                    ...prev,
-                    [currentWeek]: {
-                      ...prev[currentWeek],
-                      scouting: {
-                        ...(prev[currentWeek]?.scouting || {}),
-                        [field]: val,
-                      },
-                    },
-                  }));
+                  setWeeklyData((prev) => {
+                    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+                    const existingWeek = prev[scopedKey] || prev[currentWeek] || {
+                      formations: defaultFormations,
+                      depthChart: {},
+                      scrimmageChart: {},
+                      opponent: '',
+                    };
+                    const updatedScouting = {
+                      ...(existingWeek.scouting || {}),
+                      [field]: val,
+                    };
+                    const updatedWeek = {
+                      ...existingWeek,
+                      opponent: field === 'opponent' ? val : (existingWeek.opponent || ''),
+                      scouting: updatedScouting,
+                    };
+                    return {
+                      ...prev,
+                      [scopedKey]: updatedWeek,
+                      [currentWeek]: updatedWeek,
+                    };
+                  });
                 }}
                 onNavigateToSchedule={() => setActiveUnit('schedule')}
               />
@@ -3438,7 +3564,9 @@ export default function App() {
                 userRole={userRole}
                 teams={teams}
                 activeTeamId={activeTeamId}
+                defaultTeamId={defaultTeamId}
                 onSelectTeam={setActiveTeamId}
+                onSetDefaultTeam={handleSetDefaultTeam}
                 onAddTeam={handleAddTeam}
                 onUpdateTeam={handleUpdateTeam}
                 onDeleteTeam={handleDeleteTeam}
@@ -3732,6 +3860,22 @@ export default function App() {
         onClearEditingPlayer={() => setEditingPlayerForModal(null)}
         teams={teams}
         activeTeamId={activeTeamId}
+        formations={currentFormations}
+        depthChart={currentDepthChart}
+      />
+
+      <PreferencesModal
+        isOpen={isPreferencesModalOpen}
+        onClose={() => setIsPreferencesModalOpen(false)}
+        teams={teams}
+        activeTeamId={activeTeamId}
+        defaultTeamId={defaultTeamId}
+        onSetDefaultTeam={handleSetDefaultTeam}
+        activeUnit={activeUnit}
+        defaultScreen={defaultScreen}
+        defaultDepthSubUnit={defaultDepthSubUnit}
+        onSetDefaultScreen={handleSetDefaultScreen}
+        userRole={userRole}
       />
     </div>
   );

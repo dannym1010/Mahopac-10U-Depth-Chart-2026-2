@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FileSpreadsheet,
   Printer,
@@ -23,6 +23,9 @@ import {
   AlertCircle,
   Copy,
   Check,
+  Zap,
+  RefreshCw,
+  Clock,
 } from 'lucide-react';
 import {
   ScoutingData,
@@ -30,6 +33,7 @@ import {
   OpponentKeyPlayer,
   StaffCoach,
   UserRole,
+  ScheduleEvent,
 } from '../types';
 
 interface ScoutingViewProps {
@@ -38,6 +42,8 @@ interface ScoutingViewProps {
   currentUser?: any;
   staffList?: StaffCoach[];
   savedCoaches?: string[];
+  scheduleEvents?: ScheduleEvent[];
+  currentWeek?: string;
   onUpdateScouting: (field: keyof ScoutingData, val: any) => void;
   onNavigateToSchedule?: () => void;
 }
@@ -59,6 +65,8 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
   currentUser,
   staffList = [],
   savedCoaches = [],
+  scheduleEvents = [],
+  currentWeek = '1',
   onUpdateScouting,
   onNavigateToSchedule,
 }) => {
@@ -78,282 +86,300 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
   const [newNoteCategory, setNewNoteCategory] = useState('Defense & Fronts');
   const [newNoteTitle, setNewNoteTitle] = useState('');
   const [newNoteContent, setNewNoteContent] = useState('');
-  const [newNoteCoachEmail, setNewNoteCoachEmail] = useState(
-    currentEmail || (staffList[0]?.email || 'coach@example.com')
-  );
-  const [newNoteCoachName, setNewNoteCoachName] = useState(
-    currentUser?.displayName || (isPowerAdmin ? 'Head Coach' : 'Assistant Coach')
-  );
+  const [newNoteAuthor, setNewNoteAuthor] = useState(currentUser?.email || 'Coach');
 
-  // Editing Note State
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [editCategory, setEditCategory] = useState('');
-  const [editContent, setEditContent] = useState('');
-
-  // Keys to victory helper
-  const keysToVictory: string[] = scouting.keysToVictory || [];
-  const [newKeyText, setNewKeyText] = useState('');
-
-  // Opponent key players helper
-  const keyPlayersList: OpponentKeyPlayer[] = scouting.keyPlayersList || [];
-  const [newPlayerNum, setNewPlayerNum] = useState('');
-  const [newPlayerName, setNewPlayerName] = useState('');
-  const [newPlayerPos, setNewPlayerPos] = useState('');
-  const [newPlayerThreat, setNewPlayerThreat] = useState<'High' | 'Medium' | 'Low'>('High');
-  const [newPlayerNotes, setNewPlayerNotes] = useState('');
+  // New Key Player Form State
   const [isAddingPlayer, setIsAddingPlayer] = useState(false);
+  const [playerJersey, setPlayerJersey] = useState('');
+  const [playerName, setPlayerName] = useState('');
+  const [playerPos, setPlayerPos] = useState('');
+  const [playerThreat, setPlayerThreat] = useState<'High' | 'Medium' | 'Low'>('High');
+  const [playerNotes, setPlayerNotes] = useState('');
 
-  // Coach notes array
+  // Find matching game or scrimmage in schedule for current week
+  const matchedScheduledGame = React.useMemo(() => {
+    if (!scheduleEvents || scheduleEvents.length === 0) return null;
+    const cleanWeek = currentWeek.replace(/^Week\s+/i, '').trim();
+
+    return scheduleEvents.find((ev) => {
+      if (ev.type !== 'game' && ev.type !== 'scrimmage') return false;
+      const evWeek = (ev.week || '').replace(/^Week\s+/i, '').trim();
+      if (evWeek === cleanWeek) return true;
+      if (
+        cleanWeek === '0' &&
+        (evWeek.startsWith('pre') || evWeek === '0' || (ev.title && ev.title.toLowerCase().includes('pre-season')))
+      ) {
+        return true;
+      }
+      if (
+        cleanWeek === 'playoffs' &&
+        (evWeek === 'playoffs' || evWeek === 'post' || evWeek === 'championship')
+      ) {
+        return true;
+      }
+      return false;
+    });
+  }, [scheduleEvents, currentWeek]);
+
+  // All scheduled games in season for quick import
+  const allScheduledGames = React.useMemo(() => {
+    return scheduleEvents.filter((ev) => ev.type === 'game' || ev.type === 'scrimmage');
+  }, [scheduleEvents]);
+
+  // Auto-sync function from a schedule event into the scouting report
+  const handleSyncFromScheduleEvent = (game: ScheduleEvent) => {
+    const oppName = game.opponent || game.title || '';
+    if (oppName) onUpdateScouting('opponent', oppName);
+
+    const dateStr = `${game.date || ''} ${game.time ? '@ ' + game.time : ''}`.trim();
+    if (dateStr) onUpdateScouting('gameDate', dateStr);
+
+    if (game.location) onUpdateScouting('gameLocation', game.location);
+    if (game.week) onUpdateScouting('week', game.week.startsWith('Week') ? game.week : `Week ${game.week}`);
+
+    if (game.focusOrNotes && !scouting.overviewNotes) {
+      onUpdateScouting('overviewNotes', game.focusOrNotes);
+    }
+  };
+
+  // Safe defaults
   const coachNotes: CoachScoutingNote[] = scouting.coachNotes || [];
+  const keyPlayers: OpponentKeyPlayer[] = scouting.keyPlayers || [];
+  const keysToVictory: string[] = scouting.keysToVictory || [
+    'Dominate the line of scrimmage on both sides of the ball',
+    'Execute base trap and sweep blocking without penalties',
+    'Stay disciplined against cutback lanes and misdirection',
+  ];
 
-  // Helper to determine if current user can edit a given note
-  const canEditNote = (note: CoachScoutingNote): boolean => {
-    if (isPowerAdmin) return true; // Admin and Head Coach can edit everything
-    if (!currentEmail) return false;
-    return note.coachEmail?.toLowerCase().trim() === currentEmail;
-  };
+  // Filter notes by coach or category
+  const filteredNotes = coachNotes.filter((n) => {
+    if (selectedCoachFilter === 'all') return true;
+    return n.author === selectedCoachFilter || n.category === selectedCoachFilter;
+  });
 
-  // Add Key to Victory
-  const handleAddKey = () => {
-    if (!newKeyText.trim()) return;
-    const updated = [...keysToVictory, newKeyText.trim()];
-    onUpdateScouting('keysToVictory', updated);
-    setNewKeyText('');
-  };
+  const handleAddCoachNote = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newNoteTitle.trim() || !newNoteContent.trim()) return;
 
-  const handleRemoveKey = (idx: number) => {
-    if (!isPowerAdmin) return;
-    const updated = keysToVictory.filter((_, i) => i !== idx);
-    onUpdateScouting('keysToVictory', updated);
-  };
-
-  // Add Key Player
-  const handleAddPlayer = () => {
-    if (!newPlayerNum.trim() && !newPlayerName.trim()) return;
-    const newEntry: OpponentKeyPlayer = {
-      id: 'kp_' + Date.now(),
-      num: newPlayerNum.trim() || '00',
-      name: newPlayerName.trim() || 'Opponent Player',
-      pos: newPlayerPos.trim().toUpperCase() || 'ATH',
-      threatLevel: newPlayerThreat,
-      notes: newPlayerNotes.trim(),
-    };
-    const updated = [...keyPlayersList, newEntry];
-    onUpdateScouting('keyPlayersList', updated);
-    setNewPlayerNum('');
-    setNewPlayerName('');
-    setNewPlayerPos('');
-    setNewPlayerNotes('');
-    setIsAddingPlayer(false);
-  };
-
-  const handleRemovePlayer = (id: string) => {
-    if (!isPowerAdmin) return;
-    const updated = keyPlayersList.filter((p) => p.id !== id);
-    onUpdateScouting('keyPlayersList', updated);
-  };
-
-  // Add Coach Note
-  const handleCreateCoachNote = () => {
-    if (!newNoteTitle.trim() && !newNoteContent.trim()) return;
     const newNote: CoachScoutingNote = {
-      id: 'cn_' + Date.now(),
-      coachEmail: newNoteCoachEmail.trim() || currentEmail || 'coach@example.com',
-      coachName: newNoteCoachName.trim() || (isPowerAdmin ? 'Head Coach' : 'Coach'),
+      id: `note_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      author: newNoteAuthor.trim() || currentUser?.email || 'Coach',
+      authorRole: isPowerAdmin ? 'Head Coach' : 'Assistant Coach',
       category: newNoteCategory,
-      title: newNoteTitle.trim() || `${newNoteCategory} Plan`,
+      title: newNoteTitle.trim(),
       content: newNoteContent.trim(),
-      createdAt: Date.now(),
-      lastEdited: Date.now(),
-      lastEditedBy: currentEmail || 'Coach',
+      timestamp: Date.now(),
     };
-    const updated = [...coachNotes, newNote];
-    onUpdateScouting('coachNotes', updated);
+
+    onUpdateScouting('coachNotes', [newNote, ...coachNotes]);
     setNewNoteTitle('');
     setNewNoteContent('');
     setIsAddingNote(false);
   };
 
-  // Save Note Edit
-  const handleSaveNoteEdit = (noteId: string) => {
-    const updated = coachNotes.map((note) => {
-      if (note.id === noteId) {
-        return {
-          ...note,
-          title: editTitle.trim() || note.title,
-          category: editCategory || note.category,
-          content: editContent,
-          lastEdited: Date.now(),
-          lastEditedBy: currentEmail || 'Coach',
-        };
-      }
-      return note;
-    });
-    onUpdateScouting('coachNotes', updated);
-    setEditingNoteId(null);
-  };
-
-  // Delete Note
-  const handleDeleteNote = (noteId: string) => {
-    const note = coachNotes.find((n) => n.id === noteId);
-    if (!note) return;
-    if (!canEditNote(note)) {
-      alert('You do not have permission to delete this section. Only the author or Head Coach / Admin can delete it.');
-      return;
-    }
-    if (confirm(`Delete coach section "${note.title}"?`)) {
-      const updated = coachNotes.filter((n) => n.id !== noteId);
-      onUpdateScouting('coachNotes', updated);
+  const handleDeleteCoachNote = (noteId: string) => {
+    if (confirm('Delete this coaching observation?')) {
+      onUpdateScouting(
+        'coachNotes',
+        coachNotes.filter((n) => n.id !== noteId)
+      );
     }
   };
 
-  // Copy Full Gameplan Text
-  const handleCopyGameplan = () => {
-    const lines: string[] = [
-      `=== MAHOPAC 10U SCOUTING REPORT & GAMEPLAN ===`,
-      `Opponent: ${scouting.opponent || 'Upcoming Opponent'} | Week: ${scouting.week || 'Week 1'} | Year: ${scouting.year || '2026'}`,
-      `Date & Time: ${scouting.gameDate || 'TBD'} | Location: ${scouting.gameLocation || 'TBD'}`,
-      `\n[1. TEAM OVERVIEW & SCHEMES]`,
-      scouting.teamOverview || 'No overview notes entered.',
-      `\n[2. OFFENSIVE TENDENCIES]`,
-      scouting.offensiveTendencies || 'No offensive tendency notes.',
-      `\n[3. DEFENSIVE FRONTS & BLITZES]`,
-      scouting.defensiveFronts || 'No defensive front notes.',
-      `\n[4. SPECIAL TEAMS]`,
-      scouting.specialTeamsNotes || 'No special teams notes.',
-      `\n[5. KEYS TO VICTORY]`,
-      ...(keysToVictory.length > 0
-        ? keysToVictory.map((k, i) => `${i + 1}. ${k}`)
-        : ['No keys to victory set.']),
-      `\n[6. KEY OPPONENT PLAYERS]`,
-      ...(keyPlayersList.length > 0
-        ? keyPlayersList.map(
-            (p) => `#${p.num} ${p.name} (${p.pos}) [${p.threatLevel} Threat]: ${p.notes}`
-          )
-        : [scouting.keyPlayers || 'No player matchups listed.']),
-      `\n[7. COACHING STAFF GAMEPLAN BREAKDOWNS]`,
-      ...(coachNotes.length > 0
-        ? coachNotes.map(
-            (n) => `--- [${n.category || 'Note'}] ${n.title} (by ${n.coachName || n.coachEmail}) ---\n${n.content}\n`
-          )
-        : ['No individual coach notes entered.']),
-    ];
+  const handleAddKeyPlayer = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!playerJersey.trim() && !playerName.trim()) return;
 
-    navigator.clipboard.writeText(lines.join('\n'));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    const newKeyPlayer: OpponentKeyPlayer = {
+      id: `kp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      jersey: playerJersey.trim().replace(/\D/g, ''),
+      name: playerName.trim(),
+      position: playerPos.trim().toUpperCase() || 'ATH',
+      threatLevel: playerThreat,
+      notes: playerNotes.trim(),
+    };
+
+    onUpdateScouting('keyPlayers', [...keyPlayers, newKeyPlayer]);
+    setPlayerJersey('');
+    setPlayerName('');
+    setPlayerPos('');
+    setPlayerNotes('');
+    setIsAddingPlayer(false);
   };
 
-  // Filtered coach notes
-  const filteredNotes = coachNotes.filter((note) => {
-    if (selectedCoachFilter === 'all') return true;
-    if (selectedCoachFilter === 'mine') {
-      return note.coachEmail?.toLowerCase().trim() === currentEmail;
-    }
-    return (
-      note.coachEmail?.toLowerCase().trim() === selectedCoachFilter.toLowerCase().trim() ||
-      note.coachName?.toLowerCase().trim() === selectedCoachFilter.toLowerCase().trim()
+  const handleDeleteKeyPlayer = (id: string) => {
+    onUpdateScouting(
+      'keyPlayers',
+      keyPlayers.filter((p) => p.id !== id)
     );
-  });
+  };
+
+  const handleAddKeyToVictory = () => {
+    const text = prompt('Enter new Key to Victory:');
+    if (text && text.trim()) {
+      onUpdateScouting('keysToVictory', [...keysToVictory, text.trim()]);
+    }
+  };
+
+  const handleRemoveKeyToVictory = (idx: number) => {
+    onUpdateScouting(
+      'keysToVictory',
+      keysToVictory.filter((_, i) => i !== idx)
+    );
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleCopySummary = () => {
+    const opp = scouting.opponent || 'Upcoming Opponent';
+    const text = `🏈 SCOUTING REPORT: ${opp} (${scouting.week || 'Week 1'})\n` +
+      `📅 Game: ${scouting.gameDate || 'TBD'} @ ${scouting.gameLocation || 'TBD'}\n\n` +
+      `🎯 KEYS TO VICTORY:\n` +
+      keysToVictory.map((k, i) => `${i + 1}. ${k}`).join('\n') +
+      `\n\n🛡️ OPPONENT DEFENSE:\nBase Front: ${scouting.defenseFront || 'N/A'} | Coverage: ${scouting.defenseCoverage || 'N/A'}\nNotes: ${scouting.defenseTendencies || 'N/A'}\n\n` +
+      `⚡ OPPONENT OFFENSE:\nBase Formation: ${scouting.offenseFormations || 'N/A'}\nRun/Pass Ratio: ${scouting.runPassRatio || 'N/A'}\nNotes: ${scouting.offenseTendencies || 'N/A'}\n\n` +
+      `⭐ KEY PLAYERS TO WATCH:\n` +
+      keyPlayers.map((p) => `#${p.jersey} ${p.name} (${p.position}) - [${p.threatLevel} Threat] ${p.notes}`).join('\n');
+
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12">
-      {/* Top Bar with Permission Indicator */}
-      <div className="bg-slate-800/95 backdrop-blur-md p-4 md:p-5 rounded-3xl border border-slate-700/80 shadow-xl print:hidden flex flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+      {/* Top Banner Toolbar */}
+      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 flex items-center justify-center font-black shadow-inner">
-              <FileSpreadsheet className="w-5 h-5" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-slate-900 border border-indigo-500/30 flex items-center justify-center text-indigo-200 shadow-lg shadow-indigo-600/30">
+              <Swords className="w-6 h-6 text-amber-300" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-black text-base md:text-lg text-slate-100 tracking-tight">
-                  Opponent Scouting &amp; Staff Game Plan
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-lg md:text-xl font-black text-slate-100 tracking-tight">
+                  Opponent Scouting Hub &amp; Game Prep
                 </h2>
-                {isPowerAdmin ? (
-                  <span className="px-2 py-0.5 bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[10.5px] font-black rounded-lg flex items-center gap-1">
-                    <Award className="w-3 h-3 text-rose-400" />
-                    <span>Head Coach / Admin</span>
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.5 bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-[10.5px] font-black rounded-lg flex items-center gap-1">
-                    <Shield className="w-3 h-3 text-indigo-400" />
-                    <span>Coach Account</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-black uppercase">
+                  {scouting.opponent || 'Upcoming Matchup'}
+                </span>
+                {matchedScheduledGame && (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black uppercase flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>Auto-Synced with Schedule</span>
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-300 font-medium mt-0.5">
-                Comprehensive scouting, personnel matchups, and individual coach-scoped game planning
+              <p className="text-xs text-slate-400">
+                Opponent tendencies, key personnel breakdown, and game plan priorities
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={handleCopyGameplan}
-              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+              onClick={handleCopySummary}
+              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer"
+              title="Copy formatted text scouting briefing for coaching staff"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-indigo-300" />}
-              <span>{copied ? 'Copied' : 'Copy Text'}</span>
+              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-indigo-400" />}
+              <span>{copied ? 'Copied Briefing!' : 'Copy Summary'}</span>
             </button>
 
             <button
-              onClick={() => window.print()}
-              className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl border border-amber-500 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+              onClick={handlePrint}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-indigo-600/30 active:scale-95 cursor-pointer"
             >
-              <Printer className="w-4 h-4 text-slate-950" />
-              <span>Print Full Scouting Report</span>
+              <Printer className="w-4 h-4" />
+              <span>Print Scouting Report</span>
             </button>
-          </div>
-        </div>
-
-        {/* User Scope Banner */}
-        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-slate-900/80 rounded-xl border border-slate-700/60 text-xs">
-          <div className="flex items-center gap-2">
-            <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span className="text-slate-300 font-medium">
-              Active User:{' '}
-              <strong className="text-slate-100">
-                {currentEmail || 'Local Coach'}
-              </strong>
-            </span>
-            {isPowerAdmin ? (
-              <span className="text-amber-300 font-bold text-[11px] bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
-                👑 Full Administrative Access: You can edit and manage all shared sections &amp; individual coach notes.
-              </span>
-            ) : (
-              <span className="text-indigo-300 font-medium text-[11px] bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">
-                🛡️ Individual Access: You can add and edit your own scouting sections. Other coach sections are protected.
-              </span>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Opponent Metadata Row */}
+      {/* Schedule Auto-Sync Banner */}
+      {matchedScheduledGame && (
+        <div className="bg-gradient-to-r from-indigo-950/80 via-slate-900 to-indigo-950/80 rounded-3xl border border-indigo-500/40 p-4 md:p-5 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4 print:hidden">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-amber-300 shrink-0 mt-0.5">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-black text-sm text-slate-100">
+                  Scheduled Game for {currentWeek.startsWith('Week') ? currentWeek : `Week ${currentWeek}`}:
+                </span>
+                <span className="font-black text-amber-300 text-sm">
+                  {matchedScheduledGame.opponent || matchedScheduledGame.title}
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 font-mono text-[10px] font-bold">
+                  {matchedScheduledGame.date || 'Date TBD'} {matchedScheduledGame.time ? `@ ${matchedScheduledGame.time}` : ''}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                {matchedScheduledGame.location ? `📍 ${matchedScheduledGame.location}` : 'Home / Away'}
+                {matchedScheduledGame.focusOrNotes ? ` • Note: ${matchedScheduledGame.focusOrNotes}` : ''}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+            <button
+              onClick={() => handleSyncFromScheduleEvent(matchedScheduledGame)}
+              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-600/30 transition-all cursor-pointer active:scale-95"
+              title="Populate Opponent header, date, location and notes from this scheduled event"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-300" />
+              <span>⚡ Auto-Populate from Schedule</span>
+            </button>
+            {onNavigateToSchedule && (
+              <button
+                onClick={onNavigateToSchedule}
+                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-bold border border-slate-700 transition-all cursor-pointer"
+              >
+                View Schedule
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Opponent Metadata Row with Schedule Selector */}
       <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden">
-        <div className="flex items-center justify-between mb-3 border-b border-slate-700/60 pb-2">
+        <div className="flex items-center justify-between mb-3 border-b border-slate-700/60 pb-2 flex-wrap gap-2">
           <div className="flex items-center gap-2 text-amber-300 font-black text-xs uppercase tracking-wider">
             <Calendar className="w-4 h-4 text-amber-400" />
             <span>Game Information &amp; Opponent Header</span>
           </div>
-          <div className="flex items-center gap-2">
-            {onNavigateToSchedule && (
-              <button
-                type="button"
-                onClick={onNavigateToSchedule}
-                className="px-2.5 py-1 bg-slate-900 hover:bg-slate-700 text-amber-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all shadow-xs"
-                title="View in Season Schedule"
+
+          {/* Quick Scheduled Game Picker */}
+          {allScheduledGames.length > 0 && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-[10px] font-black uppercase text-indigo-300 font-mono hidden sm:inline">
+                Import Scheduled Game:
+              </span>
+              <select
+                onChange={(e) => {
+                  const ev = allScheduledGames.find((g) => g.id === e.target.value);
+                  if (ev) handleSyncFromScheduleEvent(ev);
+                }}
+                defaultValue=""
+                className="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-2.5 py-1 font-bold focus:outline-none focus:border-indigo-500 cursor-pointer"
               >
-                <Calendar className="w-3 h-3 text-amber-400" />
-                <span>📅 Season Schedule</span>
-              </button>
-            )}
-            <span className="text-[11px] text-slate-400 font-bold hidden sm:inline">
-              Mahopac 10U Football
-            </span>
-          </div>
+                <option value="" disabled>
+                  ⚡ Select Game from Season Schedule...
+                </option>
+                {allScheduledGames.map((game) => (
+                  <option key={game.id} value={game.id}>
+                    {game.week ? `${game.week}: ` : ''}
+                    {game.opponent || game.title} ({game.date || 'TBD'})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3.5">
@@ -376,7 +402,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
             </label>
             <input
               type="text"
-              value={scouting.week || 'Week 1'}
+              value={scouting.week || (currentWeek.startsWith('Week') ? currentWeek : `Week ${currentWeek}`)}
               disabled={!isPowerAdmin}
               onChange={(e) => onUpdateScouting('week', e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-amber-400 disabled:opacity-60"
@@ -393,7 +419,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
               disabled={!isPowerAdmin}
               onChange={(e) => onUpdateScouting('opponent', e.target.value)}
               placeholder="e.g. Carmel Rams"
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-400 disabled:opacity-60"
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-amber-300 placeholder:text-slate-500 focus:outline-none focus:border-amber-400 disabled:opacity-60"
             />
           </div>
 
@@ -441,425 +467,430 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
-          {keysToVictory.map((keyItem, idx) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {keysToVictory.map((keyGoal, idx) => (
             <div
               key={idx}
-              className="flex items-start justify-between gap-2 p-3 bg-slate-900/90 rounded-2xl border border-slate-700 hover:border-amber-400/40 transition-colors"
+              className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-3.5 flex items-start justify-between gap-2 shadow-xs group"
             >
-              <div className="flex items-start gap-2.5 min-w-0">
-                <span className="w-5 h-5 rounded-lg bg-amber-400 text-slate-950 font-black text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+              <div className="flex items-start gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-500/30 flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
                   {idx + 1}
                 </span>
-                <p className="text-xs font-bold text-slate-200 leading-snug break-words">
-                  {keyItem}
-                </p>
+                <p className="text-xs font-bold text-slate-200 leading-snug">{keyGoal}</p>
               </div>
               {isPowerAdmin && (
                 <button
-                  onClick={() => handleRemoveKey(idx)}
-                  className="text-slate-500 hover:text-rose-400 p-1 transition-colors shrink-0"
-                  title="Remove Key"
+                  onClick={() => handleRemoveKeyToVictory(idx)}
+                  className="text-slate-500 hover:text-rose-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  title="Remove goal"
                 >
-                  &times;
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
           ))}
 
-          {keysToVictory.length === 0 && (
-            <div className="col-span-full py-3 text-center text-xs text-slate-400 font-medium italic bg-slate-900/40 rounded-xl border border-dashed border-slate-700">
-              No keys to victory listed yet. Add high-priority execution goals below (e.g. Win turnover battle, Stop off-tackle run, Secure onside kick).
-            </div>
+          {isPowerAdmin && (
+            <button
+              onClick={handleAddKeyToVictory}
+              className="border-2 border-dashed border-slate-700 hover:border-amber-400/60 rounded-2xl p-3 flex items-center justify-center gap-1.5 text-xs font-bold text-slate-400 hover:text-amber-300 transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Key to Victory</span>
+            </button>
           )}
         </div>
-
-        {isPowerAdmin && (
-          <div className="flex items-center gap-2 pt-2">
-            <input
-              type="text"
-              value={newKeyText}
-              onChange={(e) => setNewKeyText(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAddKey()}
-              placeholder="Add a new key to victory (e.g. Contain #12 QB on perimeter)..."
-              className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
-            />
-            <button
-              onClick={handleAddKey}
-              className="px-3.5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl border border-amber-500 flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Key</span>
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Opponent Key Personnel / Watchlist */}
-      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-700/60">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-indigo-400" />
-            <h3 className="font-black text-sm text-slate-100">
-              Opponent Key Players &amp; Matchup Watchlist
-            </h3>
+      {/* Two Column Grid: Opponent Defense & Opponent Offense */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Opponent Defense Breakdown */}
+        <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-700/60">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300">
+                <Shield className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="font-black text-sm text-slate-100">Opponent Defensive Scheme</h3>
+                <p className="text-[11px] text-slate-400">Fronts, blitzes, coverage shells, and weak spots</p>
+              </div>
+            </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                Base Defensive Front
+              </label>
+              <input
+                type="text"
+                value={scouting.defenseFront || ''}
+                disabled={!isPowerAdmin}
+                onChange={(e) => onUpdateScouting('defenseFront', e.target.value)}
+                placeholder="e.g. 4-4 Stack, 5-3, 5-2"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-indigo-300 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                Primary Secondary Coverage
+              </label>
+              <input
+                type="text"
+                value={scouting.defenseCoverage || ''}
+                disabled={!isPowerAdmin}
+                onChange={(e) => onUpdateScouting('defenseCoverage', e.target.value)}
+                placeholder="e.g. Cover 3, Cover 1 Man, Cover 2"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-indigo-300 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+              Defensive Tendencies &amp; Attack Angles
+            </label>
+            <textarea
+              rows={3}
+              value={scouting.defenseTendencies || ''}
+              disabled={!isPowerAdmin}
+              onChange={(e) => onUpdateScouting('defenseTendencies', e.target.value)}
+              placeholder="e.g. DL pinches inside on down-and-short; Corners give 7-yard cushion on 3rd down; Weak-side DE over-pursues on sweeps..."
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+              Offensive Game Plan Strategy vs. This Defense
+            </label>
+            <textarea
+              rows={3}
+              value={scouting.gameplanOffense || ''}
+              disabled={!isPowerAdmin}
+              onChange={(e) => onUpdateScouting('gameplanOffense', e.target.value)}
+              placeholder="e.g. Run off-tackle power to test edge discipline; Use quick slant RPOs against soft corner coverage..."
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-emerald-300 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+        </div>
+
+        {/* Opponent Offense Breakdown */}
+        <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-700/60">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-300">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="font-black text-sm text-slate-100">Opponent Offensive Scheme</h3>
+                <p className="text-[11px] text-slate-400">Formations, primary ball carriers, and favorite concepts</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                Base Formations
+              </label>
+              <input
+                type="text"
+                value={scouting.offenseFormations || ''}
+                disabled={!isPowerAdmin}
+                onChange={(e) => onUpdateScouting('offenseFormations', e.target.value)}
+                placeholder="e.g. Wing-T, Singleback, Pistol"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-amber-300 placeholder:text-slate-600 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                Run / Pass Ratio
+              </label>
+              <input
+                type="text"
+                value={scouting.runPassRatio || ''}
+                disabled={!isPowerAdmin}
+                onChange={(e) => onUpdateScouting('runPassRatio', e.target.value)}
+                placeholder="e.g. 75% Run / 25% Pass"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-amber-300 placeholder:text-slate-600 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+              Offensive Tendencies &amp; Tell Keys
+            </label>
+            <textarea
+              rows={3}
+              value={scouting.offenseTendencies || ''}
+              disabled={!isPowerAdmin}
+              onChange={(e) => onUpdateScouting('offenseTendencies', e.target.value)}
+              placeholder="e.g. #22 carries on 80% of inside runs; QB looks only to right side on sprint-outs; Backfield depth tips pass vs run..."
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-amber-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+              Defensive Game Plan Strategy vs. This Offense
+            </label>
+            <textarea
+              rows={3}
+              value={scouting.gameplanDefense || ''}
+              disabled={!isPowerAdmin}
+              onChange={(e) => onUpdateScouting('gameplanDefense', e.target.value)}
+              placeholder="e.g. Set hard edge on outside stretch; Safety key on tight end release; LB flow with guard pull..."
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-indigo-300 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Key Players to Watch Section */}
+      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-700/60">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-5 h-5 text-rose-400" />
+            <div>
+              <h3 className="font-black text-sm text-slate-100">
+                Key Opponent Players &amp; Impact Matchups
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                Identify game-changers, dangerous ball carriers, and primary pass rushers
+              </p>
+            </div>
+          </div>
+
           {isPowerAdmin && (
             <button
               onClick={() => setIsAddingPlayer(!isAddingPlayer)}
-              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1 transition-all active:scale-95 shadow-xs"
+              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-md shadow-rose-600/30 transition-all cursor-pointer"
             >
-              <Plus className="w-3 h-3" />
-              <span>{isAddingPlayer ? 'Cancel' : 'Add Key Player'}</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Player</span>
             </button>
           )}
         </div>
 
         {/* Add Player Form */}
         {isAddingPlayer && (
-          <div className="p-4 bg-slate-900/95 rounded-2xl border border-indigo-500/40 space-y-3">
-            <h4 className="font-black text-xs text-indigo-300 uppercase tracking-wider">
-              Add Opponent Player
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs">
+          <form onSubmit={handleAddKeyPlayer} className="p-4 bg-slate-900 rounded-2xl border border-slate-700 space-y-3">
+            <h4 className="font-black text-xs text-rose-300">Add Opponent Player to Watch</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
                   Jersey #
                 </label>
                 <input
                   type="text"
-                  value={newPlayerNum}
-                  onChange={(e) => setNewPlayerNum(e.target.value)}
-                  placeholder="e.g. 12"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 font-mono font-bold text-slate-100 focus:outline-none focus:border-indigo-400"
+                  value={playerJersey}
+                  onChange={(e) => setPlayerJersey(e.target.value)}
+                  placeholder="e.g. 24"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-rose-300 focus:outline-none focus:border-rose-500"
+                  required
                 />
               </div>
+
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
-                  Player Name
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                  Name / Identifier
                 </label>
                 <input
                   type="text"
-                  value={newPlayerName}
-                  onChange={(e) => setNewPlayerName(e.target.value)}
-                  placeholder="e.g. John Doe"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 font-bold text-slate-100 focus:outline-none focus:border-indigo-400"
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value)}
+                  placeholder="e.g. RB / Returner"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-100 focus:outline-none focus:border-rose-500"
                 />
               </div>
+
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
                   Position
                 </label>
                 <input
                   type="text"
-                  value={newPlayerPos}
-                  onChange={(e) => setNewPlayerPos(e.target.value)}
-                  placeholder="e.g. QB / FS"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 font-bold text-slate-100 focus:outline-none focus:border-indigo-400"
+                  value={playerPos}
+                  onChange={(e) => setPlayerPos(e.target.value)}
+                  placeholder="e.g. RB / DE"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-100 focus:outline-none focus:border-rose-500"
                 />
               </div>
+
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
                   Threat Level
                 </label>
                 <select
-                  value={newPlayerThreat}
-                  onChange={(e: any) => setNewPlayerThreat(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 font-bold text-slate-100 focus:outline-none focus:border-indigo-400"
+                  value={playerThreat}
+                  onChange={(e) => setPlayerThreat(e.target.value as any)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-100 focus:outline-none focus:border-rose-500"
                 >
-                  <option value="High">🔴 High Threat</option>
-                  <option value="Medium">🟡 Medium Threat</option>
-                  <option value="Low">🟢 Standard / Low</option>
+                  <option value="High">🔥 High Threat</option>
+                  <option value="Medium">⚡ Medium Threat</option>
+                  <option value="Low">🛡️ Low / Rotational</option>
                 </select>
               </div>
             </div>
+
             <div>
-              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
-                Tendencies, Strengths &amp; How to Defend / Attack
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                Scouting Notes &amp; Tendencies
               </label>
-              <textarea
-                rows={2}
-                value={newPlayerNotes}
-                onChange={(e) => setNewPlayerNotes(e.target.value)}
-                placeholder="Runs outside contain on bootlegs; aggressive on run blitz; forces turnovers..."
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-slate-100 font-medium focus:outline-none focus:border-indigo-400"
+              <input
+                type="text"
+                value={playerNotes}
+                onChange={(e) => setPlayerNotes(e.target.value)}
+                placeholder="e.g. Elite speed on outside sweeps; jumps snap counts on pass downs..."
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-rose-500"
               />
             </div>
-            <div className="flex justify-end gap-2">
+
+            <div className="flex items-center justify-end gap-2 pt-1">
               <button
+                type="button"
                 onClick={() => setIsAddingPlayer(false)}
-                className="px-3 py-1.5 bg-slate-800 text-slate-300 font-bold text-xs rounded-xl"
+                className="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 cursor-pointer"
               >
                 Cancel
               </button>
               <button
-                onClick={handleAddPlayer}
-                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md"
+                type="submit"
+                className="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer"
               >
                 Save Player
               </button>
             </div>
-          </div>
+          </form>
         )}
 
-        {/* Players Grid / Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {keyPlayersList.map((player) => (
-            <div
-              key={player.id}
-              className="p-3.5 bg-slate-900/90 rounded-2xl border border-slate-700 flex flex-col justify-between gap-2 hover:border-slate-600 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 text-amber-300 font-black font-mono text-xs flex items-center justify-center shrink-0">
-                    #{player.num}
-                  </span>
-                  <div>
-                    <h4 className="font-black text-xs text-slate-100 leading-tight">
-                      {player.name}
-                    </h4>
-                    <span className="text-[10px] font-mono text-indigo-300 font-extrabold uppercase">
-                      {player.pos}
+        {/* Players List Table */}
+        <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-950/40">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-slate-800 bg-slate-850 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                <th className="py-2.5 px-3">#</th>
+                <th className="py-2.5 px-3">Name / Role</th>
+                <th className="py-2.5 px-3">Pos</th>
+                <th className="py-2.5 px-3">Threat</th>
+                <th className="py-2.5 px-3">Scouting Notes</th>
+                <th className="py-2.5 px-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-850">
+              {keyPlayers.map((player) => (
+                <tr key={player.id} className="hover:bg-slate-850/50 transition-colors">
+                  <td className="py-2.5 px-3 font-mono font-black text-rose-400">
+                    #{player.jersey || '—'}
+                  </td>
+                  <td className="py-2.5 px-3 font-bold text-slate-100">
+                    {player.name || 'Opponent Player'}
+                  </td>
+                  <td className="py-2.5 px-3">
+                    <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-bold border border-slate-700 text-[10px]">
+                      {player.position}
                     </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={`text-[9.5px] font-black uppercase px-2 py-0.5 rounded-md ${
-                      player.threatLevel === 'High'
-                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                        : player.threatLevel === 'Medium'
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                        : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                    }`}
-                  >
-                    {player.threatLevel}
-                  </span>
-                  {isPowerAdmin && (
-                    <button
-                      onClick={() => handleRemovePlayer(player.id)}
-                      className="text-slate-500 hover:text-rose-400 p-0.5 transition-colors"
-                      title="Remove Player"
+                  </td>
+                  <td className="py-2.5 px-3">
+                    <span
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase border ${
+                        player.threatLevel === 'High'
+                          ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                          : player.threatLevel === 'Medium'
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                          : 'bg-slate-800 text-slate-300 border-slate-700'
+                      }`}
                     >
-                      &times;
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <p className="text-[11.5px] text-slate-300 font-medium leading-relaxed bg-slate-950/50 p-2 rounded-xl border border-slate-800/80">
-                {player.notes || 'No detailed matchup notes entered.'}
-              </p>
-            </div>
-          ))}
-
-          {keyPlayersList.length === 0 && (
-            <div className="col-span-full py-4 text-center text-xs text-slate-400 font-medium italic bg-slate-900/40 rounded-2xl border border-dashed border-slate-700">
-              No key opponent players listed. Click "Add Key Player" above to track threat levels and matchup tactics.
-            </div>
-          )}
+                      {player.threatLevel}
+                    </span>
+                  </td>
+                  <td className="py-2.5 px-3 text-slate-300">
+                    {player.notes || '—'}
+                  </td>
+                  <td className="py-2.5 px-3 text-right">
+                    {isPowerAdmin && (
+                      <button
+                        onClick={() => handleDeleteKeyPlayer(player.id)}
+                        className="p-1 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {keyPlayers.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-6 text-center text-slate-500 text-xs italic">
+                    No opponent players logged yet. Click "Add Player" to highlight key threats.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Shared Strategic Schemes & Formations Bento */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:hidden">
-        {/* Team Overview & Base Schemes */}
-        <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 space-y-2.5">
-          <div className="flex items-center justify-between pb-1 border-b border-slate-700/60">
-            <div className="flex items-center gap-2 text-indigo-300 font-black text-sm">
-              <ShieldAlert className="w-4 h-4 text-indigo-400" />
-              <span>Team Overview &amp; Base Philosophy</span>
-            </div>
-            {isPowerAdmin ? (
-              <span className="text-[10px] text-amber-300 font-bold bg-amber-500/10 px-2 py-0.5 rounded-md">
-                Admin Editable
-              </span>
-            ) : (
-              <span className="text-[10px] text-slate-400 font-bold">
-                Team Shared
-              </span>
-            )}
-          </div>
-          <textarea
-            rows={5}
-            value={scouting.teamOverview || ''}
-            disabled={!isPowerAdmin}
-            onChange={(e) => onUpdateScouting('teamOverview', e.target.value)}
-            placeholder="General team strengths, coaching habits, tempo (fast-break vs huddle), disciplined vs penalty prone, preferred hash marks..."
-            className="w-full bg-slate-900/90 border border-slate-700 rounded-2xl p-3.5 text-xs text-slate-200 font-medium focus:outline-none focus:border-indigo-400 leading-relaxed resize-y disabled:opacity-60 placeholder:text-slate-500"
-          />
-        </div>
-
-        {/* Offensive Formations & Run/Pass Tendencies */}
-        <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 space-y-2.5">
-          <div className="flex items-center justify-between pb-1 border-b border-slate-700/60">
-            <div className="flex items-center gap-2 text-amber-300 font-black text-sm">
-              <Swords className="w-4 h-4 text-amber-400" />
-              <span>Offensive Formations &amp; Tendencies</span>
-            </div>
-            {isPowerAdmin ? (
-              <span className="text-[10px] text-amber-300 font-bold bg-amber-500/10 px-2 py-0.5 rounded-md">
-                Admin Editable
-              </span>
-            ) : (
-              <span className="text-[10px] text-slate-400 font-bold">
-                Team Shared
-              </span>
-            )}
-          </div>
-          <textarea
-            rows={5}
-            value={scouting.offensiveTendencies || ''}
-            disabled={!isPowerAdmin}
-            onChange={(e) => onUpdateScouting('offensiveTendencies', e.target.value)}
-            placeholder="Primary offensive formations (I-Formation, Wing-T, Single Wing, Spread), run/pass ratio, sweep tendencies, QB scramble habits, favorite third-down calls..."
-            className="w-full bg-slate-900/90 border border-slate-700 rounded-2xl p-3.5 text-xs text-slate-200 font-medium focus:outline-none focus:border-amber-400 leading-relaxed resize-y disabled:opacity-60 placeholder:text-slate-500"
-          />
-        </div>
-
-        {/* Defensive Fronts & Blitz Packages */}
-        <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 space-y-2.5">
-          <div className="flex items-center justify-between pb-1 border-b border-slate-700/60">
-            <div className="flex items-center gap-2 text-sky-300 font-black text-sm">
-              <Shield className="w-4 h-4 text-sky-400" />
-              <span>Defensive Fronts, Coverage &amp; Blitzes</span>
-            </div>
-            {isPowerAdmin ? (
-              <span className="text-[10px] text-amber-300 font-bold bg-amber-500/10 px-2 py-0.5 rounded-md">
-                Admin Editable
-              </span>
-            ) : (
-              <span className="text-[10px] text-slate-400 font-bold">
-                Team Shared
-              </span>
-            )}
-          </div>
-          <textarea
-            rows={5}
-            value={scouting.defensiveFronts || ''}
-            disabled={!isPowerAdmin}
-            onChange={(e) => onUpdateScouting('defensiveFronts', e.target.value)}
-            placeholder="Base defensive front (5-3, 4-4, 6-2 goal line), secondary coverage (Cover 2, Cover 3, Man), corner run support aggressiveness, inside blitz frequency..."
-            className="w-full bg-slate-900/90 border border-slate-700 rounded-2xl p-3.5 text-xs text-slate-200 font-medium focus:outline-none focus:border-sky-400 leading-relaxed resize-y disabled:opacity-60 placeholder:text-slate-500"
-          />
-        </div>
-
-        {/* Special Teams & Field Position */}
-        <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 space-y-2.5">
-          <div className="flex items-center justify-between pb-1 border-b border-slate-700/60">
-            <div className="flex items-center gap-2 text-emerald-300 font-black text-sm">
-              <Sparkles className="w-4 h-4 text-emerald-400" />
-              <span>Special Teams &amp; Field Position</span>
-            </div>
-            {isPowerAdmin ? (
-              <span className="text-[10px] text-amber-300 font-bold bg-amber-500/10 px-2 py-0.5 rounded-md">
-                Admin Editable
-              </span>
-            ) : (
-              <span className="text-[10px] text-slate-400 font-bold">
-                Team Shared
-              </span>
-            )}
-          </div>
-          <textarea
-            rows={5}
-            value={scouting.specialTeamsNotes || ''}
-            disabled={!isPowerAdmin}
-            onChange={(e) => onUpdateScouting('specialTeamsNotes', e.target.value)}
-            placeholder="Kickoff return coverage strengths, dangerous returners, onside kick likelihood, punt block vulnerability, extra point kick vs 2-pt conversion strategy..."
-            className="w-full bg-slate-900/90 border border-slate-700 rounded-2xl p-3.5 text-xs text-slate-200 font-medium focus:outline-none focus:border-emerald-400 leading-relaxed resize-y disabled:opacity-60 placeholder:text-slate-500"
-          />
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* INDIVIDUAL COACH SCOUTING SECTIONS (USER-SCOPED NOTES)                    */}
-      {/* ========================================================================= */}
-      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border-2 border-indigo-500/40 shadow-2xl p-5 md:p-7 print:hidden space-y-5">
-        {/* Section Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-700/80">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 flex items-center justify-center font-black shadow-inner">
-              <Shield className="w-5 h-5" />
-            </div>
+      {/* Staff Collaboration & Coaching Notes */}
+      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-700/60">
+          <div className="flex items-center gap-2">
+            <Users className="w-5 h-5 text-indigo-400" />
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-black text-base md:text-lg text-slate-100 tracking-tight">
-                  Staff Gameplan Sections &amp; Coach Notes
-                </h3>
-                <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-[10.5px] font-black rounded-lg border border-indigo-500/30">
-                  {coachNotes.length} Section{coachNotes.length === 1 ? '' : 's'}
-                </span>
-              </div>
-              <p className="text-xs text-slate-300 font-medium">
-                Each coach has their own dedicated section. Head Coaches &amp; Admins have full authority over all sections.
+              <h3 className="font-black text-sm text-slate-100">
+                Staff Observations &amp; Position Coach Notes
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                Real-time multi-coach film study notes and sideline adjustments
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Filter by Coach */}
-            <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-700 text-xs">
-              <span className="text-slate-400 font-bold px-1.5 text-[11px]">View:</span>
-              <button
-                onClick={() => setSelectedCoachFilter('all')}
-                className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-all ${
-                  selectedCoachFilter === 'all'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                All Staff
-              </button>
-              <button
-                onClick={() => setSelectedCoachFilter('mine')}
-                className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-all ${
-                  selectedCoachFilter === 'mine'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                My Section
-              </button>
-            </div>
-
-            {/* Add New Coach Section Button */}
-            <button
-              onClick={() => setIsAddingNote(true)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedCoachFilter}
+              onChange={(e) => setSelectedCoachFilter(e.target.value)}
+              className="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-2.5 py-1.5 font-bold focus:outline-none focus:border-indigo-500 cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
-              <span>Add Coach Section</span>
+              <option value="all">All Categories &amp; Coaches</option>
+              {NOTE_CATEGORIES.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+
+            <button
+              onClick={() => setIsAddingNote(!isAddingNote)}
+              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Note</span>
             </button>
           </div>
         </div>
 
-        {/* Modal / Form: Add Coach Section */}
+        {/* Add Note Form */}
         {isAddingNote && (
-          <div className="bg-slate-900/95 rounded-3xl border-2 border-indigo-500/60 p-5 md:p-6 space-y-4 shadow-2xl animate-in fade-in duration-200">
-            <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
-              <div className="flex items-center gap-2 text-indigo-300 font-black text-sm">
-                <Plus className="w-4 h-4 text-indigo-400" />
-                <span>Create New Coach Scouting Section</span>
-              </div>
-              <button
-                onClick={() => setIsAddingNote(false)}
-                className="text-slate-400 hover:text-slate-200 text-sm font-bold"
-              >
-                &times; Close
-              </button>
-            </div>
+          <form onSubmit={handleAddCoachNote} className="p-4 bg-slate-900 rounded-2xl border border-slate-700 space-y-3">
+            <h4 className="font-black text-xs text-indigo-300">New Staff Film Observation</h4>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
-                  Section Category
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                  Category
                 </label>
                 <select
                   value={newNoteCategory}
                   onChange={(e) => setNewNoteCategory(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-indigo-400"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-100 focus:outline-none focus:border-indigo-500"
                 >
                   {NOTE_CATEGORIES.map((cat) => (
                     <option key={cat.id} value={cat.id}>
@@ -870,374 +901,199 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
-                  Section Title / Focus
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                  Coach Author
+                </label>
+                <input
+                  type="text"
+                  value={newNoteAuthor}
+                  onChange={(e) => setNewNoteAuthor(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-100 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                  Observation Title
                 </label>
                 <input
                   type="text"
                   value={newNoteTitle}
                   onChange={(e) => setNewNoteTitle(e.target.value)}
-                  placeholder="e.g. Blitz Scheme & Inside Contain"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-indigo-400"
+                  placeholder="e.g. Heavy A-Gap Pressure on 3rd & Long"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-100 focus:outline-none focus:border-indigo-500"
+                  required
                 />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
-                  Author Coach / Role
-                </label>
-                {isPowerAdmin && staffList.length > 0 ? (
-                  <select
-                    value={newNoteCoachEmail}
-                    onChange={(e) => {
-                      setNewNoteCoachEmail(e.target.value);
-                      const found = staffList.find((s) => s.email === e.target.value);
-                      if (found) setNewNoteCoachName(found.role || found.email);
-                    }}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-indigo-400"
-                  >
-                    {staffList.map((s, idx) => (
-                      <option key={idx} value={s.email}>
-                        {s.email} ({s.role || 'Staff'})
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    value={newNoteCoachName}
-                    onChange={(e) => setNewNoteCoachName(e.target.value)}
-                    placeholder="Coach Name"
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-indigo-400"
-                  />
-                )}
               </div>
             </div>
 
             <div>
-              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
-                Detailed Gameplan Notes &amp; Coaching Points
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                Detailed Coaching Observation &amp; Adjustment Plan
               </label>
               <textarea
-                rows={5}
+                rows={3}
                 value={newNoteContent}
                 onChange={(e) => setNewNoteContent(e.target.value)}
-                placeholder="Enter tactical breakdown, keys for the position group, specific audible signals, blitz calls, or sideline check-ins..."
-                className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-xs text-slate-100 font-medium focus:outline-none focus:border-indigo-400 leading-relaxed"
+                placeholder="What did you see on film? How should our unit adjust or exploit it?"
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                required
               />
             </div>
 
-            <div className="flex justify-end gap-2.5 pt-2">
+            <div className="flex items-center justify-end gap-2">
               <button
+                type="button"
                 onClick={() => setIsAddingNote(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl"
+                className="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 cursor-pointer"
               >
                 Cancel
               </button>
               <button
-                onClick={handleCreateCoachNote}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md"
+                type="submit"
+                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer"
               >
-                Create Section
+                Save Observation
               </button>
             </div>
-          </div>
+          </form>
         )}
 
-        {/* Coach Note Cards List */}
+        {/* Coach Notes Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredNotes.map((note) => {
-            const isAuthor = note.coachEmail?.toLowerCase().trim() === currentEmail;
-            const editable = canEditNote(note);
-            const isEditingThis = editingNoteId === note.id;
-
+            const catObj = NOTE_CATEGORIES.find((c) => c.id === note.category);
             return (
               <div
                 key={note.id}
-                className={`bg-slate-900/90 rounded-2xl border transition-all flex flex-col justify-between ${
-                  editable
-                    ? 'border-indigo-500/40 hover:border-indigo-500/80 shadow-md'
-                    : 'border-slate-700/80 opacity-90'
-                }`}
+                className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 shadow-sm space-y-2 flex flex-col justify-between"
               >
-                {/* Note Card Header */}
-                <div className="p-4 border-b border-slate-800 flex items-start justify-between gap-2">
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 font-black text-[10px] rounded-md border border-indigo-500/30">
-                        {note.category || 'General'}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-slate-800 text-indigo-300 font-black text-[10px] uppercase border border-slate-700">
+                      {note.category}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        {note.timestamp ? new Date(note.timestamp).toLocaleDateString() : ''}
                       </span>
-                      {editable ? (
-                        <span className="px-1.5 py-0.2 text-[9.5px] font-black text-emerald-400 bg-emerald-500/10 rounded flex items-center gap-1">
-                          <Unlock className="w-2.5 h-2.5" />
-                          <span>{isPowerAdmin && !isAuthor ? 'Admin Edit' : 'You can edit'}</span>
-                        </span>
-                      ) : (
-                        <span className="px-1.5 py-0.2 text-[9.5px] font-black text-slate-400 bg-slate-800 rounded flex items-center gap-1">
-                          <Lock className="w-2.5 h-2.5 text-slate-500" />
-                          <span>Read Only</span>
-                        </span>
+                      {(isPowerAdmin || note.author === (currentUser?.email || '')) && (
+                        <button
+                          onClick={() => handleDeleteCoachNote(note.id)}
+                          className="text-slate-500 hover:text-rose-400 p-1 transition-colors cursor-pointer"
+                          title="Delete note"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
                       )}
                     </div>
-
-                    <h4 className="font-black text-sm text-slate-100 tracking-tight truncate">
-                      {note.title}
-                    </h4>
-
-                    <div className="flex items-center gap-2 text-[10.5px] text-slate-400 font-medium">
-                      <span>Coach: <strong className="text-slate-200">{note.coachName || note.coachEmail}</strong></span>
-                      <span>&bull;</span>
-                      <span className="font-mono text-slate-500 text-[9.5px]">
-                        {new Date(note.lastEdited || note.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
                   </div>
 
-                  {/* Actions (if permitted) */}
-                  {editable && (
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={() => {
-                          if (isEditingThis) {
-                            setEditingNoteId(null);
-                          } else {
-                            setEditingNoteId(note.id);
-                            setEditTitle(note.title);
-                            setEditCategory(note.category || 'General');
-                            setEditContent(note.content);
-                          }
-                        }}
-                        className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-indigo-300 rounded-lg transition-colors"
-                        title={isEditingThis ? 'Cancel Edit' : 'Edit Section'}
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        onClick={() => handleDeleteNote(note.id)}
-                        className="p-1.5 bg-slate-800 hover:bg-rose-900/60 text-slate-400 hover:text-rose-300 rounded-lg transition-colors"
-                        title="Delete Section"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
+                  <h4 className="font-black text-xs text-slate-100">{note.title}</h4>
+                  <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">{note.content}</p>
                 </div>
 
-                {/* Note Card Body (Viewing or In-Place Editing) */}
-                <div className="p-4 flex-1">
-                  {isEditingThis ? (
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
-                          Section Title
-                        </label>
-                        <input
-                          type="text"
-                          value={editTitle}
-                          onChange={(e) => setEditTitle(e.target.value)}
-                          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-100 focus:outline-none focus:border-indigo-400"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
-                          Category
-                        </label>
-                        <select
-                          value={editCategory}
-                          onChange={(e) => setEditCategory(e.target.value)}
-                          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-100 focus:outline-none focus:border-indigo-400"
-                        >
-                          {NOTE_CATEGORIES.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
-                          Notes &amp; Strategy
-                        </label>
-                        <textarea
-                          rows={6}
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 font-medium focus:outline-none focus:border-indigo-400 leading-relaxed"
-                        />
-                      </div>
-
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => setEditingNoteId(null)}
-                          className="px-3 py-1 bg-slate-800 text-slate-300 font-bold text-xs rounded-lg"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() => handleSaveNoteEdit(note.id)}
-                          className="px-4 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-lg shadow-sm"
-                        >
-                          Save Changes
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-slate-200 font-medium leading-relaxed whitespace-pre-wrap">
-                      {note.content || 'No detailed content entered for this section.'}
-                    </p>
-                  )}
+                <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
+                  <span className="font-bold text-indigo-300">👤 {note.author}</span>
+                  <span>{note.authorRole || 'Coaching Staff'}</span>
                 </div>
-
-                {/* Footer status */}
-                {!isEditingThis && (
-                  <div className="px-4 py-2 bg-slate-950/60 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
-                    <span>
-                      Author: <strong className="text-slate-300">{note.coachEmail}</strong>
-                    </span>
-                    {editable ? (
-                      <span className="text-emerald-400 font-bold">● Unlocked</span>
-                    ) : (
-                      <span className="text-slate-500 font-medium">🔒 Protected</span>
-                    )}
-                  </div>
-                )}
               </div>
             );
           })}
 
           {filteredNotes.length === 0 && (
-            <div className="col-span-full py-8 text-center bg-slate-900/40 rounded-3xl border border-dashed border-slate-700 space-y-2">
-              <Shield className="w-8 h-8 text-slate-600 mx-auto" />
-              <h4 className="font-black text-sm text-slate-300">
-                No Coach Sections Created Yet
-              </h4>
-              <p className="text-xs text-slate-400 max-w-md mx-auto font-medium">
-                Create position-specific scouting sections (e.g. Defensive Coordinator Notes, O-Line Blocking Rules, Special Teams) that stay organized and protected.
-              </p>
-              <button
-                onClick={() => setIsAddingNote(true)}
-                className="mt-2 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md inline-flex items-center gap-1.5"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add First Coach Section</span>
-              </button>
+            <div className="col-span-full py-8 text-center text-slate-500 text-xs italic bg-slate-900/50 rounded-2xl border border-dashed border-slate-800">
+              No coaching observations recorded for this filter. Click "Add Note" above to log film insights!
             </div>
           )}
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* HIGH-VISIBILITY PRINT VIEW FOR SIDELINES                                  */}
-      {/* ========================================================================= */}
-      <div className="hidden print:block space-y-4 bg-white text-black p-2">
-        {/* Printable Header */}
-        <div className="border-b-2 border-black pb-2 text-center">
-          <h1 className="text-lg font-black uppercase tracking-wider">
-            Mahopac 10U Football &bull; Opponent Scouting Report &bull; {scouting.opponent || 'Upcoming Game'}
-          </h1>
-          <div className="text-xs font-bold text-slate-800 flex items-center justify-center gap-4 mt-1">
-            <span>Year: {scouting.year || '2026'}</span>
-            <span>Week: {scouting.week || 'Week 1'}</span>
-            <span>Date: {scouting.gameDate || 'TBD'}</span>
-            <span>Location: {scouting.gameLocation || 'TBD'}</span>
+      {/* PRINT-ONLY COMPLETE SCOUTING BRIEFING */}
+      <div className="hidden print:block space-y-4 bg-white text-black p-6">
+        <div className="border-b-2 border-black pb-3 mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-black uppercase tracking-tight">
+              GAME SCOUTING REPORT: {scouting.opponent || 'Upcoming Opponent'}
+            </h1>
+            <p className="text-xs font-bold text-gray-700">
+              {scouting.week || 'Week 1'} • {scouting.gameDate || 'TBD'} • Venue: {scouting.gameLocation || 'TBD'}
+            </p>
+          </div>
+          <div className="text-right">
+            <span className="text-xs font-mono font-black border border-black px-2 py-1">
+              MAHOPAC FOOTBALL
+            </span>
           </div>
         </div>
 
         {/* Keys to Victory */}
-        {keysToVictory.length > 0 && (
-          <div className="border-2 border-black p-2.5 rounded-none">
-            <h3 className="font-black text-xs uppercase border-b-2 border-black pb-1 mb-1.5 text-black">
-              1. Keys to Victory &amp; Critical Goals
-            </h3>
-            <div className="grid grid-cols-2 gap-1.5 text-xs font-bold text-black">
-              {keysToVictory.map((k, i) => (
-                <div key={i} className="flex items-start gap-1">
-                  <span>&bull;</span>
-                  <span>{k}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="border border-black p-3 mb-3">
+          <h2 className="text-sm font-black uppercase mb-1">🎯 Keys to Victory:</h2>
+          <ol className="list-decimal list-inside text-xs font-bold space-y-0.5">
+            {keysToVictory.map((k, i) => (
+              <li key={i}>{k}</li>
+            ))}
+          </ol>
+        </div>
 
-        {/* Team Schemes & Formations */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="border-2 border-black p-2.5 rounded-none">
-            <h3 className="font-black text-xs uppercase border-b-2 border-black pb-1 mb-1.5 text-black">
-              2. Team Overview &amp; Base Philosophy
-            </h3>
-            <p className="text-xs font-bold text-black whitespace-pre-wrap leading-tight">
-              {scouting.teamOverview || 'No overview notes entered.'}
-            </p>
+        {/* Schemes Breakdown */}
+        <div className="grid grid-cols-2 gap-4 text-xs mb-3">
+          <div className="border border-black p-3">
+            <h3 className="font-black uppercase mb-1">🛡️ Opponent Defense:</h3>
+            <p><strong>Base Front:</strong> {scouting.defenseFront || 'N/A'}</p>
+            <p><strong>Secondary Coverage:</strong> {scouting.defenseCoverage || 'N/A'}</p>
+            <p className="mt-1"><strong>Tendencies:</strong> {scouting.defenseTendencies || 'N/A'}</p>
+            <p className="mt-1"><strong>Our Offensive Gameplan:</strong> {scouting.gameplanOffense || 'N/A'}</p>
           </div>
 
-          <div className="border-2 border-black p-2.5 rounded-none">
-            <h3 className="font-black text-xs uppercase border-b-2 border-black pb-1 mb-1.5 text-black">
-              3. Offensive Formations &amp; Tendencies
-            </h3>
-            <p className="text-xs font-bold text-black whitespace-pre-wrap leading-tight">
-              {scouting.offensiveTendencies || 'No offensive tendency notes entered.'}
-            </p>
-          </div>
-
-          <div className="border-2 border-black p-2.5 rounded-none">
-            <h3 className="font-black text-xs uppercase border-b-2 border-black pb-1 mb-1.5 text-black">
-              4. Defensive Fronts, Coverage &amp; Blitzes
-            </h3>
-            <p className="text-xs font-bold text-black whitespace-pre-wrap leading-tight">
-              {scouting.defensiveFronts || 'No defensive front notes entered.'}
-            </p>
-          </div>
-
-          <div className="border-2 border-black p-2.5 rounded-none">
-            <h3 className="font-black text-xs uppercase border-b-2 border-black pb-1 mb-1.5 text-black">
-              5. Special Teams &amp; Field Position
-            </h3>
-            <p className="text-xs font-bold text-black whitespace-pre-wrap leading-tight">
-              {scouting.specialTeamsNotes || 'No special teams notes entered.'}
-            </p>
+          <div className="border border-black p-3">
+            <h3 className="font-black uppercase mb-1">⚡ Opponent Offense:</h3>
+            <p><strong>Base Formations:</strong> {scouting.offenseFormations || 'N/A'}</p>
+            <p><strong>Run/Pass:</strong> {scouting.runPassRatio || 'N/A'}</p>
+            <p className="mt-1"><strong>Tendencies:</strong> {scouting.offenseTendencies || 'N/A'}</p>
+            <p className="mt-1"><strong>Our Defensive Gameplan:</strong> {scouting.gameplanDefense || 'N/A'}</p>
           </div>
         </div>
 
-        {/* Key Opponent Personnel */}
-        {keyPlayersList.length > 0 && (
-          <div className="border-2 border-black p-2.5 rounded-none">
-            <h3 className="font-black text-xs uppercase border-b-2 border-black pb-1 mb-1.5 text-black">
-              6. Opponent Key Players &amp; Matchup Watchlist
-            </h3>
-            <div className="grid grid-cols-2 gap-2 text-xs font-bold text-black">
-              {keyPlayersList.map((p, i) => (
-                <div key={i} className="border border-black p-1.5">
-                  <div className="flex justify-between font-black mb-0.5">
-                    <span>#{p.num} {p.name} ({p.pos})</span>
-                    <span>[{p.threatLevel} Threat]</span>
-                  </div>
-                  <p className="text-[11px] font-normal leading-tight">{p.notes}</p>
-                </div>
-              ))}
-            </div>
+        {/* Key Players */}
+        {keyPlayers.length > 0 && (
+          <div className="border border-black p-3 mb-3">
+            <h3 className="text-sm font-black uppercase mb-1">⭐ Key Players to Watch:</h3>
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-black font-black">
+                  <th className="py-1">#</th>
+                  <th className="py-1">Name</th>
+                  <th className="py-1">Pos</th>
+                  <th className="py-1">Threat</th>
+                  <th className="py-1">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {keyPlayers.map((p) => (
+                  <tr key={p.id} className="border-b border-gray-300">
+                    <td className="py-1 font-mono font-bold">#{p.jersey}</td>
+                    <td className="py-1 font-bold">{p.name}</td>
+                    <td className="py-1">{p.position}</td>
+                    <td className="py-1 font-bold">{p.threatLevel}</td>
+                    <td className="py-1">{p.notes}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
-        {/* Individual Coach Sections */}
+        {/* Coach Observations */}
         {coachNotes.length > 0 && (
-          <div className="border-2 border-black p-2.5 rounded-none">
-            <h3 className="font-black text-xs uppercase border-b-2 border-black pb-1 mb-2 text-black">
-              7. Coaching Staff Gameplan Breakdowns
-            </h3>
-            <div className="space-y-2">
-              {coachNotes.map((cn, i) => (
-                <div key={i} className="border-b border-black/60 pb-1.5">
-                  <div className="flex justify-between font-black text-xs mb-0.5">
-                    <span>[{cn.category || 'Note'}] {cn.title}</span>
-                    <span className="text-[10px]">Coach: {cn.coachName || cn.coachEmail}</span>
-                  </div>
-                  <p className="text-xs font-bold text-black whitespace-pre-wrap leading-tight">
-                    {cn.content}
-                  </p>
+          <div className="border border-black p-3">
+            <h3 className="text-sm font-black uppercase mb-1">📋 Staff Film Observations:</h3>
+            <div className="space-y-1.5 text-xs">
+              {coachNotes.slice(0, 6).map((n) => (
+                <div key={n.id} className="border-b border-gray-200 pb-1">
+                  <span className="font-black">[{n.category}] {n.title}</span> — <span>{n.content}</span>
+                  <span className="text-[10px] text-gray-600 ml-1">({n.author})</span>
                 </div>
               ))}
             </div>

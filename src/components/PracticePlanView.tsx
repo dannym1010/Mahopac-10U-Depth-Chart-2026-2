@@ -11,6 +11,8 @@ import {
   Calendar,
   Clock,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Folder,
   FolderOpen,
   FileText,
@@ -20,6 +22,8 @@ import {
   Check,
   UserPlus,
   Sparkles,
+  Search,
+  Layers,
 } from 'lucide-react';
 import {
   PracticePlan,
@@ -112,21 +116,20 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   onPracticeWizardGenerate,
   onQuickCreateFromSchedule,
 }) => {
-  const [isTreeDropdownOpen, setIsTreeDropdownOpen] = useState(false);
+  const [isPlanLibraryOpen, setIsPlanLibraryOpen] = useState(false);
   const [dropdownSearchTerm, setDropdownSearchTerm] = useState('');
-  const [dropdownViewMode, setDropdownViewMode] = useState<'tree' | 'flat'>('flat');
+  const [dropdownViewMode, setDropdownViewMode] = useState<'tree' | 'flat' | 'schedule'>('tree');
+  const [filterTag, setFilterTag] = useState<'all' | 'this_week' | 'upcoming' | 'past'>('all');
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [activeCoachPopup, setActiveCoachPopup] = useState<string | null>(null);
-  const [collapsedTreeFolders, setCollapsedTreeFolders] = useState<
-    Record<string, boolean>
-  >({});
+  const [collapsedTreeFolders, setCollapsedTreeFolders] = useState<Record<string, boolean>>({});
 
   const currentPlan =
     practices.find((p) => p.id === currentPracticeId) || practices[0];
 
-  // Auto expand current plan's folders when dropdown opens
+  // Auto expand current plan's folders when library opens
   useEffect(() => {
-    if (isTreeDropdownOpen && currentPlan) {
+    if (isPlanLibraryOpen && currentPlan) {
       const yr = currentPlan.year || '2026';
       const wk = currentPlan.weekFolder || 'Week 1';
       setCollapsedTreeFolders((prev) => ({
@@ -135,7 +138,18 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
         [`wk_${yr}_${wk}`]: false,
       }));
     }
-  }, [isTreeDropdownOpen, currentPlan]);
+  }, [isPlanLibraryOpen, currentPlan]);
+
+  // ESC key listener to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isPlanLibraryOpen) {
+        setIsPlanLibraryOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPlanLibraryOpen]);
 
   // Helper to flat list drills from matching category or all
   const getDrillsForCategory = (catName: string): DrillItem[] => {
@@ -171,7 +185,65 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
     practiceTree[yr][wk].push(p);
   });
 
+  const currentIndex = sortedPractices.findIndex((p) => p.id === currentPlan?.id);
+  const prevPractice = currentIndex > 0 ? sortedPractices[currentIndex - 1] : null;
+  const nextPractice =
+    currentIndex >= 0 && currentIndex < sortedPractices.length - 1
+      ? sortedPractices[currentIndex + 1]
+      : null;
+
+  const currentPlanPeriodsCount = (currentPlan?.periods || []).length;
+  const currentPlanDurationMinutes = (currentPlan?.periods || []).reduce(
+    (acc, per) => acc + (per.time || 0),
+    0
+  );
+
+  // Unplanned schedule events (practices/scrimmages without a created plan)
+  const unplannedScheduleEvents = scheduleEvents.filter(
+    (e) =>
+      (e.type === 'practice' || e.type === 'scrimmage') &&
+      !practices.some((p) => p.date === e.date)
+  );
+
   let currentStartMinutes = parseTimeString(currentPlan?.startTime || '17:05');
+
+  // Filter practices based on search and tag
+  const filteredPractices = sortedPractices.filter((p) => {
+    const term = dropdownSearchTerm.toLowerCase().trim();
+    if (term) {
+      const matchTitle = p.title.toLowerCase().includes(term);
+      const matchWeek = (p.weekFolder || '').toLowerCase().includes(term);
+      const matchDate = (p.date || '').toLowerCase().includes(term);
+      const matchDay = (p.dayFolder || '').toLowerCase().includes(term);
+      const matchFocus = (p.periods || []).some((per) =>
+        (per.stations || []).some(
+          (st) =>
+            (st.name || '').toLowerCase().includes(term) ||
+            (st.focus || '').toLowerCase().includes(term) ||
+            (st.desc || '').toLowerCase().includes(term)
+        )
+      );
+      if (!matchTitle && !matchWeek && !matchDate && !matchDay && !matchFocus) {
+        return false;
+      }
+    }
+
+    if (filterTag === 'this_week' && currentPlan) {
+      return p.weekFolder === currentPlan.weekFolder;
+    }
+
+    if (filterTag === 'upcoming') {
+      const today = new Date().toISOString().split('T')[0];
+      return (p.date || '9999-99-99') >= today;
+    }
+
+    if (filterTag === 'past') {
+      const today = new Date().toISOString().split('T')[0];
+      return (p.date || '0000-00-00') < today;
+    }
+
+    return true;
+  });
 
   return (
     <div className="space-y-5">
@@ -179,300 +251,83 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
       <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 print:hidden space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-700/80">
           
-          {/* Practice Tree Selector Dropdown */}
+          {/* Enhanced Practice Plan Selector & Quick Switcher */}
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setIsTreeDropdownOpen(!isTreeDropdownOpen)}
-                className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold text-slate-100 flex items-center gap-2 shadow-sm transition-all active:scale-95"
-              >
-                <FileText className="w-3.5 h-3.5 text-indigo-400" />
-                <span>
-                  {currentPlan
-                    ? `${currentPlan.title} (${currentPlan.year} / ${currentPlan.weekFolder})`
-                    : 'Select Practice...'}
-                </span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-              </button>
+            
+            {/* Prev Practice Arrow */}
+            <button
+              type="button"
+              disabled={!prevPractice}
+              onClick={() => prevPractice && onSelectPractice(prevPractice.id)}
+              title={prevPractice ? `Go to Previous: ${prevPractice.title}` : 'No earlier practices'}
+              className={`p-2 rounded-xl border flex items-center justify-center transition-all ${
+                prevPractice
+                  ? 'bg-slate-900 hover:bg-slate-750 text-slate-200 border-slate-700 hover:border-slate-500 active:scale-95 cursor-pointer shadow-sm'
+                  : 'bg-slate-900/50 text-slate-600 border-slate-800 cursor-not-allowed opacity-40'
+              }`}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
 
-              {/* Hierarchical & Searchable Dropdown Popup */}
-              {isTreeDropdownOpen && (
-                <div className="absolute left-0 top-full mt-2 w-84 sm:w-96 bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl p-3.5 z-50 max-h-[460px] overflow-y-auto backdrop-blur-xl animate-in fade-in duration-150">
-                  {/* Search Input & View Toggle */}
-                  <div className="space-y-2 mb-3 pb-3 border-b border-slate-800">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-black uppercase text-indigo-400 tracking-wider">
-                        Practice Plans ({practices.length})
-                      </span>
-                      <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-xl border border-slate-800">
-                        <button
-                          type="button"
-                          onClick={() => setDropdownViewMode('flat')}
-                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                            dropdownViewMode === 'flat'
-                              ? 'bg-indigo-600 text-white shadow-xs'
-                              : 'text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          📋 All List
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDropdownViewMode('tree')}
-                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                            dropdownViewMode === 'tree'
-                              ? 'bg-indigo-600 text-white shadow-xs'
-                              : 'text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          📁 By Week
-                        </button>
-                      </div>
-                    </div>
-
-                    <input
-                      type="text"
-                      value={dropdownSearchTerm}
-                      onChange={(e) => setDropdownSearchTerm(e.target.value)}
-                      placeholder="Search by title, week, date..."
-                      className="w-full px-3 py-1.5 bg-slate-950/80 border border-slate-700/80 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-400 shadow-inner"
-                      autoFocus
-                    />
-                  </div>
-
-                  {/* Mode 1: Flat List (Chronological & Searchable) */}
-                  {dropdownViewMode === 'flat' && (
-                    <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-                      {sortedPractices
-                        .filter((p) => {
-                          const term = dropdownSearchTerm.toLowerCase().trim();
-                          if (!term) return true;
-                          return (
-                            p.title.toLowerCase().includes(term) ||
-                            (p.weekFolder || '').toLowerCase().includes(term) ||
-                            (p.date || '').toLowerCase().includes(term) ||
-                            (p.dayFolder || '').toLowerCase().includes(term)
-                          );
-                        })
-                        .map((p) => {
-                          const isSelected = p.id === currentPracticeId;
-                          const periodCount = (p.periods || []).length;
-                          const totalMinutes = (p.periods || []).reduce((acc, per) => acc + (per.time || 0), 0);
-
-                          return (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={() => {
-                                onSelectPractice(p.id);
-                                setIsTreeDropdownOpen(false);
-                              }}
-                              className={`w-full text-left p-2.5 rounded-2xl text-xs font-semibold flex items-start justify-between gap-2 transition-all border ${
-                                isSelected
-                                  ? 'bg-indigo-950/90 text-indigo-100 border-indigo-500/60 shadow-md ring-1 ring-indigo-500/30 font-black'
-                                  : 'bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-slate-100 border-slate-750 hover:border-slate-600'
-                              }`}
-                            >
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5 mb-1">
-                                  <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-700 text-[9px] font-black text-amber-400 uppercase">
-                                    {p.weekFolder || 'Week'}
-                                  </span>
-                                  {p.dayFolder && (
-                                    <span className="text-[10px] text-slate-400 font-bold">
-                                      {p.dayFolder}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="font-bold text-slate-100 truncate text-xs">
-                                  {p.title}
-                                </div>
-                                <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-2 font-mono">
-                                  <span>{p.date}</span>
-                                  <span>•</span>
-                                  <span>{periodCount} Periods ({totalMinutes}m)</span>
-                                </div>
-                              </div>
-                              {isSelected && (
-                                <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-1" />
-                              )}
-                            </button>
-                          );
-                        })}
-
-                      {sortedPractices.filter((p) => {
-                        const term = dropdownSearchTerm.toLowerCase().trim();
-                        if (!term) return true;
-                        return (
-                          p.title.toLowerCase().includes(term) ||
-                          (p.weekFolder || '').toLowerCase().includes(term) ||
-                          (p.date || '').toLowerCase().includes(term)
-                        );
-                      }).length === 0 && (
-                        <div className="p-4 text-center text-xs text-slate-500 font-medium">
-                          No practice plans match "{dropdownSearchTerm}"
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Mode 2: Hierarchical Folder View */}
-                  {dropdownViewMode === 'tree' && (
-                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                      <div className="flex items-center justify-end gap-2 mb-1">
-                        <button
-                          type="button"
-                          onClick={() => setCollapsedTreeFolders({})}
-                          className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 underline"
-                        >
-                          Expand All
-                        </button>
-                      </div>
-
-                      {Object.keys(practiceTree).map((yr) => {
-                        const yrKey = `yr_${yr}`;
-                        const isYrCollapsed = collapsedTreeFolders[yrKey];
-
-                        return (
-                          <div key={yr} className="mb-2">
-                            <div
-                              onClick={() =>
-                                setCollapsedTreeFolders({
-                                  ...collapsedTreeFolders,
-                                  [yrKey]: !isYrCollapsed,
-                                })
-                              }
-                              className="px-2.5 py-1.5 text-xs font-black text-indigo-300 flex items-center gap-1.5 cursor-pointer hover:bg-slate-800 rounded-xl select-none"
-                            >
-                              {isYrCollapsed ? (
-                                <Folder className="w-3.5 h-3.5 text-amber-400" />
-                              ) : (
-                                <FolderOpen className="w-3.5 h-3.5 text-amber-400" />
-                              )}
-                              <span>Season {yr}</span>
-                            </div>
-
-                            {!isYrCollapsed && (
-                              <div className="pl-3 space-y-1 mt-1 border-l border-slate-750 ml-3">
-                                {Object.keys(practiceTree[yr]).map((wk) => {
-                                  const wkKey = `wk_${yr}_${wk}`;
-                                  const isWkCollapsed = collapsedTreeFolders[wkKey];
-
-                                  return (
-                                    <div key={wk}>
-                                      <div
-                                        onClick={() =>
-                                          setCollapsedTreeFolders({
-                                            ...collapsedTreeFolders,
-                                            [wkKey]: !isWkCollapsed,
-                                          })
-                                        }
-                                        className="px-2 py-1 text-[11.5px] font-bold text-slate-200 flex items-center gap-1.5 cursor-pointer hover:bg-slate-800 rounded-lg select-none"
-                                      >
-                                        {isWkCollapsed ? (
-                                          <Folder className="w-3 h-3 text-amber-400" />
-                                        ) : (
-                                          <FolderOpen className="w-3 h-3 text-amber-400" />
-                                        )}
-                                        <span>{wk}</span>
-                                        <span className="text-[9px] text-slate-500">
-                                          ({practiceTree[yr][wk].length})
-                                        </span>
-                                      </div>
-
-                                      {!isWkCollapsed && (
-                                        <div className="pl-3 space-y-1 mt-1">
-                                          {practiceTree[yr][wk].map((p) => (
-                                            <button
-                                              key={p.id}
-                                              type="button"
-                                              onClick={() => {
-                                                onSelectPractice(p.id);
-                                                setIsTreeDropdownOpen(false);
-                                              }}
-                                              className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors ${
-                                                p.id === currentPracticeId
-                                                  ? 'bg-indigo-950/90 text-indigo-200 border border-indigo-500/50 font-black'
-                                                  : 'hover:bg-slate-800 text-slate-300 hover:text-slate-100'
-                                              }`}
-                                            >
-                                              <span className="truncate pr-2">{p.title}</span>
-                                              <span className="text-[10px] text-slate-400 font-mono shrink-0">
-                                                {p.date}
-                                              </span>
-                                            </button>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Scheduled Calendar Events Section */}
-                  {scheduleEvents.filter(
-                    (e) => (e.type === 'practice' || e.type === 'scrimmage') && !practices.some((p) => p.date === e.date)
-                  ).length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-slate-800">
-                      <div className="text-[10px] font-black uppercase text-amber-400 tracking-wider mb-1.5 flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        <span>Unplanned Schedule Practices</span>
-                      </div>
-                      <div className="space-y-1">
-                        {scheduleEvents
-                          .filter(
-                            (e) =>
-                              (e.type === 'practice' || e.type === 'scrimmage') &&
-                              !practices.some((p) => p.date === e.date)
-                          )
-                          .slice(0, 3)
-                          .map((evt) => (
-                            <div
-                              key={evt.id}
-                              className="p-2 bg-slate-950/60 border border-slate-800 rounded-xl flex items-center justify-between gap-2"
-                            >
-                              <div className="min-w-0">
-                                <div className="font-bold text-[11px] text-slate-200 truncate">
-                                  {evt.title}
-                                </div>
-                                <div className="text-[9px] text-slate-400 font-mono">
-                                  {evt.date} • Week {evt.week}
-                                </div>
-                              </div>
-                              {onQuickCreateFromSchedule && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    onQuickCreateFromSchedule(evt);
-                                    setIsTreeDropdownOpen(false);
-                                  }}
-                                  className="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[10px] rounded-lg shrink-0"
-                                >
-                                  + Plan
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  )}
+            {/* Primary Practice Hub Selector Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsPlanLibraryOpen(true)}
+              className="px-3.5 py-2 bg-gradient-to-r from-slate-900 to-slate-850 hover:from-slate-800 hover:to-slate-750 border border-slate-700/90 hover:border-indigo-500/60 rounded-2xl text-xs font-bold text-slate-100 flex items-center gap-2.5 shadow-md transition-all active:scale-98 group cursor-pointer"
+              title="Click to open Practice Plan Library & Folder Hub"
+            >
+              <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-inner">
+                <FolderOpen className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-1.5">
+                  <span className="px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-500/40 text-[9px] font-black text-indigo-300 uppercase tracking-wider">
+                    {currentPlan?.weekFolder || 'Week 1'}
+                  </span>
+                  <span className="font-black text-slate-100 text-xs truncate max-w-[200px] sm:max-w-[260px]">
+                    {currentPlan ? currentPlan.title : 'Select Practice Plan...'}
+                  </span>
                 </div>
-              )}
-            </div>
+                <div className="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center gap-1.5">
+                  <span>{currentPlan?.date || 'No Date'}</span>
+                  <span>•</span>
+                  <span>{currentPlanPeriodsCount} Periods ({currentPlanDurationMinutes}m)</span>
+                </div>
+              </div>
+              <div className="pl-1 border-l border-slate-700/80 text-slate-400 group-hover:text-indigo-300 transition-colors flex items-center gap-1">
+                <span className="hidden lg:inline text-[10px] uppercase font-bold tracking-wider">Browse</span>
+                <ChevronDown className="w-3.5 h-3.5" />
+              </div>
+            </button>
+
+            {/* Next Practice Arrow */}
+            <button
+              type="button"
+              disabled={!nextPractice}
+              onClick={() => nextPractice && onSelectPractice(nextPractice.id)}
+              title={nextPractice ? `Go to Next: ${nextPractice.title}` : 'No later practices'}
+              className={`p-2 rounded-xl border flex items-center justify-center transition-all ${
+                nextPractice
+                  ? 'bg-slate-900 hover:bg-slate-750 text-slate-200 border-slate-700 hover:border-slate-500 active:scale-95 cursor-pointer shadow-sm'
+                  : 'bg-slate-900/50 text-slate-600 border-slate-800 cursor-not-allowed opacity-40'
+              }`}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+
+            {/* Counter Chip */}
+            {sortedPractices.length > 0 && (
+              <span className="hidden sm:inline px-2.5 py-1 rounded-xl bg-slate-900/80 border border-slate-800 text-[10px] font-mono font-bold text-slate-400">
+                {currentIndex >= 0 ? `${currentIndex + 1} / ${sortedPractices.length}` : `${sortedPractices.length} Plans`}
+              </span>
+            )}
 
             {/* Practice Plan Management Buttons */}
             {userRole === 'admin' && (
               <>
                 <button
                   onClick={() => setIsWizardOpen(true)}
-                  className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all active:scale-95 border border-amber-400/40"
+                  className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all active:scale-95 border border-amber-400/40 cursor-pointer"
                   title="Multi-Week & Multi-Day Practice Wizard"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-slate-950" />
@@ -480,7 +335,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 </button>
                 <button
                   onClick={onOpenNewPracticeModal}
-                  className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all active:scale-95"
+                  className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>New Plan</span>
@@ -488,7 +343,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 <button
                   onClick={onEditPracticeDetails}
                   title="Edit Date, Day, Year, Week title"
-                  className="px-3 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1 transition-all"
+                  className="px-3 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1 transition-all cursor-pointer"
                 >
                   <Edit className="w-3.5 h-3.5 text-indigo-400" />
                   <span>Details</span>
@@ -496,7 +351,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 <button
                   onClick={onAutoNumberPractices}
                   title="Auto-number practice days sequentially"
-                  className="px-3 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-sky-300 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1 transition-all"
+                  className="px-3 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-sky-300 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1 transition-all cursor-pointer"
                 >
                   <Hash className="w-3.5 h-3.5 text-sky-400" />
                   <span>Auto #</span>
@@ -504,7 +359,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 <button
                   onClick={onDeletePractice}
                   title="Delete this practice plan"
-                  className="p-2 text-rose-400 hover:bg-rose-950/50 rounded-xl transition-colors"
+                  className="p-2 text-rose-400 hover:bg-rose-950/50 rounded-xl transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -679,6 +534,602 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* FULL VIEWPORT PRACTICE PLAN LIBRARY & FOLDER HUB MODAL */}
+      {isPlanLibraryOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-150"
+          onClick={() => setIsPlanLibraryOpen(false)}
+        >
+          <div
+            className="bg-slate-900 border border-slate-700/90 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-5 sm:p-6 border-b border-slate-800 flex items-center justify-between gap-4 bg-slate-850">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shadow-inner shrink-0">
+                  <FolderOpen className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base sm:text-lg font-black text-slate-100 tracking-tight">
+                      Practice Plan Library &amp; Schedule Folders
+                    </h2>
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-900/60 border border-indigo-500/40 text-[10px] font-black text-indigo-300 font-mono">
+                      {practices.length} Plans
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Browse, search, and jump to any practice plan organized by season, week, and day.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPlanLibraryOpen(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Toolbar: Search, View Mode, Filter Chips */}
+            <div className="p-4 sm:px-6 bg-slate-900/95 border-b border-slate-800 space-y-3 shrink-0">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                
+                {/* Search Input */}
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={dropdownSearchTerm}
+                    onChange={(e) => setDropdownSearchTerm(e.target.value)}
+                    placeholder="Search by plan title, week folder, date, day, or drill..."
+                    className="w-full pl-9.5 pr-8 py-2 bg-slate-950/80 border border-slate-700/80 rounded-2xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 shadow-inner"
+                    autoFocus
+                  />
+                  {dropdownSearchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setDropdownSearchTerm('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* View Mode Selector */}
+                <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-2xl border border-slate-800 shrink-0 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setDropdownViewMode('tree')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      dropdownViewMode === 'tree'
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Folder className="w-3.5 h-3.5" />
+                    <span>📁 Week Folders</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDropdownViewMode('flat')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      dropdownViewMode === 'flat'
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>🗂️ All Plans (Grid)</span>
+                  </button>
+                  {unplannedScheduleEvents.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setDropdownViewMode('schedule')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                        dropdownViewMode === 'schedule'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'text-amber-400/80 hover:text-amber-300'
+                      }`}
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>📅 Unplanned ({unplannedScheduleEvents.length})</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Filter Chips Bar */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 text-xs">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 shrink-0">Filter:</span>
+                <button
+                  type="button"
+                  onClick={() => setFilterTag('all')}
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all shrink-0 cursor-pointer ${
+                    filterTag === 'all'
+                      ? 'bg-slate-700 text-white border border-slate-600'
+                      : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                  }`}
+                >
+                  All ({sortedPractices.length})
+                </button>
+                {currentPlan && (
+                  <button
+                    type="button"
+                    onClick={() => setFilterTag('this_week')}
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all shrink-0 cursor-pointer ${
+                      filterTag === 'this_week'
+                        ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/50'
+                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    }`}
+                  >
+                    Current {currentPlan.weekFolder || 'Week'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setFilterTag('upcoming')}
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all shrink-0 cursor-pointer ${
+                    filterTag === 'upcoming'
+                      ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/50'
+                      : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                  }`}
+                >
+                  Upcoming
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterTag('past')}
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all shrink-0 cursor-pointer ${
+                    filterTag === 'past'
+                      ? 'bg-slate-700/50 text-slate-300 border border-slate-600'
+                      : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                  }`}
+                >
+                  Past
+                </button>
+
+                {dropdownViewMode === 'tree' && (
+                  <div className="ml-auto shrink-0 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCollapsedTreeFolders({})}
+                      className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
+                    >
+                      Expand All
+                    </button>
+                    <span className="text-slate-700">•</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allCollapsed: Record<string, boolean> = {};
+                        Object.keys(practiceTree).forEach((yr) => {
+                          allCollapsed[`yr_${yr}`] = true;
+                          Object.keys(practiceTree[yr]).forEach((wk) => {
+                            allCollapsed[`wk_${yr}_${wk}`] = true;
+                          });
+                        });
+                        setCollapsedTreeFolders(allCollapsed);
+                      }}
+                      className="text-[11px] font-bold text-slate-400 hover:text-slate-200 underline cursor-pointer"
+                    >
+                      Collapse All
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Body - Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+              
+              {/* MODE 1: HIERARCHICAL WEEK FOLDERS VIEW */}
+              {dropdownViewMode === 'tree' && (
+                <div className="space-y-4">
+                  {Object.keys(practiceTree).length === 0 && (
+                    <div className="p-8 text-center text-slate-500 text-sm">
+                      No practice plans found. Click "+ New Plan" to create your first practice plan.
+                    </div>
+                  )}
+
+                  {Object.keys(practiceTree).map((yr) => {
+                    const yrKey = `yr_${yr}`;
+                    const isYrCollapsed = collapsedTreeFolders[yrKey];
+                    const weekKeys = Object.keys(practiceTree[yr]);
+                    const totalSeasonPlans = weekKeys.reduce(
+                      (acc, wk) => acc + practiceTree[yr][wk].length,
+                      0
+                    );
+
+                    return (
+                      <div
+                        key={yr}
+                        className="bg-slate-950/60 border border-slate-800 rounded-3xl p-3 sm:p-4 space-y-3"
+                      >
+                        {/* Year Folder Header */}
+                        <div
+                          onClick={() =>
+                            setCollapsedTreeFolders({
+                              ...collapsedTreeFolders,
+                              [yrKey]: !isYrCollapsed,
+                            })
+                          }
+                          className="flex items-center justify-between gap-2 px-3 py-2 rounded-2xl bg-slate-900 hover:bg-slate-800 cursor-pointer select-none transition-colors border border-slate-750"
+                        >
+                          <div className="flex items-center gap-2">
+                            {isYrCollapsed ? (
+                              <Folder className="w-4 h-4 text-amber-400" />
+                            ) : (
+                              <FolderOpen className="w-4 h-4 text-amber-400" />
+                            )}
+                            <span className="font-black text-sm text-indigo-300">
+                              Season {yr}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full bg-slate-950 text-[10px] font-mono font-bold text-slate-400">
+                              {totalSeasonPlans} Plans
+                            </span>
+                          </div>
+                          <ChevronDown
+                            className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                              isYrCollapsed ? '-rotate-90' : ''
+                            }`}
+                          />
+                        </div>
+
+                        {/* Week Folders in this Year */}
+                        {!isYrCollapsed && (
+                          <div className="space-y-3 pl-1 sm:pl-2">
+                            {weekKeys.map((wk) => {
+                              const wkKey = `wk_${yr}_${wk}`;
+                              const isWkCollapsed = collapsedTreeFolders[wkKey];
+                              const weekPractices = practiceTree[yr][wk].filter((p) =>
+                                filteredPractices.some((fp) => fp.id === p.id)
+                              );
+
+                              if (dropdownSearchTerm && weekPractices.length === 0) {
+                                return null;
+                              }
+
+                              const totalWeekMinutes = practiceTree[yr][wk].reduce((acc, p) => {
+                                return (
+                                  acc +
+                                  (p.periods || []).reduce(
+                                    (pAcc, per) => pAcc + (per.time || 0),
+                                    0
+                                  )
+                                );
+                              }, 0);
+
+                              const hasCurrentPlanInWeek = practiceTree[yr][wk].some(
+                                (p) => p.id === currentPracticeId
+                              );
+
+                              return (
+                                <div
+                                  key={wk}
+                                  className={`rounded-2xl border transition-all ${
+                                    hasCurrentPlanInWeek
+                                      ? 'bg-indigo-950/20 border-indigo-500/40 ring-1 ring-indigo-500/20'
+                                      : 'bg-slate-900/80 border-slate-800'
+                                  }`}
+                                >
+                                  {/* Week Folder Header */}
+                                  <div
+                                    onClick={() =>
+                                      setCollapsedTreeFolders({
+                                        ...collapsedTreeFolders,
+                                        [wkKey]: !isWkCollapsed,
+                                      })
+                                    }
+                                    className="flex items-center justify-between gap-2 p-3 cursor-pointer select-none hover:bg-slate-800/60 rounded-2xl transition-colors"
+                                  >
+                                    <div className="flex items-center gap-2.5">
+                                      {isWkCollapsed ? (
+                                        <Folder className="w-4 h-4 text-amber-400" />
+                                      ) : (
+                                        <FolderOpen className="w-4 h-4 text-amber-400" />
+                                      )}
+                                      <span className="font-black text-xs text-slate-100">
+                                        {wk}
+                                      </span>
+                                      <span className="px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-800 text-[10px] font-bold text-slate-400">
+                                        {practiceTree[yr][wk].length} {practiceTree[yr][wk].length === 1 ? 'Plan' : 'Plans'}
+                                      </span>
+                                      <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">
+                                        ({totalWeekMinutes} min total)
+                                      </span>
+                                      {hasCurrentPlanInWeek && (
+                                        <span className="px-2 py-0.5 rounded-md bg-indigo-500/20 border border-indigo-500/40 text-[9px] font-black text-indigo-300 uppercase tracking-wider">
+                                          Active Week
+                                        </span>
+                                      )}
+                                    </div>
+                                    <ChevronDown
+                                      className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                                        isWkCollapsed ? '-rotate-90' : ''
+                                      }`}
+                                    />
+                                  </div>
+
+                                  {/* Plans inside this Week */}
+                                  {!isWkCollapsed && (
+                                    <div className="p-2 sm:p-3 pt-0 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                      {weekPractices.map((p) => {
+                                        const isSelected = p.id === currentPracticeId;
+                                        const periodCount = (p.periods || []).length;
+                                        const totalMinutes = (p.periods || []).reduce(
+                                          (acc, per) => acc + (per.time || 0),
+                                          0
+                                        );
+
+                                        return (
+                                          <button
+                                            key={p.id}
+                                            type="button"
+                                            onClick={() => {
+                                              onSelectPractice(p.id);
+                                              setIsPlanLibraryOpen(false);
+                                            }}
+                                            className={`text-left p-3 rounded-2xl transition-all border flex items-start justify-between gap-3 group cursor-pointer ${
+                                              isSelected
+                                                ? 'bg-indigo-950 text-indigo-100 border-indigo-500 shadow-lg ring-1 ring-indigo-500/50'
+                                                : 'bg-slate-950/70 hover:bg-slate-800 text-slate-300 hover:text-slate-100 border-slate-800 hover:border-slate-700'
+                                            }`}
+                                          >
+                                            <div className="min-w-0 flex-1">
+                                              <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                                {p.dayFolder && (
+                                                  <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-750 text-[10px] font-bold text-amber-400">
+                                                    {p.dayFolder}
+                                                  </span>
+                                                )}
+                                                <span className="text-[10px] text-slate-400 font-mono">
+                                                  {p.date || 'No date'}
+                                                </span>
+                                              </div>
+                                              <div className="font-black text-slate-100 text-xs truncate group-hover:text-indigo-300 transition-colors">
+                                                {p.title}
+                                              </div>
+                                              <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-2 font-mono">
+                                                <span>{p.startTime || '17:05'}</span>
+                                                <span>•</span>
+                                                <span>{periodCount} Periods</span>
+                                                <span>•</span>
+                                                <span className="text-emerald-400">{totalMinutes} min</span>
+                                              </div>
+                                            </div>
+                                            <div className="shrink-0 pt-1">
+                                              {isSelected ? (
+                                                <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase">
+                                                  <Check className="w-3.5 h-3.5" />
+                                                  <span>Active</span>
+                                                </div>
+                                              ) : (
+                                                <span className="text-[10px] font-bold text-slate-500 group-hover:text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                  Open →
+                                                </span>
+                                              )}
+                                            </div>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* MODE 2: ALL PLANS GRID CARDS VIEW */}
+              {dropdownViewMode === 'flat' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {filteredPractices.map((p) => {
+                      const isSelected = p.id === currentPracticeId;
+                      const periodCount = (p.periods || []).length;
+                      const totalMinutes = (p.periods || []).reduce(
+                        (acc, per) => acc + (per.time || 0),
+                        0
+                      );
+
+                      return (
+                        <div
+                          key={p.id}
+                          onClick={() => {
+                            onSelectPractice(p.id);
+                            setIsPlanLibraryOpen(false);
+                          }}
+                          className={`p-4 rounded-3xl transition-all border flex flex-col justify-between gap-3 group cursor-pointer ${
+                            isSelected
+                              ? 'bg-indigo-950/90 text-indigo-100 border-indigo-500 shadow-xl ring-2 ring-indigo-500/40'
+                              : 'bg-slate-950/80 hover:bg-slate-800/90 text-slate-300 hover:text-slate-100 border-slate-800 hover:border-slate-700 shadow-md'
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <span className="px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-750 text-[10px] font-black text-indigo-300 uppercase">
+                                {p.weekFolder || 'Week'}
+                              </span>
+                              {isSelected ? (
+                                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black">
+                                  <Check className="w-3 h-3" />
+                                  Active Plan
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-mono text-slate-500">
+                                  {p.date || 'No Date'}
+                                </span>
+                              )}
+                            </div>
+
+                            <h3 className="font-black text-slate-100 text-sm mb-1 group-hover:text-indigo-300 transition-colors">
+                              {p.title}
+                            </h3>
+
+                            {p.dayFolder && (
+                              <div className="text-[11px] font-bold text-amber-400/90 mb-2">
+                                {p.dayFolder}
+                              </div>
+                            )}
+
+                            {/* Preview period categories */}
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {(p.periods || []).slice(0, 3).map((per, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-2 py-0.5 rounded-md bg-slate-900/90 border border-slate-800 text-[9px] font-semibold text-slate-400 truncate max-w-[110px]"
+                                >
+                                  {per.category}
+                                </span>
+                              ))}
+                              {(p.periods || []).length > 3 && (
+                                <span className="px-1.5 py-0.5 rounded-md bg-slate-900/90 text-[9px] font-bold text-slate-500">
+                                  +{(p.periods || []).length - 3} more
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="pt-3 border-t border-slate-850 flex items-center justify-between text-[11px] font-mono text-slate-400">
+                            <span>{periodCount} Periods</span>
+                            <span className="font-bold text-emerald-400">{totalMinutes} min</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {filteredPractices.length === 0 && (
+                    <div className="p-12 text-center text-slate-500">
+                      <Search className="w-8 h-8 mx-auto mb-2 text-slate-600" />
+                      <p className="font-bold text-sm text-slate-400">No practice plans matched your search.</p>
+                      <p className="text-xs text-slate-500 mt-1">Try clearing filters or search keywords.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* MODE 3: UNPLANNED SCHEDULE PRACTICES VIEW */}
+              {dropdownViewMode === 'schedule' && (
+                <div className="space-y-3">
+                  <div className="bg-amber-950/20 border border-amber-500/30 rounded-2xl p-4 text-xs text-amber-200 flex items-start gap-3">
+                    <Calendar className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-black text-amber-300">Unplanned Schedule Practices Detected</div>
+                      <p className="mt-0.5 text-amber-200/80">
+                        These practice/scrimmage dates exist on your season schedule but don't have a practice plan attached yet. Click "+ Create Plan" to generate one instantly!
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {unplannedScheduleEvents.map((evt) => (
+                      <div
+                        key={evt.id}
+                        className="p-4 bg-slate-950/80 border border-slate-800 rounded-2xl flex items-center justify-between gap-3 hover:border-slate-700 transition-all"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-black uppercase">
+                              Week {evt.week || 1}
+                            </span>
+                            <span className="font-black text-sm text-slate-100">{evt.title}</span>
+                          </div>
+                          <div className="text-xs text-slate-400 font-mono mt-1 flex items-center gap-2">
+                            <span>📅 {evt.date}</span>
+                            <span>•</span>
+                            <span>⏰ {evt.time || '17:05'}</span>
+                            {evt.location && (
+                              <>
+                                <span>•</span>
+                                <span>📍 {evt.location}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {onQuickCreateFromSchedule && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onQuickCreateFromSchedule(evt);
+                              setIsPlanLibraryOpen(false);
+                            }}
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>+ Create Plan</span>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="p-4 sm:p-5 bg-slate-850 border-t border-slate-800 flex items-center justify-between gap-3 shrink-0 flex-wrap">
+              <div className="flex items-center gap-2">
+                {userRole === 'admin' && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlanLibraryOpen(false);
+                        onOpenNewPracticeModal();
+                      }}
+                      className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>New Plan</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlanLibraryOpen(false);
+                        setIsWizardOpen(true);
+                      }}
+                      className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-slate-950" />
+                      <span>Practice Wizard</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onAutoNumberPractices();
+                      }}
+                      className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-sky-300 font-bold text-xs rounded-xl border border-slate-750 flex items-center gap-1 transition-all cursor-pointer"
+                    >
+                      <Hash className="w-3.5 h-3.5 text-sky-400" />
+                      <span>Auto # Days</span>
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsPlanLibraryOpen(false)}
+                className="px-5 py-2 bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-200 hover:text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Printable Sheet Title Header (Shown only on Print) */}
       <div className="hidden print:block mb-3 border-b-2 border-black pb-2 text-center">

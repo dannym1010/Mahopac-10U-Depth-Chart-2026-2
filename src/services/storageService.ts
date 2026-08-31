@@ -85,6 +85,108 @@ export function safeJSONSet(key: string, data: any) {
   }
 }
 
+// Client session identification for sync loop prevention
+export const CLIENT_ID = 'client_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
+
+// Server-side state sync methods
+export async function fetchServerState(): Promise<{
+  success: boolean;
+  hasData: boolean;
+  version: number;
+  updatedAt: number;
+  state: any;
+} | null> {
+  try {
+    const res = await fetch('/api/state', {
+      headers: { Accept: 'application/json' },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data;
+    }
+  } catch (err) {
+    console.warn('Could not connect to server state API:', err);
+  }
+  return null;
+}
+
+export async function saveServerState(
+  state: any,
+  author: string = 'coach'
+): Promise<{ success: boolean; version?: number; updatedAt?: number } | null> {
+  try {
+    const res = await fetch('/api/state', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: safeJSONStringify({
+        state,
+        author,
+        clientId: CLIENT_ID,
+      }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn('Failed to save state to server API:', err);
+  }
+  return null;
+}
+
+export function subscribeServerEvents(onMessage: (eventData: any) => void): () => void {
+  if (typeof window === 'undefined' || typeof EventSource === 'undefined') {
+    return () => {};
+  }
+
+  let eventSource: EventSource | null = null;
+  let reconnectTimer: any = null;
+  let isClosed = false;
+
+  function connect() {
+    if (isClosed) return;
+    try {
+      eventSource = new EventSource('/api/state/events');
+
+      eventSource.onmessage = (e) => {
+        try {
+          if (!e.data || e.data.startsWith(':')) return;
+          const parsed = JSON.parse(e.data);
+          onMessage(parsed);
+        } catch (err) {
+          console.warn('SSE message parse error:', err);
+        }
+      };
+
+      eventSource.onerror = () => {
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+        }
+        if (!isClosed) {
+          reconnectTimer = setTimeout(connect, 4000);
+        }
+      };
+    } catch (err) {
+      if (!isClosed) {
+        reconnectTimer = setTimeout(connect, 5000);
+      }
+    }
+  }
+
+  connect();
+
+  return () => {
+    isClosed = true;
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+  };
+}
+
 // Firebase configuration from original app
 export const FIREBASE_CONFIG = {
   apiKey: "AIzaSyByWAe6BpeDboNzqsC_NxWw0pfnca0sfqE",

@@ -14,6 +14,7 @@ import {
   Lock,
   Copy,
   ChevronDown,
+  Star,
 } from 'lucide-react';
 import { StaffCoach, UserRole, Team } from '../types';
 
@@ -24,7 +25,9 @@ interface StaffManagerViewProps {
   userRole: UserRole;
   teams: Team[];
   activeTeamId: string;
+  defaultTeamId?: string;
   onSelectTeam: (teamId: string) => void;
+  onSetDefaultTeam?: (teamId: string) => void;
   onAddTeam: (team: Omit<Team, 'id'>) => void;
   onUpdateTeam: (teamId: string, updated: Partial<Team>) => void;
   onDeleteTeam: (teamId: string) => void;
@@ -45,7 +48,9 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
   userRole,
   teams = [],
   activeTeamId,
+  defaultTeamId,
   onSelectTeam,
+  onSetDefaultTeam,
   onAddTeam,
   onUpdateTeam,
   onDeleteTeam,
@@ -230,6 +235,8 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {teams.map((team) => {
             const isActive = team.id === activeTeamId;
+            const isDefault = (defaultTeamId || (teams[0] && teams[0].id)) === team.id;
+
             return (
               <div
                 key={team.id}
@@ -241,9 +248,17 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                      {team.ageGroup || 'Division'}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                        {team.ageGroup || 'Division'}
+                      </span>
+                      {isDefault && (
+                        <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-amber-400/20 text-amber-300 border border-amber-400/30 flex items-center gap-1">
+                          <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                          <span>Default</span>
+                        </span>
+                      )}
+                    </div>
                     {team.season && (
                       <span className="text-[10px] text-slate-400 font-bold">
                         {team.season}
@@ -254,6 +269,11 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
                   <h4 className="font-black text-sm text-slate-100 tracking-tight">
                     {team.name}
                   </h4>
+                  {team.headCoachName && (
+                    <p className="text-[11px] text-slate-300 mt-0.5">
+                      Coach: <span className="font-semibold text-slate-100">{team.headCoachName}</span>
+                    </p>
+                  )}
                   {team.notes && (
                     <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">
                       {team.notes}
@@ -261,18 +281,32 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
                   )}
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
-                  <button
-                    onClick={() => onSelectTeam(team.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                      isActive
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                        : 'bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 hover:border-slate-600'
-                    }`}
-                  >
-                    <Check className={`w-3.5 h-3.5 ${isActive ? 'opacity-100' : 'opacity-0'}`} />
-                    <span>{isActive ? 'Active Team' : 'Switch To Team'}</span>
-                  </button>
+                <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => onSelectTeam(team.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                        isActive
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                          : 'bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 hover:border-slate-600'
+                      }`}
+                    >
+                      <Check className={`w-3.5 h-3.5 ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+                      <span>{isActive ? 'Active' : 'Switch'}</span>
+                    </button>
+
+                    {onSetDefaultTeam && !isDefault && (
+                      <button
+                        type="button"
+                        onClick={() => onSetDefaultTeam(team.id)}
+                        title="Set as startup default team"
+                        className="px-2 py-1.5 rounded-xl text-[11px] font-bold text-slate-400 hover:text-amber-300 hover:bg-slate-800 border border-slate-700/80 hover:border-amber-500/40 transition-all flex items-center gap-1 cursor-pointer"
+                      >
+                        <Star className="w-3 h-3 text-slate-400" />
+                        <span className="hidden sm:inline">Set Default</span>
+                      </button>
+                    )}
+                  </div>
 
                   {userRole === 'admin' && (
                     <div className="flex items-center gap-1">

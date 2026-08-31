@@ -18,6 +18,8 @@ import {
   Check,
   X,
   GripVertical,
+  Star,
+  Sliders,
 } from 'lucide-react';
 import { UnitType, UserRole } from '../types';
 import { safeJSONParse, safeJSONSet } from '../services/storageService';
@@ -28,6 +30,9 @@ interface NavigationTabsProps {
   userRole: UserRole;
   depthSubUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage';
   onSelectDepthSubUnit?: (subUnit: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage') => void;
+  defaultScreen?: UnitType;
+  onSetDefaultScreen?: (screen: UnitType) => void;
+  onOpenPreferencesModal?: () => void;
 }
 
 export interface NavTabItem {
@@ -55,6 +60,9 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
   userRole,
   depthSubUnit = 'offense',
   onSelectDepthSubUnit,
+  defaultScreen,
+  onSetDefaultScreen,
+  onOpenPreferencesModal,
 }) => {
   const [tabOrder, setTabOrder] = useState<string[]>(() => {
     const saved = safeJSONParse<string[]>('footballTopTabOrder', []);
@@ -129,6 +137,9 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
               const Icon = tab.icon;
               const isActive =
                 tab.id === 'depth_chart' ? isDepthChartActive : activeUnit === tab.id;
+              const isDefaultTab =
+                (defaultScreen || 'schedule') === tab.id ||
+                (defaultScreen === 'offense' && tab.id === 'depth_chart');
 
               return (
                 <button
@@ -146,20 +157,46 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
                     }`}
                   />
                   <span>{tab.label}</span>
+                  {isDefaultTab && (
+                    <span
+                      title="⭐ Default Landing Screen"
+                      className={`text-[9px] px-1 py-0.2 rounded font-bold ${
+                        isActive
+                          ? 'bg-white/20 text-amber-300'
+                          : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
+                      }`}
+                    >
+                      ★ Default
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
 
-          {/* Reorder Tabs Action Button */}
-          <button
-            onClick={() => setIsReorderModalOpen(true)}
-            title="Reorder Navigation Tabs"
-            className="px-2.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-700/80 text-slate-400 hover:text-amber-400 border border-slate-700 text-[11px] font-bold flex items-center gap-1.5 transition-all shrink-0 active:scale-95 shadow-xs"
-          >
-            <Settings className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Reorder Tabs</span>
-          </button>
+          {/* Quick Actions: Defaults & Reorder */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {onOpenPreferencesModal && (
+              <button
+                onClick={onOpenPreferencesModal}
+                title="Select Default Screen & Team"
+                className="px-2.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-750 text-amber-400 hover:text-amber-300 border border-amber-500/40 hover:border-amber-400 text-[11px] font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
+              >
+                <Star className="w-3.5 h-3.5 fill-amber-400/20 text-amber-400" />
+                <span className="hidden sm:inline">Set Defaults</span>
+              </button>
+            )}
+
+            {/* Reorder Tabs Action Button */}
+            <button
+              onClick={() => setIsReorderModalOpen(true)}
+              title="Reorder Navigation Tabs"
+              className="px-2.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-700/80 text-slate-400 hover:text-slate-200 border border-slate-700 text-[11px] font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Reorder</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -174,8 +211,8 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
                   <Settings className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-black text-slate-100 text-base">Reorder Navigation Tabs</h3>
-                  <p className="text-xs text-slate-400">Customize the top menu tabs order to match your workflow</p>
+                  <h3 className="font-black text-slate-100 text-base">Reorder &amp; Default Screen</h3>
+                  <p className="text-xs text-slate-400">Reorder top navigation tabs and pick your default startup screen</p>
                 </div>
               </div>
               <button
@@ -194,11 +231,18 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
                 const Icon = tabInfo.icon;
                 const isFirst = index === 0;
                 const isLast = index === tabOrder.length - 1;
+                const isDefaultTab =
+                  (defaultScreen || 'schedule') === tabId ||
+                  (defaultScreen === 'offense' && tabId === 'depth_chart');
 
                 return (
                   <div
                     key={tabId}
-                    className="flex items-center justify-between p-3 bg-slate-800/80 border border-slate-700/80 rounded-2xl transition-all hover:border-slate-600"
+                    className={`flex items-center justify-between p-3 rounded-2xl transition-all border ${
+                      isDefaultTab
+                        ? 'bg-amber-950/20 border-amber-500/50 shadow-inner'
+                        : 'bg-slate-800/80 border-slate-700/80 hover:border-slate-600'
+                    }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="w-6 h-6 rounded-lg bg-slate-900 border border-slate-700 text-slate-400 font-mono text-xs font-black flex items-center justify-center shrink-0">
@@ -217,34 +261,61 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
                       </div>
                     </div>
 
-                    {/* Move Up / Down Buttons */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        disabled={isFirst}
-                        onClick={() => handleMoveTab(index, 'up')}
-                        title="Move Up"
-                        className={`p-1.5 rounded-xl border transition-all ${
-                          isFirst
-                            ? 'text-slate-600 border-slate-800 cursor-not-allowed'
-                            : 'text-slate-300 hover:text-white bg-slate-900 border-slate-700 hover:border-slate-500 active:scale-95'
-                        }`}
-                      >
-                        <ChevronUp className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isLast}
-                        onClick={() => handleMoveTab(index, 'down')}
-                        title="Move Down"
-                        className={`p-1.5 rounded-xl border transition-all ${
-                          isLast
-                            ? 'text-slate-600 border-slate-800 cursor-not-allowed'
-                            : 'text-slate-300 hover:text-white bg-slate-900 border-slate-700 hover:border-slate-500 active:scale-95'
-                        }`}
-                      >
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Set Default Screen Button */}
+                      {onSetDefaultScreen && (
+                        <button
+                          type="button"
+                          onClick={() => onSetDefaultScreen(tabId as UnitType)}
+                          title={
+                            isDefaultTab
+                              ? '⭐ Default Startup Screen'
+                              : 'Set as Default Startup Screen'
+                          }
+                          className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all ${
+                            isDefaultTab
+                              ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
+                              : 'text-slate-400 hover:text-amber-300 hover:bg-slate-900 border border-slate-700'
+                          }`}
+                        >
+                          <Star
+                            className={`w-3 h-3 ${
+                              isDefaultTab ? 'fill-amber-400 text-amber-400' : 'text-slate-400'
+                            }`}
+                          />
+                          <span>{isDefaultTab ? 'Default' : 'Set Default'}</span>
+                        </button>
+                      )}
+
+                      {/* Move Up / Down Buttons */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          disabled={isFirst}
+                          onClick={() => handleMoveTab(index, 'up')}
+                          title="Move Up"
+                          className={`p-1.5 rounded-xl border transition-all ${
+                            isFirst
+                              ? 'text-slate-600 border-slate-800 cursor-not-allowed'
+                              : 'text-slate-300 hover:text-white bg-slate-900 border-slate-700 hover:border-slate-500 active:scale-95'
+                          }`}
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isLast}
+                          onClick={() => handleMoveTab(index, 'down')}
+                          title="Move Down"
+                          className={`p-1.5 rounded-xl border transition-all ${
+                            isLast
+                              ? 'text-slate-600 border-slate-800 cursor-not-allowed'
+                              : 'text-slate-300 hover:text-white bg-slate-900 border-slate-700 hover:border-slate-500 active:scale-95'
+                          }`}
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -259,7 +330,7 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
                 className="px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-rose-400 bg-slate-900 border border-slate-700 rounded-xl flex items-center gap-1.5 hover:border-rose-500/40 transition-colors"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset to Default</span>
+                <span>Reset Order</span>
               </button>
               <button
                 type="button"
