@@ -787,7 +787,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                           : ''
                                       }`}
                                     >
-                                      <span className="font-black text-[11px] print:text-[11px] text-indigo-300 print:text-amber-400 tracking-tight">
+                                      <span className="font-black text-[11px] print:text-[11px] text-indigo-300 print:text-black tracking-tight">
                                         {pos.name}
                                       </span>
                                       {userRole === 'admin' && (
