@@ -236,7 +236,7 @@ export default function App() {
   const [activeGuideMain, setActiveGuideMain] = useState<string>('Offense');
   const [activeGuideSub, setActiveGuideSub] = useState<string>('Full Playbook');
   const [printFontSize, setPrintFontSize] = useState<string>(() =>
-    safeJSONParse('footballPrintFontSize', '10')
+    safeJSONParse('footballPrintFontSize', '12')
   );
 
   // Filter & Search States

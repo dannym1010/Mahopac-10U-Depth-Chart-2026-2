@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --print-font-size: 10px;
+  --print-font-size: 12px;
 }
 
 body {
@@ -52,7 +52,7 @@ body {
     background-color: #ffffff !important;
     background: #ffffff !important;
     color: #000000 !important;
-    font-size: var(--print-font-size, 9.5px) !important;
+    font-size: var(--print-font-size, 12px) !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
     width: 100% !important;
@@ -364,16 +364,16 @@ body {
     color: #000000 !important;
   }
 
-  /* Practice table print formatting - highly space-efficient */
+  /* Practice table print formatting - highly legible & coach-friendly */
   .practice-table {
-    font-size: var(--print-font-size, 9.5px) !important;
-    border: 1.5px solid #0f172a !important;
+    font-size: var(--print-font-size, 12px) !important;
+    border: 1.5px solid #000000 !important;
     width: 100% !important;
     table-layout: fixed !important;
     border-collapse: collapse !important;
     background-color: #ffffff !important;
-    color: #0f172a !important;
-    line-height: 1.2 !important;
+    color: #000000 !important;
+    line-height: 1.3 !important;
   }
 
   .practice-table thead {
@@ -381,32 +381,61 @@ body {
   }
 
   .practice-table th {
-    font-size: calc(var(--print-font-size, 9.5px) * 0.95) !important;
+    font-size: calc(var(--print-font-size, 12px) * 1.05) !important;
     background-color: #f1f5f9 !important;
-    color: #0f172a !important;
-    border: 1px solid #64748b !important;
-    border-bottom: 2px solid #0f172a !important;
-    padding: 3px 5px !important;
+    color: #000000 !important;
+    border: 1.2px solid #000000 !important;
+    border-bottom: 2.5px solid #000000 !important;
+    padding: 5px 6px !important;
     font-weight: 900 !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.01em !important;
-    line-height: 1.15 !important;
+    letter-spacing: 0.02em !important;
+    line-height: 1.25 !important;
   }
 
   .practice-table td {
-    font-size: var(--print-font-size, 9.5px) !important;
-    border: 1px solid #94a3b8 !important;
-    padding: 2.5px 5px !important;
-    color: #0f172a !important;
+    font-size: var(--print-font-size, 12px) !important;
+    border: 1.2px solid #334155 !important;
+    padding: 4px 6px !important;
+    color: #000000 !important;
     vertical-align: top !important;
     word-break: break-word !important;
     background-color: #ffffff !important;
-    font-weight: 500 !important;
-    line-height: 1.2 !important;
+    font-weight: 600 !important;
+    line-height: 1.3 !important;
   }
 
   .practice-table tr {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+  }
+
+  /* Make sure internal print text containers inherit or scale with print font size */
+  .practice-table .print-text-title {
+    font-size: calc(var(--print-font-size, 12px) * 1.1) !important;
+    font-weight: 900 !important;
+    color: #000000 !important;
+    line-height: 1.25 !important;
+  }
+
+  .practice-table .print-text-body {
+    font-size: var(--print-font-size, 12px) !important;
+    font-weight: 500 !important;
+    color: #0f172a !important;
+    line-height: 1.35 !important;
+  }
+
+  .practice-table .print-text-sub {
+    font-size: calc(var(--print-font-size, 12px) * 0.9) !important;
+    font-weight: 700 !important;
+    color: #334155 !important;
+    line-height: 1.2 !important;
+  }
+
+  .practice-table .print-text-badge {
+    font-size: calc(var(--print-font-size, 12px) * 0.88) !important;
+    font-weight: 800 !important;
+    color: #000000 !important;
+    line-height: 1.2 !important;
   }
 }

@@ -556,14 +556,14 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 onChange={(e) => onUpdatePrintFontSize(e.target.value)}
                 className="bg-slate-800 border border-slate-600 text-xs font-semibold text-slate-200 rounded-lg px-1.5 py-1 focus:outline-none cursor-pointer"
               >
-                <option value="8">8px (Ultra Fit / 1-Page)</option>
-                <option value="8.5">8.5px (Compact Fit)</option>
-                <option value="9">9px (Tight)</option>
-                <option value="10">10px (Default)</option>
-                <option value="11">11px (Med)</option>
-                <option value="12">12px (Large)</option>
+                <option value="9">9px (Compact)</option>
+                <option value="10">10px (Small)</option>
+                <option value="11">11px (Medium)</option>
+                <option value="12">12px (Large - Default)</option>
                 <option value="13">13px (XL)</option>
-                <option value="14">14px (2XL)</option>
+                <option value="14">14px (2XL - Big)</option>
+                <option value="15">15px (3XL)</option>
+                <option value="16">16px (Jumbo)</option>
               </select>
             </div>
 
@@ -1402,13 +1402,13 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
         </div>
       )}
 
-      {/* Printable Sheet Title Header (Compact, High-Density for Print) */}
-      <div className="hidden print:block mb-1.5 border-b border-black pb-1">
+      {/* Printable Sheet Title Header */}
+      <div className="hidden print:block mb-2.5 border-b-2 border-black pb-1.5">
         <div className="flex items-baseline justify-between">
-          <h1 className="font-black text-sm uppercase tracking-tight text-black">
+          <h1 className="font-black text-lg uppercase tracking-tight text-black">
             Mahopac 10U Practice Plan
           </h1>
-          <div className="text-[10.5px] font-black text-black">
+          <div className="text-sm font-black text-black">
             {currentSeq?.isCancelled
               ? `[CANCELLED SESSION]`
               : currentSeq?.practiceNumber
@@ -1418,7 +1418,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
             {currentPlan?.title}
           </div>
         </div>
-        <div className="text-[9.5px] font-bold text-slate-800 flex items-center justify-between mt-0.5">
+        <div className="text-xs font-bold text-slate-800 flex items-center justify-between mt-0.5">
           <span>Date: {currentPlan?.date} ({currentPlan?.day || getDayOfWeekForDate(currentPlan?.date)}) • Time: {currentPlan?.startTime || '5:05 PM'}{currentPlan?.endTime ? ` - ${currentPlan.endTime}` : ''} • Location: {currentPlan?.location || 'Crane Road'}</span>
           <span>{currentPlan?.weekFolder}</span>
         </div>
@@ -1430,11 +1430,11 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
           <table className="w-full border-collapse practice-table text-xs">
             <thead>
               <tr className="bg-slate-900 text-slate-200 font-black uppercase text-[11px] border-b border-slate-700 print:bg-slate-100 print:text-black">
-                <th className="py-3 px-3 text-left w-24 sm:w-28 print:w-[11%]">Time / Period</th>
-                <th className="py-3 px-3 text-left w-28 sm:w-32 print:w-[8%]">Category</th>
-                <th className="py-3 px-3.5 text-left print:w-[58%]">Stations / Drills</th>
-                <th className="py-3 px-2.5 text-left w-28 sm:w-32 print:w-[7%]">Coaches</th>
-                <th className="py-3 px-3 text-left w-36 sm:w-40 print:w-[16%]">Focus / Cues</th>
+                <th className="py-3 px-3 text-left w-24 sm:w-28 print:w-[13%]">Time / Period</th>
+                <th className="py-3 px-3 text-left w-28 sm:w-32 print:w-[10%]">Category</th>
+                <th className="py-3 px-3.5 text-left print:w-[49%]">Stations / Drills</th>
+                <th className="py-3 px-2.5 text-left w-28 sm:w-32 print:w-[11%]">Coaches</th>
+                <th className="py-3 px-3 text-left w-36 sm:w-40 print:w-[17%]">Focus / Cues</th>
                 {userRole === 'admin' && (
                   <th className="py-3 px-2 text-center w-20 print:hidden">
                     Actions
@@ -1492,7 +1492,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                           <div className="text-xs font-black text-indigo-300 uppercase tracking-tight print:hidden">
                             Period {pIdx + 1}
                           </div>
-                          <div className="hidden print:block text-[10.5px] font-black text-slate-950 uppercase tracking-tight leading-tight">
+                          <div className="hidden print:block font-black text-black uppercase tracking-tight leading-tight print-text-title">
                             Period {pIdx + 1}
                           </div>
                           <div className="flex items-center gap-1.5 mt-1 print:hidden">
@@ -1513,10 +1513,10 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                           <div className="text-[11px] font-extrabold text-amber-300 mt-1.5 font-mono print:hidden">
                             {timeString}
                           </div>
-                          <div className="hidden print:block text-[9.5px] font-extrabold text-slate-900 font-mono mt-0.5 leading-tight">
+                          <div className="hidden print:block font-extrabold text-black font-mono mt-1 leading-tight print-text-body">
                             {timeString}
                           </div>
-                          <div className="hidden print:block text-[9px] font-bold text-slate-600 mt-0.5 leading-none">
+                          <div className="hidden print:block font-bold text-slate-700 mt-0.5 leading-none print-text-sub">
                             ({row.time} min)
                           </div>
                         </td>
@@ -1544,7 +1544,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                               ))}
                             </select>
                           </div>
-                          <div className="hidden print:block font-black text-slate-950 text-[9.5px] uppercase tracking-tight leading-tight break-words">
+                          <div className="hidden print:block font-black text-black uppercase tracking-tight leading-tight break-words print-text-title">
                             {row.category}
                           </div>
 
@@ -1568,18 +1568,18 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                               <option value="rotating">Rotating Stations</option>
                             </select>
                           </div>
-                          <div className="hidden print:block text-[8.5px] font-bold text-slate-600 mt-0.5 leading-none">
-                            {isRotating ? 'Rotating' : 'Full Grp'}
+                          <div className="hidden print:block font-bold text-slate-700 mt-1 leading-none print-text-sub">
+                            {isRotating ? 'Rotating' : 'Full Group'}
                           </div>
                         </td>
                       )}
 
                       {/* Station / Drill Title & Instructions */}
-                      <td className="py-3 px-3.5 align-top border-r border-slate-700 space-y-2 print:space-y-0.5">
+                      <td className="py-3 px-3.5 align-top border-r border-slate-700 space-y-2 print:space-y-1">
                         {isRotating && (
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-[10.5px] font-black border border-indigo-500/30 print:bg-slate-100 print:text-slate-900 print:border-slate-300 print:py-0 print:px-1 print:mb-0.5">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-[10.5px] font-black border border-indigo-500/30 print:bg-slate-200 print:text-black print:border-slate-400 print:py-0.5 print:px-1.5 print:mb-1 print-text-badge">
                             <Clock className="w-3 h-3 print:hidden" />
-                            <span className="font-mono print:text-[9px] print:leading-tight">
+                            <span className="font-mono print:font-bold">
                               Station {sIdx + 1}: {formatTimeMinutes(stationStartMin)} -{' '}
                               {formatTimeMinutes(stationEndMin)} (
                               {Math.round(stationDuration)} min)
@@ -1637,11 +1637,11 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
 
                         {/* Print view */}
                         <div className="hidden print:block">
-                          <div className="text-[10.5px] font-black text-slate-950 uppercase tracking-tight leading-tight">
+                          <div className="font-black text-black uppercase tracking-tight leading-snug print-text-title">
                             {station.name || 'Station / Drill'}
                           </div>
                           {station.desc && (
-                            <div className="text-[9.5px] font-normal text-slate-850 mt-0.5 whitespace-pre-wrap leading-tight">
+                            <div className="font-semibold text-slate-950 mt-1 whitespace-pre-wrap leading-relaxed print-text-body">
                               {station.desc}
                             </div>
                           )}
@@ -1689,7 +1689,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                           <ChevronDown className={`w-3 h-3 transition-transform ${isCoachPopupOpen ? 'rotate-180' : ''}`} />
                         </div>
 
-                        <div className="hidden print:block text-[8.5px] font-bold text-slate-950 leading-tight break-words">
+                        <div className="hidden print:block font-bold text-black leading-snug break-words print-text-body">
                           {station.coach || '—'}
                         </div>
 
@@ -1836,7 +1836,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                           placeholder="Key coaching cues & assignments..."
                           className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs font-semibold text-slate-200 leading-tight focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-500 print:hidden"
                         />
-                        <div className="hidden print:block text-[9.5px] font-normal text-slate-900 whitespace-pre-wrap leading-tight">
+                        <div className="hidden print:block font-medium text-black whitespace-pre-wrap leading-relaxed print-text-body">
                           {station.focus || '—'}
                         </div>
                       </td>
