@@ -1267,7 +1267,7 @@ export default function App() {
                 ageGroup: '10U',
                 season: '2026 Season',
                 color: 'amber',
-                headCoachName: 'Coach Danny',
+                headCoachName: '',
                 notes: 'Primary program team',
               },
             ];
@@ -1473,7 +1473,7 @@ export default function App() {
 
   const handleAddStaffCoach = (
     email: string,
-    role: string = 'Coach Danny',
+    role: string = 'Assistant Coach',
     assignedTeamIds: string[] = [activeTeamId],
     favoriteTeamId: string = activeTeamId || 'team_10u',
     startScreen: UnitType = 'schedule'
@@ -1485,7 +1485,7 @@ export default function App() {
     }
     const newEntry: StaffCoach = {
       email: cleanEmail,
-      role: role || 'Coach Danny',
+      role: role || 'Assistant Coach',
       status: 'Active',
       assignedTeamIds: assignedTeamIds && assignedTeamIds.length > 0 ? assignedTeamIds : [activeTeamId],
       favoriteTeamId,
@@ -4766,7 +4766,7 @@ export default function App() {
         onGoogleSignInRedirect={async () => {
           const { auth } = getFirebaseServices();
           if (!auth) {
-            setCurrentUser({ email: 'dannym1010@gmail.com', displayName: 'Coach Danny' });
+            setCurrentUser({ email: 'dannym1010@gmail.com', displayName: 'Administrator' });
             setIsAuthModalOpen(false);
             applyUserPreferencesOnLogin('dannym1010@gmail.com');
             return;
@@ -4779,9 +4779,7 @@ export default function App() {
         teams={teams}
         onSelectQuickCoach={(coachEmail) => {
           const cleanEmail = coachEmail.toLowerCase().trim();
-          const coach =
-            staffList.find((c) => c.email.toLowerCase().trim() === cleanEmail) ||
-            DEFAULT_TEAM_COACHES.find((c) => c.email.toLowerCase().trim() === cleanEmail);
+          const coach = staffList.find((c) => c.email.toLowerCase().trim() === cleanEmail);
           setCurrentUser({
             email: cleanEmail,
             displayName: coach?.role || 'Coach',
@@ -4791,15 +4789,14 @@ export default function App() {
           const isHead =
             cleanEmail.includes('dannym1010') ||
             coach?.role?.toLowerCase().includes('head coach') ||
-            coach?.role?.toLowerCase().includes('admin') ||
-            coach?.role?.includes('Danny');
+            coach?.role?.toLowerCase().includes('admin');
           setUserRole(isHead ? 'admin' : 'assistant');
           applyUserPreferencesOnLogin(cleanEmail);
         }}
         onBypassLogin={() => {
           setCurrentUser({
             email: 'dannym1010@gmail.com',
-            displayName: 'Coach Danny (Offline)',
+            displayName: 'Program Admin (Offline)',
           });
           setIsAuthModalOpen(false);
           setIsPendingApproval(false);

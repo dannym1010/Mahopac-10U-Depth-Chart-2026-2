@@ -16,6 +16,11 @@ import {
   ChevronDown,
   Star,
   Sparkles,
+  Mail,
+  Send,
+  ExternalLink,
+  CheckCheck,
+  Link2,
 } from 'lucide-react';
 import { StaffCoach, UserRole, Team, UnitType } from '../types';
 
@@ -85,6 +90,15 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
   const [newStaffRole, setNewStaffRole] = useState('Head Coach (Admin)');
   const [newStaffAssignedTeams, setNewStaffAssignedTeams] = useState<string[]>([activeTeamId]);
 
+  // Email Invitation Modal State
+  const [inviteModalData, setInviteModalData] = useState<{
+    email: string;
+    role: string;
+    assignedTeamNames: string[];
+  } | null>(null);
+  const [copiedInvite, setCopiedInvite] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
   // Saved Practice Coaches per Team State
   const [practiceCoachTeamFilter, setPracticeCoachTeamFilter] = useState<string>(activeTeamId);
   const [showAddPracticeCoachModal, setShowAddPracticeCoachModal] = useState(false);
@@ -101,7 +115,36 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
 
   const activeFilterTeam = teams.find((t) => t.id === practiceCoachTeamFilter) || teams[0];
   const currentTeamPracticeCoaches =
-    teamSavedCoaches[practiceCoachTeamFilter] || savedCoaches;
+    teamSavedCoaches[practiceCoachTeamFilter] || savedCoaches || [];
+
+  const generateInviteBody = (email: string, role: string, assignedTeamNames: string[]) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin || window.location.href : '';
+    const teamListStr = assignedTeamNames.length > 0 ? assignedTeamNames.join(', ') : 'All Program Teams';
+    return `Hi Coach,
+
+You have been invited to join the coaching staff on our Football Team Management & Playbook platform.
+
+🏈 Access the Portal:
+${origin}
+
+📋 Account & Access Details:
+- Authorized Email: ${email}
+- Assigned Role: ${role}
+- Assigned Teams: ${teamListStr}
+
+How to join:
+1. Open the link above.
+2. Sign in with your email (${email}) using Google Sign-In or your coach account.
+3. Access your team roster, real-time playbooks, wristband cards, practice plans, and game schedules.
+
+Looking forward to a great season!`;
+  };
+
+  const handleOpenMailClient = (email: string, role: string, assignedTeamNames: string[]) => {
+    const subject = encodeURIComponent(`Youth Football Coaching Staff Invitation - ${role}`);
+    const body = encodeURIComponent(generateInviteBody(email, role, assignedTeamNames));
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+  };
 
   const handleCreateTeam = (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,7 +154,7 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
       ageGroup: newTeamAge.trim() || 'Youth',
       season: newTeamSeason.trim() || '2026',
       color: newTeamColor,
-      headCoachName: savedCoaches[0] || 'Coach Danny',
+      headCoachName: (savedCoaches && savedCoaches[0]) ? savedCoaches[0] : '',
       calendarUrl: newTeamCalendarUrl.trim() || undefined,
     });
     setNewTeamName('');
@@ -142,15 +185,38 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
   const handleCreateStaffCoach = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStaffEmail.trim()) return;
+    const cleanEmail = newStaffEmail.trim().toLowerCase();
+    const assignedIds = newStaffAssignedTeams.length > 0 ? newStaffAssignedTeams : [activeTeamId];
+    
     onAddStaffCoach(
-      newStaffEmail.trim().toLowerCase(),
+      cleanEmail,
       newStaffRole,
-      newStaffAssignedTeams.length > 0 ? newStaffAssignedTeams : [activeTeamId]
+      assignedIds
     );
+
+    const teamNames = teams
+      .filter((t) => assignedIds.includes('all') || assignedIds.includes(t.id))
+      .map((t) => `${t.name} (${t.ageGroup || 'Youth'})`);
+
+    const inviteInfo = {
+      email: cleanEmail,
+      role: newStaffRole,
+      assignedTeamNames: teamNames,
+    };
+
+    setInviteModalData(inviteInfo);
+    setShowAddStaffModal(false);
+
+    // Launch email compose automatically
+    try {
+      handleOpenMailClient(cleanEmail, newStaffRole, teamNames);
+    } catch (e) {
+      console.warn('Mailto launch:', e);
+    }
+
     setNewStaffEmail('');
     setNewStaffRole('Head Coach (Admin)');
     setNewStaffAssignedTeams([activeTeamId]);
-    setShowAddStaffModal(false);
   };
 
   const handleCreatePracticeCoach = (e: React.FormEvent) => {
@@ -545,31 +611,51 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
 
                       {userRole === 'admin' && (
                         <td className="py-3.5 px-3 text-right">
-                          {!isMaster ? (
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => onToggleStaffApproval(idx)}
-                                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                                  isActive
-                                    ? 'bg-slate-900 hover:bg-slate-750 text-slate-300 border border-slate-700'
-                                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm shadow-emerald-600/30'
-                                }`}
-                              >
-                                {isActive ? 'Deactivate' : 'Approve'}
-                              </button>
-                              <button
-                                onClick={() => onRemoveStaffCoach(idx)}
-                                className="p-1.5 text-rose-400 hover:bg-rose-950/50 rounded-lg transition-colors cursor-pointer"
-                                title="Remove staff account"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-[10.5px] text-amber-400/80 font-bold italic">
-                              Owner
-                            </span>
-                          )}
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const assigned = coach.assignedTeamIds || [];
+                                const teamNames = teams
+                                  .filter((t) => assigned.includes('all') || assigned.includes(t.id))
+                                  .map((t) => `${t.name} (${t.ageGroup || 'Youth'})`);
+                                setInviteModalData({
+                                  email: coach.email,
+                                  role: coach.role,
+                                  assignedTeamNames: teamNames,
+                                });
+                              }}
+                              className="p-1.5 text-indigo-300 hover:text-white bg-indigo-950/60 hover:bg-indigo-600/50 border border-indigo-700/50 rounded-lg transition-all cursor-pointer"
+                              title={`Send email invitation to ${coach.email}`}
+                            >
+                              <Mail className="w-3.5 h-3.5" />
+                            </button>
+                            {!isMaster ? (
+                              <>
+                                <button
+                                  onClick={() => onToggleStaffApproval(idx)}
+                                  className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                    isActive
+                                      ? 'bg-slate-900 hover:bg-slate-750 text-slate-300 border border-slate-700'
+                                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm shadow-emerald-600/30'
+                                  }`}
+                                >
+                                  {isActive ? 'Deactivate' : 'Approve'}
+                                </button>
+                                <button
+                                  onClick={() => onRemoveStaffCoach(idx)}
+                                  className="p-1.5 text-rose-400 hover:bg-rose-950/50 rounded-lg transition-colors cursor-pointer"
+                                  title="Remove staff account"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-[10.5px] text-amber-400/80 font-bold italic px-1">
+                                Owner
+                              </span>
+                            )}
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -577,6 +663,17 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
                 })}
               </tbody>
             </table>
+            {staffList.length === 0 && (
+              <div className="text-center py-10 px-4 space-y-2">
+                <Users className="w-8 h-8 text-slate-600 mx-auto" />
+                <p className="text-xs font-bold text-slate-400">
+                  No coach accounts added yet.
+                </p>
+                <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
+                  Click <strong className="text-slate-300">+ Add Coach Account</strong> above to add staff and send them an email invitation to join.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1066,7 +1163,7 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
                   required
                   value={newPracticeCoachName}
                   onChange={(e) => setNewPracticeCoachName(e.target.value)}
-                  placeholder="e.g. Coach Danny, Coach Gangemi, Coach DeMatteo, Coach Mike, Coach Ryan"
+                  placeholder="e.g. Offensive Coordinator, Defensive Line, Coach Smith"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-emerald-500"
                   autoFocus
                 />
@@ -1170,6 +1267,146 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 cursor-pointer"
                 >
                   Copy List
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EMAIL INVITATION MODAL */}
+      {inviteModalData && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-bold">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-white">
+                    Coach Invitation Prepared
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Send join instructions to <span className="text-indigo-300 font-semibold">{inviteModalData.email}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setInviteModalData(null);
+                  setCopiedInvite(false);
+                  setCopiedLink(false);
+                }}
+                className="text-slate-400 hover:text-white p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 text-xs space-y-1.5">
+                <div className="flex items-center justify-between text-slate-400">
+                  <span>Recipient:</span>
+                  <span className="font-bold text-slate-200">{inviteModalData.email}</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-400">
+                  <span>Role Assigned:</span>
+                  <span className="font-bold text-indigo-300">{inviteModalData.role}</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-400">
+                  <span>Teams:</span>
+                  <span className="font-bold text-slate-200 truncate max-w-[240px]">
+                    {inviteModalData.assignedTeamNames.join(', ') || 'All Program Teams'}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                  Email Message Preview
+                </label>
+                <textarea
+                  readOnly
+                  rows={7}
+                  value={generateInviteBody(
+                    inviteModalData.email,
+                    inviteModalData.role,
+                    inviteModalData.assignedTeamNames
+                  )}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] font-mono text-slate-300 focus:outline-none resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleOpenMailClient(
+                      inviteModalData.email,
+                      inviteModalData.role,
+                      inviteModalData.assignedTeamNames
+                    )
+                  }
+                  className="px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Open Email App</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = generateInviteBody(
+                      inviteModalData.email,
+                      inviteModalData.role,
+                      inviteModalData.assignedTeamNames
+                    );
+                    navigator.clipboard.writeText(text);
+                    setCopiedInvite(true);
+                    setTimeout(() => setCopiedInvite(false), 2500);
+                  }}
+                  className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  {copiedInvite ? (
+                    <>
+                      <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-emerald-400">Copied Invite!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Copy Email Text</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const origin = typeof window !== 'undefined' ? window.location.origin || window.location.href : '';
+                    navigator.clipboard.writeText(origin);
+                    setCopiedLink(true);
+                    setTimeout(() => setCopiedLink(false), 2500);
+                  }}
+                  className="text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <Link2 className="w-3.5 h-3.5" />
+                  <span>{copiedLink ? 'Portal Link Copied!' : 'Copy Portal Link Only'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInviteModalData(null);
+                    setCopiedInvite(false);
+                    setCopiedLink(false);
+                  }}
+                  className="text-slate-400 hover:text-slate-200 font-bold cursor-pointer"
+                >
+                  Done
                 </button>
               </div>
             </div>

@@ -219,31 +219,9 @@ export function getPracticeSequenceMap(
   return result;
 }
 
-const GENERIC_COACH_MAP: Record<string, string> = {
-  'head coach': 'Coach Danny',
-  'offensive coordinator': 'Coach Gangemi',
-  'defensive coordinator': 'Coach DeMatteo',
-  'line coach': 'Coach Mike',
-  'special teams coach': 'Coach Ryan',
-  'skills coach': 'Coach Ryan',
-  'coach': 'Coach Danny',
-  'coach / assistant': 'Coach Gangemi',
-  'all coaches': 'Coach Danny & Staff',
-  'staff': 'Coach Danny & Staff',
-  'coaching staff': 'Coach Danny & Staff',
-};
-
 function normalizeCoachName(coach?: string): string {
-  if (!coach) return 'Coach Danny';
-  const clean = coach.trim();
-  const lower = clean.toLowerCase();
-  if (GENERIC_COACH_MAP[lower]) return GENERIC_COACH_MAP[lower];
-  if (lower === 'head coach' || lower === 'hc') return 'Coach Danny';
-  if (lower.includes('line coach') || lower.includes('ol/dl')) return 'Coach Mike';
-  if (lower.includes('defensive coord') || lower.includes('dc')) return 'Coach DeMatteo';
-  if (lower.includes('offensive coord') || lower.includes('oc')) return 'Coach Gangemi';
-  if (lower.includes('special teams') || lower.includes('st')) return 'Coach Ryan';
-  return clean;
+  if (!coach) return '';
+  return coach.trim();
 }
 
 /**
@@ -251,7 +229,6 @@ function normalizeCoachName(coach?: string): string {
  * 1. Dates match their true weekFolder (e.g. 2026-08-31 -> Week 1)
  * 2. Days of week match the actual calendar date
  * 3. Day folders match format "Day M/DD"
- * 4. Generic coach names are replaced with actual coaching staff
  */
 export function sanitizePracticePlans(
   plans: PracticePlan[],
@@ -275,7 +252,7 @@ export function sanitizePracticePlans(
       stations: Array.isArray(period.stations)
         ? period.stations.map((st) => ({
             ...st,
-            coach: normalizeCoachName(st.coach),
+            coach: (st.coach || '').trim(),
           }))
         : [],
     }));

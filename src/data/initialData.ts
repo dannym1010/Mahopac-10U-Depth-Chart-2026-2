@@ -20,7 +20,7 @@ export const DEFAULT_TEAMS: Team[] = [
     ageGroup: '10U',
     season: '2026 Season',
     color: 'indigo',
-    headCoachName: 'Coach Danny',
+    headCoachName: '',
     calendarUrl: 'http://ical-cdn.teamsnap.com/team_schedule/8a8fa840-7ecc-4756-8e56-cf0913c39beb.ics',
     notes: 'Official 10U tackle football division',
   },
@@ -30,7 +30,7 @@ export const DEFAULT_TEAMS: Team[] = [
     ageGroup: '9U',
     season: '2026 Season',
     color: 'sky',
-    headCoachName: 'Coach Danny',
+    headCoachName: '',
     notes: 'Official 9U youth tackle football division',
   },
   {
@@ -39,7 +39,7 @@ export const DEFAULT_TEAMS: Team[] = [
     ageGroup: '12U',
     season: '2026 Season',
     color: 'amber',
-    headCoachName: 'Coach Gangemi',
+    headCoachName: '',
     notes: 'Senior youth tackle division',
   },
   {
@@ -48,7 +48,7 @@ export const DEFAULT_TEAMS: Team[] = [
     ageGroup: '8U',
     season: '2026 Season',
     color: 'emerald',
-    headCoachName: 'Coach DeMatteo',
+    headCoachName: '',
     notes: 'Developmental rookie program',
   },
   {
@@ -57,7 +57,7 @@ export const DEFAULT_TEAMS: Team[] = [
     ageGroup: '6U',
     season: '2026 Season',
     color: 'purple',
-    headCoachName: 'Coach Mike',
+    headCoachName: '',
     notes: 'Introductory flag division',
   },
 ];
@@ -351,7 +351,7 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "Team Stretch & Dynamic Warm-Up",
           desc: "Dynamic stretching, knee tucks, bounding, calisthenics",
-          coach: "Coach Danny",
+          coach: "",
           focus: "Flexibility, energy & focus"
         }
       ]
@@ -364,7 +364,7 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "Agility Ladder & Footwork Circuit",
           desc: "Quick feet, shuffle, 5-yard sprints",
-          coach: "Coach Mike",
+          coach: "",
           focus: "Speed & foot placement"
         }
       ]
@@ -377,13 +377,13 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "QB / RB Mesh & Pass Routes",
           desc: "Hand-off timing, quick slant & out routes",
-          coach: "Coach Gangemi",
+          coach: "",
           focus: "Ball security & timing"
         },
         {
           name: "OL Drive & Reach Blocking",
           desc: "Pad leverage, gap steps, punch technique",
-          coach: "Coach Mike",
+          coach: "",
           focus: "First 6-inch step & pad level"
         }
       ]
@@ -396,13 +396,13 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "DL Shed & Pursuit Angles",
           desc: "Get-off, rip/swim moves, bag tackle",
-          coach: "Coach DeMatteo",
+          coach: "",
           focus: "Attack blocker, maintain gap"
         },
         {
           name: "LB / DB Zone Drops & Tackling",
           desc: "Cover-2 / Cover-3 pass drops & pursuit alleys",
-          coach: "Coach Ryan",
+          coach: "",
           focus: "Eyes on QB, break on throw"
         }
       ]
@@ -415,7 +415,7 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "Form Tackling Circuit",
           desc: "Breakdown, near-foot strike, wrap & roll finish",
-          coach: "Coach Danny & Staff",
+          coach: "",
           focus: "Safety, head placement & leg drive"
         }
       ]
@@ -428,7 +428,7 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "Team 11-on-11 Scrimmage / Script Install",
           desc: "Live script install vs scout defense, two-minute drill",
-          coach: "Coach Danny",
+          coach: "",
           focus: "Huddle speed, pre-snap alignment & execution"
         }
       ]
@@ -443,7 +443,7 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "Chalk Talk & Script Review",
           desc: "Whiteboard walk-through of weekly opponent tendencies",
-          coach: "Coach Danny",
+          coach: "",
           focus: "Mental assignments & checks"
         }
       ]
@@ -456,7 +456,7 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "Light Stretch & Footwork",
           desc: "No pads dynamic warm-up and foam rolling",
-          coach: "Coach Mike",
+          coach: "",
           focus: "Mobility & recovery"
         }
       ]
@@ -469,7 +469,7 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "Offensive Walkthrough vs Air",
           desc: "Slow speed install, motion timing, cadence calls",
-          coach: "Coach Gangemi",
+          coach: "",
           focus: "Zero false starts, clean mesh"
         }
       ]
@@ -482,7 +482,7 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         {
           name: "Defensive Alignment Walkthrough",
           desc: "Gap fits, motion adjustment, secondary rotation",
-          coach: "Coach DeMatteo",
+          coach: "",
           focus: "Proper pre-snap communication"
         }
       ]
@@ -519,59 +519,11 @@ export const DEFAULT_GUIDES_ORDER: PlaybookGuideOrder = {
   }
 };
 
-export const DEFAULT_SAVED_COACHES: string[] = [
-  "Coach Danny",
-  "Coach Gangemi",
-  "Coach DeMatteo",
-  "Coach Mike",
-  "Coach Ryan"
-];
+export const DEFAULT_SAVED_COACHES: string[] = [];
 
-export const DEFAULT_SAVED_COACHES_BY_TEAM: Record<string, string[]> = {
-  team_10u: [
-    "Coach Danny",
-    "Coach Gangemi",
-    "Coach DeMatteo",
-    "Coach Mike",
-    "Coach Ryan"
-  ],
-  team_9u: [
-    "Coach Danny",
-    "Coach Gangemi",
-    "Coach DeMatteo",
-    "Coach Mike",
-    "Coach Ryan"
-  ],
-  team_12u: [
-    "Coach Danny",
-    "Coach Gangemi",
-    "Coach DeMatteo",
-    "Coach Mike",
-    "Coach Ryan"
-  ],
-  team_8u: [
-    "Coach Danny",
-    "Coach Gangemi",
-    "Coach DeMatteo",
-    "Coach Mike",
-    "Coach Ryan"
-  ],
-  team_6u: [
-    "Coach Danny",
-    "Coach Gangemi",
-    "Coach DeMatteo",
-    "Coach Mike",
-    "Coach Ryan"
-  ],
-};
+export const DEFAULT_SAVED_COACHES_BY_TEAM: Record<string, string[]> = {};
 
-export const DEFAULT_TEAM_COACHES: StaffCoach[] = [
-  { email: "dannym1010@gmail.com", role: "Coach Danny", status: "Active", assignedTeamIds: ["all"], favoriteTeamId: "team_10u", startScreen: "schedule" },
-  { email: "gangemi@mahopacfootball.org", role: "Coach Gangemi", status: "Active", assignedTeamIds: ["all"], favoriteTeamId: "team_10u", startScreen: "schedule" },
-  { email: "dematteo@mahopacfootball.org", role: "Coach DeMatteo", status: "Active", assignedTeamIds: ["all"], favoriteTeamId: "team_10u", startScreen: "schedule" },
-  { email: "mike@mahopacfootball.org", role: "Coach Mike", status: "Active", assignedTeamIds: ["all"], favoriteTeamId: "team_10u", startScreen: "schedule" },
-  { email: "ryan@mahopacfootball.org", role: "Coach Ryan", status: "Active", assignedTeamIds: ["all"], favoriteTeamId: "team_10u", startScreen: "schedule" },
-];
+export const DEFAULT_TEAM_COACHES: StaffCoach[] = [];
 
 export const MASTER_PLAY_LIBRARY: string[] = [
   "24 Dive",
@@ -1172,7 +1124,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Team Dynamic Warm-Up & Stretches",
             desc: "High knees, butt kicks, carioca, ankle mobility, team cheer.",
-            coach: "Coach Danny",
+            coach: "",
             focus: "Energy, team cadence, flexibility"
           }
         ]
@@ -1185,7 +1137,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Agility Ladder & 5-10-5 Pro Shuttle",
             desc: "2-in-2-out, icky shuffle, quick deceleration and change of direction.",
-            coach: "Coach Mike",
+            coach: "",
             focus: "Low center of gravity, light fast feet"
           }
         ]
@@ -1198,13 +1150,13 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "QB & RB Snap / Mesh Exchange",
             desc: "Under center snap mechanics, 3-step drop, secure mesh handoff.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Zero fumbles, secure top elbow pocket"
           },
           {
             name: "OL Stance, Get-Off & 6-Inch Power Step",
             desc: "3-point stance alignment, first 6-inch drive step into sled.",
-            coach: "Coach Mike",
+            coach: "",
             focus: "Wide base, low pads, thumbs up punch"
           }
         ]
@@ -1217,13 +1169,13 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "DL Stance & First Step Get-Off",
             desc: "Explode on ball movement, strike bag with inside hands, maintain gap integrity.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Eyes on ball, explosive hips"
           },
           {
             name: "LB / DB Stance & Lateral Shuffle",
             desc: "Athletic breakdown stance, downhill plant, mirror ball movement.",
-            coach: "Coach Ryan",
+            coach: "",
             focus: "Square shoulders, avoid crossing feet"
           }
         ]
@@ -1236,7 +1188,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Heads-Up / Seahawk Leverage Form Circuit",
             desc: "Breakdown -> Buzz feet -> Near foot strike -> Wrap & squeeze dummy to ground.",
-            coach: "Coach Danny & Staff",
+            coach: "",
             focus: "Safety first: head out of the tackle, eyes up"
           }
         ]
@@ -1261,7 +1213,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Team Dynamic Warm-Up",
             desc: "Progressive running, leg swings, arm circles, team break.",
-            coach: "Coach Danny",
+            coach: "",
             focus: "Focus and tempo"
           }
         ]
@@ -1274,13 +1226,13 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Inside Zone / 24 Dive Timing",
             desc: "FB kick-out block, RB patience and cut off guard's hip.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Hitting the designated hole with speed"
           },
           {
             name: "Pass Protection & Footwork",
             desc: "Kick slide, punch timing, post-foot plant.",
-            coach: "Coach Mike",
+            coach: "",
             focus: "Balance and posture"
           }
         ]
@@ -1293,7 +1245,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Defense Pursuit Drill (Alley Runs)",
             desc: "All 11 players break on ball flight, take proper outside/inside pursuit lanes.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Containment and relentless hustle"
           }
         ]
@@ -1306,7 +1258,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Team Offense 11-on-Air Script Review",
             desc: "Run 10 core plays on air with cadence, shift motions, and huddle break.",
-            coach: "Coach Danny",
+            coach: "",
             focus: "Zero pre-snap penalties, crisp execution"
           }
         ]
@@ -1331,7 +1283,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Dynamic Warmup & Team Breakdown",
             desc: "High knees, hip openers, form runs, kickoff team cadence call.",
-            coach: "Coach Danny",
+            coach: "",
             focus: "High tempo, focus, team discipline"
           }
         ]
@@ -1344,7 +1296,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Foot Fire & Reaction Tackling Pad",
             desc: "Quick chop feet into rapid strike on padded shield with proper leverage.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Eyes up, shoulder strike, wrap and squeeze"
           }
         ]
@@ -1357,13 +1309,13 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "11-Person Base Scheme & Wristband Installation",
             desc: "24 Dive, 25 Trap, and Sweep installation with wristband number checks.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Rapid huddle break and clean handoff mesh"
           },
           {
             name: "Offensive Line Drive & Reach Blocks",
             desc: "Steps for gap control and seal blocks against Carmel 4-man front.",
-            coach: "Coach Mike",
+            coach: "",
             focus: "Wide base, low pad level, hand placement"
           }
         ]
@@ -1376,7 +1328,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "DL & LB Gap Integrity & Pursuit Flow",
             desc: "Keying guards, shooting correct gaps, outside containment.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Never lose outside leverage, fast lateral flow"
           }
         ]
@@ -1389,7 +1341,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Punt Coverage Lanes & Specialist Timing",
             desc: "Gunner release off line, lane discipline, secure snap-to-kick in 2.0s.",
-            coach: "Coach Ryan",
+            coach: "",
             focus: "Sprint to returner, breakdown inside 5 yards"
           }
         ]
@@ -1414,7 +1366,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Dynamic Stretch & Foot Fire",
             desc: "Fast feet reaction drill on whistle.",
-            coach: "Coach Mike",
+            coach: "",
             focus: "Reaction time"
           }
         ]
@@ -1427,13 +1379,13 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Sweep 28 Right & Reach Blocks",
             desc: "PST reach block, guard seal, RB accelerate to sideline numbers.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Edge speed"
           },
           {
             name: "WR Stalk Blocking & Routes",
             desc: "Mirror DB, mirror hips, drive block on whistle.",
-            coach: "Coach Ryan",
+            coach: "",
             focus: "Effort without holding"
           }
         ]
@@ -1446,7 +1398,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Cover 2 & Cover 3 Zone Drops",
             desc: "DBs backpedal to deep third/half, rally on thrown football.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Eye on QB, break on release"
           }
         ]
@@ -1459,7 +1411,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Kickoff & Kickoff Return Alignment",
             desc: "Lanes coverage, avoid wedge block, safety touchback protocol.",
-            coach: "Coach Ryan",
+            coach: "",
             focus: "Stay in designated running lane"
           }
         ]
@@ -1484,7 +1436,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Team Warmup & Calisthenics",
             desc: "Full pre-game warm-up progression.",
-            coach: "Coach Danny",
+            coach: "",
             focus: "Game day tempo"
           }
         ]
@@ -1497,7 +1449,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Goal Line & Short Yardage Package",
             desc: "I-Formation Heavy, Power 36, Wedge 0.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Low pad level, push the pile"
           }
         ]
@@ -1510,7 +1462,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Goal Line Stand & Blitz Package",
             desc: "A-gap blitz, pinch tackles, prevent push.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Penetration and secure tackle"
           }
         ]
@@ -1523,7 +1475,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Live 11-on-11 Controlled Scrimmage",
             desc: "Offense vs Defense 15-play situational scrimmage with referee whistle.",
-            coach: "Coach Danny & Staff",
+            coach: "",
             focus: "Game speed execution and player rotations"
           }
         ]
@@ -1548,7 +1500,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Chalk Talk & Defensive Scouting",
             desc: "Review opponent 5-3 defense and blitz tendencies.",
-            coach: "Coach Danny",
+            coach: "",
             focus: "Blocking assignments"
           }
         ]
@@ -1561,13 +1513,13 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Counter 21 Reverse & Bootleg Pass Install",
             desc: "Misdirection footwork, tight end drag route.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Sell the fake run"
           },
           {
             name: "OL Trap Block Technique",
             desc: "Backside guard pull, trap 3-tech defensive tackle.",
-            coach: "Coach Mike",
+            coach: "",
             focus: "Tight pull line, head in hole"
           }
         ]
@@ -1580,7 +1532,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Defending the Wing-T / Sweep",
             desc: "Force outside run back inside, linebackers scrape downhill.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Set edge firmly"
           }
         ]
@@ -1593,7 +1545,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Punt & Punt Protection Team",
             desc: "Shield punt wall, long snap consistency, 40-yard sprint gunners.",
-            coach: "Coach Ryan",
+            coach: "",
             focus: "Zero blocked punts, fair catch awareness"
           }
         ]
@@ -1618,7 +1570,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Dynamic Warmup & Agility",
             desc: "Ladder drills and hip mobility.",
-            coach: "Coach Mike",
+            coach: "",
             focus: "Agility and foot quickness"
           }
         ]
@@ -1631,7 +1583,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Redzone & 2-Point Conversion Package",
             desc: "Goal line execution: Power 36, TE Pop, Wedge.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Score from 3 yards out"
           }
         ]
@@ -1644,7 +1596,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Goal Line Defense & Blitz Check",
             desc: "Gap fills and stopping interior push.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "No gain at the goal line"
           }
         ]
@@ -1657,7 +1609,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Extra Point & Field Goal Team",
             desc: "Snap, hold, kick timing in 1.3 seconds.",
-            coach: "Coach Ryan",
+            coach: "",
             focus: "Accuracy and snap consistency"
           }
         ]
@@ -1682,7 +1634,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Team Dynamic Warm-Up & Footwork",
             desc: "Cone drills, 5-10-5 shuttle, rapid hip turn.",
-            coach: "Coach Mike",
+            coach: "",
             focus: "Change of direction and pad level"
           }
         ]
@@ -1695,13 +1647,13 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Option & Pitch Timing (Sweep 29)",
             desc: "QB mesh with fullback, pitch to tailback on perimeter.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Pitch on outside shoulder"
           },
           {
             name: "OL Reach & Seal on Yorktown 4-4",
             desc: "Reach block defensive end, climb to inside linebacker.",
-            coach: "Coach Mike",
+            coach: "",
             focus: "Wide base and sustained hand punch"
           }
         ]
@@ -1714,13 +1666,13 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Contain & Option Assignment",
             desc: "DE takes QB dive, OLB takes pitch, CB forces inside.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Discipline on option reads"
           },
           {
             name: "Pass Coverage & Deep Thirds",
             desc: "Cover-3 zone drop, rally to flats on throw.",
-            coach: "Coach Ryan",
+            coach: "",
             focus: "Backpedal speed and break on ball"
           }
         ]
@@ -1733,7 +1685,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "11-on-11 Situational Scrimmage vs Spread",
             desc: "Offense script vs Defense scout team, 3rd & long conversions.",
-            coach: "Coach Danny",
+            coach: "",
             focus: "Game tempo and quick huddle breaks"
           }
         ]
@@ -1758,7 +1710,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Special Teams Walkthrough & Pregame Routine",
             desc: "Kickoff, Kick Return, Punt Protection, Onside recovery.",
-            coach: "Coach Ryan",
+            coach: "",
             focus: "Assignment clarity and lane integrity"
           }
         ]
@@ -1771,7 +1723,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "2-Minute Drill & Hurried Cadence",
             desc: "Hurry up offense, out routes, clock management.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Get out of bounds, snap in 8 seconds"
           }
         ]
@@ -1784,7 +1736,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Prevent Defense & Redzone Lock",
             desc: "No big plays over top, secure form tackle in field of play.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Tackle in bounds to keep clock running"
           }
         ]
@@ -1797,7 +1749,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "4th Quarter Conditioning Sprints",
             desc: "Four 40-yard sprints with perfect starting stance.",
-            coach: "Coach Danny",
+            coach: "",
             focus: "Mental toughness and finishing strong"
           }
         ]
@@ -1822,7 +1774,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Agility Ladder & Form Tackling",
             desc: "Speed ladder into near-foot form wrap on tackle wheel.",
-            coach: "Coach Danny",
+            coach: "",
             focus: "Clean wrap and leg drive"
           }
         ]
@@ -1835,13 +1787,13 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Counter 21 Reverse & Bootleg Pass",
             desc: "Fake dive, guard pull, bootleg throw to tight end.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Sell the fake run completely"
           },
           {
             name: "OL Guard Pull & Trap Footwork",
             desc: "Open step, scrape the center's hip, trap defensive tackle.",
-            coach: "Coach Mike",
+            coach: "",
             focus: "Pad level and explosive shoulder contact"
           }
         ]
@@ -1854,7 +1806,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Stopping Brewster Power I & Iso",
             desc: "LB fill A & B gaps, meet fullback in hole at line of scrimmage.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "No yards after contact"
           }
         ]
@@ -1867,7 +1819,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Punt Team & Fake Punt Package",
             desc: "Punt formation, gunner releases, fake punt pass option.",
-            coach: "Coach Ryan",
+            coach: "",
             focus: "100% protection execution"
           }
         ]
@@ -1892,7 +1844,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Pregame Warm-Up Progression",
             desc: "Full pre-game routine, calisthenics, specialist kicks.",
-            coach: "Coach Danny",
+            coach: "",
             focus: "High energy, Homecoming focus"
           }
         ]
@@ -1905,7 +1857,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Goal Line Heavy & Redzone Script",
             desc: "Heavy I-Formation, Wedge, Power 36, TE Pop pass.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Touchdowns inside the 10 yard line"
           }
         ]
@@ -1918,7 +1870,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Goal Line Stand & Blitz Exits",
             desc: "6-2 goal line front, zero pass coverage, A-gap blitz.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Penetration and force fumble"
           }
         ]
@@ -1931,7 +1883,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Live Redzone 4-Play Series",
             desc: "Offense vs Defense 1st & goal from the 5-yard line.",
-            coach: "Coach Danny & Staff",
+            coach: "",
             focus: "Game speed competitive finish"
           }
         ]
@@ -1956,7 +1908,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Dynamic Warm-Up & Pursuit Angles",
             desc: "Lateral shuffles and angled sprint pursuit.",
-            coach: "Coach Mike",
+            coach: "",
             focus: "Speed and body control"
           }
         ]
@@ -1969,13 +1921,13 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "25 Trap & Inside Zone vs 5-3 Front",
             desc: "Trap nose guard, seal middle linebacker with center.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Timing and quick burst through hole"
           },
           {
             name: "OL Zone Combination Blocks",
             desc: "Guard & Tackle double-team down lineman to backside LB.",
-            coach: "Coach Mike",
+            coach: "",
             focus: "Maintain hip-to-hip contact"
           }
         ]
@@ -1988,7 +1940,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "DL Nose & Tackle Sheds vs Double Teams",
             desc: "Split double team, fight pressure with pressure.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Hold the line of scrimmage"
           }
         ]
@@ -2001,7 +1953,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Kick Return Wedge & Return Left/Right",
             desc: "Front line drop, form 3-man wedge, RB burst.",
-            coach: "Coach Ryan",
+            coach: "",
             focus: "Set up return wall cleanly"
           }
         ]
@@ -2026,7 +1978,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Chalk Talk & John Jay Scouting Review",
             desc: "Defensive signals, cadence calls, wristband check.",
-            coach: "Coach Danny",
+            coach: "",
             focus: "Mental preparation"
           }
         ]
@@ -2039,7 +1991,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "11-on-Air Offensive Script Installation",
             desc: "Run first 15 offensive plays with game day wristbands.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Zero alignment errors"
           }
         ]
@@ -2052,7 +2004,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Pass Rush & Secondary Interception Drill",
             desc: "DE speed rush, DB high-point catch on football.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Create turnovers"
           }
         ]
@@ -2065,7 +2017,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Field Goal & Extra Point Live Reps",
             desc: "10 live field goal reps from left/right hash.",
-            coach: "Coach Ryan",
+            coach: "",
             focus: "Snap-hold-kick rhythm in under 1.4 seconds"
           }
         ]
@@ -2090,7 +2042,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Warm-Up & Agility Shuttle",
             desc: "Dynamic warmup, ladder agility, fast footwork.",
-            coach: "Coach Mike",
+            coach: "",
             focus: "Speed and pad level"
           }
         ]
@@ -2103,13 +2055,13 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "RB Screen Pass & Quick Slants",
             desc: "Let defensive line rush, dump pass behind line, OL lead wall.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Patience and timing on screen"
           },
           {
             name: "Blitz Pickup & Pass Protection",
             desc: "FB and RB identify blitzing linebackers and step up in A/B gap.",
-            coach: "Coach Danny",
+            coach: "",
             focus: "Eyes on linebacker, maintain pocket"
           }
         ]
@@ -2122,7 +2074,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Corner Blitz & Fire Zone Coverage",
             desc: "CB off the edge, safety rotates over top, DL slant away.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Disguise pre-snap, explode on snap"
           }
         ]
@@ -2135,7 +2087,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Punt Coverage & Fair Catch Enforcement",
             desc: "Gunners sprint to returner, call fair catch signal.",
-            coach: "Coach Ryan",
+            coach: "",
             focus: "Down the ball inside the 10 yard line"
           }
         ]
@@ -2160,7 +2112,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Senior Night Preparation & Chalk Talk",
             desc: "Review Lakeland defense, player leadership recognition.",
-            coach: "Coach Danny",
+            coach: "",
             focus: "Focus and pride"
           }
         ]
@@ -2173,7 +2125,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Redzone & Trick Play Installation",
             desc: "Halfback pass, reverse pass, hook and lateral.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Ball security on trick plays"
           }
         ]
@@ -2186,7 +2138,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Redzone Goal Line Defense & Turnover Circuit",
             desc: "Strip the football, scoop and score, goal line stands.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Turnovers win championships"
           }
         ]
@@ -2199,7 +2151,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Controlled 11-on-11 Scrimmage",
             desc: "15 plays game tempo with game uniforms check.",
-            coach: "Coach Danny & Staff",
+            coach: "",
             focus: "High tempo and zero penalties"
           }
         ]
@@ -2224,7 +2176,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Dynamic Warm-Up & Footwork",
             desc: "Speed ladder, high knees, agility bags.",
-            coach: "Coach Mike",
+            coach: "",
             focus: "Speed and agility"
           }
         ]
@@ -2237,13 +2189,13 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Power 36 Iso & 24 Dive Execution",
             desc: "FB lead through 6 hole, RB follow hip and accelerate.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "North-south running style"
           },
           {
             name: "OL Drive Block & Stance Alignment",
             desc: "Pound the sled, strike on rising plane, leg drive.",
-            coach: "Coach Mike",
+            coach: "",
             focus: "Move the defensive line off the ball"
           }
         ]
@@ -2256,7 +2208,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Arlington Outside Sweep Contain",
             desc: "Force everything back inside to pursuing linebackers.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Do not let ball carrier get outside numbers"
           }
         ]
@@ -2269,7 +2221,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Open Field Form Tackling Circuit",
             desc: "Eyes on belt buckle, wrap and drive through contact.",
-            coach: "Coach Danny & Staff",
+            coach: "",
             focus: "Head safe form tackling"
           }
         ]
@@ -2294,7 +2246,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Chalk Talk & Season Finale Game Plan",
             desc: "Review Arlington tendencies, special teams assignments.",
-            coach: "Coach Danny",
+            coach: "",
             focus: "Sharp focus"
           }
         ]
@@ -2307,7 +2259,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Full Offensive Script on Air",
             desc: "20 plays on air with fast tempo and pristine execution.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Sharp route cuts and timing"
           }
         ]
@@ -2320,7 +2272,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Defensive Alignment & Scramble Drill",
             desc: "Cover receivers on QB scramble, rally to ball.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Never give up on the play"
           }
         ]
@@ -2333,7 +2285,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Special Teams Final Check",
             desc: "Kickoff, Kick Return, Punt, FG, Onside Defense.",
-            coach: "Coach Ryan",
+            coach: "",
             focus: "100% assignment execution"
           }
         ]
@@ -2358,7 +2310,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Playoff Dynamic Warm-Up & High Intensity Sprints",
             desc: "Playoff tempo, agility ladders, and lateral shuffles.",
-            coach: "Coach Danny",
+            coach: "",
             focus: "Playoff intensity from whistle to whistle"
           }
         ]
@@ -2371,13 +2323,13 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Playoff Core Plays & 3rd Down Conversions",
             desc: "24 Dive, Sweep 28, Counter 21 on 3rd & short / 3rd & medium.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Move the chains"
           },
           {
             name: "OL Goal Line Drive Blocks",
             desc: "6-inch power step, tight splits, push the pile.",
-            coach: "Coach Mike",
+            coach: "",
             focus: "Score from 1 yard out"
           }
         ]
@@ -2390,7 +2342,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Playoff Turnover Circuit & Tackle Leverage",
             desc: "Strip ball, scoop and score, 2-man gang tackling.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Turnovers decide playoff games"
           }
         ]
@@ -2403,7 +2355,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Punt & Field Goal Mastery",
             desc: "Punt execution, no blocks, reliable extra points.",
-            coach: "Coach Ryan",
+            coach: "",
             focus: "Flawless special teams execution"
           }
         ]
@@ -2428,7 +2380,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Chalk Talk & Playoff Game Plan Review",
             desc: "Playoff keys to victory, mental focus, assignments.",
-            coach: "Coach Danny",
+            coach: "",
             focus: "Execute under pressure"
           }
         ]
@@ -2441,7 +2393,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Playoff 11-on-11 Scrimmage Script",
             desc: "Offense vs Defense 20-play live dress rehearsal.",
-            coach: "Coach Gangemi",
+            coach: "",
             focus: "Zero turnovers, high tempo execution"
           }
         ]
@@ -2454,7 +2406,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Goal Line & 2-Minute Playoff Defense",
             desc: "Prevent big plays, secure redzone stop, celebrate team stops.",
-            coach: "Coach DeMatteo",
+            coach: "",
             focus: "Pitch a shutout"
           }
         ]
@@ -2467,7 +2419,7 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
           {
             name: "Team Huddle & Championship Focus",
             desc: "Team cheer, final wristband inspection, game day reminder.",
-            coach: "Coach Danny & Staff",
+            coach: "",
             focus: "Mahopac Pride & Brotherhood"
           }
         ]
