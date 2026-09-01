@@ -3514,11 +3514,22 @@ function mergeRemoteWeeklyData(
       prev.map((p) => {
         if (p.id === currentPracticeId) {
           const plan = [...p.plan];
-          if (plan[pIdx].stations.length <= 1) {
-            alert('Period must have at least one station.');
-            return p;
+          if (!plan[pIdx] || !plan[pIdx].stations) return p;
+          const currentStations = plan[pIdx].stations;
+          if (currentStations.length <= 1) {
+            // Reset the single station to empty
+            const stations = [
+              {
+                name: '',
+                desc: '',
+                coach: '',
+                focus: '',
+              },
+            ];
+            plan[pIdx] = { ...plan[pIdx], stations };
+            return { ...p, plan, lastEdited: Date.now() };
           }
-          const stations = [...plan[pIdx].stations];
+          const stations = [...currentStations];
           stations.splice(sIdx, 1);
           plan[pIdx] = { ...plan[pIdx], stations };
           return { ...p, plan, lastEdited: Date.now() };
@@ -3526,6 +3537,7 @@ function mergeRemoteWeeklyData(
         return p;
       })
     );
+    flushAndSaveStateToStorage('remove_station');
   };
 
   const handleUpdateStation = (

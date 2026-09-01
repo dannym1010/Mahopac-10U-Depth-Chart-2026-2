@@ -1986,16 +1986,62 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
 
                         {/* Station / Drill Title & Instructions */}
                         <td className="py-3 px-3.5 align-top border-r border-slate-700 space-y-2 print:space-y-1">
-                          {isRotating && (
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-[10.5px] font-black border border-indigo-500/30 print:bg-slate-200 print:text-black print:border-slate-400 print:py-0.5 print:px-1.5 print:mb-1 print-text-badge">
-                              <Clock className="w-3 h-3 print:hidden" />
-                              <span className="font-mono print:font-bold">
-                                Station {sIdx + 1}: {formatTimeMinutes(stationStartMin)} -{' '}
-                                {formatTimeMinutes(stationEndMin)} (
-                                {Math.round(stationDuration)} min)
-                              </span>
+                          {/* Station Header: Station badge + Add Station & Delete Station buttons */}
+                          <div className="flex items-center justify-between gap-2 flex-wrap pb-0.5 print:pb-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {isRotating ? (
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-[10.5px] font-black border border-indigo-500/30 print:bg-slate-200 print:text-black print:border-slate-400 print:py-0.5 print:px-1.5 print:mb-1 print-text-badge">
+                                  <Clock className="w-3 h-3 print:hidden" />
+                                  <span className="font-mono print:font-bold">
+                                    Station {sIdx + 1}: {formatTimeMinutes(stationStartMin)} -{' '}
+                                    {formatTimeMinutes(stationEndMin)} (
+                                    {Math.round(stationDuration)} min)
+                                  </span>
+                                </div>
+                              ) : (
+                                numStations > 1 && (
+                                  <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-[10.5px] font-black border border-indigo-500/30 print:hidden">
+                                    <span>Station {sIdx + 1} of {numStations}</span>
+                                  </div>
+                                )
+                              )}
                             </div>
-                          )}
+
+                            {/* Station-level Controls (Add Station / Delete Station) */}
+                            {userRole === 'admin' && (
+                              <div className="flex items-center gap-1.5 print:hidden ml-auto">
+                                <button
+                                  type="button"
+                                  onClick={() => onAddStationToPeriod(pIdx)}
+                                  title="Add another station to this period"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[10.5px] font-bold text-sky-300 bg-sky-950/60 hover:bg-sky-900 border border-sky-700/60 rounded-lg transition-all active:scale-95 cursor-pointer shadow-sm"
+                                >
+                                  <Plus className="w-3 h-3 text-sky-400" />
+                                  <span>+ Station</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (numStations > 1) {
+                                      if (confirm(`Delete Station ${sIdx + 1} ("${safeStation.name || 'Station'}") from Period ${pIdx + 1}? (The rest of Period ${pIdx + 1} will be kept)`)) {
+                                        onRemoveStationFromPeriod(pIdx, sIdx);
+                                      }
+                                    } else {
+                                      if (confirm(`Clear this station's drill details and coach assignments? (To delete the entire period, use "Del Period" in the Actions column)`)) {
+                                        onRemoveStationFromPeriod(pIdx, sIdx);
+                                      }
+                                    }
+                                  }}
+                                  title={numStations > 1 ? `Delete Station ${sIdx + 1} from Period ${pIdx + 1}` : 'Clear station drill contents'}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[10.5px] font-bold text-rose-300 hover:text-rose-100 bg-rose-950/60 hover:bg-rose-900 border border-rose-700/60 rounded-lg transition-all active:scale-95 cursor-pointer shadow-sm"
+                                >
+                                  <Trash2 className="w-3 h-3 text-rose-400" />
+                                  <span>{numStations > 1 ? `Delete Station ${sIdx + 1}` : 'Clear Station'}</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
 
                           {/* Position / Group & Drill Selectors */}
                           <div className="space-y-1.5 print:hidden">
@@ -2337,9 +2383,13 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                             rowSpan={numStations}
                             className="py-3.5 px-2 align-top text-center print:hidden"
                           >
-                            <div className="flex flex-col items-center gap-1.5">
+                            <div className="flex flex-col items-center gap-1.5 bg-slate-900/60 p-1.5 rounded-xl border border-slate-700/60">
+                              <div className="text-[9.5px] font-black uppercase tracking-wider text-slate-400">
+                                Period
+                              </div>
                               <div className="flex items-center gap-1">
                                 <button
+                                  type="button"
                                   onClick={() => onMovePeriod(pIdx, -1)}
                                   title="Move Period Up"
                                   className="p-1 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-slate-100 cursor-pointer"
@@ -2347,6 +2397,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                                   <ArrowUp className="w-3.5 h-3.5" />
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => onMovePeriod(pIdx, 1)}
                                   title="Move Period Down"
                                   className="p-1 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-slate-100 cursor-pointer"
@@ -2355,18 +2406,13 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                                 </button>
                               </div>
                               <button
-                                onClick={() => onAddStationToPeriod(pIdx)}
-                                className="px-2 py-1 bg-slate-900 hover:bg-slate-700 border border-slate-700 text-sky-300 text-[10px] font-bold rounded-lg flex items-center gap-0.5 transition-colors cursor-pointer"
-                              >
-                                <Plus className="w-2.5 h-2.5 text-sky-400" />
-                                <span>Station</span>
-                              </button>
-                              <button
+                                type="button"
                                 onClick={() => onRemovePeriod(pIdx)}
-                                title="Delete Period"
-                                className="p-1 text-rose-400 hover:bg-rose-950/50 rounded-lg cursor-pointer"
+                                title="Delete Entire Period"
+                                className="px-2 py-1 bg-rose-950/40 hover:bg-rose-900/70 border border-rose-800/50 text-rose-300 text-[10px] font-bold rounded-lg flex items-center gap-1 transition-colors cursor-pointer w-full justify-center"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 className="w-3 h-3 text-rose-400" />
+                                <span>Delete</span>
                               </button>
                             </div>
                           </td>
