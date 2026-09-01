@@ -636,78 +636,26 @@ function mergeRemoteWeeklyData(
       };
     } else {
       // Not actively editing locally:
-      // Remote formations are authoritative and preserve server ordering.
-      // Retain any formations in local that might not have made it to remote yet.
-      const mergedFormations: FormationBoard[] = [];
-      const usedIds = new Set<string>();
+      // Remote cloud state is authoritative.
+      const mergedFormations: FormationBoard[] =
+        remoteFormations.length > 0
+          ? remoteFormations
+          : localFormations;
 
-      remoteFormations.forEach((rf) => {
-        if (rf && rf.id && !usedIds.has(rf.id)) {
-          mergedFormations.push(rf);
-          usedIds.add(rf.id);
-        }
-      });
-      localFormations.forEach((lf) => {
-        if (lf && lf.id && !usedIds.has(lf.id)) {
-          mergedFormations.push(lf);
-          usedIds.add(lf.id);
-        }
-      });
+      const mergedDC: Record<string, PlacedPlayer[]> =
+        remoteState.depthChart !== undefined
+          ? remoteState.depthChart
+          : localState.depthChart || {};
 
-      const localDC = localState.depthChart || {};
-      const remoteDC = remoteState.depthChart || {};
-      const localPlayerCount = Object.values(localDC).reduce(
-        (sum, list) => sum + (Array.isArray(list) ? list.length : 0),
-        0
-      );
-      const remotePlayerCount = Object.values(remoteDC).reduce(
-        (sum, list) => sum + (Array.isArray(list) ? list.length : 0),
-        0
-      );
-
-      let mergedDC: Record<string, PlacedPlayer[]> = {};
-      if (remotePlayerCount > 0 && localPlayerCount === 0) {
-        mergedDC = { ...remoteDC };
-      } else if (localPlayerCount > 0 && remotePlayerCount === 0) {
-        mergedDC = { ...localDC };
-      } else if (remotePlayerCount > 0 && localPlayerCount > 0) {
-        mergedDC = { ...localDC, ...remoteDC };
-      } else {
-        mergedDC =
-          remoteState.depthChart !== undefined
-            ? { ...remoteState.depthChart }
-            : { ...(localState.depthChart || {}) };
-      }
-
-      const localSC = localState.scrimmageChart || {};
-      const remoteSC = remoteState.scrimmageChart || {};
-      const localSCCount = Object.values(localSC).reduce(
-        (sum, list) => sum + (Array.isArray(list) ? list.length : 0),
-        0
-      );
-      const remoteSCCount = Object.values(remoteSC).reduce(
-        (sum, list) => sum + (Array.isArray(list) ? list.length : 0),
-        0
-      );
-
-      let mergedSC: Record<string, PlacedPlayer[]> = {};
-      if (remoteSCCount > 0 && localSCCount === 0) {
-        mergedSC = { ...remoteSC };
-      } else if (localSCCount > 0 && remoteSCCount === 0) {
-        mergedSC = { ...localSC };
-      } else if (remoteSCCount > 0 && localSCCount > 0) {
-        mergedSC = { ...localSC, ...remoteSC };
-      } else {
-        mergedSC =
-          remoteState.scrimmageChart !== undefined
-            ? { ...remoteState.scrimmageChart }
-            : { ...(localState.scrimmageChart || {}) };
-      }
+      const mergedSC: Record<string, PlacedPlayer[]> =
+        remoteState.scrimmageChart !== undefined
+          ? remoteState.scrimmageChart
+          : localState.scrimmageChart || {};
 
       merged[weekKey] = {
         ...localState,
         ...remoteState,
-        formations: mergedFormations.length > 0 ? mergedFormations : (localState.formations || remoteState.formations || []),
+        formations: mergedFormations,
         depthChart: mergedDC,
         scrimmageChart: mergedSC,
       };
@@ -971,6 +919,12 @@ function mergeRemoteWeeklyData(
     if (payloadJson === lastSavedPayloadRef.current && scope !== 'force' && scope !== 'initial_seed') {
       return;
     }
+
+    // Never overwrite cloud if initial cloud pull has not completed yet
+    if (!initialCloudLoadDoneRef.current && scope !== 'force') {
+      return;
+    }
+
     lastSavedPayloadRef.current = payloadJson;
 
     setSyncStatus({ text: '☁️ Syncing...', color: '#f59e0b' });
@@ -1021,6 +975,15 @@ function mergeRemoteWeeklyData(
     setSyncStatus({ text: `✅ Saved & Synced (${timeStr})`, color: '#22c55e' });
   };
 
+  // Immediate non-debounced flush to storage & cloud
+  const flushAndSaveStateToStorage = async (scope: string = 'immediate') => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    await saveStateToStorage(scope);
+  };
+
   const debouncedSave = (scope: string = 'all') => {
     if (isRemoteSyncRef.current) {
       return;
@@ -1041,11 +1004,6 @@ function mergeRemoteWeeklyData(
   const handleForceRefresh = async () => {
     setSyncStatus({ text: '🔄 Fetching Latest Cloud Data...', color: '#f59e0b' });
     try {
-      const serverRes = await fetchServerState();
-      if (serverRes && serverRes.hasData && serverRes.state) {
-        applyRemoteState(serverRes.state, 'manual_server_refresh', serverRes.version, serverRes.updatedAt);
-        return;
-      }
       const { db } = getFirebaseServices();
       if (db) {
         const doc = await db.collection('teamData').doc('depthChartData').get();
@@ -1053,6 +1011,11 @@ function mergeRemoteWeeklyData(
           applyRemoteState(doc.data(), 'manual_firestore_refresh');
           return;
         }
+      }
+      const serverRes = await fetchServerState();
+      if (serverRes && serverRes.hasData && serverRes.state) {
+        applyRemoteState(serverRes.state, 'manual_server_refresh', serverRes.version, serverRes.updatedAt);
+        return;
       }
       setSyncStatus({ text: '✅ Up to Date', color: '#22c55e' });
     } catch (err) {
@@ -1069,29 +1032,77 @@ function mergeRemoteWeeklyData(
     );
   }, [printFontSize]);
 
+  // Global blur / focusout sync listener: whenever a coach clicks out of any input/box/dropdown,
+  // immediately flush changes to Firestore & Server so other coaches see them instantly
+  useEffect(() => {
+    const handleGlobalFocusOut = (e: FocusEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        flushAndSaveStateToStorage('focusout');
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      saveStateToStorage('beforeunload');
+    };
+
+    document.addEventListener('focusout', handleGlobalFocusOut);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('focusout', handleGlobalFocusOut);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
   // Initial Server Persistence & Live Real-Time Multi-Coach Subscription
   useEffect(() => {
     let isMounted = true;
 
     async function initPersistence() {
       try {
-        // 1. Fetch server state first
+        // 1. Check Firestore FIRST for existing cloud data
+        const { db } = getFirebaseServices();
+        let firestoreLoaded = false;
+        if (db) {
+          try {
+            const doc = await db.collection('teamData').doc('depthChartData').get();
+            if (!isMounted) return;
+            if (doc && doc.exists) {
+              const data = doc.data();
+              if (data) {
+                applyRemoteState(data, 'firestore_init');
+                initialCloudLoadDoneRef.current = true;
+                firestoreLoaded = true;
+              }
+            }
+          } catch (fErr) {
+            console.warn('Initial firestore fetch warning:', fErr);
+          }
+        }
+
+        // 2. Fetch server state
         const serverRes = await fetchServerState();
         if (!isMounted) return;
 
         if (serverRes && serverRes.hasData && serverRes.state) {
           applyRemoteState(serverRes.state, 'server_init', serverRes.version, serverRes.updatedAt);
-        } else {
-          // Empty server on first launch: seed server with current local data
           initialCloudLoadDoneRef.current = true;
-          saveStateToStorage('initial_seed');
+        } else if (!firestoreLoaded) {
+          initialCloudLoadDoneRef.current = true;
         }
       } catch (err) {
         console.warn('Initial server state fetch warning:', err);
         initialCloudLoadDoneRef.current = true;
       }
 
-      // 2. Subscribe to real-time multi-coach updates via SSE
+      // 3. Subscribe to real-time multi-coach updates via SSE
       const unsubscribeSSE = subscribeServerEvents((eventData) => {
         if (!isMounted) return;
         if (eventData.type === 'sync' && eventData.state) {
@@ -1100,7 +1111,7 @@ function mergeRemoteWeeklyData(
         }
       });
 
-      // 3. Resilient polling fallback every 4 seconds
+      // 4. Resilient polling fallback every 4 seconds
       const pollInterval = setInterval(async () => {
         if (!isMounted) return;
         try {
@@ -1121,10 +1132,23 @@ function mergeRemoteWeeklyData(
         }
       }, 4000);
 
-      // 4. Check server on window focus / tab visibility change
+      // 5. Check server & Firestore on window focus / tab visibility change
       const handleWindowFocus = async () => {
         if (!isMounted) return;
         try {
+          const { db } = getFirebaseServices();
+          if (db) {
+            const doc = await db.collection('teamData').doc('depthChartData').get();
+            if (doc && doc.exists) {
+              const data = doc.data();
+              if (data) {
+                const dataJson = safeJSONStringify(data);
+                if (dataJson !== lastSavedPayloadRef.current) {
+                  applyRemoteState(data, 'focus_firestore_sync');
+                }
+              }
+            }
+          }
           const serverRes = await fetchServerState();
           if (serverRes && serverRes.hasData && serverRes.state) {
             if (
@@ -1235,11 +1259,26 @@ function mergeRemoteWeeklyData(
           console.warn('Redirect auth result error:', err);
         });
 
-      const unsubscribeAuth = auth.onAuthStateChanged((user: any) => {
+      const unsubscribeAuth = auth.onAuthStateChanged(async (user: any) => {
         if (user) {
           setCurrentUser(user);
           setIsAuthModalOpen(false);
           applyUserPreferencesOnLogin(user.email);
+
+          // On user login, immediately pull all live team data from Firestore
+          if (db) {
+            try {
+              const doc = await db.collection('teamData').doc('depthChartData').get();
+              if (doc && doc.exists) {
+                const cloudData = doc.data();
+                if (cloudData) {
+                  applyRemoteState(cloudData, 'auth_login_pull');
+                }
+              }
+            } catch (loginPullErr) {
+              console.warn('Error pulling cloud data on login:', loginPullErr);
+            }
+          }
 
           // Check if coach is approved or master admin
           const cleanEmail = (user.email || '').toLowerCase().trim();
@@ -1343,7 +1382,6 @@ function mergeRemoteWeeklyData(
                 applyRemoteState(data, 'firestore_snapshot');
               } else {
                 initialCloudLoadDoneRef.current = true;
-                saveStateToStorage('all');
               }
             },
             (err: any) => {
@@ -2235,6 +2273,7 @@ function mergeRemoteWeeklyData(
     }
 
     draggedPlayerRef.current = null;
+    flushAndSaveStateToStorage('player_move');
   };
 
   const handleRemovePlayerFromCard = (posId: string, playerIndex: number) => {
@@ -2248,6 +2287,7 @@ function mergeRemoteWeeklyData(
       chart[posId].splice(playerIndex, 1);
       if (isScrimmage) updateCurrentWeekScrimmageChart(chart);
       else updateCurrentWeekDepthChart(chart);
+      flushAndSaveStateToStorage('player_remove');
     }
   };
 
@@ -2300,6 +2340,7 @@ function mergeRemoteWeeklyData(
         targetRow.positions[targetPIdx] = srcPos || null;
 
         updateCurrentWeekFormations(forms);
+        flushAndSaveStateToStorage('position_card_move');
       }
     }
     draggedPositionCardRef.current = null;
