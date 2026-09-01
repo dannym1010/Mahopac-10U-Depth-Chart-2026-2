@@ -33,6 +33,7 @@ import {
   AttendanceRecord,
   Team,
   formatWeekLabel,
+  SectionLock,
 } from './types';
 import {
   MASTER_ROSTER,
@@ -63,6 +64,10 @@ import {
   checkServerHealth,
   saveServerState,
   subscribeServerEvents,
+  fetchServerLocks,
+  acquireServerLock,
+  releaseServerLock,
+  heartbeatServerLock,
   normalizePracticeTemplates,
   normalizeCascadingDrills,
   CLIENT_ID,
@@ -248,6 +253,9 @@ export default function App() {
     color: '#22c55e',
   });
 
+  // Real-Time Concurrency Section Locks
+  const [activeLocks, setActiveLocks] = useState<SectionLock[]>([]);
+
   // Modal Dialog States
   const [isPreferencesModalOpen, setIsPreferencesModalOpen] = useState(false);
   const [isSeasonConfigModalOpen, setIsSeasonConfigModalOpen] = useState(false);
@@ -341,6 +349,110 @@ export default function App() {
       attendanceLogs,
     };
   });
+
+  // Determine current active depth chart unit
+  const currentDepthUnit =
+    activeUnit === 'depth_chart'
+      ? (depthSubUnit === 'scrimmage' ? 'offense' : (depthSubUnit || 'offense'))
+      : (['offense', 'defense', 'st', 'groups'].includes(activeUnit)
+          ? (activeUnit as 'offense' | 'defense' | 'st' | 'groups')
+          : 'offense');
+
+  // Find active lock for current section
+  const currentUnitLock = activeLocks.find((l) => {
+    if (!l) return false;
+    const sameTeam = l.teamId === activeTeamId;
+    const sameWeek = String(l.week) === String(currentWeek);
+    const sameUnit = l.unit === currentDepthUnit || l.unit === 'all';
+    const notExpired = l.expiresAt > Date.now();
+    return sameTeam && sameWeek && sameUnit && notExpired;
+  });
+
+  const currentUserEmail = (currentUser?.email || '').toLowerCase().trim();
+  const lockHolderEmail = (currentUnitLock?.holderEmail || '').toLowerCase().trim();
+
+  const isLockedByOther = Boolean(
+    currentUnitLock &&
+    currentUserEmail &&
+    lockHolderEmail &&
+    lockHolderEmail !== currentUserEmail
+  );
+
+  const isHeldByMe = Boolean(
+    currentUnitLock &&
+    currentUserEmail &&
+    lockHolderEmail &&
+    lockHolderEmail === currentUserEmail
+  );
+
+  const lockHolderName = currentUnitLock?.holderName || currentUnitLock?.holderEmail || 'Another Coach';
+
+  const handleAcquireLock = async (
+    unitName: string = currentDepthUnit,
+    weekNum: string = currentWeek,
+    force = false
+  ) => {
+    const authorEmail = currentUser?.email || 'Coach';
+    const authorName = currentUser?.displayName || authorEmail.split('@')[0];
+    const res = await acquireServerLock({
+      teamId: activeTeamId,
+      week: String(weekNum),
+      unit: unitName,
+      holderEmail: authorEmail,
+      holderName: authorName,
+      force,
+    });
+    if (res && res.lock) {
+      setActiveLocks((prev) => {
+        const filtered = prev.filter(
+          (l) => !(l.teamId === activeTeamId && String(l.week) === String(weekNum) && l.unit === unitName)
+        );
+        return [...filtered, res.lock!];
+      });
+    }
+    return res;
+  };
+
+  const handleReleaseLock = async (
+    unitName: string = currentDepthUnit,
+    weekNum: string = currentWeek
+  ) => {
+    const authorEmail = currentUser?.email || 'Coach';
+    const ok = await releaseServerLock({
+      teamId: activeTeamId,
+      week: String(weekNum),
+      unit: unitName,
+      holderEmail: authorEmail,
+    });
+    if (ok) {
+      setActiveLocks((prev) =>
+        prev.filter(
+          (l) => !(l.teamId === activeTeamId && String(l.week) === String(weekNum) && l.unit === unitName)
+        )
+      );
+    }
+  };
+
+  const handleTakeOverLock = async (
+    unitName: string = currentDepthUnit,
+    weekNum: string = currentWeek
+  ) => {
+    await handleAcquireLock(unitName, weekNum, true);
+  };
+
+  // Heartbeat to keep active editing locks alive
+  useEffect(() => {
+    if (!isHeldByMe || !currentUser?.email) return;
+    const interval = setInterval(async () => {
+      await heartbeatServerLock({
+        teamId: activeTeamId,
+        week: String(currentWeek),
+        unit: currentDepthUnit,
+        holderEmail: currentUser.email,
+      });
+    }, 25000);
+    return () => clearInterval(interval);
+  }, [isHeldByMe, activeTeamId, currentWeek, currentDepthUnit, currentUser?.email]);
 
   // Helper to compute team-scoped week key
   const getScopedWeekKey = (teamId: string, week: string) => `${teamId}__week_${week}`;
@@ -610,18 +722,17 @@ function mergeRemoteWeeklyData(
       const remoteDC = remoteState.depthChart || {};
       const mergedDC: Record<string, PlacedPlayer[]> = { ...remoteDC };
 
-      for (const posId of Object.keys(localDC)) {
-        if (localActiveUnitPosIds.has(posId)) {
-          mergedDC[posId] = localDC[posId];
-        }
+      for (const posId of localActiveUnitPosIds) {
+        mergedDC[posId] = localDC[posId] || [];
       }
 
       const localSC = localState.scrimmageChart || {};
       const remoteSC = remoteState.scrimmageChart || {};
       const mergedSC: Record<string, PlacedPlayer[]> = { ...remoteSC };
       if (activeUnit === 'scrimmage') {
-        for (const posId of Object.keys(localSC)) {
-          mergedSC[posId] = localSC[posId];
+        const localScrimmagePosIds = getUnitPositionIds(localFormations, 'scrimmage');
+        for (const posId of localScrimmagePosIds) {
+          mergedSC[posId] = localSC[posId] || [];
         }
       }
 
@@ -1087,9 +1198,16 @@ function mergeRemoteWeeklyData(
           }
         }
 
-        // 2. Fetch server state
-        const serverRes = await fetchServerState();
+        // 2. Fetch server state & locks
+        const [serverRes, locksRes] = await Promise.all([
+          fetchServerState(),
+          fetchServerLocks(),
+        ]);
         if (!isMounted) return;
+
+        if (Array.isArray(locksRes)) {
+          setActiveLocks(locksRes);
+        }
 
         if (serverRes && serverRes.hasData && serverRes.state) {
           applyRemoteState(serverRes.state, 'server_init', serverRes.version, serverRes.updatedAt);
@@ -1105,7 +1223,11 @@ function mergeRemoteWeeklyData(
       // 3. Subscribe to real-time multi-coach updates via SSE
       const unsubscribeSSE = subscribeServerEvents((eventData) => {
         if (!isMounted) return;
-        if (eventData.type === 'sync' && eventData.state) {
+        if (eventData.type === 'connected' && Array.isArray(eventData.locks)) {
+          setActiveLocks(eventData.locks);
+        } else if (eventData.type === 'locks_update' && Array.isArray(eventData.locks)) {
+          setActiveLocks(eventData.locks);
+        } else if (eventData.type === 'sync' && eventData.state) {
           if (eventData.senderClientId === CLIENT_ID) return;
           applyRemoteState(eventData.state, 'sse_live_update', eventData.version, eventData.updatedAt);
         }
@@ -1115,7 +1237,13 @@ function mergeRemoteWeeklyData(
       const pollInterval = setInterval(async () => {
         if (!isMounted) return;
         try {
-          const health = await checkServerHealth();
+          const [health, currentLocks] = await Promise.all([
+            checkServerHealth(),
+            fetchServerLocks(),
+          ]);
+          if (Array.isArray(currentLocks)) {
+            setActiveLocks(currentLocks);
+          }
           if (health && health.hasCachedState) {
             if (
               (typeof health.stateVersion === 'number' && health.stateVersion > localServerVersionRef.current) ||
@@ -3904,11 +4032,58 @@ function mergeRemoteWeeklyData(
   /* =========================================================================
      PLAYBOOKS & GUIDES ACTIONS
      ========================================================================= */
+  const handleSaveGuideHtml = (main: string, sub: string, htmlContent: string) => {
+    setGuideTree((prev) => {
+      const next = {
+        ...prev,
+        [main]: {
+          ...(prev[main] || {}),
+          [sub]: htmlContent,
+        },
+      };
+      latestStateRef.current.guideTree = next;
+      safeJSONSet('footballPdfGuidesTree', next);
+      return next;
+    });
+    flushAndSaveStateToStorage('guide_html_update');
+  };
+
+  const handleClearGuideDocument = (main: string, sub: string) => {
+    setGuideTree((prev) => {
+      const next = {
+        ...prev,
+        [main]: {
+          ...(prev[main] || {}),
+          [sub]: '',
+        },
+      };
+      latestStateRef.current.guideTree = next;
+      safeJSONSet('footballPdfGuidesTree', next);
+      return next;
+    });
+    flushAndSaveStateToStorage('guide_clear');
+  };
+
   const handleUploadGuideDocument = (
     main: string,
     sub: string,
     file: File
   ) => {
+    const isHtmlFile =
+      file.name.toLowerCase().endsWith('.html') ||
+      file.name.toLowerCase().endsWith('.htm') ||
+      file.type === 'text/html';
+
+    if (isHtmlFile) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = (e.target?.result as string) || '';
+        handleSaveGuideHtml(main, sub, content);
+      };
+      reader.readAsText(file);
+      return;
+    }
+
     const { storage } = getFirebaseServices();
     if (storage) {
       const storageRef = storage.ref(`playbook_guides/${Date.now()}_${file.name}`);
@@ -3916,35 +4091,52 @@ function mergeRemoteWeeklyData(
         .put(file)
         .then((snapshot: any) => snapshot.ref.getDownloadURL())
         .then((downloadUrl: string) => {
-          setGuideTree((prev) => ({
-            ...prev,
-            [main]: {
-              ...(prev[main] || {}),
-              [sub]: downloadUrl,
-            },
-          }));
-          alert('Document uploaded and live in cloud storage!');
+          setGuideTree((prev) => {
+            const next = {
+              ...prev,
+              [main]: {
+                ...(prev[main] || {}),
+                [sub]: downloadUrl,
+              },
+            };
+            latestStateRef.current.guideTree = next;
+            safeJSONSet('footballPdfGuidesTree', next);
+            return next;
+          });
+          flushAndSaveStateToStorage('guide_upload');
         })
         .catch((err: any) => {
           console.warn('Storage upload error, falling back to local data URL:', err);
           const localUrl = URL.createObjectURL(file);
-          setGuideTree((prev) => ({
-            ...prev,
-            [main]: {
-              ...(prev[main] || {}),
-              [sub]: localUrl,
-            },
-          }));
+          setGuideTree((prev) => {
+            const next = {
+              ...prev,
+              [main]: {
+                ...(prev[main] || {}),
+                [sub]: localUrl,
+              },
+            };
+            latestStateRef.current.guideTree = next;
+            safeJSONSet('footballPdfGuidesTree', next);
+            return next;
+          });
+          flushAndSaveStateToStorage('guide_upload_local');
         });
     } else {
       const localUrl = URL.createObjectURL(file);
-      setGuideTree((prev) => ({
-        ...prev,
-        [main]: {
-          ...(prev[main] || {}),
-          [sub]: localUrl,
-        },
-      }));
+      setGuideTree((prev) => {
+        const next = {
+          ...prev,
+          [main]: {
+            ...(prev[main] || {}),
+            [sub]: localUrl,
+          },
+        };
+        latestStateRef.current.guideTree = next;
+        safeJSONSet('footballPdfGuidesTree', next);
+        return next;
+      });
+      flushAndSaveStateToStorage('guide_upload_local');
     }
   };
 
@@ -4972,6 +5164,13 @@ function mergeRemoteWeeklyData(
                 onDuplicateFormationDirect={handleDuplicateFormationDirect}
                 onMovePositionDirect={handleMovePositionDirect}
                 onCopyPositionDirect={handleCopyPositionDirect}
+                isLockedByOther={isLockedByOther}
+                lockHolderName={lockHolderName}
+                lockHolderEmail={lockHolderEmail}
+                isHeldByMe={isHeldByMe}
+                onAcquireLock={() => handleAcquireLock(currentDepthUnit, currentWeek, false)}
+                onReleaseLock={() => handleReleaseLock(currentDepthUnit, currentWeek)}
+                onTakeOverLock={() => handleTakeOverLock(currentDepthUnit, currentWeek)}
               />
               </>
             )}
@@ -5150,28 +5349,44 @@ function mergeRemoteWeeklyData(
                 onSelectMain={setActiveGuideMain}
                 onSelectSub={setActiveGuideSub}
                 onUploadDocument={handleUploadGuideDocument}
+                onSaveHtmlContent={handleSaveGuideHtml}
+                onClearDocument={handleClearGuideDocument}
                 onAddMainFolder={(name) => {
-                  setGuideTree((prev) => ({ ...prev, [name]: { 'Full Playbook': '' } }));
-                  setGuideOrder((prev) => ({
-                    main: [...prev.main, name],
-                    sub: { ...prev.sub, [name]: ['Full Playbook'] },
-                  }));
+                  const updatedTree = { ...guideTree, [name]: { 'Full Playbook': '' } };
+                  const updatedOrder = {
+                    main: [...guideOrder.main, name],
+                    sub: { ...guideOrder.sub, [name]: ['Full Playbook'] },
+                  };
+                  setGuideTree(updatedTree);
+                  setGuideOrder(updatedOrder);
+                  latestStateRef.current.guideTree = updatedTree;
+                  latestStateRef.current.guideOrder = updatedOrder;
+                  safeJSONSet('footballPdfGuidesTree', updatedTree);
+                  safeJSONSet('footballPdfGuidesOrder', updatedOrder);
                   setActiveGuideMain(name);
                   setActiveGuideSub('Full Playbook');
+                  flushAndSaveStateToStorage('playbook_add_main');
                 }}
                 onAddSubTab={(main, name) => {
-                  setGuideTree((prev) => ({
-                    ...prev,
-                    [main]: { ...(prev[main] || {}), [name]: '' },
-                  }));
-                  setGuideOrder((prev) => ({
-                    ...prev,
+                  const updatedTree = {
+                    ...guideTree,
+                    [main]: { ...(guideTree[main] || {}), [name]: '' },
+                  };
+                  const updatedOrder = {
+                    ...guideOrder,
                     sub: {
-                      ...prev.sub,
-                      [main]: [...(prev.sub[main] || []), name],
+                      ...guideOrder.sub,
+                      [main]: [...(guideOrder.sub[main] || []), name],
                     },
-                  }));
+                  };
+                  setGuideTree(updatedTree);
+                  setGuideOrder(updatedOrder);
+                  latestStateRef.current.guideTree = updatedTree;
+                  latestStateRef.current.guideOrder = updatedOrder;
+                  safeJSONSet('footballPdfGuidesTree', updatedTree);
+                  safeJSONSet('footballPdfGuidesOrder', updatedOrder);
                   setActiveGuideSub(name);
+                  flushAndSaveStateToStorage('playbook_add_sub');
                 }}
                 onRenameMainFolder={(oldName, newName) => {
                   const updatedTree = { ...guideTree };
@@ -5187,7 +5402,12 @@ function mergeRemoteWeeklyData(
                     delete updatedOrder.sub[oldName];
                   }
                   setGuideOrder(updatedOrder);
+                  latestStateRef.current.guideTree = updatedTree;
+                  latestStateRef.current.guideOrder = updatedOrder;
+                  safeJSONSet('footballPdfGuidesTree', updatedTree);
+                  safeJSONSet('footballPdfGuidesOrder', updatedOrder);
                   if (activeGuideMain === oldName) setActiveGuideMain(newName);
+                  flushAndSaveStateToStorage('playbook_rename_main');
                 }}
                 onRenameSubTab={(main, oldName, newName) => {
                   const updatedTree = { ...guideTree };
@@ -5204,7 +5424,12 @@ function mergeRemoteWeeklyData(
                     if (sIdx !== -1) updatedOrder.sub[main][sIdx] = newName;
                     setGuideOrder(updatedOrder);
                   }
+                  latestStateRef.current.guideTree = updatedTree;
+                  latestStateRef.current.guideOrder = updatedOrder;
+                  safeJSONSet('footballPdfGuidesTree', updatedTree);
+                  safeJSONSet('footballPdfGuidesOrder', updatedOrder);
                   if (activeGuideSub === oldName) setActiveGuideSub(newName);
+                  flushAndSaveStateToStorage('playbook_rename_sub');
                 }}
                 onDeleteMainFolder={(name) => {
                   const updatedTree = { ...guideTree };
@@ -5215,13 +5440,19 @@ function mergeRemoteWeeklyData(
                   updatedOrder.main = updatedOrder.main.filter((m) => m !== name);
                   delete updatedOrder.sub[name];
                   setGuideOrder(updatedOrder);
+                  latestStateRef.current.guideTree = updatedTree;
+                  latestStateRef.current.guideOrder = updatedOrder;
+                  safeJSONSet('footballPdfGuidesTree', updatedTree);
+                  safeJSONSet('footballPdfGuidesOrder', updatedOrder);
 
                   if (activeGuideMain === name) {
-                    setActiveGuideMain(updatedOrder.main[0] || 'Offense');
+                    const nextMain = updatedOrder.main[0] || 'Offense';
+                    setActiveGuideMain(nextMain);
                     setActiveGuideSub(
-                      updatedOrder.sub[updatedOrder.main[0]]?.[0] || ''
+                      updatedOrder.sub[nextMain]?.[0] || 'Full Playbook'
                     );
                   }
+                  flushAndSaveStateToStorage('playbook_delete_main');
                 }}
                 onDeleteSubTab={(main, name) => {
                   const updatedTree = { ...guideTree };
@@ -5240,6 +5471,11 @@ function mergeRemoteWeeklyData(
                       setActiveGuideSub(updatedOrder.sub[main][0] || '');
                     }
                   }
+                  latestStateRef.current.guideTree = updatedTree;
+                  latestStateRef.current.guideOrder = updatedOrder;
+                  safeJSONSet('footballPdfGuidesTree', updatedTree);
+                  safeJSONSet('footballPdfGuidesOrder', updatedOrder);
+                  flushAndSaveStateToStorage('playbook_delete_sub');
                 }}
                 onMoveMainFolder={(name, direction) => {
                   const idx = guideOrder.main.indexOf(name);
@@ -5249,7 +5485,11 @@ function mergeRemoteWeeklyData(
                   const list = [...guideOrder.main];
                   const [moved] = list.splice(idx, 1);
                   list.splice(newIdx, 0, moved);
-                  setGuideOrder({ ...guideOrder, main: list });
+                  const updatedOrder = { ...guideOrder, main: list };
+                  setGuideOrder(updatedOrder);
+                  latestStateRef.current.guideOrder = updatedOrder;
+                  safeJSONSet('footballPdfGuidesOrder', updatedOrder);
+                  flushAndSaveStateToStorage('playbook_move_main');
                 }}
                 onMoveSubTab={(main, name, direction) => {
                   const subList = guideOrder.sub[main] || [];
@@ -5260,10 +5500,14 @@ function mergeRemoteWeeklyData(
                   const list = [...subList];
                   const [moved] = list.splice(idx, 1);
                   list.splice(newIdx, 0, moved);
-                  setGuideOrder({
+                  const updatedOrder = {
                     ...guideOrder,
                     sub: { ...guideOrder.sub, [main]: list },
-                  });
+                  };
+                  setGuideOrder(updatedOrder);
+                  latestStateRef.current.guideOrder = updatedOrder;
+                  safeJSONSet('footballPdfGuidesOrder', updatedOrder);
+                  flushAndSaveStateToStorage('playbook_move_sub');
                 }}
               />
             )}

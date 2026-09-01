@@ -22,6 +22,42 @@ let cachedState: any = null;
 let stateUpdatedAt = Date.now();
 let stateVersion = 1;
 
+// Multi-coach section lock storage
+interface ServerSectionLock {
+  id: string; // e.g. "team_10u_week_1_offense"
+  teamId: string;
+  week: string;
+  unit: string;
+  holderEmail: string;
+  holderName: string;
+  acquiredAt: number;
+  expiresAt: number;
+}
+
+const activeLocks = new Map<string, ServerSectionLock>();
+
+function cleanExpiredLocks() {
+  const now = Date.now();
+  for (const [id, lock] of activeLocks.entries()) {
+    if (lock.expiresAt <= now) {
+      activeLocks.delete(id);
+    }
+  }
+}
+
+function broadcastLocks() {
+  cleanExpiredLocks();
+  const locksArray = Array.from(activeLocks.values());
+  const payload = `data: ${JSON.stringify({ type: 'locks_update', locks: locksArray })}\n\n`;
+  for (const client of sseClients) {
+    try {
+      client.write(payload);
+    } catch {
+      sseClients.delete(client);
+    }
+  }
+}
+
 function getFormationUnitPosIds(formations: any[], unit: string): Set<string> {
   const ids = new Set<string>();
   if (Array.isArray(formations)) {
@@ -81,14 +117,12 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
         mergedFormations = result;
       }
 
-      // Merge Depth Chart per position ID (Offense & Defense positions coexist safely without ghost retention)
+      // Merge Depth Chart per position ID without ghost retention or resurrecting removed players
       const curDC: Record<string, any> = curWeekState.depthChart || {};
       const incDC: Record<string, any> = incWeekState.depthChart || {};
-      const curDCCount: number = Object.values(curDC).reduce<number>((sum: number, list: any) => sum + (Array.isArray(list) ? list.length : 0), 0);
-      const incDCCount: number = Object.values(incDC).reduce<number>((sum: number, list: any) => sum + (Array.isArray(list) ? list.length : 0), 0);
       let mergedDC: Record<string, any> = {};
 
-      if (metadata?.activeUnit && metadata.activeUnit !== 'all') {
+      if (metadata?.activeUnit && metadata.activeUnit !== 'all' && metadata.activeUnit !== 'scrimmage' && metadata.activeUnit !== 'practice') {
         const activeUnitPosIds = getFormationUnitPosIds(mergedFormations, metadata.activeUnit);
         
         // Retain positions from other units
@@ -98,40 +132,25 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
           }
         }
         
-        // Take incoming positions for active unit (or any extra position in incDC)
+        // Take incoming positions for active unit (explicitly setting empty or updated arrays)
         for (const [posId, players] of Object.entries(incDC)) {
           if (activeUnitPosIds.has(posId) || !mergedDC[posId]) {
             mergedDC[posId] = players;
           }
         }
       } else {
-        if (incDCCount > 0 && curDCCount === 0) {
-          mergedDC = { ...incDC };
-        } else if (curDCCount > 0 && incDCCount === 0) {
-          mergedDC = { ...curDC };
-        } else if (incDCCount > 0 && curDCCount > 0) {
-          mergedDC = { ...curDC, ...incDC };
-        } else {
-          mergedDC = { ...incDC };
-        }
+        // Whole depth chart save: incoming state is authoritative
+        mergedDC = { ...incDC };
       }
 
       // Merge Scrimmage Chart per position ID
       const curSC: Record<string, any> = curWeekState.scrimmageChart || {};
       const incSC: Record<string, any> = incWeekState.scrimmageChart || {};
-      const curSCCount: number = Object.values(curSC).reduce<number>((sum: number, list: any) => sum + (Array.isArray(list) ? list.length : 0), 0);
-      const incSCCount: number = Object.values(incSC).reduce<number>((sum: number, list: any) => sum + (Array.isArray(list) ? list.length : 0), 0);
       let mergedSC: Record<string, any> = {};
       if (metadata?.activeUnit === 'scrimmage') {
-        mergedSC = { ...curSC, ...incSC };
+        mergedSC = { ...incSC };
       } else if (metadata?.scope === 'all' || !metadata?.activeUnit) {
-        if (incSCCount > 0 && curSCCount === 0) {
-          mergedSC = { ...incSC };
-        } else if (curSCCount > 0 && incSCCount === 0) {
-          mergedSC = { ...curSC };
-        } else {
-          mergedSC = { ...curSC, ...incSC };
-        }
+        mergedSC = { ...incSC };
       } else {
         mergedSC = { ...curSC, ...incSC };
       }
@@ -432,6 +451,108 @@ async function startServer() {
     }
   });
 
+  // Multi-Coach Section Lock Endpoints
+  app.get('/api/locks', (req, res) => {
+    cleanExpiredLocks();
+    res.json({
+      success: true,
+      locks: Array.from(activeLocks.values()),
+    });
+  });
+
+  app.post('/api/locks/acquire', (req, res) => {
+    try {
+      cleanExpiredLocks();
+      const { teamId, week, unit, holderEmail, holderName, force } = req.body;
+      if (!teamId || !week || !unit || !holderEmail) {
+        return res.status(400).json({ error: 'Missing required lock fields.' });
+      }
+
+      const lockId = `${teamId}_wk${week}_${unit}`;
+      const existing = activeLocks.get(lockId);
+      const now = Date.now();
+
+      if (existing && existing.expiresAt > now && existing.holderEmail !== holderEmail && !force) {
+        return res.json({
+          success: false,
+          lockedByOther: true,
+          existingLock: existing,
+          message: `Locked by ${existing.holderName || existing.holderEmail}`,
+        });
+      }
+
+      const newLock: ServerSectionLock = {
+        id: lockId,
+        teamId: String(teamId),
+        week: String(week),
+        unit: String(unit),
+        holderEmail: String(holderEmail),
+        holderName: String(holderName || holderEmail),
+        acquiredAt: now,
+        expiresAt: now + 90000, // 90 seconds lease
+      };
+
+      activeLocks.set(lockId, newLock);
+      broadcastLocks();
+
+      return res.json({
+        success: true,
+        lock: newLock,
+        locks: Array.from(activeLocks.values()),
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: err?.message || 'Lock acquire error' });
+    }
+  });
+
+  app.post('/api/locks/release', (req, res) => {
+    try {
+      cleanExpiredLocks();
+      const { teamId, week, unit, holderEmail, force } = req.body;
+      const lockId = `${teamId}_wk${week}_${unit}`;
+      const existing = activeLocks.get(lockId);
+
+      if (existing) {
+        if (existing.holderEmail === holderEmail || force) {
+          activeLocks.delete(lockId);
+          broadcastLocks();
+        }
+      }
+
+      return res.json({
+        success: true,
+        locks: Array.from(activeLocks.values()),
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: err?.message || 'Lock release error' });
+    }
+  });
+
+  app.post('/api/locks/heartbeat', (req, res) => {
+    try {
+      cleanExpiredLocks();
+      const { teamId, week, unit, holderEmail } = req.body;
+      const lockId = `${teamId}_wk${week}_${unit}`;
+      const existing = activeLocks.get(lockId);
+      const now = Date.now();
+
+      if (existing && existing.holderEmail === holderEmail) {
+        existing.expiresAt = now + 90000;
+        return res.json({
+          success: true,
+          lock: existing,
+        });
+      }
+
+      return res.json({
+        success: false,
+        message: 'Lock not found or expired',
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: err?.message || 'Lock heartbeat error' });
+    }
+  });
+
   // Real-time SSE Endpoint for multi-coach live sync
   app.get('/api/state/events', (req, res) => {
     res.writeHead(200, {
@@ -441,7 +562,14 @@ async function startServer() {
       'X-Accel-Buffering': 'no',
     });
 
-    res.write(`data: ${JSON.stringify({ type: 'connected', version: stateVersion, updatedAt: stateUpdatedAt })}\n\n`);
+    cleanExpiredLocks();
+    const initialPayload = {
+      type: 'connected',
+      version: stateVersion,
+      updatedAt: stateUpdatedAt,
+      locks: Array.from(activeLocks.values()),
+    };
+    res.write(`data: ${JSON.stringify(initialPayload)}\n\n`);
 
     sseClients.add(res);
 

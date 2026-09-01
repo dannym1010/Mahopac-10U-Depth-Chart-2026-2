@@ -384,3 +384,14 @@ export interface PlaybookGuideOrder {
   main: string[];
   sub: Record<string, string[]>;
 }
+
+export interface SectionLock {
+  id: string; // e.g. "team_10u_week_1_offense" or "team_10u_week_1_all"
+  teamId: string;
+  week: string;
+  unit: string; // 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage' | 'practice' | 'all'
+  holderEmail: string;
+  holderName: string;
+  acquiredAt: number;
+  expiresAt: number;
+}

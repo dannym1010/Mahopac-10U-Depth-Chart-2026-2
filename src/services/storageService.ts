@@ -460,3 +460,71 @@ export function parseTimeString(str: string): number {
   }
   return 0;
 }
+
+// Multi-Coach Section Locks (Depth Chart / Units)
+export async function fetchServerLocks(): Promise<any[]> {
+  try {
+    const res = await fetch('/api/locks', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      return Array.isArray(data.locks) ? data.locks : [];
+    }
+  } catch {}
+  return [];
+}
+
+export async function acquireServerLock(params: {
+  teamId: string;
+  week: string;
+  unit: string;
+  holderEmail: string;
+  holderName: string;
+  force?: boolean;
+}): Promise<{ success: boolean; lock?: any; lockedByOther?: boolean; existingLock?: any; message?: string }> {
+  try {
+    const res = await fetch('/api/locks/acquire', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+  return { success: false };
+}
+
+export async function releaseServerLock(params: {
+  teamId: string;
+  week: string;
+  unit: string;
+  holderEmail: string;
+  force?: boolean;
+}): Promise<boolean> {
+  try {
+    const res = await fetch('/api/locks/release', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    return res.ok;
+  } catch {}
+  return false;
+}
+
+export async function heartbeatServerLock(params: {
+  teamId: string;
+  week: string;
+  unit: string;
+  holderEmail: string;
+}): Promise<boolean> {
+  try {
+    const res = await fetch('/api/locks/heartbeat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    return res.ok;
+  } catch {}
+  return false;
+}
