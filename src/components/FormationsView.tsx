@@ -323,6 +323,12 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
   const [formationNameInput, setFormationNameInput] = useState('');
   const [formationTemplateKey, setFormationTemplateKey] = useState('');
 
+  // Dedicated In-App Delete Formation Confirmation Modal Target
+  const [deleteFormationTarget, setDeleteFormationTarget] = useState<{
+    formId: string;
+    formName: string;
+  } | null>(null);
+
   const [movePositionTarget, setMovePositionTarget] = useState<{
     formId: string;
     rIdx: number;
@@ -979,45 +985,78 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                         </div>
 
                         {userRole === 'admin' && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (isLockedByOther) {
-                                if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Take over editing?`)) {
-                                  if (onTakeOverLock) onTakeOverLock();
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormationNameInput(form.name);
+                                setFormationModalState({
+                                  isOpen: true,
+                                  mode: 'rename',
+                                  formId: form.id,
+                                  unit: form.unit,
+                                });
+                              }}
+                              className="p-1.5 text-slate-300 hover:text-indigo-400 hover:bg-slate-800 border border-slate-700 rounded-xl transition-all cursor-pointer shrink-0"
+                              title="Rename formation"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDeleteFormationTarget({
+                                  formId: form.id,
+                                  formName: form.name,
+                                });
+                              }}
+                              className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 border border-rose-900/50 rounded-xl transition-all cursor-pointer shrink-0"
+                              title="Delete formation"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isLockedByOther) {
+                                  if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Take over editing?`)) {
+                                    if (onTakeOverLock) onTakeOverLock();
+                                  }
+                                  return;
                                 }
-                                return;
-                              }
-                              setRowLabelInput('');
-                              setRowLabelModalTarget({ formId: form.id, isNew: true });
-                            }}
-                            className="px-2.5 py-1 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 flex items-center gap-1 cursor-pointer shrink-0"
-                          >
-                            <Plus className="w-3.5 h-3.5 text-indigo-400" />
-                            <span>Add Level</span>
-                          </button>
+                                setRowLabelInput('');
+                                setRowLabelModalTarget({ formId: form.id, isNew: true });
+                              }}
+                              className="px-2 py-1 text-[11px] font-bold bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 rounded-xl border border-indigo-500/40 flex items-center gap-1 cursor-pointer shrink-0"
+                              title="Add Level to Formation"
+                            >
+                              <Plus className="w-3.5 h-3.5 text-indigo-400" />
+                              <span className="hidden sm:inline">Add Level</span>
+                            </button>
+                          </div>
                         )}
                       </div>
 
                       {/* Pocket Table Grid */}
                       <div className="overflow-x-auto divide-y divide-slate-800/80">
                         {/* Table Header Bar */}
-                        <div className="min-w-[640px] grid grid-cols-12 bg-slate-900/95 text-[10.5px] font-black uppercase text-slate-400 px-3 py-2 border-b border-slate-800 tracking-wider">
-                          <div className="col-span-2">POS</div>
-                          <div className="col-span-3 flex items-center gap-1.5 text-zinc-100">
-                            <span className="w-2 h-2 rounded-full bg-zinc-300 ring-2 ring-zinc-700"></span>
-                            <span>BLACK (1ST)</span>
+                        <div className="min-w-[490px] grid grid-cols-[48px_repeat(4,minmax(0,1fr))] bg-slate-900/95 text-[10px] font-black uppercase text-slate-400 px-2 py-2 border-b border-slate-800 tracking-wider items-center gap-1.5">
+                          <div className="text-left font-black text-slate-400">POS</div>
+                          <div className="flex items-center gap-1 text-zinc-100 min-w-0 truncate">
+                            <span className="w-2 h-2 rounded-full bg-zinc-300 ring-1 ring-zinc-600 shrink-0"></span>
+                            <span className="truncate">BLACK</span>
                           </div>
-                          <div className="col-span-3 flex items-center gap-1.5 text-amber-400">
-                            <span className="w-2 h-2 rounded-full bg-amber-400 ring-2 ring-amber-900"></span>
-                            <span>GOLD (2ND)</span>
+                          <div className="flex items-center gap-1 text-amber-400 min-w-0 truncate">
+                            <span className="w-2 h-2 rounded-full bg-amber-400 ring-1 ring-amber-700 shrink-0"></span>
+                            <span className="truncate">GOLD</span>
                           </div>
-                          <div className="col-span-2 flex items-center gap-1.5 text-blue-400">
-                            <span className="w-2 h-2 rounded-full bg-blue-400 ring-2 ring-blue-900"></span>
-                            <span>BLUE (3RD)</span>
+                          <div className="flex items-center gap-1 text-blue-400 min-w-0 truncate">
+                            <span className="w-2 h-2 rounded-full bg-blue-400 ring-1 ring-blue-700 shrink-0"></span>
+                            <span className="truncate">BLUE</span>
                           </div>
-                          <div className="col-span-2 flex items-center gap-1.5 text-slate-400">
-                            <span>BACKUPS</span>
+                          <div className="flex items-center gap-1 text-slate-300 min-w-0 truncate">
+                            <span className="w-2 h-2 rounded-full bg-slate-400 ring-1 ring-slate-600 shrink-0"></span>
+                            <span className="truncate">BACKUPS</span>
                           </div>
                         </div>
 
@@ -1032,22 +1071,20 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                           return (
                             <div
                               key={pos.id}
-                              className="min-w-[640px] grid grid-cols-12 px-3 py-2.5 items-center gap-2 hover:bg-slate-800/40 transition-colors"
+                              className="min-w-[490px] grid grid-cols-[48px_repeat(4,minmax(0,1fr))] px-2 py-2 items-center gap-1.5 hover:bg-slate-800/40 transition-colors"
                             >
                               {/* Position Badge & Level */}
-                              <div className="col-span-2 flex flex-col items-start gap-1">
-                                <div className="flex items-center gap-1">
-                                  <span className="px-2 py-0.5 bg-indigo-600/90 text-white font-black text-xs rounded-lg border border-indigo-400/40 shadow-xs">
-                                    {pos.name}
-                                  </span>
-                                </div>
-                                <span className="text-[9.5px] font-bold text-slate-500 truncate max-w-[80px]">
+                              <div className="flex flex-col items-start gap-0.5 min-w-0">
+                                <span className="px-1.5 py-0.5 bg-indigo-600/90 text-white font-black text-[11px] rounded-md border border-indigo-400/40 shadow-xs leading-none">
+                                  {pos.name}
+                                </span>
+                                <span className="text-[8.5px] font-bold text-slate-500 truncate max-w-[44px]">
                                   {rowLabel}
                                 </span>
                               </div>
 
                               {/* BLACK (1st String / Starter) */}
-                              <div className="col-span-3 min-w-0">
+                              <div className="min-w-0">
                                 {blackPlayer ? (
                                   <div
                                     onClick={() => {
@@ -1062,23 +1099,23 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="p-1.5 bg-black border border-zinc-700 hover:border-amber-400 rounded-xl flex items-center justify-between gap-1.5 shadow-sm cursor-pointer group"
+                                    className="p-1 bg-black border border-zinc-700 hover:border-amber-400 rounded-lg flex items-center justify-between gap-1 shadow-xs cursor-pointer group"
                                   >
-                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                      <span className="w-6 h-6 rounded-lg bg-amber-400 text-slate-950 font-mono font-black text-[11px] flex items-center justify-center shrink-0">
+                                    <div className="flex items-center gap-1 min-w-0 flex-1">
+                                      <span className="w-5 h-5 rounded bg-amber-400 text-slate-950 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
                                         #{blackPlayer.num}
                                       </span>
-                                      <div className="min-w-0">
-                                        <span className="text-xs font-black uppercase text-white tracking-tight truncate block group-hover:text-amber-300">
+                                      <div className="min-w-0 flex-1">
+                                        <span className="text-[11px] font-black uppercase text-white tracking-tight truncate block group-hover:text-amber-300 leading-tight">
                                           {blackPlayer.name}
                                         </span>
-                                        <span className="text-[8.5px] font-black uppercase text-zinc-400 tracking-wider">
+                                        <span className="text-[7.5px] font-black uppercase text-zinc-400 tracking-wider block leading-none">
                                           BLACK
                                         </span>
                                       </div>
                                     </div>
                                     {userRole === 'admin' && (
-                                      <span className="text-[9px] font-black text-slate-500 group-hover:text-amber-300 uppercase px-1 py-0.5 rounded shrink-0">
+                                      <span className="text-[8px] font-black text-slate-500 group-hover:text-amber-300 uppercase px-0.5 rounded shrink-0">
                                         Swap
                                       </span>
                                     )}
@@ -1103,16 +1140,16 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="w-full py-2 px-2 border border-dashed border-zinc-700 hover:border-amber-400 bg-black/40 hover:bg-black/70 rounded-xl text-center text-[10.5px] font-black text-zinc-400 hover:text-amber-300 flex items-center justify-center gap-1 cursor-pointer"
+                                    className="w-full py-1.5 px-1 border border-dashed border-zinc-700 hover:border-amber-400 bg-black/40 hover:bg-black/70 rounded-lg text-center text-[10px] font-black text-zinc-400 hover:text-amber-300 flex items-center justify-center gap-0.5 cursor-pointer"
                                   >
-                                    <Plus className="w-3 h-3 text-zinc-300" />
-                                    <span>+ BLACK</span>
+                                    <Plus className="w-3 h-3 text-zinc-300 shrink-0" />
+                                    <span className="truncate">+ BLACK</span>
                                   </button>
                                 )}
                               </div>
 
                               {/* GOLD (2nd String) */}
-                              <div className="col-span-3 min-w-0">
+                              <div className="min-w-0">
                                 {goldPlayer ? (
                                   <div
                                     onClick={() => {
@@ -1127,23 +1164,23 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="p-1.5 bg-amber-950/30 border border-amber-500/40 hover:border-amber-400 rounded-xl flex items-center justify-between gap-1.5 shadow-sm cursor-pointer group"
+                                    className="p-1 bg-amber-950/30 border border-amber-500/40 hover:border-amber-400 rounded-lg flex items-center justify-between gap-1 shadow-xs cursor-pointer group"
                                   >
-                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                      <span className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono font-black text-[11px] flex items-center justify-center shrink-0">
+                                    <div className="flex items-center gap-1 min-w-0 flex-1">
+                                      <span className="w-5 h-5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
                                         #{goldPlayer.num}
                                       </span>
-                                      <div className="min-w-0">
-                                        <span className="text-xs font-black uppercase text-amber-200 tracking-tight truncate block group-hover:text-amber-100">
+                                      <div className="min-w-0 flex-1">
+                                        <span className="text-[11px] font-black uppercase text-amber-200 tracking-tight truncate block group-hover:text-amber-100 leading-tight">
                                           {goldPlayer.name}
                                         </span>
-                                        <span className="text-[8.5px] font-black uppercase text-amber-400 tracking-wider">
+                                        <span className="text-[7.5px] font-black uppercase text-amber-400 tracking-wider block leading-none">
                                           GOLD
                                         </span>
                                       </div>
                                     </div>
                                     {userRole === 'admin' && (
-                                      <span className="text-[9px] font-black text-slate-500 group-hover:text-amber-300 uppercase px-1 py-0.5 rounded shrink-0">
+                                      <span className="text-[8px] font-black text-slate-500 group-hover:text-amber-300 uppercase px-0.5 rounded shrink-0">
                                         Swap
                                       </span>
                                     )}
@@ -1168,16 +1205,16 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="w-full py-2 px-2 border border-dashed border-amber-700/50 hover:border-amber-400 bg-amber-950/20 hover:bg-amber-950/40 rounded-xl text-center text-[10.5px] font-black text-amber-400/80 hover:text-amber-300 flex items-center justify-center gap-1 cursor-pointer"
+                                    className="w-full py-1.5 px-1 border border-dashed border-amber-700/50 hover:border-amber-400 bg-amber-950/20 hover:bg-amber-950/40 rounded-lg text-center text-[10px] font-black text-amber-400/80 hover:text-amber-300 flex items-center justify-center gap-0.5 cursor-pointer"
                                   >
-                                    <Plus className="w-3 h-3 text-amber-400" />
-                                    <span>+ GOLD</span>
+                                    <Plus className="w-3 h-3 text-amber-400 shrink-0" />
+                                    <span className="truncate">+ GOLD</span>
                                   </button>
                                 )}
                               </div>
 
                               {/* BLUE (3rd String) */}
-                              <div className="col-span-2 min-w-0">
+                              <div className="min-w-0">
                                 {bluePlayer ? (
                                   <div
                                     onClick={() => {
@@ -1192,23 +1229,23 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="p-1.5 bg-blue-950/30 border border-blue-500/40 hover:border-blue-400 rounded-xl flex items-center justify-between gap-1.5 shadow-sm cursor-pointer group"
+                                    className="p-1 bg-blue-950/30 border border-blue-500/40 hover:border-blue-400 rounded-lg flex items-center justify-between gap-1 shadow-xs cursor-pointer group"
                                   >
-                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                      <span className="w-6 h-6 rounded-lg bg-blue-600/30 text-blue-300 border border-blue-500/40 font-mono font-black text-[11px] flex items-center justify-center shrink-0">
+                                    <div className="flex items-center gap-1 min-w-0 flex-1">
+                                      <span className="w-5 h-5 rounded bg-blue-600/30 text-blue-300 border border-blue-500/40 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
                                         #{bluePlayer.num}
                                       </span>
-                                      <div className="min-w-0">
-                                        <span className="text-xs font-black uppercase text-blue-200 tracking-tight truncate block group-hover:text-blue-100">
+                                      <div className="min-w-0 flex-1">
+                                        <span className="text-[11px] font-black uppercase text-blue-200 tracking-tight truncate block group-hover:text-blue-100 leading-tight">
                                           {bluePlayer.name}
                                         </span>
-                                        <span className="text-[8.5px] font-black uppercase text-blue-400 tracking-wider">
+                                        <span className="text-[7.5px] font-black uppercase text-blue-400 tracking-wider block leading-none">
                                           BLUE
                                         </span>
                                       </div>
                                     </div>
                                     {userRole === 'admin' && (
-                                      <span className="text-[9px] font-black text-slate-500 group-hover:text-blue-300 uppercase px-1 py-0.5 rounded shrink-0">
+                                      <span className="text-[8px] font-black text-slate-500 group-hover:text-blue-300 uppercase px-0.5 rounded shrink-0">
                                         Swap
                                       </span>
                                     )}
@@ -1233,16 +1270,16 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="w-full py-2 px-2 border border-dashed border-blue-700/50 hover:border-blue-400 bg-blue-950/20 hover:bg-blue-950/40 rounded-xl text-center text-[10.5px] font-black text-blue-400/80 hover:text-blue-300 flex items-center justify-center gap-1 cursor-pointer"
+                                    className="w-full py-1.5 px-1 border border-dashed border-blue-700/50 hover:border-blue-400 bg-blue-950/20 hover:bg-blue-950/40 rounded-lg text-center text-[10px] font-black text-blue-400/80 hover:text-blue-300 flex items-center justify-center gap-0.5 cursor-pointer"
                                   >
-                                    <Plus className="w-3 h-3 text-blue-400" />
-                                    <span>+ BLUE</span>
+                                    <Plus className="w-3 h-3 text-blue-400 shrink-0" />
+                                    <span className="truncate">+ BLUE</span>
                                   </button>
                                 )}
                               </div>
 
                               {/* BACKUPS (4th+ String) */}
-                              <div className="col-span-2 flex items-center gap-1 flex-wrap">
+                              <div className="min-w-0 flex items-center gap-1 flex-wrap">
                                 {extraBackups.map((bk, bIdx) => {
                                   const realIdx = bIdx + 3;
                                   return (
@@ -1261,11 +1298,11 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                           });
                                         }
                                       }}
-                                      className="px-2 py-1 rounded-lg border border-slate-700 bg-slate-800/90 text-slate-200 hover:bg-slate-750 text-[10.5px] font-bold flex items-center gap-1 cursor-pointer transition-all"
+                                      className="px-1.5 py-0.5 rounded-md border border-slate-700 bg-slate-800/90 text-slate-200 hover:bg-slate-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all shrink-0 max-w-full"
                                       title={`Backup (D${realIdx + 1}): #${bk.num} ${bk.name}`}
                                     >
-                                      <span className="font-mono font-black text-[10px]">#{bk.num}</span>
-                                      <span className="truncate max-w-[50px] font-extrabold">{bk.name}</span>
+                                      <span className="font-mono font-black text-[9.5px]">#{bk.num}</span>
+                                      <span className="truncate max-w-[55px] font-extrabold">{bk.name}</span>
                                     </button>
                                   );
                                 })}
@@ -1287,10 +1324,10 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         posName: pos.name,
                                       });
                                     }}
-                                    className="p-1 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 rounded-lg border border-slate-700/60 cursor-pointer"
+                                    className="p-1 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 rounded-md border border-slate-700/60 cursor-pointer shrink-0"
                                     title="Add Extra Backup Player"
                                   >
-                                    <Plus className="w-3.5 h-3.5" />
+                                    <Plus className="w-3 h-3" />
                                   </button>
                                 )}
                               </div>
@@ -1627,7 +1664,12 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={() => onDeleteFormation(form.id)}
+                      onClick={() => {
+                        setDeleteFormationTarget({
+                          formId: form.id,
+                          formName: form.name,
+                        });
+                      }}
                       title="Delete formation"
                       className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 border border-rose-900/40 rounded-xl transition-all cursor-pointer"
                     >
@@ -3297,6 +3339,49 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Remove From Position</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dedicated In-App Delete Formation Confirmation Modal */}
+      {deleteFormationTarget && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-rose-900/60 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col space-y-4 p-5 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-950/60 border border-rose-800/60 flex items-center justify-center text-rose-400 shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-black text-base text-white">Delete Formation</h3>
+                <p className="text-xs font-bold text-slate-400 truncate">
+                  Delete <span className="text-rose-300 font-black">"{deleteFormationTarget.formName}"</span>?
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-400 bg-slate-950/70 p-3 rounded-xl border border-slate-800 leading-relaxed">
+              This will remove the formation and unassign its position slots for this team.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setDeleteFormationTarget(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800 rounded-xl border border-slate-700 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const idToDelete = deleteFormationTarget.formId;
+                  setDeleteFormationTarget(null);
+                  onDeleteFormation(idToDelete);
+                }}
+                className="px-4 py-2 text-xs font-black bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow-lg shadow-rose-600/30 flex items-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete Formation</span>
               </button>
             </div>
           </div>

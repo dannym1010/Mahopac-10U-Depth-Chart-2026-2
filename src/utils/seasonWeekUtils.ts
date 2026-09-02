@@ -24,9 +24,24 @@ export function normalizeWeeklyData(
   const deepClone = <T>(obj: T): T => {
     if (!obj) return obj;
     try {
+      if (typeof structuredClone === 'function') {
+        return structuredClone(obj);
+      }
       return JSON.parse(JSON.stringify(obj));
     } catch {
-      return obj;
+      try {
+        const seen = new WeakSet();
+        const clean = JSON.stringify(obj, (_key, value) => {
+          if (typeof value === 'object' && value !== null) {
+            if (seen.has(value)) return undefined;
+            seen.add(value);
+          }
+          return value;
+        });
+        return JSON.parse(clean);
+      } catch {
+        return obj;
+      }
     }
   };
 

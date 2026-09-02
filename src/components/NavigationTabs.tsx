@@ -20,6 +20,7 @@ import {
   GripVertical,
   Star,
   Sliders,
+  Smartphone,
 } from 'lucide-react';
 import { UnitType, UserRole } from '../types';
 import { safeJSONParse, safeJSONSet } from '../services/storageService';
@@ -43,6 +44,7 @@ export interface NavTabItem {
 }
 
 export const DEFAULT_NAV_TABS: NavTabItem[] = [
+  { id: 'mobile_hub', label: '📱 Mobile Hub', icon: Smartphone },
   { id: 'schedule', label: '📅 Season Schedule', icon: Calendar },
   { id: 'compliance', label: '⚡ Practice Hours & Compliance', icon: Zap },
   { id: 'depth_chart', label: '📋 Depth Chart', icon: ClipboardList },

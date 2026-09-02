@@ -582,6 +582,7 @@ Looking forward to a great season!`;
                               className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-[11px] font-semibold text-indigo-300 focus:outline-none w-full"
                               title="Start screen linked to this coach login"
                             >
+                              <option value="mobile_hub">📱 Mobile Hub (Phone Quick Start)</option>
                               <option value="schedule">Season Schedule</option>
                               <option value="depth_chart">Depth Chart (Offense)</option>
                               <option value="practice">Practice Plans</option>

@@ -9,6 +9,9 @@ import {
   Copy,
   Check,
   Sparkles,
+  Smartphone,
+  Watch,
+  Calendar,
 } from 'lucide-react';
 import {
   UnitType,
@@ -96,6 +99,7 @@ import { PracticePlanView } from './components/PracticePlanView';
 import { StaffManagerView } from './components/StaffManagerView';
 import { ScheduleView } from './components/ScheduleView';
 import { PlayerHoursTracker } from './components/PlayerHoursTracker';
+import { MobileHubView } from './components/MobileHubView';
 import { RosterManagerModal } from './components/RosterManagerModal';
 import { PracticeWizardGeneratedResult } from './components/PracticeWizardModal';
 import { PreferencesModal } from './components/PreferencesModal';
@@ -187,9 +191,12 @@ export default function App() {
   const [defaultTeamId, setDefaultTeamId] = useState<string>(() =>
     safeJSONParse('footballDefaultTeamId', DEFAULT_TEAMS[0]?.id || 'team_10u')
   );
-  const [defaultScreen, setDefaultScreen] = useState<UnitType>(() =>
-    safeJSONParse('footballDefaultScreen', 'schedule')
-  );
+  const [defaultScreen, setDefaultScreen] = useState<UnitType>(() => {
+    const saved = safeJSONParse('footballDefaultScreen', null);
+    if (saved) return saved;
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    return isMobile ? 'mobile_hub' : 'schedule';
+  });
   const [defaultDepthSubUnit, setDefaultDepthSubUnit] = useState<
     'offense' | 'defense' | 'st' | 'groups' | 'scrimmage'
   >(() => safeJSONParse('footballDefaultDepthSubUnit', 'offense'));
@@ -212,6 +219,8 @@ export default function App() {
   const [activeUnit, setActiveUnit] = useState<UnitType>(() => {
     const savedDefault = safeJSONParse('footballDefaultScreen', null);
     if (savedDefault) return savedDefault;
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    if (isMobile) return 'mobile_hub';
     return safeJSONParse('footballActiveUnit', 'schedule');
   });
   const [depthSubUnit, setDepthSubUnit] = useState<
@@ -471,22 +480,21 @@ export default function App() {
 
     // Formations resolution
     let formations: FormationBoard[] = [];
-    if (scopedState?.formations && scopedState.formations.length > 0) {
+    if (Array.isArray(scopedState?.formations)) {
       formations = scopedState.formations;
-    } else if (legacyState?.formations && legacyState.formations.length > 0) {
+    } else if (Array.isArray(legacyState?.formations)) {
       formations = legacyState.formations;
-    } else if (defScopedState?.formations && defScopedState.formations.length > 0) {
+    } else if (Array.isArray(defScopedState?.formations)) {
       formations = defScopedState.formations;
-    } else if (wData['0']?.formations && wData['0'].formations.length > 0) {
+    } else if (Array.isArray(wData['0']?.formations)) {
       formations = wData['0'].formations;
     } else if (
-      wData[getScopedWeekKey('team_10u', '0')]?.formations &&
-      wData[getScopedWeekKey('team_10u', '0')].formations.length > 0
+      Array.isArray(wData[getScopedWeekKey('team_10u', '0')]?.formations)
     ) {
       formations = wData[getScopedWeekKey('team_10u', '0')].formations;
     } else {
       formations =
-        defaultFormations && defaultFormations.length > 0
+        defaultFormations && Array.isArray(defaultFormations) && defaultFormations.length > 0
           ? defaultFormations
           : INITIAL_DEFAULT_FORMATIONS;
     }
@@ -3066,10 +3074,52 @@ function mergeRemoteWeeklyData(
   const handleDeleteFormation = (formId: string) => {
     const form = currentFormations.find((f) => f.id === formId);
     if (!form) return;
-    if (confirm(`Delete formation "${form.name}"?`)) {
-      const updated = currentFormations.filter((f) => f.id !== formId);
-      updateCurrentWeekFormations(updated, true);
+
+    // Collect all position IDs in the deleted formation to clean up depthChart/scrimmageChart
+    const deletedPosIds = new Set<string>();
+    if (Array.isArray(form.rows)) {
+      form.rows.forEach((r) => {
+        if (r && Array.isArray(r.positions)) {
+          r.positions.forEach((p) => {
+            if (p && p.id) deletedPosIds.add(p.id);
+          });
+        }
+      });
     }
+
+    const updated = currentFormations.filter((f) => f.id !== formId);
+
+    lastLocalEditTimeRef.current = Date.now();
+    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+    setWeeklyData((prev) => {
+      const existing = resolveWeekState(prev, activeTeamId, currentWeek);
+      const newDepthChart = { ...(existing.depthChart || {}) };
+      const newScrimmageChart = { ...(existing.scrimmageChart || {}) };
+      deletedPosIds.forEach((posId) => {
+        delete newDepthChart[posId];
+        delete newScrimmageChart[posId];
+      });
+
+      const updatedWeekState: WeekState = {
+        ...existing,
+        formations: updated,
+        depthChart: newDepthChart,
+        scrimmageChart: newScrimmageChart,
+      };
+
+      const updatedAll = {
+        ...prev,
+        [scopedKey]: updatedWeekState,
+        [currentWeek]: updatedWeekState,
+      };
+      safeJSONSet('footballWeeklyData', updatedAll);
+      latestStateRef.current.weeklyData = updatedAll;
+      return updatedAll;
+    });
+
+    setDefaultFormations(updated);
+    safeJSONSet('footballDefaultFormations', updated);
+    latestStateRef.current.defaultFormations = updated;
   };
 
   const handleMoveFormation = (formId: string, direction: number) => {
@@ -5073,6 +5123,47 @@ function mergeRemoteWeeklyData(
         <div className="flex flex-col lg:flex-row gap-6 items-start">
           {/* Main Board / Panel Column */}
           <div className="flex-1 min-w-0 w-full">
+            {/* 0. Mobile Starting Screen & Coach Hub */}
+            {activeUnit === 'mobile_hub' && (
+              <MobileHubView
+                activeTeam={currentActiveTeam}
+                teams={teams}
+                onSelectTeam={setActiveTeamId}
+                currentWeek={currentWeek}
+                onSelectWeek={(wk) => {
+                  setCurrentWeek(wk);
+                  ensureWeekExists(wk);
+                }}
+                userRole={userRole}
+                roster={activeTeamRoster}
+                scheduleEvents={activeTeamScheduleEvents}
+                practicePlans={activeTeamPracticeData.length > 0 ? activeTeamPracticeData : practiceData}
+                currentWeekState={currentWeekState}
+                formations={currentFormations}
+                depthChart={currentDepthChart}
+                defaultScreen={defaultScreen}
+                onSetDefaultScreen={handleSetDefaultScreen}
+                onNavigateToUnit={(unit, subUnit) => {
+                  if (unit === 'depth_chart') {
+                    setDepthSubUnit(subUnit || 'offense');
+                    setActiveUnit((subUnit || 'offense') as any);
+                  } else {
+                    setActiveUnit(unit);
+                  }
+                }}
+                onQuickAttendanceSave={(rec) => {
+                  setAttendanceLogs((prev) => {
+                    const updated = [rec, ...prev];
+                    safeJSONSet('footballAttendanceLogs', updated);
+                    return updated;
+                  });
+                  saveStateToStorage('attendance');
+                }}
+                onOpenPreferencesModal={() => setIsPreferencesModalOpen(true)}
+                onOpenScheduleModal={() => setActiveUnit('schedule')}
+              />
+            )}
+
             {/* Depth Chart Sub-Navigation Bar */}
             {['offense', 'defense', 'st', 'groups', 'scrimmage', 'depth_chart'].includes(
               activeUnit
@@ -5772,7 +5863,7 @@ function mergeRemoteWeeklyData(
           </div>
 
           {/* Master Roster Sidebar (Shown on Depth Charts, Scrimmage, Wristband) */}
-          {!['drills', 'scouting', 'guide', 'practice', 'users', 'schedule', 'compliance'].includes(
+          {!['mobile_hub', 'drills', 'scouting', 'guide', 'practice', 'users', 'schedule', 'compliance'].includes(
             activeUnit
           ) && (
             <RosterSidebar
@@ -5821,6 +5912,64 @@ function mergeRemoteWeeklyData(
           )}
         </div>
       </main>
+
+      {/* Mobile Bottom Quick Launch Dock (Phone Viewports) */}
+      <nav aria-label="Mobile Navigation" className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-lg border-t border-slate-700/80 px-2 py-1.5 flex items-center justify-around shadow-2xl print:hidden">
+        <button
+          onClick={() => setActiveUnit('mobile_hub')}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all ${
+            activeUnit === 'mobile_hub' ? 'text-indigo-400 font-black' : 'text-slate-400 font-semibold'
+          }`}
+        >
+          <Smartphone className="w-5 h-5" />
+          <span className="text-[10px]">Hub</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setDepthSubUnit(depthSubUnit || 'offense');
+            setActiveUnit(depthSubUnit || 'offense');
+          }}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all ${
+            ['offense', 'defense', 'st', 'groups', 'scrimmage', 'depth_chart'].includes(activeUnit)
+              ? 'text-indigo-400 font-black'
+              : 'text-slate-400 font-semibold'
+          }`}
+        >
+          <Zap className="w-5 h-5" />
+          <span className="text-[10px]">Depth</span>
+        </button>
+
+        <button
+          onClick={() => setActiveUnit('wristband')}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all ${
+            activeUnit === 'wristband' ? 'text-indigo-400 font-black' : 'text-slate-400 font-semibold'
+          }`}
+        >
+          <Watch className="w-5 h-5" />
+          <span className="text-[10px]">Plays</span>
+        </button>
+
+        <button
+          onClick={() => setActiveUnit('practice')}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all ${
+            activeUnit === 'practice' ? 'text-indigo-400 font-black' : 'text-slate-400 font-semibold'
+          }`}
+        >
+          <ClipboardList className="w-5 h-5" />
+          <span className="text-[10px]">Plan</span>
+        </button>
+
+        <button
+          onClick={() => setActiveUnit('schedule')}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all ${
+            activeUnit === 'schedule' ? 'text-indigo-400 font-black' : 'text-slate-400 font-semibold'
+          }`}
+        >
+          <Calendar className="w-5 h-5" />
+          <span className="text-[10px]">Schedule</span>
+        </button>
+      </nav>
 
       {/* Global Dialog Modals */}
       <AuthModal

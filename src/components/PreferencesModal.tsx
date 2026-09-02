@@ -17,6 +17,7 @@ import {
   Target,
   Swords,
   Sparkles,
+  Smartphone,
 } from 'lucide-react';
 import { UnitType, Team, UserRole } from '../types';
 import { DEFAULT_NAV_TABS } from './NavigationTabs';
@@ -50,6 +51,13 @@ interface ScreenOption {
 }
 
 const SCREEN_OPTIONS: ScreenOption[] = [
+  {
+    id: 'mobile_hub',
+    name: 'Mobile Coach Hub (Phone Quick Start)',
+    category: 'Mobile & Fast Access',
+    description: 'Thumb-friendly game day dashboard with big touch buttons, next game countdown, attendance, and instant pocket depth chart access',
+    icon: Smartphone,
+  },
   {
     id: 'schedule',
     name: 'Season Schedule',

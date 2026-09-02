@@ -1,4 +1,5 @@
 export type UnitType = 
+  | 'mobile_hub'
   | 'depth_chart'
   | 'offense' 
   | 'defense' 
