@@ -131,7 +131,7 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
 
   return (
     <>
-      <div className="bg-slate-800/95 backdrop-blur-md border-b border-slate-700/80 sticky top-[108px] z-30 shadow-md print:hidden">
+      <div className="hidden md:block bg-slate-800/95 backdrop-blur-md border-b border-slate-700/80 sticky top-[108px] z-30 shadow-md print:hidden">
         <div className="max-w-[1700px] mx-auto px-4 py-2 flex items-center justify-between gap-3">
           {/* Scrollable Nav Tabs */}
           <div className="flex gap-2 overflow-x-auto no-scrollbar items-center py-0.5 flex-1 min-w-0">

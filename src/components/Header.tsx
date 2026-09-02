@@ -9,6 +9,10 @@ import {
   LogOut,
   UserCheck,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  X,
   Calendar,
   Layers,
   Users,
@@ -87,6 +91,8 @@ export const Header: React.FC<HeaderProps> = ({
   onForceSave,
   onForceRefresh,
 }) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   // Find scheduled game for current week
   const matchedScheduledGame = React.useMemo(() => {
     if (!scheduleEvents || scheduleEvents.length === 0) return null;
@@ -130,10 +136,88 @@ export const Header: React.FC<HeaderProps> = ({
   const activeTeam = teams.find((t) => t.id === activeTeamId) || teams[0];
   const isCurrentTeamDefault = activeTeam && (defaultTeamId || (teams[0] && teams[0].id)) === activeTeam.id;
 
+  const allWeeks = React.useMemo(() => getSeasonWeekList(seasonConfig), [seasonConfig]);
+  const currentWeekIdx = allWeeks.findIndex((w) => w.key === currentWeek);
+
+  const handlePrevWeek = () => {
+    if (currentWeekIdx > 0) {
+      onWeekChange(allWeeks[currentWeekIdx - 1].key);
+    }
+  };
+
+  const handleNextWeek = () => {
+    if (currentWeekIdx < allWeeks.length - 1) {
+      onWeekChange(allWeeks[currentWeekIdx + 1].key);
+    }
+  };
+
   return (
     <header className="bg-slate-850/95 bg-slate-800/95 backdrop-blur-md border-b border-slate-700/80 text-slate-100 shadow-xl sticky top-0 z-40">
-      {/* Top Banner Bar */}
-      <div className="max-w-[1700px] mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/70">
+      {/* =========================================================================
+          1. SLEEK COMPACT MOBILE HEADER (< md: 768px)
+          ========================================================================= */}
+      <div className="md:hidden px-3 py-2 flex items-center justify-between gap-2">
+        {/* Left: Team Selector Pill */}
+        <div className="flex items-center gap-1.5 min-w-0 bg-slate-900/90 border border-slate-700 px-2 py-1 rounded-xl shadow-inner">
+          <span className="text-base select-none">🏈</span>
+          <select
+            value={activeTeamId || (accessibleTeams && accessibleTeams[0]?.id) || ''}
+            onChange={(e) => onSelectTeam && onSelectTeam(e.target.value)}
+            className="bg-transparent font-black text-xs text-white focus:outline-none cursor-pointer truncate max-w-[130px]"
+          >
+            {(accessibleTeams || []).map((t) => (
+              <option key={t.id} value={t.id} className="bg-slate-900 text-slate-100 font-bold">
+                {t.name} {t.ageGroup ? `(${t.ageGroup})` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Center: Week Selector Pill */}
+        <div className="flex items-center gap-1 bg-slate-900/90 border border-slate-700 px-1.5 py-0.5 rounded-xl">
+          <button
+            type="button"
+            onClick={handlePrevWeek}
+            disabled={currentWeekIdx <= 0}
+            className="p-1 text-slate-400 hover:text-white disabled:opacity-20"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+          <span className="text-xs font-black text-indigo-300 px-1 whitespace-nowrap">
+            {formatWeekLabel(currentWeek)}
+          </span>
+          <button
+            type="button"
+            onClick={handleNextWeek}
+            disabled={currentWeekIdx >= allWeeks.length - 1}
+            className="p-1 text-slate-400 hover:text-white disabled:opacity-20"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Right: Sync Status & Mobile Menu Button */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div
+            title={syncStatus.text}
+            className="w-2.5 h-2.5 rounded-full animate-pulse"
+            style={{ backgroundColor: syncStatus.color || '#10b981' }}
+          />
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-1.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white active:scale-95 transition-all"
+            title="Open Quick Menu"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          2. DESKTOP HEADER BAR (md: and above)
+          ========================================================================= */}
+      <div className="hidden md:flex max-w-[1700px] mx-auto px-4 py-3 items-center justify-between gap-3 border-b border-slate-700/70">
         
         {/* Brand / Title Bento Block */}
         <div className="flex items-center gap-3">
@@ -355,8 +439,10 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Automated Game Week & Status Bar */}
-      <div className="max-w-[1700px] mx-auto px-4 py-2 bg-slate-800/90 backdrop-blur-sm flex flex-wrap items-center justify-between gap-3 text-xs border-b border-slate-700/70">
+      {/* =========================================================================
+          3. AUTOMATED GAME WEEK & STATUS BAR (md: and above)
+          ========================================================================= */}
+      <div className="hidden md:flex max-w-[1700px] mx-auto px-4 py-2 bg-slate-800/90 backdrop-blur-sm items-center justify-between gap-3 text-xs border-b border-slate-700/70">
         <div className="flex items-center gap-3 flex-wrap">
           {/* Automated Active Week Badge */}
           <div className="flex items-center gap-2 bg-slate-900/90 p-1.5 px-3 rounded-2xl border border-slate-700/80 shadow-inner">
@@ -391,7 +477,6 @@ export const Header: React.FC<HeaderProps> = ({
                 title="Change active depth chart week"
               >
                 {(() => {
-                  const allWeeks = getSeasonWeekList(seasonConfig);
                   const preWeeks = allWeeks.filter((w) => w.phase === 'preseason');
                   const regWeeks = allWeeks.filter((w) => w.phase === 'regular');
                   const postWeeks = allWeeks.filter((w) => w.phase === 'postseason');
@@ -525,6 +610,164 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
       </div>
+
+      {/* =========================================================================
+          4. SLIDE-OVER MOBILE QUICK MENU MODAL
+          ========================================================================= */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden p-4 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 bg-indigo-600/30 text-indigo-400 rounded-xl border border-indigo-500/30">
+                  <Sliders className="w-4 h-4" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-black text-white">Coach Quick Menu</h3>
+                  <p className="text-[11px] text-slate-400">{userEmail}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-xl bg-slate-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Quick Actions List */}
+            <div className="space-y-2 text-xs">
+              {/* Force Save */}
+              {onForceSave && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onForceSave();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-emerald-300 font-bold border border-slate-700/60"
+                >
+                  <div className="flex items-center gap-2">
+                    <Cloud className="w-4 h-4 text-emerald-400" />
+                    <span>Save &amp; Sync Cloud Data</span>
+                  </div>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                </button>
+              )}
+
+              {/* Defaults & Preferences */}
+              {onOpenPreferencesModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onOpenPreferencesModal();
+                  }}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-amber-300 font-bold border border-slate-700/60"
+                >
+                  <div className="flex items-center gap-2">
+                    <Star className="w-4 h-4 text-amber-400" />
+                    <span>Default Screen &amp; Team</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                </button>
+              )}
+
+              {/* Manage Teams */}
+              {userRole === 'admin' && onOpenManageTeams && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onOpenManageTeams();
+                  }}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-200 font-bold border border-slate-700/60"
+                >
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-indigo-400" />
+                    <span>Configure Teams &amp; Age Groups</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                </button>
+              )}
+
+              {/* Season Schedule Settings */}
+              {userRole === 'admin' && onOpenSeasonConfigModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onOpenSeasonConfigModal();
+                  }}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-200 font-bold border border-slate-700/60"
+                >
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-purple-400" />
+                    <span>Season Weeks &amp; Schedule Config</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                </button>
+              )}
+
+              {/* Fullscreen */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  onToggleFullScreen();
+                }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-200 font-bold border border-slate-700/60"
+              >
+                <div className="flex items-center gap-2">
+                  <Maximize className="w-4 h-4 text-indigo-400" />
+                  <span>Toggle Fullscreen</span>
+                </div>
+              </button>
+
+              {/* Admin Data Backup */}
+              {userRole === 'admin' && (
+                <div className="pt-2 border-t border-slate-800 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onExportData();
+                    }}
+                    className="p-2 rounded-xl bg-slate-800 text-emerald-300 font-bold border border-slate-700 text-center flex items-center justify-center gap-1.5"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Backup</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onImportClick();
+                    }}
+                    className="p-2 rounded-xl bg-slate-800 text-cyan-300 font-bold border border-slate-700 text-center flex items-center justify-center gap-1.5"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Import</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Sign Out */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  onSignOut();
+                }}
+                className="w-full mt-2 p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-black border border-rose-500/20 text-center flex items-center justify-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
