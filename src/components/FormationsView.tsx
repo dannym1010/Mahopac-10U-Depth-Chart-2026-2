@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Plus,
   Printer,
@@ -18,6 +18,8 @@ import {
   Minus,
   Sliders,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Sparkles,
   HelpCircle,
   Eraser,
@@ -27,6 +29,16 @@ import {
   Lock,
   Unlock,
   ShieldAlert,
+  Smartphone,
+  LayoutGrid,
+  Search,
+  Users,
+  UserCheck,
+  CheckCircle2,
+  TableProperties,
+  Sparkle,
+  Layers,
+  ArrowLeftRight,
 } from 'lucide-react';
 import {
   FormationBoard,
@@ -36,6 +48,7 @@ import {
   UserRole,
   UnitType,
   Team,
+  RosterPlayer,
 } from '../types';
 import { triggerPrint } from '../utils/printUtils';
 
@@ -48,6 +61,7 @@ interface FormationsViewProps {
   userRole: UserRole;
   activeTeam?: Team;
   teams?: Team[];
+  roster?: RosterPlayer[];
   isLockedByOther?: boolean;
   lockHolderName?: string;
   lockHolderEmail?: string;
@@ -55,6 +69,8 @@ interface FormationsViewProps {
   onAcquireLock?: () => void;
   onReleaseLock?: () => void;
   onTakeOverLock?: () => void;
+  onAssignPlayerDirect?: (posId: string, player: PlacedPlayer, targetIndex?: number) => void;
+  onReorderDepthPlayer?: (posId: string, fromIndex: number, toIndex: number) => void;
   onCopyFormationsFromTeam?: (sourceTeamId: string) => void;
   onAddFormation?: (unit: 'offense' | 'defense' | 'st' | 'groups') => void;
   onMoveFormation: (formId: string, direction: number) => void;
@@ -180,6 +196,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
   userRole,
   activeTeam,
   teams = [],
+  roster = [],
   isLockedByOther,
   lockHolderName,
   lockHolderEmail,
@@ -187,6 +204,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
   onAcquireLock,
   onReleaseLock,
   onTakeOverLock,
+  onAssignPlayerDirect,
+  onReorderDepthPlayer,
   onCopyFormationsFromTeam,
   onAddFormation,
   onMoveFormation,
@@ -227,6 +246,36 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
   onCopyPositionDirect,
 }) => {
   const [filterViewId, setFilterViewId] = useState<string>('ALL');
+  const [viewMode, setViewMode] = useState<'field' | 'mobile_cards'>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return 'mobile_cards';
+    }
+    return 'field';
+  });
+  const [mobileSearchQuery, setMobileSearchQuery] = useState('');
+  const [activeMobileFormationTab, setActiveMobileFormationTab] = useState<string>('ALL');
+  const [mobileSubTab, setMobileSubTab] = useState<'pocket_chart' | 'player_matrix'>('pocket_chart');
+  const [matrixFilter, setMatrixFilter] = useState<'ALL' | 'BLACK' | 'GOLD' | 'BLUE' | 'BACKUPS' | 'STARTERS' | 'ROTATION' | 'UNASSIGNED'>('ALL');
+  const [quickSwapTarget, setQuickSwapTarget] = useState<{
+    posId: string;
+    posName: string;
+    formId: string;
+    formName: string;
+    currentIndex: number;
+    currentPlayer?: PlacedPlayer;
+  } | null>(null);
+  
+  // Mobile Direct Player Picker Modal State
+  const [assignPlayerModalTarget, setAssignPlayerModalTarget] = useState<{
+    formId: string;
+    formName: string;
+    posId: string;
+    posName: string;
+    targetIndex?: number;
+  } | null>(null);
+  const [playerPickerSearch, setPlayerPickerSearch] = useState('');
+  const [playerPickerPosFilter, setPlayerPickerPosFilter] = useState<'ALL' | 'UNASSIGNED' | 'MATCHING'>('ALL');
+
   const [dragOverPosId, setDragOverPosId] = useState<string | null>(null);
   const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null);
   const [showCopyModal, setShowCopyModal] = useState(false);
@@ -295,6 +344,176 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
     filterViewId === 'ALL'
       ? unitFormations
       : unitFormations.filter((f) => f.id === filterViewId);
+
+  const mobileFormations = useMemo(() => {
+    let list = unitFormations;
+    if (activeMobileFormationTab !== 'ALL') {
+      list = list.filter((f) => f.id === activeMobileFormationTab);
+    } else if (filterViewId !== 'ALL') {
+      list = list.filter((f) => f.id === filterViewId);
+    }
+    return list;
+  }, [unitFormations, activeMobileFormationTab, filterViewId]);
+
+  const filteredRosterPlayers = useMemo(() => {
+    if (!assignPlayerModalTarget) return [];
+    let list = [...roster];
+    const s = playerPickerSearch.trim().toLowerCase();
+    if (s) {
+      list = list.filter((p) => {
+        const full = `${p.firstName || ''} ${p.lastName || ''} ${p.rosterName || ''}`.toLowerCase();
+        return (
+          full.includes(s) ||
+          p.num.toLowerCase().includes(s) ||
+          (p.primaryPosition && p.primaryPosition.toLowerCase().includes(s)) ||
+          (p.secondaryPosition && p.secondaryPosition.toLowerCase().includes(s)) ||
+          (p.offensivePosition && p.offensivePosition.toLowerCase().includes(s)) ||
+          (p.defensivePosition && p.defensivePosition.toLowerCase().includes(s))
+        );
+      });
+    }
+
+    if (playerPickerPosFilter === 'MATCHING' && assignPlayerModalTarget.posName) {
+      const targetPos = assignPlayerModalTarget.posName.toUpperCase().trim();
+      list = list.filter((p) => {
+        const p1 = (p.primaryPosition || '').toUpperCase();
+        const p2 = (p.secondaryPosition || '').toUpperCase();
+        const p3 = (p.offensivePosition || '').toUpperCase();
+        const p4 = (p.defensivePosition || '').toUpperCase();
+        return (
+          (p1 && (p1.includes(targetPos) || targetPos.includes(p1))) ||
+          (p2 && (p2.includes(targetPos) || targetPos.includes(p2))) ||
+          (p3 && (p3.includes(targetPos) || targetPos.includes(p3))) ||
+          (p4 && (p4.includes(targetPos) || targetPos.includes(p4)))
+        );
+      });
+    } else if (playerPickerPosFilter === 'UNASSIGNED') {
+      const placedNums = new Set<string>();
+      const currentForm = formations.find((f) => f.id === assignPlayerModalTarget.formId);
+      if (currentForm) {
+        currentForm.rows.forEach((r) => {
+          r.positions.forEach((pos) => {
+            if (pos && depthChart[pos.id]) {
+              depthChart[pos.id].forEach((pl) => placedNums.add(pl.num.trim()));
+            }
+          });
+        });
+      }
+      list = list.filter((p) => !placedNums.has(p.num.trim()));
+    }
+
+    return list;
+  }, [roster, assignPlayerModalTarget, playerPickerSearch, playerPickerPosFilter, formations, depthChart]);
+
+  // Compute Player-First Assignment Matrix for all roster players across formations
+  const playerAssignmentsMatrix = useMemo(() => {
+    return roster.map((player) => {
+      const playerName =
+        `${player.firstName || ''} ${player.lastName || ''}`.trim() ||
+        player.rosterName ||
+        `#${player.num}`;
+      const numTrim = (player.num || '').trim();
+
+      const assignments: Array<{
+        formId: string;
+        formName: string;
+        posId: string;
+        posName: string;
+        depthIndex: number;
+        stringLabel: string;
+        isStarter: boolean;
+      }> = [];
+
+      unitFormations.forEach((form) => {
+        form.rows.forEach((row) => {
+          row.positions.forEach((pos) => {
+            if (pos && depthChart[pos.id]) {
+              depthChart[pos.id].forEach((pl, idx) => {
+                if (pl.num.trim() === numTrim) {
+                  const stringLabel =
+                    idx === 0 ? 'BLACK' : idx === 1 ? 'GOLD' : idx === 2 ? 'BLUE' : `BACKUP (D${idx + 1})`;
+                  assignments.push({
+                    formId: form.id,
+                    formName: form.name,
+                    posId: pos.id,
+                    posName: pos.name,
+                    depthIndex: idx,
+                    stringLabel,
+                    isStarter: idx === 0,
+                  });
+                }
+              });
+            }
+          });
+        });
+      });
+
+      const blackCount = assignments.filter((a) => a.depthIndex === 0).length;
+      const goldCount = assignments.filter((a) => a.depthIndex === 1).length;
+      const blueCount = assignments.filter((a) => a.depthIndex === 2).length;
+      const backupCount = assignments.filter((a) => a.depthIndex >= 3).length;
+
+      return {
+        player,
+        playerName,
+        num: player.num,
+        assignments,
+        totalAssigned: assignments.length,
+        starterCount: blackCount,
+        blackCount,
+        goldCount,
+        blueCount,
+        backupCount,
+        rotationCount: goldCount + blueCount + backupCount,
+        isUnassigned: assignments.length === 0,
+      };
+    });
+  }, [roster, unitFormations, depthChart]);
+
+  const filteredMatrixPlayers = useMemo(() => {
+    let list = [...playerAssignmentsMatrix];
+    const s = mobileSearchQuery.trim().toLowerCase();
+    if (s) {
+      list = list.filter((item) => {
+        const full = `${item.playerName} ${item.num}`.toLowerCase();
+        const p1 = (item.player.primaryPosition || '').toLowerCase();
+        const p2 = (item.player.secondaryPosition || '').toLowerCase();
+        const p3 = (item.player.offensivePosition || '').toLowerCase();
+        const p4 = (item.player.defensivePosition || '').toLowerCase();
+        const hasMatchingPos = item.assignments.some((a) =>
+          a.posName.toLowerCase().includes(s) || a.formName.toLowerCase().includes(s)
+        );
+        return (
+          full.includes(s) ||
+          p1.includes(s) ||
+          p2.includes(s) ||
+          p3.includes(s) ||
+          p4.includes(s) ||
+          hasMatchingPos
+        );
+      });
+    }
+
+    if (matrixFilter === 'BLACK' || matrixFilter === 'STARTERS') {
+      list = list.filter((item) => item.blackCount > 0);
+    } else if (matrixFilter === 'GOLD') {
+      list = list.filter((item) => item.goldCount > 0);
+    } else if (matrixFilter === 'BLUE') {
+      list = list.filter((item) => item.blueCount > 0);
+    } else if (matrixFilter === 'BACKUPS' || matrixFilter === 'ROTATION') {
+      list = list.filter((item) => item.backupCount > 0);
+    } else if (matrixFilter === 'UNASSIGNED') {
+      list = list.filter((item) => item.isUnassigned);
+    }
+
+    // Sort by jersey number numerically if possible, else alphabetically
+    return list.sort((a, b) => {
+      const numA = parseInt(a.num, 10);
+      const numB = parseInt(b.num, 10);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return a.num.localeCompare(b.num);
+    });
+  }, [playerAssignmentsMatrix, mobileSearchQuery, matrixFilter]);
 
   const teamDisplayName = activeTeam
     ? `${activeTeam.name} ${activeTeam.ageGroup ? `(${activeTeam.ageGroup})` : ''}`
@@ -497,6 +716,36 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
             </>
           )}
 
+          {/* View Mode Switcher (Mobile Cards vs Field Diagram) */}
+          <div className="flex items-center bg-slate-900/90 border border-slate-700 p-1 rounded-2xl shadow-inner print:hidden">
+            <button
+              type="button"
+              onClick={() => setViewMode('mobile_cards')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+                viewMode === 'mobile_cards'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
+              title="Optimized full-width mobile depth chart with large readable names and 1-touch controls"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Mobile Cards</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('field')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+                viewMode === 'field'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
+              title="Tactical football formation diagram"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Field Diagram</span>
+            </button>
+          </div>
+
           {/* On-screen view filter */}
           <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700 px-3 py-1.5 rounded-xl">
             <Filter className="w-3.5 h-3.5 text-indigo-400" />
@@ -589,8 +838,699 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
         </div>
       )}
 
-      {/* Formation Cards */}
-      <div className="space-y-6 print:space-y-3">
+      {/* =========================================================================
+         MERGED MOBILE DEPTH VIEW (Pocket Laminated Table #5 + Player Assignment Matrix #3)
+         ========================================================================= */}
+      {viewMode === 'mobile_cards' && (
+        <div className="space-y-4 print:hidden">
+          {/* Sub-View Switcher: Pocket Table vs Player Matrix */}
+          <div className="flex items-center justify-between gap-2 bg-slate-900/95 border border-slate-700/80 p-1.5 rounded-2xl shadow-xl">
+            <button
+              type="button"
+              onClick={() => setMobileSubTab('pocket_chart')}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                mobileSubTab === 'pocket_chart'
+                  ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
+            >
+              <TableProperties className="w-4 h-4" />
+              <span>Pocket Depth Card</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileSubTab('player_matrix')}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                mobileSubTab === 'player_matrix'
+                  ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>Player Assignment Matrix</span>
+            </button>
+          </div>
+
+          {/* Quick Universal Mobile Search Bar */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder={
+                mobileSubTab === 'pocket_chart'
+                  ? 'Filter by position (e.g. QB, LT, CB) or player name / jersey #...'
+                  : 'Search player name, #, or assigned positions across formations...'
+              }
+              value={mobileSearchQuery}
+              onChange={(e) => setMobileSearchQuery(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 rounded-2xl pl-10 pr-9 py-2.5 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 shadow-inner"
+            />
+            {mobileSearchQuery && (
+              <button
+                type="button"
+                onClick={() => setMobileSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* =====================================================================
+              SUB-TAB 1: POCKET LAMINATED CARD TABLE VIEW (#5)
+             ===================================================================== */}
+          {mobileSubTab === 'pocket_chart' && (
+            <div className="space-y-4">
+              {/* Formation Tab Selector Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                <button
+                  type="button"
+                  onClick={() => setActiveMobileFormationTab('ALL')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all cursor-pointer ${
+                    activeMobileFormationTab === 'ALL'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
+                      : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700'
+                  }`}
+                >
+                  All Formations ({unitFormations.length})
+                </button>
+                {unitFormations.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setActiveMobileFormationTab(f.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all cursor-pointer ${
+                      activeMobileFormationTab === f.id
+                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
+                        : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700'
+                    }`}
+                  >
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+
+              {/* Formations List in Pocket Grid Format */}
+              <div className="space-y-4">
+                {mobileFormations.map((form) => {
+                  const query = mobileSearchQuery.toLowerCase().trim();
+
+                  // Collect all valid position slots in this formation
+                  const allSlots: Array<{ pos: PositionSlot; rIdx: number; rowLabel: string }> = [];
+                  form.rows.forEach((r, rIdx) => {
+                    r.positions.forEach((p) => {
+                      if (p) allSlots.push({ pos: p, rIdx, rowLabel: r.label || `Level ${rIdx + 1}` });
+                    });
+                  });
+
+                  const filteredSlots = query
+                    ? allSlots.filter(({ pos }) => {
+                        if (pos.name.toLowerCase().includes(query)) return true;
+                        const players = depthChart[pos.id] || [];
+                        return players.some(
+                          (pl) =>
+                            pl.name.toLowerCase().includes(query) ||
+                            pl.num.includes(query)
+                        );
+                      })
+                    : allSlots;
+
+                  if (query && filteredSlots.length === 0) return null;
+
+                  return (
+                    <div
+                      key={form.id}
+                      className="bg-slate-850/95 rounded-3xl border border-slate-700/80 shadow-2xl overflow-hidden"
+                    >
+                      {/* Laminated Card Header */}
+                      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-indigo-950/80 p-3.5 sm:p-4 border-b border-slate-700/80 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
+                            {unit === 'offense' ? 'OFF' : unit === 'defense' ? 'DEF' : unit === 'st' ? 'ST' : 'GRP'}
+                          </div>
+                          <div className="min-w-0">
+                            <h2 className="font-black text-base text-white tracking-tight truncate">
+                              {form.name}
+                            </h2>
+                            <p className="text-[11px] font-bold text-slate-400">
+                              {filteredSlots.length} Positions • Pocket Depth Chart
+                            </p>
+                          </div>
+                        </div>
+
+                        {userRole === 'admin' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isLockedByOther) {
+                                if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Take over editing?`)) {
+                                  if (onTakeOverLock) onTakeOverLock();
+                                }
+                                return;
+                              }
+                              setRowLabelInput('');
+                              setRowLabelModalTarget({ formId: form.id, isNew: true });
+                            }}
+                            className="px-2.5 py-1 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 flex items-center gap-1 cursor-pointer shrink-0"
+                          >
+                            <Plus className="w-3.5 h-3.5 text-indigo-400" />
+                            <span>Add Level</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Pocket Table Grid */}
+                      <div className="overflow-x-auto divide-y divide-slate-800/80">
+                        {/* Table Header Bar */}
+                        <div className="min-w-[640px] grid grid-cols-12 bg-slate-900/95 text-[10.5px] font-black uppercase text-slate-400 px-3 py-2 border-b border-slate-800 tracking-wider">
+                          <div className="col-span-2">POS</div>
+                          <div className="col-span-3 flex items-center gap-1.5 text-zinc-100">
+                            <span className="w-2 h-2 rounded-full bg-zinc-300 ring-2 ring-zinc-700"></span>
+                            <span>BLACK (1ST)</span>
+                          </div>
+                          <div className="col-span-3 flex items-center gap-1.5 text-amber-400">
+                            <span className="w-2 h-2 rounded-full bg-amber-400 ring-2 ring-amber-900"></span>
+                            <span>GOLD (2ND)</span>
+                          </div>
+                          <div className="col-span-2 flex items-center gap-1.5 text-blue-400">
+                            <span className="w-2 h-2 rounded-full bg-blue-400 ring-2 ring-blue-900"></span>
+                            <span>BLUE (3RD)</span>
+                          </div>
+                          <div className="col-span-2 flex items-center gap-1.5 text-slate-400">
+                            <span>BACKUPS</span>
+                          </div>
+                        </div>
+
+                        {/* Position Rows */}
+                        {filteredSlots.map(({ pos, rIdx, rowLabel }) => {
+                          const players = depthChart[pos.id] || [];
+                          const blackPlayer = players[0];
+                          const goldPlayer = players[1];
+                          const bluePlayer = players[2];
+                          const extraBackups = players.slice(3);
+
+                          return (
+                            <div
+                              key={pos.id}
+                              className="min-w-[640px] grid grid-cols-12 px-3 py-2.5 items-center gap-2 hover:bg-slate-800/40 transition-colors"
+                            >
+                              {/* Position Badge & Level */}
+                              <div className="col-span-2 flex flex-col items-start gap-1">
+                                <div className="flex items-center gap-1">
+                                  <span className="px-2 py-0.5 bg-indigo-600/90 text-white font-black text-xs rounded-lg border border-indigo-400/40 shadow-xs">
+                                    {pos.name}
+                                  </span>
+                                </div>
+                                <span className="text-[9.5px] font-bold text-slate-500 truncate max-w-[80px]">
+                                  {rowLabel}
+                                </span>
+                              </div>
+
+                              {/* BLACK (1st String / Starter) */}
+                              <div className="col-span-3 min-w-0">
+                                {blackPlayer ? (
+                                  <div
+                                    onClick={() => {
+                                      if (userRole === 'admin') {
+                                        setQuickSwapTarget({
+                                          posId: pos.id,
+                                          posName: pos.name,
+                                          formId: form.id,
+                                          formName: form.name,
+                                          currentIndex: 0,
+                                          currentPlayer: blackPlayer,
+                                        });
+                                      }
+                                    }}
+                                    className="p-1.5 bg-black border border-zinc-700 hover:border-amber-400 rounded-xl flex items-center justify-between gap-1.5 shadow-sm cursor-pointer group"
+                                  >
+                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                      <span className="w-6 h-6 rounded-lg bg-amber-400 text-slate-950 font-mono font-black text-[11px] flex items-center justify-center shrink-0">
+                                        #{blackPlayer.num}
+                                      </span>
+                                      <div className="min-w-0">
+                                        <span className="text-xs font-black uppercase text-white tracking-tight truncate block group-hover:text-amber-300">
+                                          {blackPlayer.name}
+                                        </span>
+                                        <span className="text-[8.5px] font-black uppercase text-zinc-400 tracking-wider">
+                                          BLACK
+                                        </span>
+                                      </div>
+                                    </div>
+                                    {userRole === 'admin' && (
+                                      <span className="text-[9px] font-black text-slate-500 group-hover:text-amber-300 uppercase px-1 py-0.5 rounded shrink-0">
+                                        Swap
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (userRole === 'admin') {
+                                        if (isLockedByOther) {
+                                          if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Take over editing?`)) {
+                                            if (onTakeOverLock) onTakeOverLock();
+                                          }
+                                          return;
+                                        }
+                                        setAssignPlayerModalTarget({
+                                          formId: form.id,
+                                          formName: form.name,
+                                          posId: pos.id,
+                                          posName: pos.name,
+                                          targetIndex: 0,
+                                        });
+                                      }
+                                    }}
+                                    className="w-full py-2 px-2 border border-dashed border-zinc-700 hover:border-amber-400 bg-black/40 hover:bg-black/70 rounded-xl text-center text-[10.5px] font-black text-zinc-400 hover:text-amber-300 flex items-center justify-center gap-1 cursor-pointer"
+                                  >
+                                    <Plus className="w-3 h-3 text-zinc-300" />
+                                    <span>+ BLACK</span>
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* GOLD (2nd String) */}
+                              <div className="col-span-3 min-w-0">
+                                {goldPlayer ? (
+                                  <div
+                                    onClick={() => {
+                                      if (userRole === 'admin') {
+                                        setQuickSwapTarget({
+                                          posId: pos.id,
+                                          posName: pos.name,
+                                          formId: form.id,
+                                          formName: form.name,
+                                          currentIndex: 1,
+                                          currentPlayer: goldPlayer,
+                                        });
+                                      }
+                                    }}
+                                    className="p-1.5 bg-amber-950/30 border border-amber-500/40 hover:border-amber-400 rounded-xl flex items-center justify-between gap-1.5 shadow-sm cursor-pointer group"
+                                  >
+                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                      <span className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono font-black text-[11px] flex items-center justify-center shrink-0">
+                                        #{goldPlayer.num}
+                                      </span>
+                                      <div className="min-w-0">
+                                        <span className="text-xs font-black uppercase text-amber-200 tracking-tight truncate block group-hover:text-amber-100">
+                                          {goldPlayer.name}
+                                        </span>
+                                        <span className="text-[8.5px] font-black uppercase text-amber-400 tracking-wider">
+                                          GOLD
+                                        </span>
+                                      </div>
+                                    </div>
+                                    {userRole === 'admin' && (
+                                      <span className="text-[9px] font-black text-slate-500 group-hover:text-amber-300 uppercase px-1 py-0.5 rounded shrink-0">
+                                        Swap
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (userRole === 'admin') {
+                                        if (isLockedByOther) {
+                                          if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Take over editing?`)) {
+                                            if (onTakeOverLock) onTakeOverLock();
+                                          }
+                                          return;
+                                        }
+                                        setAssignPlayerModalTarget({
+                                          formId: form.id,
+                                          formName: form.name,
+                                          posId: pos.id,
+                                          posName: pos.name,
+                                          targetIndex: 1,
+                                        });
+                                      }
+                                    }}
+                                    className="w-full py-2 px-2 border border-dashed border-amber-700/50 hover:border-amber-400 bg-amber-950/20 hover:bg-amber-950/40 rounded-xl text-center text-[10.5px] font-black text-amber-400/80 hover:text-amber-300 flex items-center justify-center gap-1 cursor-pointer"
+                                  >
+                                    <Plus className="w-3 h-3 text-amber-400" />
+                                    <span>+ GOLD</span>
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* BLUE (3rd String) */}
+                              <div className="col-span-2 min-w-0">
+                                {bluePlayer ? (
+                                  <div
+                                    onClick={() => {
+                                      if (userRole === 'admin') {
+                                        setQuickSwapTarget({
+                                          posId: pos.id,
+                                          posName: pos.name,
+                                          formId: form.id,
+                                          formName: form.name,
+                                          currentIndex: 2,
+                                          currentPlayer: bluePlayer,
+                                        });
+                                      }
+                                    }}
+                                    className="p-1.5 bg-blue-950/30 border border-blue-500/40 hover:border-blue-400 rounded-xl flex items-center justify-between gap-1.5 shadow-sm cursor-pointer group"
+                                  >
+                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                      <span className="w-6 h-6 rounded-lg bg-blue-600/30 text-blue-300 border border-blue-500/40 font-mono font-black text-[11px] flex items-center justify-center shrink-0">
+                                        #{bluePlayer.num}
+                                      </span>
+                                      <div className="min-w-0">
+                                        <span className="text-xs font-black uppercase text-blue-200 tracking-tight truncate block group-hover:text-blue-100">
+                                          {bluePlayer.name}
+                                        </span>
+                                        <span className="text-[8.5px] font-black uppercase text-blue-400 tracking-wider">
+                                          BLUE
+                                        </span>
+                                      </div>
+                                    </div>
+                                    {userRole === 'admin' && (
+                                      <span className="text-[9px] font-black text-slate-500 group-hover:text-blue-300 uppercase px-1 py-0.5 rounded shrink-0">
+                                        Swap
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (userRole === 'admin') {
+                                        if (isLockedByOther) {
+                                          if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Take over editing?`)) {
+                                            if (onTakeOverLock) onTakeOverLock();
+                                          }
+                                          return;
+                                        }
+                                        setAssignPlayerModalTarget({
+                                          formId: form.id,
+                                          formName: form.name,
+                                          posId: pos.id,
+                                          posName: pos.name,
+                                          targetIndex: 2,
+                                        });
+                                      }
+                                    }}
+                                    className="w-full py-2 px-2 border border-dashed border-blue-700/50 hover:border-blue-400 bg-blue-950/20 hover:bg-blue-950/40 rounded-xl text-center text-[10.5px] font-black text-blue-400/80 hover:text-blue-300 flex items-center justify-center gap-1 cursor-pointer"
+                                  >
+                                    <Plus className="w-3 h-3 text-blue-400" />
+                                    <span>+ BLUE</span>
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* BACKUPS (4th+ String) */}
+                              <div className="col-span-2 flex items-center gap-1 flex-wrap">
+                                {extraBackups.map((bk, bIdx) => {
+                                  const realIdx = bIdx + 3;
+                                  return (
+                                    <button
+                                      key={realIdx}
+                                      type="button"
+                                      onClick={() => {
+                                        if (userRole === 'admin') {
+                                          setQuickSwapTarget({
+                                            posId: pos.id,
+                                            posName: pos.name,
+                                            formId: form.id,
+                                            formName: form.name,
+                                            currentIndex: realIdx,
+                                            currentPlayer: bk,
+                                          });
+                                        }
+                                      }}
+                                      className="px-2 py-1 rounded-lg border border-slate-700 bg-slate-800/90 text-slate-200 hover:bg-slate-750 text-[10.5px] font-bold flex items-center gap-1 cursor-pointer transition-all"
+                                      title={`Backup (D${realIdx + 1}): #${bk.num} ${bk.name}`}
+                                    >
+                                      <span className="font-mono font-black text-[10px]">#{bk.num}</span>
+                                      <span className="truncate max-w-[50px] font-extrabold">{bk.name}</span>
+                                    </button>
+                                  );
+                                })}
+
+                                {userRole === 'admin' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (isLockedByOther) {
+                                        if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Take over editing?`)) {
+                                          if (onTakeOverLock) onTakeOverLock();
+                                        }
+                                        return;
+                                      }
+                                      setAssignPlayerModalTarget({
+                                        formId: form.id,
+                                        formName: form.name,
+                                        posId: pos.id,
+                                        posName: pos.name,
+                                      });
+                                    }}
+                                    className="p-1 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 rounded-lg border border-slate-700/60 cursor-pointer"
+                                    title="Add Extra Backup Player"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* =====================================================================
+              SUB-TAB 2: PLAYER ASSIGNMENT MATRIX VIEW (#3)
+             ===================================================================== */}
+          {mobileSubTab === 'player_matrix' && (
+            <div className="space-y-4">
+              {/* Matrix Status Filter Chips */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setMatrixFilter('ALL')}
+                  className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
+                    matrixFilter === 'ALL'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400 font-black'
+                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-700'
+                  }`}
+                >
+                  All Roster ({roster.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMatrixFilter('BLACK')}
+                  className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
+                    matrixFilter === 'BLACK' || matrixFilter === 'STARTERS'
+                      ? 'bg-zinc-100 text-slate-950 font-black shadow-md shadow-zinc-200/20'
+                      : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-700'
+                  }`}
+                >
+                  BLACK ({playerAssignmentsMatrix.filter((p) => p.blackCount > 0).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMatrixFilter('GOLD')}
+                  className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
+                    matrixFilter === 'GOLD'
+                      ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/30'
+                      : 'bg-slate-900 text-amber-400 hover:text-amber-300 border border-slate-700'
+                  }`}
+                >
+                  GOLD ({playerAssignmentsMatrix.filter((p) => p.goldCount > 0).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMatrixFilter('BLUE')}
+                  className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
+                    matrixFilter === 'BLUE'
+                      ? 'bg-blue-600 text-white font-black shadow-md shadow-blue-600/30'
+                      : 'bg-slate-900 text-blue-400 hover:text-blue-300 border border-slate-700'
+                  }`}
+                >
+                  BLUE ({playerAssignmentsMatrix.filter((p) => p.blueCount > 0).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMatrixFilter('BACKUPS')}
+                  className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
+                    matrixFilter === 'BACKUPS' || matrixFilter === 'ROTATION'
+                      ? 'bg-slate-700 text-white shadow-md font-black'
+                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-700'
+                  }`}
+                >
+                  Backups ({playerAssignmentsMatrix.filter((p) => p.backupCount > 0).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMatrixFilter('UNASSIGNED')}
+                  className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
+                    matrixFilter === 'UNASSIGNED'
+                      ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30 font-black'
+                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-700'
+                  }`}
+                >
+                  Unassigned in {unit.toUpperCase()} ({playerAssignmentsMatrix.filter((p) => p.isUnassigned).length})
+                </button>
+              </div>
+
+              {/* Roster Assignment List */}
+              <div className="space-y-3">
+                {filteredMatrixPlayers.map((item) => {
+                  return (
+                    <div
+                      key={item.player.id || `${item.num}-${item.playerName}`}
+                      className="bg-slate-850/95 rounded-2xl border border-slate-700/80 p-3.5 shadow-md space-y-2.5"
+                    >
+                      {/* Player Info Line */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className={`w-10 h-10 rounded-xl font-mono font-black text-sm flex items-center justify-center shrink-0 border ${
+                              item.blackCount > 0
+                                ? 'bg-black text-amber-400 border-zinc-600 shadow-xs'
+                                : item.goldCount > 0
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                : item.blueCount > 0
+                                ? 'bg-blue-950/80 text-blue-300 border-blue-600/40'
+                                : 'bg-slate-800 text-slate-400 border-slate-700'
+                            }`}
+                          >
+                            #{item.num}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-sm font-black uppercase text-white tracking-tight truncate">
+                              {item.playerName}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-bold">
+                              {item.player.primaryPosition && (
+                                <span className="text-slate-300">
+                                  Pos: {item.player.primaryPosition}
+                                </span>
+                              )}
+                              {item.player.offensivePosition && (
+                                <span className="text-emerald-400">
+                                  OFF: {item.player.offensivePosition}
+                                </span>
+                              )}
+                              {item.player.defensivePosition && (
+                                <span className="text-blue-400">
+                                  DEF: {item.player.defensivePosition}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Summary Badges */}
+                        <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                          {item.blackCount > 0 && (
+                            <span className="px-2 py-0.5 bg-black text-white border border-zinc-700 font-black text-[10.5px] rounded-lg shadow-xs">
+                              {item.blackCount} BLACK
+                            </span>
+                          )}
+                          {item.goldCount > 0 && (
+                            <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 font-black text-[10.5px] rounded-lg">
+                              {item.goldCount} GOLD
+                            </span>
+                          )}
+                          {item.blueCount > 0 && (
+                            <span className="px-2 py-0.5 bg-blue-950/80 text-blue-300 border border-blue-600/50 font-black text-[10.5px] rounded-lg">
+                              {item.blueCount} BLUE
+                            </span>
+                          )}
+                          {item.backupCount > 0 && (
+                            <span className="px-2 py-0.5 bg-slate-800 text-slate-300 border border-slate-700 font-bold text-[10.5px] rounded-lg">
+                              {item.backupCount} Backup
+                            </span>
+                          )}
+                          {item.isUnassigned && (
+                            <span className="px-2 py-0.5 bg-rose-950/60 text-rose-300 border border-rose-800/50 font-bold text-[10.5px] rounded-lg">
+                              No Spot Yet
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Formation Assignments Badges */}
+                      {item.assignments.length > 0 ? (
+                        <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-slate-800/80">
+                          {item.assignments.map((asgn, aIdx) => (
+                            <div
+                              key={aIdx}
+                              className={`px-2.5 py-1 rounded-xl border text-xs font-black flex items-center gap-1.5 ${
+                                asgn.depthIndex === 0
+                                  ? 'bg-black/90 border-zinc-700 text-zinc-100 shadow-xs'
+                                  : asgn.depthIndex === 1
+                                  ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                                  : asgn.depthIndex === 2
+                                  ? 'bg-blue-950/40 border-blue-500/40 text-blue-200'
+                                  : 'bg-slate-800/90 border-slate-700 text-slate-300'
+                              }`}
+                            >
+                              <span className="font-extrabold text-slate-400">{asgn.formName}:</span>
+                              <span className="text-white">{asgn.posName}</span>
+                              <span
+                                className={`text-[9.5px] px-1.5 py-0.5 rounded font-black uppercase ${
+                                  asgn.depthIndex === 0
+                                    ? 'bg-zinc-200 text-slate-950'
+                                    : asgn.depthIndex === 1
+                                    ? 'bg-amber-400 text-slate-950'
+                                    : asgn.depthIndex === 2
+                                    ? 'bg-blue-500 text-white'
+                                    : 'bg-slate-700 text-slate-200'
+                                }`}
+                              >
+                                {asgn.stringLabel}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-slate-500 font-medium italic pt-1 border-t border-slate-800/60">
+                          Player has not been assigned to any formation positions in {unit.toUpperCase()}.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {filteredMatrixPlayers.length === 0 && (
+                  <div className="p-8 text-center text-slate-400 bg-slate-900/60 rounded-2xl border border-slate-800">
+                    <p className="text-xs font-bold text-slate-300">No players match the current filter.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* =========================================================================
+         TACTICAL FIELD DIAGRAM VIEW (Grid Layout for Wide Screens & Printing)
+         ========================================================================= */}
+      <div className={`space-y-6 print:space-y-3 ${viewMode === 'mobile_cards' ? 'hidden print:block' : 'block'}`}>
+        {/* Mobile Swipe Tip when in field view */}
+        <div className="md:hidden flex items-center justify-between gap-2 p-3 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl text-xs font-bold text-indigo-200 print:hidden">
+          <div className="flex items-center gap-2 min-w-0">
+            <Smartphone className="w-4 h-4 text-indigo-400 shrink-0" />
+            <span className="truncate">Viewing Field Diagram. Swipe sideways across rows.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setViewMode('mobile_cards')}
+            className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[11px] rounded-xl shrink-0 whitespace-nowrap cursor-pointer shadow-xs"
+          >
+            Mobile View
+          </button>
+        </div>
+
         {displayedFormations.map((form) => {
           const isSelected = selectedFormationId === form.id;
 
@@ -1048,9 +1988,9 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                               : 'bg-white text-slate-950 border-slate-300 font-extrabold shadow-xs print-player-badge-d4'
                                           } ${userRole === 'admin' && !isLockedByOther ? 'cursor-grab active:cursor-grabbing' : ''}`}
                                         >
-                                          <div className="flex items-center gap-1.5 min-w-0 truncate">
+                                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
                                             <span
-                                              className={`text-[8.5px] print:text-[8.5px] font-black uppercase px-1 py-0.2 rounded-md ${
+                                              className={`text-[8.5px] print:text-[8.5px] font-black uppercase px-1 py-0.2 rounded-md shrink-0 ${
                                                 isStarter
                                                   ? 'bg-zinc-800 text-white border border-zinc-700 print-tag-st'
                                                   : isD2
@@ -1062,10 +2002,10 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                             >
                                               {isStarter ? 'ST' : isD2 ? 'D2' : isD3 ? 'D3' : `D${plIdx + 1}`}
                                             </span>
-                                            <span className="font-mono text-[10px] print:text-[10.5px] opacity-90 font-black">
+                                            <span className="font-mono text-[10px] print:text-[10.5px] opacity-90 font-black shrink-0">
                                               #{player.num}
                                             </span>
-                                            <span className="truncate uppercase font-black text-[10.5px] print:text-[10px] tracking-tight">
+                                            <span className="uppercase font-black text-[10.5px] sm:text-[11px] print:text-[10px] tracking-tight leading-tight break-words flex-1 line-clamp-2">
                                               {player.name}
                                             </span>
                                           </div>
@@ -1998,6 +2938,365 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
               >
                 <Check className="w-4 h-4" />
                 <span>Clone Formations</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+         8. MOBILE / DIRECT ASSIGN PLAYER MODAL
+         ========================================================================= */}
+      {assignPlayerModalTarget && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-t-3xl sm:rounded-3xl max-w-lg w-full max-h-[88vh] flex flex-col shadow-2xl text-slate-100 animate-in slide-in-from-bottom-6 sm:zoom-in-95">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 bg-indigo-600 text-white font-black text-xs rounded-lg shadow-xs">
+                    {assignPlayerModalTarget.posName}
+                  </span>
+                  <h3 className="font-black text-base text-white">
+                    Assign Player to {assignPlayerModalTarget.posName}
+                  </h3>
+                </div>
+                <p className="text-[11px] text-slate-400 font-medium mt-0.5 flex items-center gap-1.5">
+                  <span>Formation: <span className="text-slate-200 font-bold">{assignPlayerModalTarget.formName}</span></span>
+                  {assignPlayerModalTarget.targetIndex !== undefined && (
+                    <>
+                      <span>•</span>
+                      <span className="font-bold text-amber-400">
+                        Slot:{' '}
+                        {assignPlayerModalTarget.targetIndex === 0
+                          ? 'BLACK (1st String)'
+                          : assignPlayerModalTarget.targetIndex === 1
+                          ? 'GOLD (2nd String)'
+                          : assignPlayerModalTarget.targetIndex === 2
+                          ? 'BLUE (3rd String)'
+                          : `BACKUP (D${assignPlayerModalTarget.targetIndex + 1})`}
+                      </span>
+                    </>
+                  )}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setAssignPlayerModalTarget(null);
+                  setPlayerPickerSearch('');
+                }}
+                className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Search Input & Filter Pills */}
+            <div className="p-3 border-b border-slate-800 bg-slate-850/50 space-y-2">
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Search roster by name, jersey #, or pos..."
+                  value={playerPickerSearch}
+                  onChange={(e) => setPlayerPickerSearch(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-8 py-2 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 shadow-inner"
+                />
+                {playerPickerSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setPlayerPickerSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Filter Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[11px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => setPlayerPickerPosFilter('ALL')}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                    playerPickerPosFilter === 'ALL'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  All Players ({roster.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlayerPickerPosFilter('MATCHING')}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                    playerPickerPosFilter === 'MATCHING'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Matching ({assignPlayerModalTarget.posName})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlayerPickerPosFilter('UNASSIGNED')}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                    playerPickerPosFilter === 'UNASSIGNED'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Unassigned in Formation
+                </button>
+              </div>
+            </div>
+
+            {/* Roster Players List */}
+            <div className="p-3 overflow-y-auto max-h-[50vh] space-y-1.5 divide-y divide-slate-800/40">
+              {filteredRosterPlayers.map((player) => {
+                const playerName =
+                  `${player.firstName || ''} ${player.lastName || ''}`.trim() ||
+                  player.rosterName ||
+                  'Player';
+
+                // Check if player is already assigned in this position
+                const currentPosPlayers = depthChart[assignPlayerModalTarget.posId] || [];
+                const alreadyInThisPos = currentPosPlayers.some(
+                  (p) => p.num.trim() === player.num.trim()
+                );
+
+                return (
+                  <div
+                    key={player.id || `${player.num}-${playerName}`}
+                    onClick={() => {
+                      const playerObj: PlacedPlayer = {
+                        name: playerName,
+                        num: player.num,
+                      };
+                      if (onAssignPlayerDirect) {
+                        onAssignPlayerDirect(
+                          assignPlayerModalTarget.posId,
+                          playerObj,
+                          assignPlayerModalTarget.targetIndex
+                        );
+                      } else {
+                        onDropPlayerOnCard(
+                          assignPlayerModalTarget.posId,
+                          assignPlayerModalTarget.formId,
+                          ''
+                        );
+                      }
+                      setAssignPlayerModalTarget(null);
+                      setPlayerPickerSearch('');
+                    }}
+                    className="pt-2 flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-800/90 border border-transparent hover:border-slate-700 transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-slate-950 font-mono font-black text-sm flex items-center justify-center border border-slate-700 text-amber-400 shrink-0 group-hover:border-indigo-500 shadow-xs">
+                        #{player.num}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-black text-white uppercase tracking-tight truncate group-hover:text-indigo-300">
+                          {playerName}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-bold mt-0.5">
+                          {player.primaryPosition && (
+                            <span className="px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded">
+                              {player.primaryPosition}
+                            </span>
+                          )}
+                          {player.offensivePosition && (
+                            <span className="px-1.5 py-0.2 bg-emerald-950/80 text-emerald-300 rounded border border-emerald-800/40">
+                              OFF: {player.offensivePosition}
+                            </span>
+                          )}
+                          {player.defensivePosition && (
+                            <span className="px-1.5 py-0.2 bg-blue-950/80 text-blue-300 rounded border border-blue-800/40">
+                              DEF: {player.defensivePosition}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {alreadyInThisPos ? (
+                        <span className="text-[11px] font-bold text-amber-400 bg-amber-950/40 border border-amber-800/50 px-2.5 py-1 rounded-xl">
+                          In Position
+                        </span>
+                      ) : (
+                        <span className="text-xs font-black text-indigo-400 group-hover:text-white group-hover:bg-indigo-600 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 transition-all flex items-center gap-1 shadow-xs">
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Assign</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {filteredRosterPlayers.length === 0 && (
+                <div className="p-8 text-center text-slate-400 space-y-1">
+                  <p className="text-xs font-bold text-slate-300">No players match your search filter.</p>
+                  <p className="text-[11px] text-slate-500">Try searching for a different name, number, or clearing the filter.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+         QUICK SWAP & PLAYER ACTIONS MODAL (Mobile Sideline Optimization)
+         ========================================================================= */}
+      {quickSwapTarget && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col space-y-4 p-5 animate-in fade-in zoom-in duration-150">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-3">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-indigo-400">
+                  {quickSwapTarget.formName} • {quickSwapTarget.posName}
+                </span>
+                <h3 className="font-black text-base text-white">Player Depth Options</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuickSwapTarget(null)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Current Active Player Card */}
+            <div className="p-3 bg-black/60 border border-zinc-700 rounded-2xl flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div
+                  className={`w-10 h-10 rounded-xl font-mono font-black text-sm flex items-center justify-center shrink-0 border ${
+                    quickSwapTarget.currentIndex === 0
+                      ? 'bg-amber-400 text-slate-950 border-amber-300'
+                      : quickSwapTarget.currentIndex === 1
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                      : quickSwapTarget.currentIndex === 2
+                      ? 'bg-blue-600/30 text-blue-300 border-blue-500/40'
+                      : 'bg-slate-800 text-slate-300 border-slate-700'
+                  }`}
+                >
+                  #{quickSwapTarget.currentPlayer.num}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-black uppercase text-white truncate">
+                    {quickSwapTarget.currentPlayer.name}
+                  </div>
+                  <span
+                    className={`text-[10.5px] font-black uppercase ${
+                      quickSwapTarget.currentIndex === 0
+                        ? 'text-amber-400'
+                        : quickSwapTarget.currentIndex === 1
+                        ? 'text-amber-300'
+                        : quickSwapTarget.currentIndex === 2
+                        ? 'text-blue-400'
+                        : 'text-slate-400'
+                    }`}
+                  >
+                    {quickSwapTarget.currentIndex === 0
+                      ? 'BLACK (1st String / Starter)'
+                      : quickSwapTarget.currentIndex === 1
+                      ? 'GOLD (2nd String)'
+                      : quickSwapTarget.currentIndex === 2
+                      ? 'BLUE (3rd String)'
+                      : `BACKUP (D${quickSwapTarget.currentIndex + 1})`}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions Grid */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const target = quickSwapTarget;
+                  setQuickSwapTarget(null);
+                  setAssignPlayerModalTarget({
+                    formId: target.formId,
+                    formName: target.formName,
+                    posId: target.posId,
+                    posName: target.posName,
+                    targetIndex: target.currentIndex,
+                  });
+                }}
+                className="w-full py-2.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-md shadow-indigo-600/30 cursor-pointer"
+              >
+                <ArrowLeftRight className="w-4 h-4" />
+                <span>Replace with Another Player</span>
+              </button>
+
+              {/* Order Controls */}
+              <div className="grid grid-cols-2 gap-2">
+                {quickSwapTarget.currentIndex > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onReorderDepthPlayer) {
+                        onReorderDepthPlayer(
+                          quickSwapTarget.posId,
+                          quickSwapTarget.currentIndex,
+                          quickSwapTarget.currentIndex - 1
+                        );
+                      }
+                      setQuickSwapTarget(null);
+                    }}
+                    className="py-2 px-3 bg-slate-800 hover:bg-slate-750 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <ChevronUp className="w-4 h-4 text-emerald-400" />
+                    <span>Promote / Move Up</span>
+                  </button>
+                ) : (
+                  <div className="py-2 px-3 bg-slate-900 text-slate-600 font-bold text-xs rounded-xl border border-slate-800 flex items-center justify-center gap-1.5">
+                    <span className="text-[11px]">Already 1st String</span>
+                  </div>
+                )}
+
+                {(depthChart[quickSwapTarget.posId]?.length || 0) > quickSwapTarget.currentIndex + 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onReorderDepthPlayer) {
+                        onReorderDepthPlayer(
+                          quickSwapTarget.posId,
+                          quickSwapTarget.currentIndex,
+                          quickSwapTarget.currentIndex + 1
+                        );
+                      }
+                      setQuickSwapTarget(null);
+                    }}
+                    className="py-2 px-3 bg-slate-800 hover:bg-slate-750 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <ChevronDown className="w-4 h-4 text-amber-400" />
+                    <span>Demote / Move Down</span>
+                  </button>
+                ) : (
+                  <div className="py-2 px-3 bg-slate-900 text-slate-600 font-bold text-xs rounded-xl border border-slate-800 flex items-center justify-center gap-1.5">
+                    <span className="text-[11px]">Lowest String</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Remove Action */}
+              <button
+                type="button"
+                onClick={() => {
+                  onRemovePlayerFromCard(quickSwapTarget.posId, quickSwapTarget.currentIndex);
+                  setQuickSwapTarget(null);
+                }}
+                className="w-full py-2 px-3 bg-rose-950/30 hover:bg-rose-950/60 text-rose-300 font-bold text-xs rounded-xl border border-rose-800/40 flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Remove From Position</span>
               </button>
             </div>
           </div>

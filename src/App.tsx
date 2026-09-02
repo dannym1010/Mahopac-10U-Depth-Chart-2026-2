@@ -2419,6 +2419,62 @@ function mergeRemoteWeeklyData(
     }
   };
 
+  const handleAssignPlayerDirect = (
+    posId: string,
+    player: PlacedPlayer,
+    targetIndex?: number
+  ) => {
+    if (userRole !== 'admin') return;
+    const isScrimmage = activeUnit === 'scrimmage';
+    const chart = isScrimmage
+      ? { ...currentScrimmageChart }
+      : { ...currentDepthChart };
+
+    if (!chart[posId]) chart[posId] = [];
+
+    // Remove player if already in this position to avoid duplicates
+    const filtered = chart[posId].filter((p) => p.num.trim() !== player.num.trim());
+    if (targetIndex !== undefined && targetIndex >= 0 && targetIndex <= filtered.length) {
+      filtered.splice(targetIndex, 0, player);
+    } else {
+      filtered.push(player);
+    }
+    chart[posId] = filtered;
+
+    if (isScrimmage) {
+      updateCurrentWeekScrimmageChart(chart);
+    } else {
+      updateCurrentWeekDepthChart(chart);
+    }
+    flushAndSaveStateToStorage('player_assign_direct');
+  };
+
+  const handleReorderDepthPlayer = (
+    posId: string,
+    fromIndex: number,
+    toIndex: number
+  ) => {
+    if (userRole !== 'admin') return;
+    const isScrimmage = activeUnit === 'scrimmage';
+    const chart = isScrimmage
+      ? { ...currentScrimmageChart }
+      : { ...currentDepthChart };
+
+    if (!chart[posId] || !chart[posId][fromIndex]) return;
+    const list = [...chart[posId]];
+    const [moved] = list.splice(fromIndex, 1);
+    const clampedToIndex = Math.max(0, Math.min(list.length, toIndex));
+    list.splice(clampedToIndex, 0, moved);
+    chart[posId] = list;
+
+    if (isScrimmage) {
+      updateCurrentWeekScrimmageChart(chart);
+    } else {
+      updateCurrentWeekDepthChart(chart);
+    }
+    flushAndSaveStateToStorage('player_reorder_depth');
+  };
+
   // Drag and Drop Position Cards Across Rows & Slots
   const handlePositionCardDragStart = (
     e: React.DragEvent,
@@ -5164,6 +5220,9 @@ function mergeRemoteWeeklyData(
                 onDuplicateFormationDirect={handleDuplicateFormationDirect}
                 onMovePositionDirect={handleMovePositionDirect}
                 onCopyPositionDirect={handleCopyPositionDirect}
+                roster={roster.filter((p) => !p.teamId || p.teamId === activeTeamId)}
+                onAssignPlayerDirect={handleAssignPlayerDirect}
+                onReorderDepthPlayer={handleReorderDepthPlayer}
                 isLockedByOther={isLockedByOther}
                 lockHolderName={lockHolderName}
                 lockHolderEmail={lockHolderEmail}
