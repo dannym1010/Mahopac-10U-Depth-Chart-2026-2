@@ -21,6 +21,7 @@ import {
   Printer,
   Layers,
   ExternalLink,
+  CheckSquare,
 } from 'lucide-react';
 import { PlaybookGuideTree, PlaybookGuideOrder, UserRole, Team } from '../types';
 import {
@@ -391,6 +392,8 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [printScope, setPrintScope] = useState<'current' | 'category' | 'all'>('current');
   const [printInkFriendly, setPrintInkFriendly] = useState(true);
+  const [includeCoverPage, setIncludeCoverPage] = useState(true);
+  const [selectedPrintSubTabs, setSelectedPrintSubTabs] = useState<Record<string, boolean>>({});
   const [isPrintingLoading, setIsPrintingLoading] = useState(false);
 
   const mainCategories =
@@ -415,6 +418,49 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
     });
     return count;
   }, [mainCategories, guideOrder.sub, guideTree]);
+
+  // Available sections for current print scope
+  const availablePrintSections = useMemo(() => {
+    if (printScope === 'current') {
+      return [{ category: activeMain, subTab: activeSub, key: `${activeMain}__${activeSub}` }];
+    }
+    if (printScope === 'category') {
+      return currentSubTabs.map((sub) => ({
+        category: activeMain,
+        subTab: sub,
+        key: `${activeMain}__${sub}`,
+      }));
+    }
+    // 'all' - full binder
+    const list: { category: string; subTab: string; key: string }[] = [];
+    mainCategories.forEach((cat) => {
+      const subs =
+        (guideOrder.sub && guideOrder.sub[cat]) || Object.keys(guideTree[cat] || {});
+      subs.forEach((sub) => {
+        list.push({ category: cat, subTab: sub, key: `${cat}__${sub}` });
+      });
+    });
+    return list;
+  }, [printScope, activeMain, activeSub, currentSubTabs, mainCategories, guideOrder.sub, guideTree]);
+
+  const selectedSectionsCount = useMemo(() => {
+    return availablePrintSections.filter((s) => selectedPrintSubTabs[s.key] !== false).length;
+  }, [availablePrintSections, selectedPrintSubTabs]);
+
+  const togglePrintSection = (key: string) => {
+    setSelectedPrintSubTabs((prev) => ({
+      ...prev,
+      [key]: prev[key] === false ? true : false,
+    }));
+  };
+
+  const handleSelectAllPrintSections = (selectAll: boolean) => {
+    const updated: Record<string, boolean> = {};
+    availablePrintSections.forEach((s) => {
+      updated[s.key] = selectAll;
+    });
+    setSelectedPrintSubTabs(updated);
+  };
 
   const isHtml = (val: string): boolean => {
     if (!val) return false;
@@ -500,7 +546,17 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
     const teamSeason = activeTeam?.season || activeTeam?.ageGroup || '10U Football';
     const headCoach = activeTeam?.headCoachName || '';
 
-    const sections = subTabs.map((sub) => ({
+    // Filter to selected sections
+    const activeSubs = subTabs.filter(
+      (sub) => selectedPrintSubTabs[`${category}__${sub}`] !== false
+    );
+
+    if (activeSubs.length === 0) {
+      alert('Please select at least one playbook section to print.');
+      return;
+    }
+
+    const sections = activeSubs.map((sub) => ({
       category,
       subTab: sub,
       content: guideTree[category]?.[sub] || '',
@@ -513,6 +569,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
       title: `${category.toUpperCase()} PLAYBOOK & INSTALL PACKET`,
       sections,
       inkFriendly: printInkFriendly,
+      includeCoverPage: includeCoverPage,
     });
 
     const docTitle = `${teamTitle} - ${category} Playbook Packet`;
@@ -534,13 +591,20 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
       const subTabs =
         (guideOrder.sub && guideOrder.sub[cat]) || Object.keys(guideTree[cat] || {});
       subTabs.forEach((sub) => {
-        sections.push({
-          category: cat,
-          subTab: sub,
-          content: guideTree[cat]?.[sub] || '',
-        });
+        if (selectedPrintSubTabs[`${cat}__${sub}`] !== false) {
+          sections.push({
+            category: cat,
+            subTab: sub,
+            content: guideTree[cat]?.[sub] || '',
+          });
+        }
       });
     });
+
+    if (sections.length === 0) {
+      alert('Please select at least one playbook section to print.');
+      return;
+    }
 
     const html = generatePlaybookBinderPrintHTML({
       teamName: teamTitle,
@@ -549,6 +613,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
       title: 'OFFICIAL TEAM PLAYBOOK & SCHEME INSTALL BINDER',
       sections,
       inkFriendly: printInkFriendly,
+      includeCoverPage: includeCoverPage,
     });
 
     const docTitle = `${teamTitle} - Complete Team Playbook Binder`;
@@ -569,6 +634,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
       } else {
         handlePrintFullPlaybookBinder(mode);
       }
+      setIsPrintModalOpen(false);
     } finally {
       setTimeout(() => setIsPrintingLoading(false), 800);
     }
@@ -1450,10 +1516,115 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
               </div>
             </div>
 
+            {/* Pagination & Multi-Section Handling */}
+            <div className="space-y-3">
+              <div className="bg-indigo-950/40 p-3.5 rounded-2xl border border-indigo-500/40 flex items-start gap-3">
+                <FileText className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                <div className="text-xs text-slate-300 space-y-1">
+                  <div className="font-bold text-white flex items-center gap-1.5">
+                    <span>Multi-Section Page Break Assurance</span>
+                    <span className="text-[10px] px-1.5 py-0.2 bg-indigo-500/30 text-indigo-300 rounded border border-indigo-400/40 font-mono">
+                      page-break-after: always
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Every playbook section prints on its <strong>own separate page</strong>. If a complex play contains extensive diagrams and coaching assignments, it cleanly flows onto a <strong>2nd page</strong> without truncating, and the next section will always start on a brand new sheet.
+                  </p>
+                </div>
+              </div>
+
+              {printScope !== 'current' && (
+                <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800 flex items-center justify-between gap-3">
+                  <label htmlFor="cover-page-toggle" className="cursor-pointer flex items-center gap-2.5">
+                    <input
+                      id="cover-page-toggle"
+                      type="checkbox"
+                      checked={includeCoverPage}
+                      onChange={(e) => setIncludeCoverPage(e.target.checked)}
+                      className="w-4 h-4 rounded text-indigo-600 bg-slate-900 border-slate-700 cursor-pointer accent-indigo-500"
+                    />
+                    <div>
+                      <div className="text-xs font-bold text-slate-200">
+                        Include Binder Cover Sheet &amp; Table of Contents
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        Prints team title &amp; quick table of contents on Page 1. Playbook sections begin on Page 2.
+                      </div>
+                    </div>
+                  </label>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${
+                    includeCoverPage ? 'bg-indigo-950 text-indigo-300 border-indigo-500/40' : 'bg-slate-900 text-slate-500 border-slate-800'
+                  }`}>
+                    {includeCoverPage ? '+1 Cover Sheet' : 'Plays Only'}
+                  </span>
+                </div>
+              )}
+
+              {printScope !== 'current' && availablePrintSections.length > 1 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                      <CheckSquare className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Sections to Print ({selectedSectionsCount} of {availablePrintSections.length})</span>
+                    </label>
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectAllPrintSections(true)}
+                        className="text-indigo-400 hover:text-indigo-300 font-bold hover:underline cursor-pointer"
+                      >
+                        Select All
+                      </button>
+                      <span className="text-slate-600">&bull;</span>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectAllPrintSections(false)}
+                        className="text-slate-400 hover:text-slate-300 font-medium hover:underline cursor-pointer"
+                      >
+                        Deselect All
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="max-h-36 overflow-y-auto space-y-1 pr-1 rounded-xl bg-slate-950/60 p-2 border border-slate-800/80">
+                    {availablePrintSections.map((sec, sIdx) => {
+                      const isSelected = selectedPrintSubTabs[sec.key] !== false;
+                      return (
+                        <label
+                          key={sec.key}
+                          className={`flex items-center justify-between p-1.5 px-2.5 rounded-lg border text-xs cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'bg-slate-900/90 border-slate-700/80 text-white'
+                              : 'bg-slate-950/40 border-slate-900 text-slate-500 hover:bg-slate-900/40'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => togglePrintSection(sec.key)}
+                              className="w-3.5 h-3.5 rounded text-indigo-600 bg-slate-900 border-slate-700 cursor-pointer accent-indigo-500"
+                            />
+                            <span className="font-bold truncate">{sec.subTab}</span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-bold uppercase">
+                              {sec.category}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-mono shrink-0 ml-2">
+                            Section {sIdx + 1}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Print Theme & Ink Format */}
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                2. Print Styling &amp; Paper Mode
+                3. Print Styling &amp; Paper Mode
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
