@@ -63,6 +63,7 @@ interface PlayerHoursTrackerProps {
   onUpdateAttendanceLogs?: (logs: AttendanceRecord[]) => void;
   onAddScheduleEvent?: (event: ScheduleEvent) => void;
   onUpdateScheduleEvent?: (event: ScheduleEvent) => void;
+  onDeleteScheduleEvent?: (id: string) => void;
 }
 
 export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
@@ -81,6 +82,7 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
   onUpdateAttendanceLogs,
   onAddScheduleEvent,
   onUpdateScheduleEvent,
+  onDeleteScheduleEvent,
 }) => {
   const [activeTab, setActiveTab] = useState<'weekly_matrix' | 'roster_hours' | 'attendance_log'>('weekly_matrix');
   const [searchTerm, setSearchTerm] = useState('');
@@ -305,7 +307,36 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
   // Delete an attendance log entry
   const handleDeleteAttendanceLog = (recordId: string) => {
     if (userRole !== 'admin') return;
-    if (window.confirm('Are you sure you want to remove this attendance record from history?')) {
+    const logToDelete = attendanceLogs.find((r) => r.id === recordId);
+    if (window.confirm(`Are you sure you want to remove attendance log "${logToDelete?.title || 'Practice'}"? Credited hours will be reversed.`)) {
+      if (logToDelete && (logToDelete.hours || 0) > 0 && onUpdateRoster) {
+        const updatedRoster = roster.map((player) => {
+          const wasPresent = logToDelete.presentPlayerNums?.includes(player.num);
+          if (wasPresent) {
+            const logWeek = logToDelete.week || currentWeek;
+            const curWeekly = player.weeklyHours?.[logWeek] || 0;
+            const newWeekly = Math.max(0, +(curWeekly - logToDelete.hours).toFixed(2));
+            let newCond = player.conditioningHours || 0;
+            let newPadded = player.paddedHours || 0;
+            if (logToDelete.sessionType === 'conditioning') {
+              newCond = Math.max(0, +(newCond - logToDelete.hours).toFixed(2));
+            } else {
+              newPadded = Math.max(0, +(newPadded - logToDelete.hours).toFixed(2));
+            }
+            return {
+              ...player,
+              weeklyHours: {
+                ...player.weeklyHours,
+                [logWeek]: newWeekly,
+              },
+              conditioningHours: newCond,
+              paddedHours: newPadded,
+            };
+          }
+          return player;
+        });
+        onUpdateRoster(updatedRoster);
+      }
       if (onUpdateAttendanceLogs) {
         onUpdateAttendanceLogs(attendanceLogs.filter((r) => r.id !== recordId));
       }
@@ -547,6 +578,7 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
           onUpdateAttendanceLogs={onUpdateAttendanceLogs}
           onAddScheduleEvent={onAddScheduleEvent}
           onUpdateScheduleEvent={onUpdateScheduleEvent}
+          onDeleteScheduleEvent={onDeleteScheduleEvent}
         />
       )}
 

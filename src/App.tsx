@@ -3532,10 +3532,41 @@ function mergeRemoteWeeklyData(
       alert('Cannot delete the last practice plan.');
       return;
     }
-    if (confirm('Delete current practice plan?')) {
+    const planToDelete = practiceData.find((p) => p.id === currentPracticeId);
+    if (!planToDelete) return;
+
+    const matchingEvent = scheduleEvents.find(
+      (e) =>
+        e.linkedPracticePlanId === planToDelete.id ||
+        (planToDelete.date && e.date === planToDelete.date && (e.type === 'practice' || e.type === 'scrimmage'))
+    );
+
+    const hasAttendance = attendanceLogs.some(
+      (l) => planToDelete.date && l.date === planToDelete.date
+    );
+
+    let confirmPrompt = `Delete practice plan "${planToDelete.title || 'Current Practice'}"?`;
+    if (matchingEvent || hasAttendance) {
+      confirmPrompt += `\n\nThis will also remove this practice from the Schedule and Attendance Tracker.`;
+    }
+
+    if (confirm(confirmPrompt)) {
       const remaining = practiceData.filter((p) => p.id !== currentPracticeId);
       updatePracticeDataAndSave(() => remaining);
       setCurrentPracticeId(remaining[0]?.id || null);
+
+      if (matchingEvent) {
+        handleDeleteScheduleEvent(matchingEvent.id);
+      } else if (hasAttendance && planToDelete.date) {
+        // Clean up attendance logs for this date if no event
+        const matchingLogs = attendanceLogs.filter((l) => l.date === planToDelete.date);
+        if (matchingLogs.length > 0) {
+          const matchingIds = new Set(matchingLogs.map((l) => l.id));
+          const updatedLogs = attendanceLogs.filter((l) => !matchingIds.has(l.id));
+          setAttendanceLogs(updatedLogs);
+          safeJSONSet('footballAttendanceLogs', updatedLogs);
+        }
+      }
     }
   };
 
@@ -4946,11 +4977,82 @@ function mergeRemoteWeeklyData(
   };
 
   const handleDeleteScheduleEvent = (id: string) => {
-    setScheduleEvents((prev) => {
-      const updated = prev.filter((ev) => ev.id !== id);
-      safeJSONSet('footballScheduleEvents', updated);
-      return updated;
+    // 1. Find event to delete
+    const eventToDelete = scheduleEvents.find((ev) => ev.id === id);
+
+    // 2. Remove from scheduleEvents
+    const updatedEvents = scheduleEvents.filter((ev) => ev.id !== id);
+    setScheduleEvents(updatedEvents);
+    safeJSONSet('footballScheduleEvents', updatedEvents);
+
+    // 3. Find and remove matching attendance logs
+    // Check if any other practice/scrimmage still exists on this date
+    const remainingPracticesOnDate = updatedEvents.filter(
+      (e) => eventToDelete && e.date === eventToDelete.date && (e.type === 'practice' || e.type === 'scrimmage' || e.type === 'walkthrough')
+    );
+
+    const matchingLogs = attendanceLogs.filter((log) => {
+      if (log.id === id || log.id === `att_${id}`) return true;
+      if (log.scheduleEventId === id) return true;
+      if (eventToDelete && log.date === eventToDelete.date) {
+        if (!log.teamId || log.teamId === eventToDelete.teamId) {
+          // If no other practice exists on this date, this log belonged to the deleted event
+          if (remainingPracticesOnDate.length === 0) return true;
+        }
+      }
+      return false;
     });
+
+    if (matchingLogs.length > 0) {
+      const matchingIds = new Set(matchingLogs.map((l) => l.id));
+      const updatedLogs = attendanceLogs.filter((l) => !matchingIds.has(l.id));
+      setAttendanceLogs(updatedLogs);
+      safeJSONSet('footballAttendanceLogs', updatedLogs);
+
+      // 4. Reverse hours credited to players from these deleted attendance logs
+      setRoster((prevRoster) => {
+        let changed = false;
+        const newRoster = prevRoster.map((player) => {
+          let pCopy = { ...player };
+          matchingLogs.forEach((log) => {
+            const wasPresent = log.presentPlayerNums?.includes(player.num);
+            if (wasPresent && (log.hours || 0) > 0) {
+              changed = true;
+              const logWeek = log.week || '0';
+              const curWeekly = pCopy.weeklyHours?.[logWeek] || 0;
+              const newWeekly = Math.max(0, +(curWeekly - log.hours).toFixed(2));
+
+              let newCond = pCopy.conditioningHours || 0;
+              let newPadded = pCopy.paddedHours || 0;
+              if (log.sessionType === 'conditioning') {
+                newCond = Math.max(0, +(newCond - log.hours).toFixed(2));
+              } else {
+                newPadded = Math.max(0, +(newPadded - log.hours).toFixed(2));
+              }
+
+              pCopy = {
+                ...pCopy,
+                weeklyHours: {
+                  ...pCopy.weeklyHours,
+                  [logWeek]: newWeekly,
+                },
+                conditioningHours: newCond,
+                paddedHours: newPadded,
+              };
+            }
+          });
+          return pCopy;
+        });
+
+        if (changed) {
+          safeJSONSet('footballRoster', newRoster);
+          return newRoster;
+        }
+        return prevRoster;
+      });
+    }
+
+    saveStateToStorage('schedule');
   };
 
   const handleBulkAddScheduleEvents = (
@@ -5924,6 +6026,7 @@ function mergeRemoteWeeklyData(
                 onUpdateRoster={handleUpdateRoster}
                 onAddScheduleEvent={handleAddScheduleEvent}
                 onUpdateScheduleEvent={(event) => handleUpdateScheduleEvent(event.id, event)}
+                onDeleteScheduleEvent={handleDeleteScheduleEvent}
                 onOpenAddPlayerModal={() => {
                   setEditingPlayerForModal(null);
                   setIsRosterModalOpen(true);

@@ -61,6 +61,7 @@ interface WeeklyAttendanceTrackerProps {
   onUpdateAttendanceLogs?: (logs: AttendanceRecord[]) => void;
   onAddScheduleEvent?: (event: ScheduleEvent) => void;
   onUpdateScheduleEvent?: (event: ScheduleEvent) => void;
+  onDeleteScheduleEvent?: (id: string) => void;
 }
 
 // Helper to format date into readable day and date: e.g. "Tue 8/25"
@@ -129,6 +130,7 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
   onUpdateAttendanceLogs,
   onAddScheduleEvent,
   onUpdateScheduleEvent,
+  onDeleteScheduleEvent,
 }) => {
   // Selected week for weekly tracking
   const [selectedWeek, setSelectedWeek] = useState<string>(currentWeek || '0');
@@ -209,7 +211,7 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
         });
       });
 
-    // 2. From Attendance Logs: incorporate any logged sessions for this week
+    // 2. From Attendance Logs: enrich existing scheduled sessions with logged metadata
     attendanceLogs
       .filter((log) => {
         if (!log) return false;
@@ -220,10 +222,9 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
         return false;
       })
       .forEach((log) => {
-        const { dayName, shortDate } = formatShortDate(log.date);
         const existingKey = Array.from(sessionsMap.keys()).find((k) => {
           const s = sessionsMap.get(k);
-          return s && s.date === log.date;
+          return s && (s.id === log.id || s.scheduleEventId === log.scheduleEventId || s.date === log.date);
         });
 
         if (existingKey) {
@@ -235,20 +236,9 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
             sessionType: log.sessionType || existing.sessionType,
             title: log.title || existing.title,
           });
-        } else {
-          // Add attendance log as an active practice session
-          sessionsMap.set(log.id, {
-            id: log.id,
-            date: log.date,
-            dayOfWeek: dayName,
-            title: log.title || `Practice (${shortDate})`,
-            timeStr: 'Scheduled Practice',
-            hours: log.hours || 2.0,
-            sessionType: log.sessionType || (isPreSeason ? 'conditioning' : 'padded'),
-            location: log.location,
-            notes: log.notes,
-          });
         }
+        // NOTE: We intentionally do NOT resurrect attendance logs whose schedule event has been deleted.
+        // If a practice was deleted, it will no longer display on the attendance tracker.
       });
 
     // Sort chronologically by date
@@ -729,6 +719,7 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
     // Add corresponding attendance record
     const newRecord: AttendanceRecord = {
       id: newLogId,
+      scheduleEventId: newSessionId,
       date: newPracticeDate,
       week: selectedWeek,
       title: newPracticeTitle || 'Practice Session',
@@ -815,6 +806,7 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
 
       newLogs.push({
         id: `att_auto_${Date.now()}_${idx}`,
+        scheduleEventId: sId,
         date: s.date,
         week: selectedWeek,
         title: s.title,
@@ -833,6 +825,93 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
 
     triggerSaveToast(`✓ Generated 3 weekly practice dates (Tue 2.0h, Thu 2.0h, Sat 2.5h)`);
   };
+
+  // Delete a practice session from both the attendance tracker and the schedule
+  const handleDeleteSession = (session: WeeklyPracticeSession) => {
+    if (userRole !== 'admin') return;
+    const { shortDate } = formatShortDate(session.date);
+    if (
+      !window.confirm(
+        `Are you sure you want to delete practice "${session.title}" (${shortDate})?\n\nThis will remove it from both the Attendance Tracker and the Schedule, and reverse credited hours.`
+      )
+    ) {
+      return;
+    }
+
+    // 1. Identify matching attendance logs
+    const matchingLogs = attendanceLogs.filter(
+      (l) =>
+        l.id === session.id ||
+        l.scheduleEventId === session.id ||
+        (session.scheduleEventId && l.scheduleEventId === session.scheduleEventId) ||
+        (l.date === session.date && (!l.week || l.week === selectedWeek))
+    );
+
+    // 2. Deduct credited hours from roster players
+    if (matchingLogs.length > 0 && onUpdateRoster) {
+      const updatedRoster = roster.map((player) => {
+        let pCopy = { ...player };
+        matchingLogs.forEach((log) => {
+          const wasPresent = log.presentPlayerNums?.includes(player.num);
+          if (wasPresent && (log.hours || 0) > 0) {
+            const logWeek = log.week || selectedWeek;
+            const curWeekly = pCopy.weeklyHours?.[logWeek] || 0;
+            const newWeekly = Math.max(0, +(curWeekly - log.hours).toFixed(2));
+            let newCond = pCopy.conditioningHours || 0;
+            let newPadded = pCopy.paddedHours || 0;
+            if (log.sessionType === 'conditioning') {
+              newCond = Math.max(0, +(newCond - log.hours).toFixed(2));
+            } else {
+              newPadded = Math.max(0, +(newPadded - log.hours).toFixed(2));
+            }
+
+            pCopy = {
+              ...pCopy,
+              weeklyHours: {
+                ...pCopy.weeklyHours,
+                [logWeek]: newWeekly,
+              },
+              conditioningHours: newCond,
+              paddedHours: newPadded,
+            };
+          }
+        });
+        return pCopy;
+      });
+      onUpdateRoster(updatedRoster);
+
+      // 3. Remove attendance logs
+      const matchingIds = new Set(matchingLogs.map((l) => l.id));
+      const remainingLogs = attendanceLogs.filter((l) => !matchingIds.has(l.id));
+      if (onUpdateAttendanceLogs) {
+        onUpdateAttendanceLogs(remainingLogs);
+      }
+    }
+
+    // 4. Delete matching schedule event
+    const eventIdToDelete = session.scheduleEventId || session.id;
+    if (onDeleteScheduleEvent) {
+      onDeleteScheduleEvent(eventIdToDelete);
+    }
+
+    triggerSaveToast(`✓ Deleted practice "${session.title}" (${shortDate})`);
+  };
+
+  // Auto-cleanup orphaned empty attendance logs whose schedule events were deleted
+  React.useEffect(() => {
+    if (!onUpdateAttendanceLogs || attendanceLogs.length === 0) return;
+    const activeDates = new Set(scheduleEvents.map((e) => e.date));
+    const orphanedEmptyLogs = attendanceLogs.filter(
+      (l) =>
+        (!l.presentPlayerNums || l.presentPlayerNums.length === 0) &&
+        !activeDates.has(l.date)
+    );
+    if (orphanedEmptyLogs.length > 0) {
+      const orphanIds = new Set(orphanedEmptyLogs.map((l) => l.id));
+      const cleaned = attendanceLogs.filter((l) => !orphanIds.has(l.id));
+      onUpdateAttendanceLogs(cleaned);
+    }
+  }, [scheduleEvents, attendanceLogs, onUpdateAttendanceLogs]);
 
   // Shift selected week backward/forward
   const handleShiftWeek = (direction: number) => {
@@ -1293,10 +1372,19 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                                 <button
                                   type="button"
                                   onClick={() => handleClearAllForSession(session)}
-                                  className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 border border-rose-500/30 font-bold"
+                                  className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 font-bold"
                                   title="Clear All"
                                 >
-                                  ✕ Clear
+                                  Clear
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteSession(session)}
+                                  className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 font-bold flex items-center gap-0.5"
+                                  title={`Delete practice "${session.title}" from schedule and attendance tracker`}
+                                >
+                                  <Trash2 className="w-2.5 h-2.5" />
+                                  <span>Del</span>
                                 </button>
                               </div>
                             )}

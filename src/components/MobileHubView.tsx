@@ -779,14 +779,22 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
 
     const dateFormatted = formatFullDateLabel(attendanceDate);
 
+    const matchingSchedEvent = (scheduleEvents || []).find(
+      (e) =>
+        e.date === attendanceDate &&
+        (!e.teamId || e.teamId === activeTeam.id) &&
+        (e.type === 'practice' || e.type === 'scrimmage' || e.type === 'walkthrough')
+    );
+
     const record: AttendanceRecord = {
       id: `att_${attendanceDate}_${Date.now()}`,
+      scheduleEventId: matchingSchedEvent?.id,
       date: attendanceDate,
       week: currentWeek,
       teamId: activeTeam.id,
-      title: `Practice Attendance • ${dateFormatted}`,
-      sessionType: 'padded',
-      hours: 1.5,
+      title: matchingSchedEvent?.title || `Practice Attendance • ${dateFormatted}`,
+      sessionType: matchingSchedEvent?.focusOrNotes?.toLowerCase().includes('cond') ? 'conditioning' : 'padded',
+      hours: matchingSchedEvent?.durationMinutes ? Math.round((matchingSchedEvent.durationMinutes / 60) * 10) / 10 : 1.5,
       presentPlayerNums: presentNums,
       absentPlayerNums: absentNums,
       timestamp: Date.now(),

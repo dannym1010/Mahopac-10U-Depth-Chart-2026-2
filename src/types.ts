@@ -55,6 +55,7 @@ export interface SeasonConfig {
 
 export interface AttendanceRecord {
   id: string;
+  scheduleEventId?: string; // Links attendance log to a specific schedule event
   teamId?: string; // Links attendance log to a specific team
   date: string;
   week: string;
