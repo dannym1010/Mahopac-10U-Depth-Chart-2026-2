@@ -42,7 +42,12 @@ import {
   Copy,
   FileCode,
   Layers,
+  Printer,
 } from 'lucide-react';
+import {
+  generatePlaybookGuidePrintHTML,
+  printCleanHTML,
+} from '../utils/printUtils';
 import {
   Team,
   UnitType,
@@ -458,6 +463,28 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
       content,
       isStarterTemplate: false,
     });
+  };
+
+  // Helper to print a playbook guide
+  const handlePrintGuide = (category: string, docName: string, content: string) => {
+    const teamTitle = activeTeam?.name || 'Mahopac 10U Indians';
+    const teamSeason = activeTeam?.season || activeTeam?.ageGroup || '10U Football';
+
+    if (content && (content.startsWith('data:application/pdf') || content.endsWith('.pdf'))) {
+      window.open(content, '_blank');
+      return;
+    }
+
+    const html = generatePlaybookGuidePrintHTML({
+      teamName: teamTitle,
+      teamSeason,
+      category,
+      subTab: docName,
+      content,
+      inkFriendly: true,
+    });
+
+    printCleanHTML(html, `${teamTitle} - ${category} - ${docName}`);
   };
 
   // Helper to preview template
@@ -1353,6 +1380,15 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>Read / View</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePrintGuide(doc.category, doc.name, doc.content)}
+                      className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
+                      title="Print Playbook Guide"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-indigo-400" />
+                      <span className="hidden sm:inline">Print</span>
                     </button>
                     <button
                       type="button"
@@ -2339,6 +2375,23 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                   </button>
                 )}
               </div>
+
+              {/* Print Guide Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  handlePrintGuide(
+                    quickViewGuideModal.category,
+                    quickViewGuideModal.title,
+                    quickViewGuideModal.content
+                  );
+                }}
+                className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1 active:scale-95 transition-all shadow-xs cursor-pointer"
+                title="Print this playbook guide"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Print</span>
+              </button>
 
               {/* Open in Studio Button */}
               <button

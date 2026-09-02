@@ -5679,6 +5679,7 @@ function mergeRemoteWeeklyData(
                 activeMain={activeGuideMain}
                 activeSub={activeGuideSub}
                 userRole={userRole}
+                activeTeam={currentActiveTeam}
                 onSelectMain={setActiveGuideMain}
                 onSelectSub={setActiveGuideSub}
                 onUploadDocument={handleUploadGuideDocument}

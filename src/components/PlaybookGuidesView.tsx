@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   BookOpen,
   Settings,
@@ -18,8 +18,17 @@ import {
   Sparkles,
   FileCode,
   Globe,
+  Printer,
+  Layers,
+  ExternalLink,
 } from 'lucide-react';
-import { PlaybookGuideTree, PlaybookGuideOrder, UserRole } from '../types';
+import { PlaybookGuideTree, PlaybookGuideOrder, UserRole, Team } from '../types';
+import {
+  printCleanHTML,
+  openCleanPrintTab,
+  generatePlaybookGuidePrintHTML,
+  generatePlaybookBinderPrintHTML,
+} from '../utils/printUtils';
 
 interface PlaybookGuidesViewProps {
   guideTree: PlaybookGuideTree;
@@ -27,6 +36,7 @@ interface PlaybookGuidesViewProps {
   activeMain: string;
   activeSub: string;
   userRole: UserRole;
+  activeTeam?: Team;
   onSelectMain: (main: string) => void;
   onSelectSub: (sub: string) => void;
   onUploadDocument: (main: string, sub: string, file: File) => void;
@@ -355,6 +365,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
   activeMain,
   activeSub,
   userRole,
+  activeTeam,
   onSelectMain,
   onSelectSub,
   onUploadDocument,
@@ -376,6 +387,12 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
   const [htmlEditorCode, setHtmlEditorCode] = useState('');
   const [copiedNotification, setCopiedNotification] = useState(false);
 
+  // Playbook & Guides Printing State
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [printScope, setPrintScope] = useState<'current' | 'category' | 'all'>('current');
+  const [printInkFriendly, setPrintInkFriendly] = useState(true);
+  const [isPrintingLoading, setIsPrintingLoading] = useState(false);
+
   const mainCategories =
     guideOrder.main && guideOrder.main.length > 0
       ? guideOrder.main
@@ -388,6 +405,16 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
     Object.keys(guideTree[activeMain] || {});
 
   const currentDocUrl = guideTree[activeMain]?.[activeSub] || '';
+
+  const totalSubTabsCount = useMemo(() => {
+    let count = 0;
+    mainCategories.forEach((cat) => {
+      const subs =
+        (guideOrder.sub && guideOrder.sub[cat]) || Object.keys(guideTree[cat] || {});
+      count += subs.length;
+    });
+    return count;
+  }, [mainCategories, guideOrder.sub, guideTree]);
 
   const isHtml = (val: string): boolean => {
     if (!val) return false;
@@ -429,6 +456,142 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
     setTimeout(() => setCopiedNotification(false), 2000);
   };
 
+  // Helper to print a single guide
+  const handlePrintSingleGuide = (mainCat: string, subTabName: string, mode: 'iframe' | 'tab' = 'iframe') => {
+    const content = guideTree[mainCat]?.[subTabName] || '';
+    const teamTitle = activeTeam?.name || 'Mahopac 10U Indians';
+    const teamSeason = activeTeam?.season || activeTeam?.ageGroup || '10U Football';
+
+    // If it's a PDF URL or Data URL
+    if (content && (content.startsWith('data:application/pdf') || content.endsWith('.pdf'))) {
+      if (mode === 'tab') {
+        window.open(content, '_blank');
+      } else {
+        printCleanHTML(
+          `<iframe src="${content}" style="width:100%;height:100vh;border:none;"></iframe>`,
+          `${teamTitle} - ${mainCat} - ${subTabName}`
+        );
+      }
+      return;
+    }
+
+    const html = generatePlaybookGuidePrintHTML({
+      teamName: teamTitle,
+      teamSeason,
+      category: mainCat,
+      subTab: subTabName,
+      content,
+      inkFriendly: printInkFriendly,
+    });
+
+    const docTitle = `${teamTitle} - ${mainCat} - ${subTabName}`;
+    if (mode === 'tab') {
+      openCleanPrintTab(html, docTitle);
+    } else {
+      printCleanHTML(html, docTitle);
+    }
+  };
+
+  // Helper to print category packet (all sub-tabs in category)
+  const handlePrintCategoryPacket = (category: string, mode: 'iframe' | 'tab' = 'iframe') => {
+    const subTabs =
+      (guideOrder.sub && guideOrder.sub[category]) || Object.keys(guideTree[category] || {});
+    const teamTitle = activeTeam?.name || 'Mahopac 10U Indians';
+    const teamSeason = activeTeam?.season || activeTeam?.ageGroup || '10U Football';
+    const headCoach = activeTeam?.headCoachName || '';
+
+    const sections = subTabs.map((sub) => ({
+      category,
+      subTab: sub,
+      content: guideTree[category]?.[sub] || '',
+    }));
+
+    const html = generatePlaybookBinderPrintHTML({
+      teamName: teamTitle,
+      teamSeason,
+      headCoachName: headCoach,
+      title: `${category.toUpperCase()} PLAYBOOK & INSTALL PACKET`,
+      sections,
+      inkFriendly: printInkFriendly,
+    });
+
+    const docTitle = `${teamTitle} - ${category} Playbook Packet`;
+    if (mode === 'tab') {
+      openCleanPrintTab(html, docTitle);
+    } else {
+      printCleanHTML(html, docTitle);
+    }
+  };
+
+  // Helper to print complete team playbook binder
+  const handlePrintFullPlaybookBinder = (mode: 'iframe' | 'tab' = 'iframe') => {
+    const teamTitle = activeTeam?.name || 'Mahopac 10U Indians';
+    const teamSeason = activeTeam?.season || activeTeam?.ageGroup || '10U Football';
+    const headCoach = activeTeam?.headCoachName || '';
+
+    const sections: Array<{ category: string; subTab: string; content: string }> = [];
+    mainCategories.forEach((cat) => {
+      const subTabs =
+        (guideOrder.sub && guideOrder.sub[cat]) || Object.keys(guideTree[cat] || {});
+      subTabs.forEach((sub) => {
+        sections.push({
+          category: cat,
+          subTab: sub,
+          content: guideTree[cat]?.[sub] || '',
+        });
+      });
+    });
+
+    const html = generatePlaybookBinderPrintHTML({
+      teamName: teamTitle,
+      teamSeason,
+      headCoachName: headCoach,
+      title: 'OFFICIAL TEAM PLAYBOOK & SCHEME INSTALL BINDER',
+      sections,
+      inkFriendly: printInkFriendly,
+    });
+
+    const docTitle = `${teamTitle} - Complete Team Playbook Binder`;
+    if (mode === 'tab') {
+      openCleanPrintTab(html, docTitle);
+    } else {
+      printCleanHTML(html, docTitle);
+    }
+  };
+
+  const handleExecutePrint = (mode: 'iframe' | 'tab' = 'iframe') => {
+    setIsPrintingLoading(true);
+    try {
+      if (printScope === 'current') {
+        handlePrintSingleGuide(activeMain, activeSub, mode);
+      } else if (printScope === 'category') {
+        handlePrintCategoryPacket(activeMain, mode);
+      } else {
+        handlePrintFullPlaybookBinder(mode);
+      }
+    } finally {
+      setTimeout(() => setIsPrintingLoading(false), 800);
+    }
+  };
+
+  const handlePrintHtmlEditorContent = (mode: 'iframe' | 'tab' = 'iframe') => {
+    const teamTitle = activeTeam?.name || 'Mahopac 10U Indians';
+    const teamSeason = activeTeam?.season || activeTeam?.ageGroup || '10U Football';
+    const html = generatePlaybookGuidePrintHTML({
+      teamName: teamTitle,
+      teamSeason,
+      category: activeMain,
+      subTab: activeSub,
+      content: htmlEditorCode,
+      inkFriendly: printInkFriendly,
+    });
+    if (mode === 'tab') {
+      openCleanPrintTab(html, `${teamTitle} - HTML Preview`);
+    } else {
+      printCleanHTML(html, `${teamTitle} - HTML Preview`);
+    }
+  };
+
   return (
     <div className="space-y-5">
       {/* Top Header Card */}
@@ -443,47 +606,60 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                 <span>Playbooks &amp; Positional Install Guides</span>
               </h2>
               <p className="text-xs text-slate-300 font-medium">
-                Upload PDFs, write interactive HTML playbook sheets, organize folders, and embed video cutups
+                Upload PDFs, write interactive HTML playbook sheets, organize folders, and print team binders
               </p>
             </div>
           </div>
 
-          {userRole === 'admin' && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() => setIsOrganizeModalOpen(true)}
-                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm"
-              >
-                <Settings className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Organize Folders &amp; Tabs</span>
-              </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Primary Print Button in Header */}
+            <button
+              type="button"
+              onClick={() => setIsPrintModalOpen(true)}
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+              title="Print playbook sheets, install guides, or full team playbook binder"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print Playbook</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  const name = prompt('Enter New Playbook / Guide Category Name (e.g. Special Teams, 7v7 Tournament, Red Zone):');
-                  if (name && name.trim()) onAddMainFolder(name.trim());
-                }}
-                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm"
-              >
-                <Plus className="w-3.5 h-3.5 text-amber-400" />
-                <span>+ Category Folder</span>
-              </button>
+            {userRole === 'admin' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsOrganizeModalOpen(true)}
+                  className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm"
+                >
+                  <Settings className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Organize Folders &amp; Tabs</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  const name = prompt(`Enter Position or Sub-Tab Name for [${activeMain}] (e.g. Wide Receivers, Blitz Pickup):`);
-                  if (name && name.trim()) onAddSubTab(activeMain, name.trim());
-                }}
-                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>+ Add Sub-Tab</span>
-              </button>
-            </div>
-          )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const name = prompt('Enter New Playbook / Guide Category Name (e.g. Special Teams, 7v7 Tournament, Red Zone):');
+                    if (name && name.trim()) onAddMainFolder(name.trim());
+                  }}
+                  className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm"
+                >
+                  <Plus className="w-3.5 h-3.5 text-amber-400" />
+                  <span>+ Category Folder</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const name = prompt(`Enter Position or Sub-Tab Name for [${activeMain}] (e.g. Wide Receivers, Blitz Pickup):`);
+                    if (name && name.trim()) onAddSubTab(activeMain, name.trim());
+                  }}
+                  className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ Add Sub-Tab</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Level 1: Main Category Ribbon */}
@@ -631,6 +807,20 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                 )}
               </>
             )}
+
+            {/* Print Guide Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setPrintScope('current');
+                setIsPrintModalOpen(true);
+              }}
+              className="px-3.5 py-2 bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-300 hover:text-indigo-100 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-sm transition-colors active:scale-95"
+              title="Print this playbook guide section or create a packet"
+            >
+              <Printer className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Print Guide</span>
+            </button>
 
             {currentDocUrl && (
               <button
@@ -800,6 +990,15 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  onClick={() => handlePrintHtmlEditorContent('tab')}
+                  className="px-2.5 py-1 text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg flex items-center gap-1 cursor-pointer"
+                  title="Print Preview this HTML design"
+                >
+                  <Printer className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Print Preview</span>
+                </button>
+                <button
+                  type="button"
                   onClick={handleCopyCode}
                   className="px-2.5 py-1 text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg flex items-center gap-1 cursor-pointer"
                 >
@@ -876,14 +1075,25 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                 {activeMain} &gt; {activeSub} - Fullscreen View
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsFullScreenModalOpen(false)}
-              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl flex items-center gap-1 shadow-md shadow-rose-600/30 cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-              <span>Close</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handlePrintSingleGuide(activeMain, activeSub, 'iframe')}
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-600/30 cursor-pointer active:scale-95 transition-all"
+                title="Print this playbook guide"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Print Guide</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsFullScreenModalOpen(false)}
+                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl flex items-center gap-1 shadow-md shadow-rose-600/30 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+                <span>Close</span>
+              </button>
+            </div>
           </div>
           <div className="flex-1 bg-white rounded-2xl overflow-hidden mt-3 shadow-2xl">
             {isCurrentHtml ? (
@@ -1119,6 +1329,229 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
               >
                 Done
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Print Playbook & Guides Modal */}
+      {isPrintModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shadow-inner">
+                  <Printer className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-slate-100 flex items-center gap-2">
+                    <span>Print Playbook &amp; Guides</span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    High-contrast, printer-friendly sideline sheets and complete team binders
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPrintModalOpen(false)}
+                className="text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scope Selection */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                <span>1. Select Print Scope</span>
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {/* 1. Current Sheet */}
+                <button
+                  type="button"
+                  onClick={() => setPrintScope('current')}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                    printScope === 'current'
+                      ? 'bg-indigo-950/60 border-indigo-500 text-white shadow-md ring-1 ring-indigo-500/50'
+                      : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-750'
+                  }`}
+                >
+                  <div>
+                    <div className="text-xs font-black flex items-center gap-1.5 text-indigo-300">
+                      <span>📄 Current Section</span>
+                    </div>
+                    <div className="font-bold text-sm text-slate-100 mt-1 truncate" title={`${activeMain} > ${activeSub}`}>
+                      {activeSub}
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5 truncate">
+                      {activeMain}
+                    </div>
+                  </div>
+                  <div className="mt-3 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-900/60 text-slate-400 w-fit">
+                    1 Single Sheet
+                  </div>
+                </button>
+
+                {/* 2. Category Packet */}
+                <button
+                  type="button"
+                  onClick={() => setPrintScope('category')}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                    printScope === 'category'
+                      ? 'bg-indigo-950/60 border-indigo-500 text-white shadow-md ring-1 ring-indigo-500/50'
+                      : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-750'
+                  }`}
+                >
+                  <div>
+                    <div className="text-xs font-black flex items-center gap-1.5 text-amber-300">
+                      <span>📑 Category Packet</span>
+                    </div>
+                    <div className="font-bold text-sm text-slate-100 mt-1 truncate" title={activeMain}>
+                      {activeMain}
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">
+                      All sub-tabs
+                    </div>
+                  </div>
+                  <div className="mt-3 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-900/60 text-amber-300 w-fit">
+                    {currentSubTabs.length} Sections
+                  </div>
+                </button>
+
+                {/* 3. Full Team Playbook Binder */}
+                <button
+                  type="button"
+                  onClick={() => setPrintScope('all')}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                    printScope === 'all'
+                      ? 'bg-indigo-950/60 border-indigo-500 text-white shadow-md ring-1 ring-indigo-500/50'
+                      : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-750'
+                  }`}
+                >
+                  <div>
+                    <div className="text-xs font-black flex items-center gap-1.5 text-emerald-300">
+                      <span>📚 Full Binder</span>
+                    </div>
+                    <div className="font-bold text-sm text-slate-100 mt-1">
+                      Team Playbook
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">
+                      Cover Page + TOC
+                    </div>
+                  </div>
+                  <div className="mt-3 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-900/60 text-emerald-300 w-fit">
+                    {totalSubTabsCount} Sections &bull; {mainCategories.length} Cats
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Print Theme & Ink Format */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                2. Print Styling &amp; Paper Mode
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setPrintInkFriendly(true)}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-2.5 ${
+                    printInkFriendly
+                      ? 'bg-emerald-950/40 border-emerald-500 text-emerald-200 shadow-sm'
+                      : 'bg-slate-800/80 border-slate-700/80 text-slate-400 hover:bg-slate-750'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center ${
+                    printInkFriendly ? 'border-emerald-400 bg-emerald-500' : 'border-slate-500'
+                  }`}>
+                    {printInkFriendly && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-slate-100">
+                      🖨️ Ink-Friendly Paper Mode (Recommended)
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                      Clean white background, sharp black text, crisp borders. Saves expensive printer ink/toner.
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPrintInkFriendly(false)}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-2.5 ${
+                    !printInkFriendly
+                      ? 'bg-indigo-950/40 border-indigo-500 text-indigo-200 shadow-sm'
+                      : 'bg-slate-800/80 border-slate-700/80 text-slate-400 hover:bg-slate-750'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center ${
+                    !printInkFriendly ? 'border-indigo-400 bg-indigo-500' : 'border-slate-500'
+                  }`}>
+                    {!printInkFriendly && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-slate-100">
+                      🎨 Full Color / Original Theme
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                      Preserves dark backgrounds and original styles. Great for color PDFs and digital tablets.
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Target Team & Pro-Tip Banner */}
+            <div className="bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800 flex items-start gap-2.5">
+              <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="text-xs text-slate-300 space-y-1">
+                <div className="font-bold text-slate-200">
+                  Team Target: {activeTeam?.name || 'Mahopac 10U Indians'} ({activeTeam?.season || activeTeam?.ageGroup || '10U Football'})
+                </div>
+                <div className="text-[11px] text-slate-400 leading-relaxed">
+                  💡 In the system print dialog, choose <strong className="text-slate-200">&quot;Save as PDF&quot;</strong> to export an electronic playbook file to email or message to staff and families.
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsPrintModalOpen(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold text-xs rounded-xl cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleExecutePrint('tab')}
+                  disabled={isPrintingLoading}
+                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                  title="Open formatted sheet in a new browser tab"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Open in Print Tab</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleExecutePrint('iframe')}
+                  disabled={isPrintingLoading}
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-2 cursor-pointer active:scale-95 transition-all"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>{isPrintingLoading ? 'Preparing...' : 'Print Now'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

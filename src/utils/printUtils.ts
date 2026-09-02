@@ -364,3 +364,534 @@ export function openCleanPrintTab(htmlString: string, documentTitle?: string) {
 
   triggerPrint();
 }
+
+export interface SinglePlaybookPrintOptions {
+  teamName?: string;
+  teamSeason?: string;
+  category: string;
+  subTab: string;
+  content: string;
+  inkFriendly?: boolean;
+}
+
+export interface PlaybookBinderSection {
+  category: string;
+  subTab: string;
+  content: string;
+}
+
+export interface PlaybookBinderPrintOptions {
+  teamName?: string;
+  teamSeason?: string;
+  headCoachName?: string;
+  title?: string;
+  sections: PlaybookBinderSection[];
+  inkFriendly?: boolean;
+}
+
+/**
+ * Common print CSS rules for ink-friendly high-contrast output
+ */
+const INK_FRIENDLY_PLAYBOOK_CSS = `
+  @page {
+    size: letter portrait;
+    margin: 0.4in;
+  }
+  *, *:before, *:after {
+    box-sizing: border-box !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body, html {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
+  }
+  .card, .wrapper, .box, .container, [class*="card"] {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    padding: 14px !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    color: #0f172a !important;
+    margin-top: 0 !important;
+    font-weight: 800 !important;
+  }
+  .header {
+    border-bottom: 2px solid #0f172a !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 14px !important;
+  }
+  .badge {
+    background: #0284c7 !important;
+    color: #ffffff !important;
+    border-radius: 4px !important;
+    padding: 2px 8px !important;
+    font-size: 8pt !important;
+    font-weight: bold !important;
+  }
+  .diagram-box {
+    background: #f8fafc !important;
+    border: 2px dashed #0f766e !important;
+    border-radius: 8px !important;
+    height: 220px !important;
+    color: #042f2e !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-bottom: 14px !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+  .grid-lines {
+    position: absolute !important;
+    width: 100% !important;
+    height: 100% !important;
+    background-size: 20px 20px !important;
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0.07) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.07) 1px, transparent 1px) !important;
+  }
+  .diagram-title {
+    z-index: 1 !important;
+    font-weight: 900 !important;
+    font-size: 12pt !important;
+    color: #042f2e !important;
+  }
+  .diagram-sub {
+    z-index: 1 !important;
+    font-size: 9pt !important;
+    color: #0f766e !important;
+    font-weight: 600 !important;
+  }
+  table, .assignments-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 12px !important;
+  }
+  th, .assignments-table th {
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+    border: 1px solid #94a3b8 !important;
+    padding: 6px 8px !important;
+    font-size: 8.5pt !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+  }
+  td, .assignments-table td {
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    padding: 6px 8px !important;
+    font-size: 8.5pt !important;
+  }
+  .pos-tag {
+    background: #e2e8f0 !important;
+    color: #0369a1 !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    font-weight: 800 !important;
+    font-family: monospace !important;
+    display: inline-block !important;
+  }
+  .notes-box, .notes {
+    background: #f8fafc !important;
+    border-left: 4px solid #d97706 !important;
+    border-top: 1px solid #e2e8f0 !important;
+    border-right: 1px solid #e2e8f0 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    color: #334155 !important;
+    padding: 10px 14px !important;
+    margin-top: 12px !important;
+    border-radius: 0 6px 6px 0 !important;
+    font-size: 8.5pt !important;
+  }
+  /* Normalize dark utility backgrounds */
+  [class*="bg-slate-"], [class*="bg-zinc-"], [class*="bg-neutral-"], [class*="bg-gray-"] {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+  [class*="text-slate-100"], [class*="text-slate-200"], [class*="text-white"], [class*="text-slate-300"] {
+    color: #0f172a !important;
+  }
+  [class*="text-slate-400"], [class*="text-slate-500"] {
+    color: #475569 !important;
+  }
+  [class*="border-slate-"] {
+    border-color: #cbd5e1 !important;
+  }
+`;
+
+/**
+ * Generate a blank playbook install worksheet if the section has no content
+ */
+function generateBlankPlaybookWorksheet(category: string, subTab: string): string {
+  return `
+    <div class="card">
+      <div class="header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h1 style="margin: 0; font-size: 16pt;">${subTab.toUpperCase()}</h1>
+          <div style="font-size: 9pt; color: #475569; margin-top: 3px;">Category: ${category} • Formation & Scheme Install Worksheet</div>
+        </div>
+        <span class="badge">${category.toUpperCase()}</span>
+      </div>
+
+      <div class="diagram-box">
+        <div class="grid-lines"></div>
+        <div class="diagram-title">🏈 PLAY SCHEMATIC & FIELD DIAGRAM</div>
+        <div class="diagram-sub">Sketch Formation, Motion & Route Trees / Defensive Gap Fits</div>
+      </div>
+
+      <table class="assignments-table">
+        <thead>
+          <tr>
+            <th style="width: 80px;">Pos</th>
+            <th style="width: 140px;">Alignment</th>
+            <th>Assignment & Key Read</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pos-tag">QB</span></td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td><span class="pos-tag">RB</span></td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td><span class="pos-tag">X / WR1</span></td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td><span class="pos-tag">Z / WR2</span></td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td><span class="pos-tag">H / Slot</span></td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td><span class="pos-tag">TE</span></td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td><span class="pos-tag">OL</span></td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="notes-box">
+        <strong>Coaching Points & Scheme Rules:</strong>
+        <div style="height: 48px; border-bottom: 1px dotted #cbd5e1; margin-top: 6px;"></div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Generate self-contained HTML for a single Playbook Guide
+ */
+export function generatePlaybookGuidePrintHTML(options: SinglePlaybookPrintOptions): string {
+  const {
+    teamName = 'Mahopac Indians',
+    teamSeason = '10U Football',
+    category,
+    subTab,
+    content,
+    inkFriendly = true,
+  } = options;
+
+  const hasContent = content && content.trim().length > 0;
+  let bodyContent = '';
+
+  if (!hasContent) {
+    bodyContent = generateBlankPlaybookWorksheet(category, subTab);
+  } else {
+    // If it's a full HTML document, extract body or use directly
+    const trimmed = content.trim();
+    if (trimmed.includes('<body') && trimmed.includes('</body>')) {
+      const match = trimmed.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+      bodyContent = match ? match[1] : trimmed;
+    } else {
+      bodyContent = trimmed;
+    }
+  }
+
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>${teamName} - ${category} - ${subTab}</title>
+  <style>
+    ${inkFriendly ? INK_FRIENDLY_PLAYBOOK_CSS : `
+      @page { size: letter portrait; margin: 0.4in; }
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    `}
+    .playbook-top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 6px;
+      margin-bottom: 16px;
+      font-size: 8.5pt;
+      font-weight: 700;
+      color: #334155;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .playbook-top-bar .team-brand {
+      color: #0f172a;
+      font-size: 11pt;
+      font-weight: 900;
+    }
+    .playbook-bottom-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #cbd5e1;
+      padding-top: 6px;
+      margin-top: 16px;
+      font-size: 7.5pt;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="playbook-top-bar">
+    <span class="team-brand">🏈 ${teamName} &bull; ${teamSeason}</span>
+    <span>${category} &gt; ${subTab}</span>
+    <span>Printed: ${currentDate}</span>
+  </div>
+
+  <div class="playbook-main-content">
+    ${bodyContent}
+  </div>
+
+  <div class="playbook-bottom-bar">
+    <span>CONFIDENTIAL TEAM INSTALL SHEET &bull; PROPERTY OF ${teamName.toUpperCase()}</span>
+    <span>Playbook &amp; Position Install Guides</span>
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * Generate self-contained HTML for a multi-page Playbook Binder (Category or Full Team)
+ */
+export function generatePlaybookBinderPrintHTML(options: PlaybookBinderPrintOptions): string {
+  const {
+    teamName = 'Mahopac Indians',
+    teamSeason = '10U Football',
+    headCoachName = '',
+    title = 'Team Playbook & Positional Install Binder',
+    sections,
+    inkFriendly = true,
+  } = options;
+
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  // Group sections by category for Table of Contents
+  const categoriesMap: Record<string, PlaybookBinderSection[]> = {};
+  sections.forEach((sec) => {
+    if (!categoriesMap[sec.category]) categoriesMap[sec.category] = [];
+    categoriesMap[sec.category].push(sec);
+  });
+
+  let tocHtml = '';
+  let currentPageIndex = 2; // Cover is page 1
+  Object.keys(categoriesMap).forEach((cat) => {
+    tocHtml += `
+      <div style="margin-bottom: 12px;">
+        <div style="font-weight: 900; font-size: 10pt; color: #0f172a; text-transform: uppercase; border-bottom: 1.5px solid #0f172a; padding-bottom: 2px; margin-bottom: 4px;">
+          ${cat} (${categoriesMap[cat].length} Sections)
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 8.5pt;">
+    `;
+    categoriesMap[cat].forEach((sec) => {
+      const pageNum = currentPageIndex++;
+      tocHtml += `
+        <tr>
+          <td style="padding: 2px 4px; font-weight: 700; color: #1e293b; width: 75%; border: none;">&bull; ${sec.subTab}</td>
+          <td style="padding: 2px 4px; text-align: right; color: #64748b; border: none; font-family: monospace;">Page ${pageNum}</td>
+        </tr>
+      `;
+    });
+    tocHtml += `</table></div>`;
+  });
+
+  // Build section pages
+  let pagesHtml = '';
+  let pageNumber = 2;
+  sections.forEach((sec) => {
+    const hasContent = sec.content && sec.content.trim().length > 0;
+    let secBody = '';
+    if (!hasContent) {
+      secBody = generateBlankPlaybookWorksheet(sec.category, sec.subTab);
+    } else {
+      const trimmed = sec.content.trim();
+      if (trimmed.includes('<body') && trimmed.includes('</body>')) {
+        const match = trimmed.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+        secBody = match ? match[1] : trimmed;
+      } else {
+        secBody = trimmed;
+      }
+    }
+
+    pagesHtml += `
+      <div class="playbook-page">
+        <div class="playbook-top-bar">
+          <span class="team-brand">🏈 ${teamName} &bull; ${teamSeason}</span>
+          <span>${sec.category} &gt; ${sec.subTab}</span>
+          <span>Page ${pageNumber}</span>
+        </div>
+
+        <div class="playbook-main-content">
+          ${secBody}
+        </div>
+
+        <div class="playbook-bottom-bar">
+          <span>CONFIDENTIAL TEAM PLAYBOOK &bull; PROPERTY OF ${teamName.toUpperCase()}</span>
+          <span>Page ${pageNumber} of ${sections.length + 1}</span>
+        </div>
+      </div>
+    `;
+    pageNumber++;
+  });
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>${teamName} - ${title}</title>
+  <style>
+    ${inkFriendly ? INK_FRIENDLY_PLAYBOOK_CSS : `
+      @page { size: letter portrait; margin: 0.4in; }
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    `}
+    .playbook-page {
+      page-break-after: always;
+      break-after: page;
+      min-height: 9.8in;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .playbook-page:last-child {
+      page-break-after: auto;
+      break-after: auto;
+      margin-bottom: 0;
+    }
+    .cover-page {
+      border: 4px double #0f172a;
+      border-radius: 12px;
+      padding: 32px 24px;
+      min-height: 9.8in;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      page-break-after: always;
+      break-after: page;
+      box-sizing: border-box;
+      background: #ffffff;
+    }
+    .playbook-top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 6px;
+      margin-bottom: 14px;
+      font-size: 8.5pt;
+      font-weight: 700;
+      color: #334155;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .playbook-top-bar .team-brand {
+      color: #0f172a;
+      font-size: 10.5pt;
+      font-weight: 900;
+    }
+    .playbook-bottom-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #cbd5e1;
+      padding-top: 6px;
+      margin-top: 14px;
+      font-size: 7.5pt;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <!-- COVER PAGE -->
+  <div class="cover-page">
+    <div style="text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 16px;">
+      <div style="font-size: 13pt; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #1e3a8a;">
+        🏈 ${teamName} &bull; ${teamSeason}
+      </div>
+      <h1 style="font-size: 24pt; font-weight: 950; margin: 8px 0 4px 0; color: #0f172a; text-transform: uppercase; letter-spacing: -0.02em;">
+        ${title}
+      </h1>
+      <div style="font-size: 10pt; font-weight: 700; color: #475569;">
+        Official Team Schemes, Alignment Rules, Route Trees &amp; Player Assignments
+      </div>
+      ${headCoachName ? `<div style="font-size: 9.5pt; font-weight: 700; color: #1e3a8a; margin-top: 4px;">Head Coach: ${headCoachName}</div>` : ''}
+    </div>
+
+    <!-- Table of Contents -->
+    <div style="margin: 20px 0; flex: 1;">
+      <div style="font-size: 11pt; font-weight: 900; color: #0f172a; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.05em;">
+        📋 Table of Contents &amp; Play Index:
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+        ${tocHtml}
+      </div>
+    </div>
+
+    <!-- Footer Tenets -->
+    <div style="border-top: 2px solid #0f172a; padding-top: 12px; text-align: center;">
+      <div style="font-size: 10pt; font-weight: 900; color: #0f172a; letter-spacing: 0.08em; text-transform: uppercase;">
+        ALIGNMENT &bull; ASSIGNMENT &bull; TECHNIQUE &bull; EFFORT
+      </div>
+      <div style="font-size: 8pt; color: #64748b; margin-top: 4px;">
+        Assembled &amp; Printed on ${currentDate} &bull; Confidential &bull; For Team &amp; Coaching Staff Use Only
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION PAGES -->
+  ${pagesHtml}
+</body>
+</html>`;
+}
