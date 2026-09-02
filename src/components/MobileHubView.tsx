@@ -30,6 +30,12 @@ import {
   Check,
   X,
   Play,
+  FileText,
+  Eye,
+  Code,
+  Maximize2,
+  FileCode,
+  Layers,
 } from 'lucide-react';
 import {
   Team,
@@ -42,7 +48,177 @@ import {
   FormationBoard,
   formatWeekLabel,
   AttendanceRecord,
+  PlaybookGuideTree,
+  PlaybookGuideOrder,
 } from '../types';
+
+// Built-in starter templates for quick sideline & playbook reference
+const QUICK_GUIDE_TEMPLATES = [
+  {
+    id: 'play_card',
+    title: 'Play Scheme & Assignment Card',
+    category: 'Offense',
+    tag: 'Schematic',
+    desc: 'Gun Trips Right 62 Smash route tree & player assignments',
+    code: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 16px; }
+    .card { background: #1e293b; border-radius: 14px; border: 1px solid #334155; padding: 18px; max-width: 800px; margin: 0 auto; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 16px; }
+    h1 { margin: 0; font-size: 20px; color: #facc15; }
+    .badge { background: #3b82f6; color: white; padding: 4px 10px; border-radius: 9999px; font-weight: bold; font-size: 11px; }
+    .diagram-box { background: #022c22; border: 2px dashed #10b981; border-radius: 10px; height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 16px; text-align: center; color: #6ee7b7; position: relative; }
+    .diagram-title { font-weight: 800; font-size: 15px; margin-bottom: 4px; }
+    .diagram-sub { font-size: 11px; color: #a7f3d0; }
+    .assignments-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
+    .assignments-table th { background: #0f172a; color: #94a3b8; text-align: left; padding: 8px 10px; text-transform: uppercase; border-bottom: 1px solid #334155; }
+    .assignments-table td { padding: 8px 10px; border-bottom: 1px solid #334155; }
+    .pos-tag { background: #334155; color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-family: monospace; }
+    .notes-box { margin-top: 14px; background: #0f172a; border-left: 3px solid #facc15; padding: 10px 12px; border-radius: 0 6px 6px 0; font-size: 12px; color: #cbd5e1; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div>
+        <h1>GUN TRIPS RIGHT - 62 SMASH</h1>
+        <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">11 Personnel (1 RB, 1 TE, 3 WR)</div>
+      </div>
+      <span class="badge">Red Zone / Pass</span>
+    </div>
+    <div class="diagram-box">
+      <div class="diagram-title">🏈 PLAY FIELD SCHEMATIC</div>
+      <div class="diagram-sub">Progression: 1. Corner (CB bite) &rarr; 2. Hitch (Underneath) &rarr; 3. Backside Dig</div>
+    </div>
+    <table class="assignments-table">
+      <thead>
+        <tr><th>Pos</th><th>Alignment</th><th>Assignment &amp; Key Read</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="pos-tag">QB</span></td><td>Gun (5 yds)</td><td>3-step drop. Read boundary CB. If CB squats on hitch, throw corner route over top.</td></tr>
+        <tr><td><span class="pos-tag">X</span></td><td>Split Left</td><td>12-yard Dig across hash. Settle between inside linebackers.</td></tr>
+        <tr><td><span class="pos-tag">H</span></td><td>Slot Right</td><td>Corner route (10 yds stem, break at 45&deg; toward pylon). High point catch.</td></tr>
+        <tr><td><span class="pos-tag">Z</span></td><td>Wide Right</td><td>5-yard Hitch. Sell vertical drive, plant outside foot, show numbers.</td></tr>
+        <tr><td><span class="pos-tag">RB</span></td><td>Weakside Offset</td><td>Check-release to flat. Block weakside edge blitz first.</td></tr>
+        <tr><td><span class="pos-tag">OL</span></td><td>Balanced</td><td>Half-slide protection left. Center declares Mike LB. Firm interior pocket.</td></tr>
+      </tbody>
+    </table>
+    <div class="notes-box">
+      <strong>Coaching Key:</strong> Against Cover 2, the Corner route opens behind the CB and under safety. Against Cover 3, take 5-yd hitch immediately.
+    </div>
+  </div>
+</body>
+</html>`,
+  },
+  {
+    id: 'wristband_insert',
+    title: '3-Column Wristband Grid Sheet',
+    category: 'Specials',
+    tag: 'Call Sheet',
+    desc: 'Formatted sideline wristband sheet with color-coded play calls',
+    code: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body { font-family: 'Arial Black', Arial, sans-serif; background: #0f172a; color: #000; margin: 0; padding: 12px; }
+    .wristband-header { text-align: center; font-size: 15px; font-weight: 900; margin-bottom: 10px; color: #f8fafc; text-transform: uppercase; }
+    .grid-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .column { border: 2px solid #334155; border-radius: 8px; overflow: hidden; background: #ffffff; }
+    .col-title { color: #fff; padding: 6px; text-align: center; font-size: 11px; font-weight: 900; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    td { padding: 4px 6px; border-bottom: 1px solid #ddd; }
+    .num { width: 22px; font-weight: 900; background: #f0f0f0; text-align: center; border-right: 1px solid #ccc; }
+    .play { font-weight: bold; }
+    .tag-run { background: #e0f2fe; color: #0369a1; }
+    .tag-pass { background: #fef3c7; color: #b45309; }
+    .tag-screen { background: #dcfce7; color: #15803d; }
+  </style>
+</head>
+<body>
+  <div class="wristband-header">Sideline Wristband Play Sheet</div>
+  <div class="grid-container">
+    <div class="column">
+      <div class="col-title" style="background:#1e3a8a;">CARD 1: BASE RUNS</div>
+      <table>
+        <tr class="tag-run"><td class="num">1</td><td class="play">Gun Inside Zone Rt</td></tr>
+        <tr class="tag-run"><td class="num">2</td><td class="play">Gun Stretch Lt</td></tr>
+        <tr class="tag-run"><td class="num">3</td><td class="play">Counter Tre Solid</td></tr>
+        <tr class="tag-run"><td class="num">4</td><td class="play">Power G Weak</td></tr>
+        <tr class="tag-run"><td class="num">5</td><td class="play">QB Draw Trap</td></tr>
+        <tr class="tag-run"><td class="num">6</td><td class="play">Split Zone Slice</td></tr>
+      </table>
+    </div>
+    <div class="column">
+      <div class="col-title" style="background:#991b1b;">CARD 2: QUICK PASS</div>
+      <table>
+        <tr class="tag-pass"><td class="num">7</td><td class="play">Trips Quick Slants</td></tr>
+        <tr class="tag-pass"><td class="num">8</td><td class="play">Smash Out Concept</td></tr>
+        <tr class="tag-pass"><td class="num">9</td><td class="play">Mesh Shallow Cross</td></tr>
+        <tr class="tag-screen"><td class="num">10</td><td class="play">Tunnel Screen Rt</td></tr>
+        <tr class="tag-screen"><td class="num">11</td><td class="play">RB Middle Screen</td></tr>
+        <tr class="tag-pass"><td class="num">12</td><td class="play">Double Post Deep</td></tr>
+      </table>
+    </div>
+    <div class="column">
+      <div class="col-title" style="background:#14532d;">CARD 3: SPECIALS</div>
+      <table>
+        <tr class="tag-pass"><td class="num">13</td><td class="play">Philly Special</td></tr>
+        <tr class="tag-pass"><td class="num">14</td><td class="play">TE Pop Pass Seam</td></tr>
+        <tr class="tag-run"><td class="num">15</td><td class="play">Goal-Line Wedge</td></tr>
+        <tr class="tag-pass"><td class="num">16</td><td class="play">Fade Out Red Zone</td></tr>
+        <tr class="tag-run"><td class="num">17</td><td class="play">Jet Sweep Reverse</td></tr>
+        <tr class="tag-run"><td class="num">18</td><td class="play">Victory Knee</td></tr>
+      </table>
+    </div>
+  </div>
+</body>
+</html>`,
+  },
+  {
+    id: 'install_rules',
+    title: 'Pass Protection & Blitz Rules Matrix',
+    category: 'Defense',
+    tag: 'Install Matrix',
+    desc: 'Structured rules for front fronts, offensive line slides and LB blitz fits',
+    code: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 16px; }
+    .box { background: #1e293b; border-radius: 12px; border: 1px solid #334155; padding: 16px; max-width: 800px; margin: 0 auto; }
+    h2 { color: #38bdf8; margin-top: 0; font-size: 17px; border-bottom: 2px solid #334155; padding-bottom: 6px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+    th { background: #0284c7; color: #fff; padding: 8px; text-align: left; }
+    td { padding: 8px; border-bottom: 1px solid #334155; }
+    tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>🛡️ PASS PROTECTION RULES &amp; BLITZ ALERTS</h2>
+    <table>
+      <thead>
+        <tr><th>Call</th><th>Type</th><th>OL Responsibility</th><th>RB Responsibility</th><th>Hot Answer</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>50 BASE</strong></td><td>5-Man Slide</td><td>Center slides to Call side; Tackles lock man-on-man</td><td>Dual read Mike to Will LB</td><td>Slot Quick Out</td></tr>
+        <tr><td><strong>60 BOB</strong></td><td>Big On Big</td><td>Guards &amp; Tackles take 4 down; Center on 0/1 Tech</td><td>Check-release A-gap</td><td>RB hook checkdown</td></tr>
+        <tr><td><strong>MAX PRO</strong></td><td>7-Man Max</td><td>Full slide to call, TE locks strong edge</td><td>RB blocks weak edge</td><td>Vertical double move</td></tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>`,
+  },
+];
 
 interface MobileHubViewProps {
   activeTeam: Team;
@@ -64,6 +240,13 @@ interface MobileHubViewProps {
   onOpenPreferencesModal?: () => void;
   onOpenScheduleModal?: () => void;
   onOpenThemeGallery?: () => void;
+  // Guides & Playbook integration
+  guideTree?: PlaybookGuideTree;
+  guideOrder?: PlaybookGuideOrder;
+  activeGuideMain?: string;
+  activeGuideSub?: string;
+  onSelectGuideMain?: (main: string) => void;
+  onSelectGuideSub?: (sub: string) => void;
 }
 
 const getPlayerFullName = (p: RosterPlayer): string => {
@@ -98,6 +281,23 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
   onOpenPreferencesModal,
   onOpenScheduleModal,
   onOpenThemeGallery,
+  guideTree = {
+    Offense: { 'Full Playbook': '', Quarterbacks: '', 'Running Backs': '', 'Wide Receivers': '', 'Offensive Line': '' },
+    Defense: { 'Full Playbook': '', 'Defensive Line': '', Linebackers: '', Secondary: '' },
+    Specials: { 'Special Teams': '', 'Kicking & Punting': '' },
+  },
+  guideOrder = {
+    main: ['Offense', 'Defense', 'Specials'],
+    sub: {
+      Offense: ['Full Playbook', 'Quarterbacks', 'Running Backs', 'Wide Receivers', 'Offensive Line'],
+      Defense: ['Full Playbook', 'Defensive Line', 'Linebackers', 'Secondary'],
+      Specials: ['Special Teams', 'Kicking & Punting'],
+    },
+  },
+  activeGuideMain = 'Offense',
+  activeGuideSub = 'Full Playbook',
+  onSelectGuideMain,
+  onSelectGuideSub,
 }) => {
   // Mobile Hub active tab: 'starters' | 'roster' | 'attendance'
   const [hubTab, setHubTab] = useState<'starters' | 'roster' | 'attendance'>('starters');
@@ -108,6 +308,94 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
   });
   const [attendanceSavedToast, setAttendanceSavedToast] = useState(false);
   const [selectedPlayerModal, setSelectedPlayerModal] = useState<RosterPlayer | null>(null);
+
+  // Guides section state
+  const [selectedGuideCategory, setSelectedGuideCategory] = useState<string>(() => {
+    return activeGuideMain || (guideOrder.main && guideOrder.main[0]) || 'Offense';
+  });
+  const [guideSearchTerm, setGuideSearchTerm] = useState('');
+  const [quickViewGuideModal, setQuickViewGuideModal] = useState<{
+    title: string;
+    category: string;
+    content: string;
+    isStarterTemplate?: boolean;
+  } | null>(null);
+
+  // Available categories in Guide tree
+  const guideCategories = useMemo(() => {
+    if (guideOrder && Array.isArray(guideOrder.main) && guideOrder.main.length > 0) {
+      return guideOrder.main;
+    }
+    return Object.keys(guideTree || {});
+  }, [guideOrder, guideTree]);
+
+  // Documents under the selected category (or filtered by search term)
+  const currentCategoryDocs = useMemo(() => {
+    const list = (guideOrder?.sub && guideOrder.sub[selectedGuideCategory]) ||
+      (guideTree[selectedGuideCategory] ? Object.keys(guideTree[selectedGuideCategory]) : []);
+    
+    if (!guideSearchTerm.trim()) {
+      return list.map((docName) => ({
+        category: selectedGuideCategory,
+        name: docName,
+        content: guideTree[selectedGuideCategory]?.[docName] || '',
+      }));
+    }
+
+    // If search term is present, search across all categories
+    const term = guideSearchTerm.toLowerCase().trim();
+    const results: { category: string; name: string; content: string }[] = [];
+    guideCategories.forEach((cat) => {
+      const subs = (guideOrder?.sub && guideOrder.sub[cat]) || (guideTree[cat] ? Object.keys(guideTree[cat]) : []);
+      subs.forEach((docName) => {
+        if (docName.toLowerCase().includes(term) || cat.toLowerCase().includes(term)) {
+          results.push({
+            category: cat,
+            name: docName,
+            content: guideTree[cat]?.[docName] || '',
+          });
+        }
+      });
+    });
+    return results;
+  }, [selectedGuideCategory, guideTree, guideOrder, guideSearchTerm, guideCategories]);
+
+  // Total count of guides across all categories
+  const totalGuidesCount = useMemo(() => {
+    let count = 0;
+    guideCategories.forEach((cat) => {
+      const subs = (guideOrder?.sub && guideOrder.sub[cat]) || (guideTree[cat] ? Object.keys(guideTree[cat]) : []);
+      count += subs.length;
+    });
+    return count;
+  }, [guideCategories, guideOrder, guideTree]);
+
+  // Helper to open a guide in the studio
+  const handleOpenGuideInStudio = (category: string, docName: string) => {
+    if (onSelectGuideMain) onSelectGuideMain(category);
+    if (onSelectGuideSub) onSelectGuideSub(docName);
+    onNavigateToUnit('guide');
+  };
+
+  // Helper to preview guide content in modal
+  const handlePreviewGuide = (category: string, docName: string, content: string) => {
+    setQuickViewGuideModal({
+      title: docName,
+      category,
+      content,
+      isStarterTemplate: false,
+    });
+  };
+
+  // Helper to preview template
+  const handlePreviewStarterTemplate = (tpl: typeof QUICK_GUIDE_TEMPLATES[0]) => {
+    setQuickViewGuideModal({
+      title: tpl.title,
+      category: tpl.category,
+      content: tpl.code,
+      isStarterTemplate: true,
+    });
+  };
 
   // Determine Next / Upcoming Event for Active Team
   const upcomingEvent = useMemo(() => {
@@ -407,7 +695,211 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
       </div>
 
       {/* =========================================================================
-          3. SEGMENTED COACH COMMAND HUB (Tabs: Starters | Roster | Attendance)
+          3. DEDICATED GUIDES SECTION (Playbooks, Scheme Cards & Installs)
+          ========================================================================= */}
+      <div className="bg-slate-850 rounded-3xl border border-indigo-500/30 p-3.5 shadow-xl space-y-3 relative overflow-hidden">
+        {/* Guides Section Header */}
+        <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 flex items-center justify-center shrink-0 shadow-inner">
+              <BookOpen className="w-5 h-5 text-indigo-300" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h2 className="text-sm font-black text-white tracking-tight">Guides</h2>
+                <span className="px-1.5 py-0.2 rounded-md text-[10px] font-black uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  {totalGuidesCount} Docs
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium">
+                Playbooks, Schemes &amp; Install Sheets
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onNavigateToUnit('guide')}
+            className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1 active:scale-95 transition-all shadow-md shadow-indigo-600/30 cursor-pointer shrink-0"
+          >
+            <span>Studio</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Category Switcher Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {guideCategories.map((cat) => {
+            const isSelected = selectedGuideCategory === cat && !guideSearchTerm;
+            const subCount = (guideOrder?.sub && guideOrder.sub[cat]?.length) ||
+              (guideTree[cat] ? Object.keys(guideTree[cat]).length : 0);
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => {
+                  setSelectedGuideCategory(cat);
+                  setGuideSearchTerm('');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                  isSelected
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                    : 'bg-slate-900/90 text-slate-400 hover:text-slate-200 border border-slate-800'
+                }`}
+              >
+                <span>{cat}</span>
+                <span
+                  className={`text-[10px] px-1 py-0.2 rounded-md font-mono ${
+                    isSelected ? 'bg-indigo-700/80 text-indigo-100' : 'bg-slate-800 text-slate-500'
+                  }`}
+                >
+                  {subCount}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Search Bar for Guides */}
+        <div className="relative">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Search playbooks, schemes &amp; guides..."
+            value={guideSearchTerm}
+            onChange={(e) => setGuideSearchTerm(e.target.value)}
+            className="w-full pl-8 pr-8 py-2 bg-slate-900 border border-slate-750 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+          />
+          {guideSearchTerm && (
+            <button
+              type="button"
+              onClick={() => setGuideSearchTerm('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Document Cards List */}
+        <div className="space-y-2 max-h-72 overflow-y-auto pr-0.5">
+          {currentCategoryDocs.length > 0 ? (
+            currentCategoryDocs.map((doc) => {
+              const hasContent = Boolean(doc.content && doc.content.trim().length > 0);
+              const isPdf = Boolean(doc.content && (doc.content.startsWith('data:application/pdf') || doc.content.endsWith('.pdf')));
+              
+              return (
+                <div
+                  key={`${doc.category}_${doc.name}`}
+                  className="bg-slate-900/90 border border-slate-800 hover:border-slate-700 p-2.5 rounded-2xl flex items-center justify-between gap-2.5 transition-all shadow-xs"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                        hasContent
+                          ? isPdf
+                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                            : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                          : 'bg-slate-800 text-slate-400 border border-slate-700'
+                      }`}
+                    >
+                      {doc.category === 'Offense' ? (
+                        <Zap className="w-4 h-4" />
+                      ) : doc.category === 'Defense' ? (
+                        <Shield className="w-4 h-4" />
+                      ) : (
+                        <BookOpen className="w-4 h-4" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-white truncate">{doc.name}</span>
+                        {guideSearchTerm && (
+                          <span className="text-[9px] px-1 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">
+                            {doc.category}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {hasContent ? (
+                          <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
+                            {isPdf ? 'PDF Guide' : 'HTML Schematic'}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-500 font-medium">
+                            Template Ready
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions for Document */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handlePreviewGuide(doc.category, doc.name, doc.content)}
+                      className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
+                      title="Quick Read / View"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Read</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenGuideInStudio(doc.category, doc.name)}
+                      className="p-1.5 rounded-xl bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-400 transition-all active:scale-95 cursor-pointer"
+                      title="Open in Playbook Studio"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 text-center space-y-1">
+              <p className="text-xs font-bold text-slate-300">No guides matching search</p>
+              <p className="text-[11px] text-slate-500">
+                Clear filter or add new guide sections in the Studio.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Fast Starter Templates Strip */}
+        <div className="pt-2 border-t border-slate-800">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-amber-400" />
+              <span>Quick Scheme Templates</span>
+            </span>
+            <span className="text-[10px] text-slate-500">Tap to preview</span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-1.5">
+            {QUICK_GUIDE_TEMPLATES.map((tpl) => (
+              <button
+                key={tpl.id}
+                type="button"
+                onClick={() => handlePreviewStarterTemplate(tpl)}
+                className="p-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded-xl text-left transition-all active:scale-95 cursor-pointer group"
+              >
+                <div className="text-[10px] font-black text-indigo-300 group-hover:text-indigo-200 truncate">
+                  {tpl.tag}
+                </div>
+                <div className="text-[11px] font-bold text-white truncate mt-0.5">
+                  {tpl.title.split(' ')[0]} {tpl.title.split(' ')[1] || ''}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          4. SEGMENTED COACH COMMAND HUB (Tabs: Starters | Roster | Attendance)
           ========================================================================= */}
       <div className="bg-slate-850 rounded-3xl border border-slate-700/80 p-3.5 shadow-xl space-y-3">
         {/* Segmented Tab Bar */}
@@ -802,6 +1294,126 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          6. QUICK VIEW PLAYBOOK & GUIDE MODAL
+          ========================================================================= */}
+      {quickViewGuideModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-3.5 sm:p-4 bg-slate-850 border-b border-slate-700 flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-2xl bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 flex items-center justify-center shrink-0">
+                  <BookOpen className="w-5 h-5 text-indigo-300" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-sm sm:text-base font-black text-white truncate">
+                      {quickViewGuideModal.title}
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                      {quickViewGuideModal.category}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-medium truncate">
+                    {quickViewGuideModal.isStarterTemplate
+                      ? 'Starter Scheme Reference Card'
+                      : 'Sideline Document & Playbook Viewer'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cat = quickViewGuideModal.category;
+                    const doc = quickViewGuideModal.title;
+                    setQuickViewGuideModal(null);
+                    handleOpenGuideInStudio(cat, doc);
+                  }}
+                  className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1 active:scale-95 transition-all shadow-xs cursor-pointer"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Open in</span> Studio
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQuickViewGuideModal(null)}
+                  className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body / Viewer */}
+            <div className="p-3 sm:p-4 flex-1 overflow-y-auto bg-slate-950 space-y-3">
+              {quickViewGuideModal.content && quickViewGuideModal.content.trim().length > 0 ? (
+                quickViewGuideModal.content.startsWith('data:application/pdf') ||
+                quickViewGuideModal.content.endsWith('.pdf') ? (
+                  <div className="w-full h-[60vh] bg-slate-900 rounded-2xl overflow-hidden border border-slate-800">
+                    <iframe
+                      src={quickViewGuideModal.content}
+                      title={quickViewGuideModal.title}
+                      className="w-full h-full border-0"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full min-h-[50vh] bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-inner">
+                    <iframe
+                      srcDoc={quickViewGuideModal.content}
+                      title={quickViewGuideModal.title}
+                      className="w-full h-[60vh] border-0 bg-transparent"
+                      sandbox="allow-scripts allow-same-origin"
+                    />
+                  </div>
+                )
+              ) : (
+                <div className="p-8 bg-slate-900 rounded-2xl border border-slate-800 text-center space-y-3 my-6">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 mx-auto flex items-center justify-center">
+                    <FileCode className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1 max-w-sm mx-auto">
+                    <h4 className="text-sm font-black text-white">No Schematic Document Yet</h4>
+                    <p className="text-xs text-slate-400">
+                      This playbook section is currently blank. Open in the Studio to write custom HTML schematics, upload PDF install packs, or paste template cards.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const cat = quickViewGuideModal.category;
+                      const doc = quickViewGuideModal.title;
+                      setQuickViewGuideModal(null);
+                      handleOpenGuideInStudio(cat, doc);
+                    }}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl inline-flex items-center gap-1.5 shadow-md shadow-indigo-600/30 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <span>Open in Playbook Studio</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 bg-slate-850 border-t border-slate-800 flex items-center justify-between gap-2 shrink-0 text-xs">
+              <span className="text-[11px] text-slate-400 font-medium">
+                {quickViewGuideModal.category} &bull; {quickViewGuideModal.title}
+              </span>
+              <button
+                type="button"
+                onClick={() => setQuickViewGuideModal(null)}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                Close Viewer
+              </button>
+            </div>
           </div>
         </div>
       )}

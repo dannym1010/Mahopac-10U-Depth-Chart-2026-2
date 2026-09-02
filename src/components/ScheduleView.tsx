@@ -1194,14 +1194,14 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                         </div>
 
                         {/* Week-level Quick Translation Links & Collapse Toggle */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               onNavigateToWeek(weekKey, 'scouting');
                             }}
-                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all"
-                            title="Open weekly scouting report and coaching keys"
+                            className="px-2.5 py-1 bg-slate-800/90 hover:bg-slate-700 text-amber-300 hover:text-amber-200 text-xs font-bold rounded-lg border border-slate-700/80 flex items-center gap-1 transition-all cursor-pointer"
+                            title="Open weekly scouting report"
                           >
                             <FileSpreadsheet className="w-3 h-3 text-amber-400" />
                             <span>Scouting</span>
@@ -1217,58 +1217,30 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                                 onNavigateToWeek(weekKey, 'practice');
                               }
                             }}
-                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all"
-                            title="Open practice plans for this week"
+                            className="px-2.5 py-1 bg-slate-800/90 hover:bg-slate-700 text-indigo-300 hover:text-indigo-200 text-xs font-bold rounded-lg border border-slate-700/80 flex items-center gap-1 transition-all cursor-pointer"
+                            title="Open practice plans"
                           >
                             <ClipboardList className="w-3 h-3 text-indigo-400" />
-                            <span>Practices</span>
+                            <span>Practice</span>
                           </button>
 
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onNavigateToWeek(weekKey, 'wristband');
-                            }}
-                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all hidden sm:flex"
-                            title="Open wristband call sheet"
-                          >
-                            <span>Wristband</span>
-                          </button>
-
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onNavigateToWeek(weekKey, 'groups');
-                            }}
-                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-all hidden sm:flex"
-                            title="Open weekly depth chart"
-                          >
-                            <span>Depth Chart</span>
-                          </button>
-
-                          {/* Toggle Expand / Minimize Button */}
+                          {/* Toggle Expand / Minimize Chevron */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               toggleWeekExpanded(weekKey);
                             }}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-xs ${
+                            className={`p-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-all border cursor-pointer ${
                               isExpanded
-                                ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-                                : 'bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white border border-indigo-500/40'
+                                ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                                : 'bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border-indigo-500/30'
                             }`}
-                            title={isExpanded ? 'Minimize week' : 'Expand week details'}
+                            title={isExpanded ? 'Minimize week' : 'Expand week'}
                           >
                             {isExpanded ? (
-                              <>
-                                <ChevronUp className="w-3.5 h-3.5 text-slate-300" />
-                                <span>Minimize</span>
-                              </>
+                              <ChevronUp className="w-4 h-4 text-slate-400" />
                             ) : (
-                              <>
-                                <ChevronDown className="w-3.5 h-3.5 text-indigo-300" />
-                                <span>Expand ({events.length})</span>
-                              </>
+                              <ChevronDown className="w-4 h-4 text-indigo-400" />
                             )}
                           </button>
                         </div>
@@ -1337,29 +1309,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                                       )}
                                     </div>
 
-                                    {/* Admin Edit / Delete / Result / Fast Switch Actions */}
+                                    {/* Admin Edit / Delete / Result Actions */}
                                     {userRole === 'admin' && (
                                       <div className="flex items-center gap-1 text-slate-400">
-                                        {/* Fast Type Toggle */}
-                                        <button
-                                          onClick={() => {
-                                            const newType: ScheduleEventType = isGame ? 'practice' : 'game';
-                                            const updates: Partial<ScheduleEvent> = { type: newType };
-                                            if (newType === 'game' && !evt.opponent) {
-                                              updates.opponent = evt.title.replace(/^(practice|game)\s*[:-]?\s*/i, '').trim() || 'Opponent';
-                                            }
-                                            onUpdateEvent(evt.id, updates);
-                                          }}
-                                          className={`p-1 text-[10px] font-bold flex items-center gap-1 px-2 py-0.5 rounded border transition-all ${
-                                            isGame
-                                              ? 'bg-indigo-950/80 text-indigo-300 border-indigo-700/60 hover:bg-indigo-900'
-                                              : 'bg-amber-950/80 text-amber-300 border-amber-700/60 hover:bg-amber-900'
-                                          }`}
-                                          title={isGame ? 'Change event type to Practice' : 'Change event type to Game'}
-                                        >
-                                          <span>{isGame ? 'To Practice 🏈' : 'To Game 🎮'}</span>
-                                        </button>
-
                                         {isGame && (
                                           <button
                                             onClick={() => {
@@ -1368,8 +1320,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                                               setOppScore(evt.result?.opponentScore || 0);
                                               setRecapNotes(evt.result?.recapNotes || '');
                                             }}
-                                            className="p-1 hover:text-amber-300 text-[10px] font-bold flex items-center gap-0.5 bg-slate-800 px-2 py-0.5 rounded border border-slate-700"
-                                            title="Record game final score and recap"
+                                            className="px-2 py-0.5 hover:text-amber-300 text-[10px] font-bold flex items-center gap-1 bg-slate-800/90 hover:bg-slate-800 rounded-lg border border-slate-700 transition-all cursor-pointer"
+                                            title="Record game score"
                                           >
                                             <Trophy className="w-3 h-3 text-amber-400" />
                                             <span>Score</span>
@@ -1379,8 +1331,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                                           onClick={() => {
                                             setEditingEvent(evt);
                                           }}
-                                          className="p-1 hover:text-slate-200"
-                                          title="Edit event details"
+                                          className="p-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-all cursor-pointer"
+                                          title="Edit event"
                                         >
                                           <Edit2 className="w-3.5 h-3.5" />
                                         </button>
@@ -1390,7 +1342,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                                               onDeleteEvent(evt.id);
                                             }
                                           }}
-                                          className="p-1 hover:text-rose-400"
+                                          className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-all cursor-pointer"
                                           title="Delete event"
                                         >
                                           <Trash2 className="w-3.5 h-3.5" />

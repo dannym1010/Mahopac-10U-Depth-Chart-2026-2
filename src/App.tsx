@@ -1720,13 +1720,15 @@ function mergeRemoteWeeklyData(
     return teams.slice(0, 1);
   }, [teams, currentUserCoach, currentUser]);
 
-  // Active Team Saved Practice Coaches (Per-Team Roster)
+  // Active Team Saved Practice Coaches (Per-Team Roster - strictly on this team only)
   const activeTeamSavedCoaches = React.useMemo(() => {
-    if (teamSavedCoaches[activeTeamId] && teamSavedCoaches[activeTeamId].length > 0) {
-      return teamSavedCoaches[activeTeamId];
+    if (teamSavedCoaches && teamSavedCoaches[activeTeamId] && Array.isArray(teamSavedCoaches[activeTeamId])) {
+      return teamSavedCoaches[activeTeamId].filter(
+        (c) => c && typeof c === 'string' && c.trim()
+      );
     }
-    return savedCoaches || DEFAULT_SAVED_COACHES;
-  }, [teamSavedCoaches, activeTeamId, savedCoaches]);
+    return [];
+  }, [teamSavedCoaches, activeTeamId]);
 
   // Ensure activeTeamId is within accessible teams
   useEffect(() => {
@@ -2125,28 +2127,32 @@ function mergeRemoteWeeklyData(
     }
   };
 
-  const handleAddNewSavedCoach = (name: string, targetTeamId?: string) => {
+  const handleAddNewSavedCoach = (rawName: string, targetTeamId?: string) => {
+    if (!rawName || !rawName.trim()) return;
     const tid = targetTeamId || activeTeamId;
+    const namesToAdd = rawName
+      .split(/[,;\n]+/)
+      .map((n) => n.trim())
+      .filter(Boolean);
+
+    if (namesToAdd.length === 0) return;
+
     let updatedTeamCoaches: Record<string, string[]> = {};
     setTeamSavedCoaches((prev) => {
-      const currentList = prev[tid] || savedCoaches || DEFAULT_SAVED_COACHES;
-      if (currentList.includes(name)) return prev;
+      const currentList = Array.isArray(prev[tid]) ? prev[tid] : [];
+      const nextList = [...currentList];
+      namesToAdd.forEach((name) => {
+        if (!nextList.some((c) => c.toLowerCase() === name.toLowerCase())) {
+          nextList.push(name);
+        }
+      });
       updatedTeamCoaches = {
         ...prev,
-        [tid]: [...currentList, name],
+        [tid]: nextList,
       };
       safeJSONSet('footballTeamSavedCoaches', updatedTeamCoaches);
       latestStateRef.current.teamSavedCoaches = updatedTeamCoaches;
       return updatedTeamCoaches;
-    });
-
-    let updatedSavedCoaches: string[] = [];
-    setSavedCoaches((prev) => {
-      if (prev.includes(name)) return prev;
-      updatedSavedCoaches = [...prev, name];
-      safeJSONSet('footballSavedCoaches', updatedSavedCoaches);
-      latestStateRef.current.savedCoaches = updatedSavedCoaches;
-      return updatedSavedCoaches;
     });
 
     const { db } = getFirebaseServices();
@@ -2156,7 +2162,6 @@ function mergeRemoteWeeklyData(
         .set(
           {
             teamSavedCoaches: latestStateRef.current.teamSavedCoaches,
-            savedCoaches: latestStateRef.current.savedCoaches,
             updatedAt: Date.now(),
           },
           { merge: true }
@@ -2167,24 +2172,18 @@ function mergeRemoteWeeklyData(
 
   const handleDeleteSavedCoach = (name: string, targetTeamId?: string) => {
     const tid = targetTeamId || activeTeamId;
+    const normTarget = name.toLowerCase().trim();
+
     let updatedTeamCoaches: Record<string, string[]> = {};
     setTeamSavedCoaches((prev) => {
-      const currentList = prev[tid] || savedCoaches || DEFAULT_SAVED_COACHES;
+      const currentList = Array.isArray(prev[tid]) ? prev[tid] : [];
       updatedTeamCoaches = {
         ...prev,
-        [tid]: currentList.filter((c) => c !== name),
+        [tid]: currentList.filter((c) => c.toLowerCase().trim() !== normTarget),
       };
       safeJSONSet('footballTeamSavedCoaches', updatedTeamCoaches);
       latestStateRef.current.teamSavedCoaches = updatedTeamCoaches;
       return updatedTeamCoaches;
-    });
-
-    let updatedSavedCoaches: string[] = [];
-    setSavedCoaches((prev) => {
-      updatedSavedCoaches = prev.filter((c) => c !== name);
-      safeJSONSet('footballSavedCoaches', updatedSavedCoaches);
-      latestStateRef.current.savedCoaches = updatedSavedCoaches;
-      return updatedSavedCoaches;
     });
 
     const { db } = getFirebaseServices();
@@ -2194,7 +2193,6 @@ function mergeRemoteWeeklyData(
         .set(
           {
             teamSavedCoaches: latestStateRef.current.teamSavedCoaches,
-            savedCoaches: latestStateRef.current.savedCoaches,
             updatedAt: Date.now(),
           },
           { merge: true }
@@ -2204,7 +2202,7 @@ function mergeRemoteWeeklyData(
   };
 
   const handleCopyCoachesFromTeam = (sourceTeamId: string, targetTeamId: string) => {
-    const sourceList = teamSavedCoaches[sourceTeamId] || savedCoaches || DEFAULT_SAVED_COACHES;
+    const sourceList = Array.isArray(teamSavedCoaches[sourceTeamId]) ? teamSavedCoaches[sourceTeamId] : [];
     let updatedTeamCoaches: Record<string, string[]> = {};
     setTeamSavedCoaches((prev) => {
       updatedTeamCoaches = {
@@ -3543,47 +3541,97 @@ function mergeRemoteWeeklyData(
 
   const handleApplyPracticeTemplate = (templateName: string) => {
     const tmpl = practiceTemplates[templateName];
-    if (!tmpl) return;
-    const planToApply = Array.isArray(tmpl) ? tmpl : (tmpl as any).plan;
-    if (!Array.isArray(planToApply)) return;
+    if (!tmpl) {
+      alert(`Template "${templateName}" not found.`);
+      return;
+    }
+    const planToApply = Array.isArray(tmpl)
+      ? tmpl
+      : (tmpl as any).plan || (tmpl as any).periods;
+    if (!Array.isArray(planToApply) || planToApply.length === 0) {
+      alert(`Template "${templateName}" has no periods to apply.`);
+      return;
+    }
     if (
       confirm(
-        `Apply template "${templateName}"? This will replace current practice periods.`
+        `Apply template "${templateName}"? This will replace the periods in the active practice plan.`
       )
     ) {
+      const activeList =
+        activeTeamPracticeData.length > 0 ? activeTeamPracticeData : practiceData;
+      const targetId =
+        currentPracticeId ||
+        findBestActivePracticeId(activeList) ||
+        activeList[0]?.id;
+
+      if (!targetId) {
+        alert('Please create or select a practice plan first.');
+        return;
+      }
+
       updatePracticeDataAndSave((prev) =>
         prev.map((p) =>
-          p.id === currentPracticeId
+          p.id === targetId
             ? {
                 ...p,
                 plan: deepClone(planToApply),
+                periods: deepClone(planToApply),
                 lastEdited: Date.now(),
               }
             : p
         )
       );
+      debouncedSave('practice');
     }
   };
 
-  const handleSaveCurrentAsTemplate = () => {
-    const cur = practiceData.find((p) => p.id === currentPracticeId);
-    if (!cur || !cur.plan?.length) {
-      alert('No practice periods to save.');
+  const handleSaveCurrentAsTemplate = (customName?: string) => {
+    const activeList =
+      activeTeamPracticeData.length > 0 ? activeTeamPracticeData : practiceData;
+    const cur =
+      activeList.find((p) => p && p.id === currentPracticeId) ||
+      activeList.find((p) => p && p.id === findBestActivePracticeId(activeList)) ||
+      activeList[0];
+
+    const periodsToSave = cur
+      ? Array.isArray(cur.plan) && cur.plan.length > 0
+        ? cur.plan
+        : Array.isArray(cur.periods) && cur.periods.length > 0
+        ? cur.periods
+        : []
+      : [];
+
+    if (!cur || periodsToSave.length === 0) {
+      alert('No practice periods found in the active practice plan to save. Please add periods before saving as a template.');
       return;
     }
-    const name = prompt('Enter a name for this practice template:');
+
+    const defaultName = cur.name ? `${cur.name} Template` : 'Standard Practice Template';
+    const name =
+      typeof customName === 'string' && customName.trim()
+        ? customName.trim()
+        : prompt('Enter a name for this practice template:', defaultName);
+
     if (name && name.trim()) {
-      setPracticeTemplates((prev) => {
-        const next = {
-          ...prev,
-          [name.trim()]: deepClone(cur.plan),
-        };
-        latestStateRef.current.practiceTemplates = next;
-        safeJSONSet('footballPracticeTemplates', next);
-        return next;
-      });
+      const trimmed = name.trim();
+      const next = {
+        ...practiceTemplates,
+        [trimmed]: deepClone(periodsToSave),
+      };
+      setPracticeTemplates(next);
+      latestStateRef.current.practiceTemplates = next;
+      safeJSONSet('footballPracticeTemplates', next);
       debouncedSave('practice');
-      alert(`Template "${name.trim()}" saved!`);
+
+      const { db } = getFirebaseServices();
+      if (db) {
+        db.collection('teamData')
+          .doc('depthChartData')
+          .set({ practiceTemplates: next, updatedAt: Date.now() }, { merge: true })
+          .catch((err: any) => console.warn('Firestore practice template save error:', err));
+      }
+
+      alert(`Practice Template "${trimmed}" saved! You can now apply it to any practice plan.`);
     }
   };
 
@@ -4255,32 +4303,44 @@ function mergeRemoteWeeklyData(
      BACKUP & IMPORT FULL APPLICATION STATE
      ========================================================================= */
   const handleExportFullBackup = () => {
-    const fullBackup = {
-      weeklyData,
-      defaultFormations,
-      practiceData,
-      practiceTemplates,
-      cascadingDrills,
-      guideTree,
-      guideOrder,
-      savedCoaches,
-      teamSavedCoaches,
-      staffList,
-      masterPlayLibrary,
-      collapsedFolders,
-      scheduleEvents,
-      roster,
-      teams,
-      seasonConfig,
-      attendanceLogs,
-    };
-    const dataStr =
-      'data:text/json;charset=utf-8,' +
-      encodeURIComponent(safeJSONStringify(fullBackup, 2));
-    const a = document.createElement('a');
-    a.download = `mahopac10u_backup_${new Date().toISOString().slice(0, 10)}.json`;
-    a.href = dataStr;
-    a.click();
+    try {
+      const fullBackup = {
+        weeklyData,
+        defaultFormations,
+        practiceData,
+        practiceTemplates,
+        cascadingDrills,
+        guideTree,
+        guideOrder,
+        savedCoaches,
+        teamSavedCoaches,
+        staffList,
+        masterPlayLibrary,
+        collapsedFolders,
+        scheduleEvents,
+        roster,
+        teams,
+        seasonConfig,
+        attendanceLogs,
+        exportedAt: new Date().toISOString(),
+      };
+      const jsonStr = safeJSONStringify(fullBackup, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `football_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1000);
+    } catch (err: any) {
+      console.error('Backup export failed:', err);
+      alert(`Export failed: ${err?.message || 'Unknown error'}`);
+    }
   };
 
   const applyImportDataObject = (
@@ -5168,6 +5228,12 @@ function mergeRemoteWeeklyData(
                 onOpenPreferencesModal={() => setIsPreferencesModalOpen(true)}
                 onOpenScheduleModal={() => setActiveUnit('schedule')}
                 onOpenThemeGallery={() => setIsThemeGalleryOpen(true)}
+                guideTree={guideTree}
+                guideOrder={guideOrder}
+                activeGuideMain={activeGuideMain}
+                activeGuideSub={activeGuideSub}
+                onSelectGuideMain={setActiveGuideMain}
+                onSelectGuideSub={setActiveGuideSub}
               />
             )}
 
@@ -6125,6 +6191,16 @@ function mergeRemoteWeeklyData(
             const updated = { ...prev };
             updated[newName] = updated[oldName];
             delete updated[oldName];
+            safeJSONSet('footballPracticeTemplates', updated);
+            latestStateRef.current.practiceTemplates = updated;
+            debouncedSave('practice');
+            const { db } = getFirebaseServices();
+            if (db) {
+              db.collection('teamData')
+                .doc('depthChartData')
+                .set({ practiceTemplates: updated, updatedAt: Date.now() }, { merge: true })
+                .catch((err: any) => console.warn('Firestore template rename error:', err));
+            }
             return updated;
           });
         }}
@@ -6132,8 +6208,21 @@ function mergeRemoteWeeklyData(
           setPracticeTemplates((prev) => {
             const updated = { ...prev };
             delete updated[name];
+            safeJSONSet('footballPracticeTemplates', updated);
+            latestStateRef.current.practiceTemplates = updated;
+            debouncedSave('practice');
+            const { db } = getFirebaseServices();
+            if (db) {
+              db.collection('teamData')
+                .doc('depthChartData')
+                .set({ practiceTemplates: updated, updatedAt: Date.now() }, { merge: true })
+                .catch((err: any) => console.warn('Firestore template delete error:', err));
+            }
             return updated;
           });
+        }}
+        onSaveNewTemplate={(name) => {
+          handleSaveCurrentAsTemplate(name);
         }}
       />
 
@@ -6176,6 +6265,14 @@ function mergeRemoteWeeklyData(
         userRole={userRole}
         currentUserEmail={currentUser?.email || 'dannym1010@gmail.com'}
         onOpenThemeGallery={() => setIsThemeGalleryOpen(true)}
+        onOpenSeasonConfigModal={() => setIsSeasonConfigModalOpen(true)}
+        onOpenManageTeams={() => setActiveUnit('users')}
+        onOpenCopyWeekModal={() => setIsCopyWeekModalOpen(true)}
+        onExportData={handleExportFullBackup}
+        onImportClick={() => setIsImportModalOpen(true)}
+        onResetData={handleResetData}
+        onForceSave={handleForceSave}
+        onForceRefresh={handleForceRefresh}
       />
 
       <ThemeGalleryModal

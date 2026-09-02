@@ -891,6 +891,7 @@ interface TemplatesManagerModalProps {
   onClose: () => void;
   onRenameTemplate: (oldName: string, newName: string) => void;
   onDeleteTemplate: (name: string) => void;
+  onSaveNewTemplate?: (name: string) => void;
 }
 
 export const TemplatesManagerModal: React.FC<TemplatesManagerModalProps> = ({
@@ -899,8 +900,20 @@ export const TemplatesManagerModal: React.FC<TemplatesManagerModalProps> = ({
   onClose,
   onRenameTemplate,
   onDeleteTemplate,
+  onSaveNewTemplate,
 }) => {
+  const [newTemplateName, setNewTemplateName] = React.useState('');
+
   if (!isOpen) return null;
+
+  const handleCreateTemplate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTemplateName.trim()) return;
+    if (onSaveNewTemplate) {
+      onSaveNewTemplate(newTemplateName.trim());
+      setNewTemplateName('');
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
@@ -917,47 +930,86 @@ export const TemplatesManagerModal: React.FC<TemplatesManagerModalProps> = ({
           </button>
         </div>
 
-        <div className="space-y-2 max-h-60 overflow-y-auto border border-slate-700 p-3 rounded-2xl bg-slate-900/90">
-          {Object.keys(templates).map((name) => (
-            <div
-              key={name}
-              className="flex items-center justify-between p-2.5 bg-slate-800 rounded-xl border border-slate-700 text-xs font-bold text-slate-200"
-            >
-              <span>{name}</span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => {
-                    const newName = prompt('Rename template:', name);
-                    if (newName && newName.trim() && newName !== name) {
-                      onRenameTemplate(name, newName.trim());
-                    }
-                  }}
-                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-750 rounded-lg text-slate-300 text-[11px] border border-slate-700"
-                >
-                  Rename
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm(`Delete template "${name}"?`)) onDeleteTemplate(name);
-                  }}
-                  className="p-1 hover:bg-rose-950/50 text-rose-400 rounded-lg"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+        {onSaveNewTemplate && (
+          <form onSubmit={handleCreateTemplate} className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">
+              Save Active Practice as New Template
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newTemplateName}
+                onChange={(e) => setNewTemplateName(e.target.value)}
+                placeholder="e.g. Tuesday Full Pads / Pre-Game Walkthrough"
+                className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              />
+              <button
+                type="submit"
+                disabled={!newTemplateName.trim()}
+                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer whitespace-nowrap"
+              >
+                Save
+              </button>
             </div>
-          ))}
+          </form>
+        )}
+
+        <div className="space-y-2 max-h-64 overflow-y-auto border border-slate-700 p-3 rounded-2xl bg-slate-900/90">
+          <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+            Saved Templates ({Object.keys(templates).length})
+          </div>
+          {Object.entries(templates).map(([name, periods]) => {
+            const count = Array.isArray(periods) ? periods.length : 0;
+            return (
+              <div
+                key={name}
+                className="flex items-center justify-between p-2.5 bg-slate-800 rounded-xl border border-slate-700 text-xs font-bold text-slate-200"
+              >
+                <div className="flex items-center gap-2 min-w-0 pr-2">
+                  <span className="truncate">{name}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-slate-900 text-indigo-300 text-[10px] font-mono border border-slate-700/60 shrink-0">
+                    {count} {count === 1 ? 'period' : 'periods'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newName = prompt('Rename template:', name);
+                      if (newName && newName.trim() && newName !== name) {
+                        onRenameTemplate(name, newName.trim());
+                      }
+                    }}
+                    className="px-2.5 py-1 bg-slate-900 hover:bg-slate-700 rounded-lg text-slate-300 text-[11px] border border-slate-700 cursor-pointer"
+                  >
+                    Rename
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`Delete template "${name}"?`)) onDeleteTemplate(name);
+                    }}
+                    className="p-1 hover:bg-rose-950/50 text-rose-400 rounded-lg cursor-pointer"
+                    title="Delete template"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
           {Object.keys(templates).length === 0 && (
             <div className="text-center py-6 text-xs text-slate-400 italic">
-              No templates saved.
+              No saved templates yet. Click Save above to save your current plan as a reusable template.
             </div>
           )}
         </div>
 
         <div className="flex justify-end pt-3 border-t border-slate-700">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-750 text-slate-200 font-bold text-xs rounded-xl border border-slate-700"
+            className="px-4 py-2 bg-slate-900 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 cursor-pointer"
           >
             Done
           </button>

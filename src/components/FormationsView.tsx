@@ -1058,36 +1058,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                         </div>
 
                         {userRole === 'admin' && (
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setFormationNameInput(form.name);
-                                setFormationModalState({
-                                  isOpen: true,
-                                  mode: 'rename',
-                                  formId: form.id,
-                                  unit: form.unit,
-                                });
-                              }}
-                              className="p-1.5 text-slate-300 hover:text-indigo-400 hover:bg-slate-800 border border-slate-700 rounded-xl transition-all cursor-pointer shrink-0"
-                              title="Rename formation"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setDeleteFormationTarget({
-                                  formId: form.id,
-                                  formName: form.name,
-                                });
-                              }}
-                              className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 border border-rose-900/50 rounded-xl transition-all cursor-pointer shrink-0"
-                              title="Delete formation"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                          <div className="flex items-center gap-1.5 shrink-0">
                             <button
                               type="button"
                               onClick={() => {
@@ -1100,11 +1071,40 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                 setRowLabelInput('');
                                 setRowLabelModalTarget({ formId: form.id, isNew: true });
                               }}
-                              className="px-2 py-1 text-[11px] font-bold bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 rounded-xl border border-indigo-500/40 flex items-center gap-1 cursor-pointer shrink-0"
+                              className="px-2.5 py-1 text-xs font-bold bg-indigo-600/30 hover:bg-indigo-600/60 text-indigo-200 hover:text-white rounded-lg border border-indigo-500/40 flex items-center gap-1 cursor-pointer transition-all shrink-0"
                               title="Add Level to Formation"
                             >
-                              <Plus className="w-3.5 h-3.5 text-indigo-400" />
-                              <span className="hidden sm:inline">Add Level</span>
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Level</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormationNameInput(form.name);
+                                setFormationModalState({
+                                  isOpen: true,
+                                  mode: 'rename',
+                                  formId: form.id,
+                                  unit: form.unit,
+                                });
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-all cursor-pointer shrink-0"
+                              title="Rename formation"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDeleteFormationTarget({
+                                  formId: form.id,
+                                  formName: form.name,
+                                });
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-all cursor-pointer shrink-0"
+                              title="Delete formation"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         )}

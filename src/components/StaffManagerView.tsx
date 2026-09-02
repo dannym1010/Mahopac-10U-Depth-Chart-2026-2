@@ -115,7 +115,9 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
 
   const activeFilterTeam = teams.find((t) => t.id === practiceCoachTeamFilter) || teams[0];
   const currentTeamPracticeCoaches =
-    teamSavedCoaches[practiceCoachTeamFilter] || savedCoaches || [];
+    Array.isArray(teamSavedCoaches[practiceCoachTeamFilter])
+      ? teamSavedCoaches[practiceCoachTeamFilter]
+      : [];
 
   const generateInviteBody = (email: string, role: string, assignedTeamNames: string[]) => {
     const origin = typeof window !== 'undefined' ? window.location.origin || window.location.href : '';
@@ -1164,7 +1166,7 @@ Looking forward to a great season!`;
                   required
                   value={newPracticeCoachName}
                   onChange={(e) => setNewPracticeCoachName(e.target.value)}
-                  placeholder="e.g. Offensive Coordinator, Defensive Line, Coach Smith"
+                  placeholder="e.g. Coach Dan, Coach Mike, Coach Sarah"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-emerald-500"
                   autoFocus
                 />

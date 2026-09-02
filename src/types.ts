@@ -357,6 +357,7 @@ export interface PracticePlan {
   weekFolder: string;
   dayFolder?: string;
   title: string;
+  name?: string;
   date: string;
   day?: string;
   startTime?: string;
@@ -376,6 +377,7 @@ export interface PracticeTemplate {
 
 export interface StaffCoach {
   email: string;
+  name?: string;
   role: string;
   status: 'Active' | 'Pending';
   assignedTeamIds?: string[]; // IDs of teams this coach has access to. If undefined or includes 'all', coach has access to all teams.

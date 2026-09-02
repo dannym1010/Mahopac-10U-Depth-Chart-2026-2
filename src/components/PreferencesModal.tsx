@@ -683,52 +683,62 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
               </div>
 
               {/* Offline Backup & File Archive */}
-              {userRole === 'admin' && (
-                <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 space-y-3">
-                  <h4 className="text-xs font-black text-zinc-100 uppercase tracking-wider flex items-center gap-2">
-                    <Download className="w-4 h-4 text-amber-400" />
-                    <span>File Backup &amp; Offline Archive</span>
-                  </h4>
-                  <p className="text-xs text-zinc-400">
-                    Download a full snapshot of your playbooks, depth charts, rosters, and practice itineraries as a portable .json file.
-                  </p>
+              <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 space-y-3">
+                <h4 className="text-xs font-black text-zinc-100 uppercase tracking-wider flex items-center gap-2">
+                  <Download className="w-4 h-4 text-amber-400" />
+                  <span>File Backup &amp; Offline Archive</span>
+                </h4>
+                <p className="text-xs text-zinc-400">
+                  Download a complete portable JSON snapshot of your plays, wristband cards, depth charts, rosters, practice plans, and schedules.
+                </p>
 
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {onExportData && (
-                      <button
-                        type="button"
-                        onClick={onExportData}
-                        className="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-amber-300 font-bold text-xs rounded-xl flex items-center gap-1.5 border border-amber-500/40 hover:border-amber-400 transition-all active:scale-95 cursor-pointer"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Export Backup (.json)</span>
-                      </button>
-                    )}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {onExportData ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onExportData();
+                        showToast('Backup download initiated');
+                      }}
+                      className="px-4 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-xs rounded-xl flex items-center gap-2 border border-amber-500/40 hover:border-amber-400 transition-all active:scale-95 cursor-pointer shadow-sm"
+                    >
+                      <Download className="w-4 h-4 text-amber-400" />
+                      <span>Download Backup (.json)</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="px-4 py-2.5 bg-zinc-800 text-zinc-500 font-bold text-xs rounded-xl flex items-center gap-2 border border-zinc-700 opacity-60"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Export Unavailable</span>
+                    </button>
+                  )}
 
-                    {onImportClick && (
-                      <button
-                        type="button"
-                        onClick={onImportClick}
-                        className="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-cyan-300 font-bold text-xs rounded-xl flex items-center gap-1.5 border border-cyan-500/40 hover:border-cyan-400 transition-all active:scale-95 cursor-pointer"
-                      >
-                        <Upload className="w-3.5 h-3.5" />
-                        <span>Import Backup (.json)</span>
-                      </button>
-                    )}
+                  {onImportClick && userRole === 'admin' && (
+                    <button
+                      type="button"
+                      onClick={onImportClick}
+                      className="px-3.5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-cyan-300 font-bold text-xs rounded-xl flex items-center gap-1.5 border border-cyan-500/40 hover:border-cyan-400 transition-all active:scale-95 cursor-pointer"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Import Backup (.json)</span>
+                    </button>
+                  )}
 
-                    {onResetData && (
-                      <button
-                        type="button"
-                        onClick={onResetData}
-                        className="px-3.5 py-2 bg-rose-950/40 hover:bg-rose-900/50 text-rose-300 font-bold text-xs rounded-xl flex items-center gap-1.5 border border-rose-500/40 transition-all active:scale-95 cursor-pointer"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span>Reset App State</span>
-                      </button>
-                    )}
-                  </div>
+                  {onResetData && userRole === 'admin' && (
+                    <button
+                      type="button"
+                      onClick={onResetData}
+                      className="px-3.5 py-2.5 bg-rose-950/40 hover:bg-rose-900/50 text-rose-300 font-bold text-xs rounded-xl flex items-center gap-1.5 border border-rose-500/40 transition-all active:scale-95 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Reset App State</span>
+                    </button>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           )}
         </div>

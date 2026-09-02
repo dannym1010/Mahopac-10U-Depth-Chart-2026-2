@@ -145,6 +145,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [activeCoachPopup, setActiveCoachPopup] = useState<string | null>(null);
   const [coachSearchTerm, setCoachSearchTerm] = useState('');
+  const [quickNewCoachInput, setQuickNewCoachInput] = useState('');
   const [collapsedTreeFolders, setCollapsedTreeFolders] = useState<Record<string, boolean>>({});
   const [stationGroupFilters, setStationGroupFilters] = useState<Record<string, string>>({});
   const [isPrintMenuOpen, setIsPrintMenuOpen] = useState(false);
@@ -1878,7 +1879,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                     );
 
                     const assignedCoachTokens = (safeStation.coach || '')
-                      .split(',')
+                      .split(/[,/&+\n]+/)
                       .map((c) => c.trim())
                       .filter(Boolean);
 
@@ -2275,9 +2276,14 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                                     c.toLowerCase().includes(coachSearchTerm.toLowerCase().trim())
                                   )
                                   .map((coachName) => {
-                                    const isChecked =
-                                      assignedCoachTokens.includes(coachName) ||
-                                      assignedCoachTokens.includes(`Coach ${coachName}`);
+                                    const normCoach = coachName.toLowerCase().replace(/^coach\s+/, '').trim();
+                                    const isChecked = assignedCoachTokens.some((t) => {
+                                      const normT = t.toLowerCase().replace(/^coach\s+/, '').trim();
+                                      return (
+                                        normT === normCoach ||
+                                        t.toLowerCase().trim() === coachName.toLowerCase().trim()
+                                      );
+                                    });
 
                                     return (
                                       <div
@@ -2295,14 +2301,18 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                                             onChange={(e) => {
                                               let updatedTokens = [...assignedCoachTokens];
                                               if (e.target.checked) {
-                                                if (!updatedTokens.includes(coachName))
+                                                const exists = updatedTokens.some((t) => {
+                                                  const normT = t.toLowerCase().replace(/^coach\s+/, '').trim();
+                                                  return normT === normCoach || t.toLowerCase() === coachName.toLowerCase();
+                                                });
+                                                if (!exists) {
                                                   updatedTokens.push(coachName);
+                                                }
                                               } else {
-                                                updatedTokens = updatedTokens.filter(
-                                                  (t) =>
-                                                    t !== coachName &&
-                                                    t !== `Coach ${coachName}`
-                                                );
+                                                updatedTokens = updatedTokens.filter((t) => {
+                                                  const normT = t.toLowerCase().replace(/^coach\s+/, '').trim();
+                                                  return normT !== normCoach && t.toLowerCase().trim() !== coachName.toLowerCase().trim();
+                                                });
                                               }
                                               onUpdateStation(
                                                 pIdx,
@@ -2336,25 +2346,49 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
 
                                 {savedCoaches.length === 0 && (
                                   <div className="p-3 text-center text-xs text-slate-400">
-                                    No saved coaches. Click below to add staff coaches.
+                                    No saved coaches found for this team. Add coaches below.
                                   </div>
                                 )}
                               </div>
 
-                              <div className="pt-2 border-t border-slate-700 text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const name = prompt('Enter new Coach Name (e.g. Coach Dan, Coach Mike):');
-                                    if (name && name.trim()) {
-                                      onAddNewSavedCoach(name.trim());
-                                    }
-                                  }}
-                                  className="w-full py-2 bg-indigo-950 hover:bg-indigo-900 border border-indigo-500/40 text-indigo-300 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                                >
-                                  <UserPlus className="w-3.5 h-3.5" />
-                                  <span>Add New Coach</span>
-                                </button>
+                              <div className="pt-2 border-t border-slate-700 space-y-1.5">
+                                <div className="flex items-center gap-1.5">
+                                  <input
+                                    type="text"
+                                    value={quickNewCoachInput}
+                                    onChange={(e) => setQuickNewCoachInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' && quickNewCoachInput.trim()) {
+                                        e.preventDefault();
+                                        onAddNewSavedCoach(quickNewCoachInput.trim());
+                                        setQuickNewCoachInput('');
+                                      }
+                                    }}
+                                    placeholder="Add coach name(s)..."
+                                    className="flex-1 px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (quickNewCoachInput.trim()) {
+                                        onAddNewSavedCoach(quickNewCoachInput.trim());
+                                        setQuickNewCoachInput('');
+                                      } else {
+                                        const name = prompt('Enter new Coach Name (e.g. Coach Dan, Coach Mike):');
+                                        if (name && name.trim()) {
+                                          onAddNewSavedCoach(name.trim());
+                                        }
+                                      }
+                                    }}
+                                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center gap-1 transition-all cursor-pointer shrink-0"
+                                  >
+                                    <UserPlus className="w-3.5 h-3.5" />
+                                    <span>Add</span>
+                                  </button>
+                                </div>
+                                <div className="text-[10px] text-slate-400 text-center">
+                                  You can add multiple names separated by commas
+                                </div>
                               </div>
                             </div>
                           )}
