@@ -404,6 +404,9 @@ const INK_FRIENDLY_PLAYBOOK_CSS = `
     print-color-adjust: exact !important;
   }
   body, html {
+    display: block !important;
+    width: 100% !important;
+    float: none !important;
     background: #ffffff !important;
     color: #0f172a !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
@@ -411,6 +414,81 @@ const INK_FRIENDLY_PLAYBOOK_CSS = `
     padding: 0 !important;
     font-size: 9.5pt !important;
     line-height: 1.35 !important;
+  }
+  .playbook-container {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .top-nav, .bottom-nav, select, button, .action-btn, .play-nav {
+    display: none !important;
+  }
+  .field-wrap {
+    margin: 8px 0 !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    background: #ffffff !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  svg {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: 4.6in !important;
+  }
+  .meta-bar {
+    display: block !important;
+    padding: 8px 12px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    background: #f8fafc !important;
+    margin: 8px 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .concepts-text {
+    font-size: 8.5pt !important;
+    color: #334155 !important;
+    line-height: 1.4 !important;
+  }
+  .table-section {
+    padding: 8px 0 12px 0 !important;
+    overflow: visible !important;
+    width: 100% !important;
+  }
+  .table-section table, table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 8.5pt !important;
+    text-align: left !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+  .table-section thead th, thead th, th {
+    padding: 6px 8px !important;
+    font-size: 8pt !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    color: #334155 !important;
+    border: 1px solid #cbd5e1 !important;
+    background: #f1f5f9 !important;
+  }
+  .table-section tbody td, tbody td, td {
+    padding: 6px 8px !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    vertical-align: top !important;
+    line-height: 1.35 !important;
+    font-size: 8pt !important;
   }
   .card, .wrapper, .box, .container, [class*="card"] {
     background: #ffffff !important;
@@ -632,6 +710,97 @@ function generateBlankPlaybookWorksheet(category: string, subTab: string): strin
 }
 
 /**
+ * Safely extracts, cleans, and sanitizes playbook HTML content for printing.
+ * - Extracts body content if it is a full HTML document (even if unclosed)
+ * - Strips any web navigation controls (.top-nav, .bottom-nav, select dropdowns, action buttons)
+ * - Neutralizes any embedded <style> tags that define global `body { display: flex }` or `*` rules
+ * - Automatically repairs unclosed tags to prevent section bleed/nesting in multi-page documents
+ */
+export function extractAndSanitizePlaybookHtml(
+  rawContent: string | undefined,
+  category: string,
+  subTab: string
+): string {
+  if (!rawContent || !rawContent.trim()) {
+    return generateBlankPlaybookWorksheet(category, subTab);
+  }
+
+  const trimmed = rawContent.trim();
+
+  // If it is an image data URI or image link
+  if (trimmed.startsWith('data:image/') || trimmed.match(/\.(jpeg|jpg|gif|png|webp)($|\?)/i)) {
+    return `
+      <div class="card" style="text-align: center; padding: 14px;">
+        <div class="header">
+          <h1 style="margin: 0; font-size: 15pt;">${subTab.toUpperCase()}</h1>
+          <div style="font-size: 9pt; color: #475569; margin-top: 3px;">Category: ${category}</div>
+        </div>
+        <img src="${trimmed}" alt="${subTab}" style="max-width: 100%; max-height: 8.2in; object-fit: contain; margin: 12px auto; display: block;" />
+      </div>
+    `;
+  }
+
+  // Use DOMParser in browser for resilient HTML tree parsing & auto-closing of unclosed tags
+  if (typeof window !== 'undefined' && typeof DOMParser !== 'undefined') {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(trimmed, 'text/html');
+
+      // 1. Remove non-printable web UI interactive controls and dropdowns
+      doc.querySelectorAll('.top-nav, .bottom-nav, select, .play-nav, button.action-btn, button').forEach((el) => {
+        el.remove();
+      });
+
+      // 2. Remove script and link tags
+      doc.querySelectorAll('script, link').forEach((el) => el.remove());
+
+      // 3. Neutralize any global style rules (e.g. body { display: flex }) so they don't break the outer document
+      doc.querySelectorAll('style').forEach((styleEl) => {
+        let css = styleEl.textContent || '';
+        css = css.replace(/(^|[,\s}])\s*(body|html)\s*\{/gi, '$1 .playbook-main-content {');
+        css = css.replace(/(^|[,\s}])\s*\*\s*\{/gi, '$1 .playbook-main-content * {');
+        styleEl.textContent = css;
+      });
+
+      const bodyHtml = doc.body ? doc.body.innerHTML.trim() : '';
+      if (bodyHtml) {
+        return bodyHtml;
+      }
+    } catch (err) {
+      console.warn('DOMParser extraction warning, falling back to regex sanitizer:', err);
+    }
+  }
+
+  // Regex fallback
+  let bodyContent = trimmed;
+  if (bodyContent.includes('<body') || bodyContent.includes('<BODY')) {
+    const match = bodyContent.match(/<body[^>]*>([\s\S]*?)(?:<\/body>|$)/i);
+    if (match && match[1]) {
+      bodyContent = match[1];
+    }
+  } else if (bodyContent.includes('<head') || bodyContent.includes('<HEAD')) {
+    bodyContent = bodyContent.replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '');
+  }
+
+  // Strip scripts, links, and web navigation elements
+  bodyContent = bodyContent.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+  bodyContent = bodyContent.replace(/<link[^>]*>/gi, '');
+  bodyContent = bodyContent.replace(/<div class="top-nav">[\s\S]*?<\/div>/gi, '');
+  bodyContent = bodyContent.replace(/<div class="bottom-nav">[\s\S]*?<\/div>/gi, '');
+  bodyContent = bodyContent.replace(/<select[^>]*>[\s\S]*?<\/select>/gi, '');
+  bodyContent = bodyContent.replace(/<button[^>]*>[\s\S]*?<\/button>/gi, '');
+
+  // Strip doc tags
+  bodyContent = bodyContent.replace(/<\/?(html|head|body)[^>]*>/gi, '');
+  bodyContent = bodyContent.replace(/<!DOCTYPE[^>]*>/gi, '');
+
+  // Neutralize global body/html style selectors
+  bodyContent = bodyContent.replace(/(^|[,\s}])\s*(body|html)\s*\{/gi, '$1 .playbook-main-content {');
+
+  return bodyContent;
+}
+
+/**
  * Generate self-contained HTML for a single Playbook Guide
  */
 export function generatePlaybookGuidePrintHTML(options: SinglePlaybookPrintOptions): string {
@@ -644,30 +813,7 @@ export function generatePlaybookGuidePrintHTML(options: SinglePlaybookPrintOptio
     inkFriendly = true,
   } = options;
 
-  const hasContent = content && content.trim().length > 0;
-  let bodyContent = '';
-
-  if (!hasContent) {
-    bodyContent = generateBlankPlaybookWorksheet(category, subTab);
-  } else {
-    const trimmed = content.trim();
-    if (trimmed.startsWith('data:image/') || trimmed.match(/\.(jpeg|jpg|gif|png|webp)($|\?)/i)) {
-      bodyContent = `
-        <div class="card" style="text-align: center; padding: 14px;">
-          <div class="header">
-            <h1 style="margin: 0; font-size: 15pt;">${subTab.toUpperCase()}</h1>
-            <div style="font-size: 9pt; color: #475569; margin-top: 3px;">Category: ${category}</div>
-          </div>
-          <img src="${trimmed}" alt="${subTab}" style="max-width: 100%; max-height: 8.2in; object-fit: contain; margin: 12px auto; display: block;" />
-        </div>
-      `;
-    } else if (trimmed.includes('<body') && trimmed.includes('</body>')) {
-      const match = trimmed.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-      bodyContent = match ? match[1] : trimmed;
-    } else {
-      bodyContent = trimmed;
-    }
-  }
+  const bodyContent = extractAndSanitizePlaybookHtml(content, category, subTab);
 
   const currentDate = new Date().toLocaleDateString('en-US', {
     month: 'short',
@@ -683,7 +829,107 @@ export function generatePlaybookGuidePrintHTML(options: SinglePlaybookPrintOptio
   <style>
     ${inkFriendly ? INK_FRIENDLY_PLAYBOOK_CSS : `
       @page { size: letter portrait; margin: 0.4in; }
-      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      html, body {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        float: none !important;
+        background: #ffffff !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .playbook-container {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .top-nav, .bottom-nav, select, button, .action-btn, .play-nav {
+        display: none !important;
+      }
+      .field-wrap {
+        margin: 8px 0 !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        background: #ffffff !important;
+        overflow: hidden !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      svg {
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        max-height: 4.6in !important;
+      }
+      .meta-bar {
+        display: block !important;
+        padding: 8px 12px !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        background: #f8fafc !important;
+        margin: 8px 0 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      .concepts-text {
+        font-size: 8.5pt !important;
+        color: #334155 !important;
+        line-height: 1.4 !important;
+      }
+      .table-section {
+        padding: 8px 0 12px 0 !important;
+        overflow: visible !important;
+        width: 100% !important;
+      }
+      .table-section table, table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 8.5pt !important;
+        text-align: left !important;
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+      }
+      .table-section thead th, thead th, th {
+        padding: 6px 8px !important;
+        font-size: 8pt !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        color: #334155 !important;
+        border: 1px solid #cbd5e1 !important;
+        background: #f1f5f9 !important;
+      }
+      .table-section tbody td, tbody td, td {
+        padding: 6px 8px !important;
+        color: #0f172a !important;
+        border: 1px solid #cbd5e1 !important;
+        vertical-align: top !important;
+        line-height: 1.35 !important;
+        font-size: 8pt !important;
+      }
+      .pos-name {
+        font-weight: 800 !important;
+        color: #0f172a !important;
+        white-space: nowrap !important;
+      }
+      .pos-desc {
+        font-weight: normal !important;
+        color: #64748b !important;
+        font-size: 7.5pt !important;
+        display: block !important;
+      }
+      .tag-contain { color: #0284c7 !important; font-weight: 700 !important; }
+      .tag-blitz { color: #dc2626 !important; font-weight: 700 !important; }
+      .tag-cover { color: #7c3aed !important; font-weight: 700 !important; }
+      .tag-stunt { color: #d97706 !important; font-weight: 700 !important; }
     `}
     .playbook-section {
       display: block !important;
@@ -803,29 +1049,7 @@ export function generatePlaybookBinderPrintHTML(options: PlaybookBinderPrintOpti
   // Build section pages
   let pagesHtml = '';
   sections.forEach((sec, sIdx) => {
-    const hasContent = sec.content && sec.content.trim().length > 0;
-    let secBody = '';
-    if (!hasContent) {
-      secBody = generateBlankPlaybookWorksheet(sec.category, sec.subTab);
-    } else {
-      const trimmed = sec.content.trim();
-      if (trimmed.startsWith('data:image/') || trimmed.match(/\.(jpeg|jpg|gif|png|webp)($|\?)/i)) {
-        secBody = `
-          <div class="card" style="text-align: center; padding: 14px;">
-            <div class="header">
-              <h1 style="margin: 0; font-size: 15pt;">${sec.subTab.toUpperCase()}</h1>
-              <div style="font-size: 9pt; color: #475569; margin-top: 3px;">Category: ${sec.category}</div>
-            </div>
-            <img src="${trimmed}" alt="${sec.subTab}" style="max-width: 100%; max-height: 8.2in; object-fit: contain; margin: 12px auto; display: block;" />
-          </div>
-        `;
-      } else if (trimmed.includes('<body') && trimmed.includes('</body>')) {
-        const match = trimmed.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-        secBody = match ? match[1] : trimmed;
-      } else {
-        secBody = trimmed;
-      }
-    }
+    const secBody = extractAndSanitizePlaybookHtml(sec.content, sec.category, sec.subTab);
 
     pagesHtml += `
       <section class="playbook-section" data-section="${sec.category}-${sec.subTab}">
@@ -855,7 +1079,107 @@ export function generatePlaybookBinderPrintHTML(options: PlaybookBinderPrintOpti
   <style>
     ${inkFriendly ? INK_FRIENDLY_PLAYBOOK_CSS : `
       @page { size: letter portrait; margin: 0.4in; }
-      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      html, body {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        float: none !important;
+        background: #ffffff !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .playbook-container {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .top-nav, .bottom-nav, select, button, .action-btn, .play-nav {
+        display: none !important;
+      }
+      .field-wrap {
+        margin: 8px 0 !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        background: #ffffff !important;
+        overflow: hidden !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      svg {
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        max-height: 4.6in !important;
+      }
+      .meta-bar {
+        display: block !important;
+        padding: 8px 12px !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        background: #f8fafc !important;
+        margin: 8px 0 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      .concepts-text {
+        font-size: 8.5pt !important;
+        color: #334155 !important;
+        line-height: 1.4 !important;
+      }
+      .table-section {
+        padding: 8px 0 12px 0 !important;
+        overflow: visible !important;
+        width: 100% !important;
+      }
+      .table-section table, table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 8.5pt !important;
+        text-align: left !important;
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+      }
+      .table-section thead th, thead th, th {
+        padding: 6px 8px !important;
+        font-size: 8pt !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        color: #334155 !important;
+        border: 1px solid #cbd5e1 !important;
+        background: #f1f5f9 !important;
+      }
+      .table-section tbody td, tbody td, td {
+        padding: 6px 8px !important;
+        color: #0f172a !important;
+        border: 1px solid #cbd5e1 !important;
+        vertical-align: top !important;
+        line-height: 1.35 !important;
+        font-size: 8pt !important;
+      }
+      .pos-name {
+        font-weight: 800 !important;
+        color: #0f172a !important;
+        white-space: nowrap !important;
+      }
+      .pos-desc {
+        font-weight: normal !important;
+        color: #64748b !important;
+        font-size: 7.5pt !important;
+        display: block !important;
+      }
+      .tag-contain { color: #0284c7 !important; font-weight: 700 !important; }
+      .tag-blitz { color: #dc2626 !important; font-weight: 700 !important; }
+      .tag-cover { color: #7c3aed !important; font-weight: 700 !important; }
+      .tag-stunt { color: #d97706 !important; font-weight: 700 !important; }
     `}
 
     /* =========================================================
@@ -887,11 +1211,16 @@ export function generatePlaybookBinderPrintHTML(options: PlaybookBinderPrintOpti
       /* Block display allows standard fragment rendering across page breaks */
       display: block !important;
       width: 100% !important;
+      max-width: 100% !important;
+      min-width: 100% !important;
       box-sizing: border-box !important;
       clear: both !important;
+      float: none !important;
       position: relative !important;
 
       /* When the section ends, the NEXT section MUST start on its own fresh page! */
+      page-break-before: auto !important;
+      break-before: auto !important;
       page-break-after: always !important;
       break-after: page !important;
 
@@ -899,7 +1228,7 @@ export function generatePlaybookBinderPrintHTML(options: PlaybookBinderPrintOpti
       page-break-inside: auto !important;
       break-inside: auto !important;
 
-      margin: 0 !important;
+      margin: 0 0 24px 0 !important;
       padding: 0 !important;
     }
 
@@ -907,6 +1236,14 @@ export function generatePlaybookBinderPrintHTML(options: PlaybookBinderPrintOpti
     .playbook-section:last-child {
       page-break-after: auto !important;
       break-after: auto !important;
+      margin-bottom: 0 !important;
+    }
+
+    .playbook-main-content {
+      display: block !important;
+      width: 100% !important;
+      clear: both !important;
+      overflow: visible !important;
     }
 
     /* Sub-element break rules to keep assignments and diagrams intact */
@@ -915,12 +1252,12 @@ export function generatePlaybookBinderPrintHTML(options: PlaybookBinderPrintOpti
       break-inside: avoid !important;
     }
 
-    .diagram-box, figure, img, svg, .field-diagram {
+    .diagram-box, figure, img, svg, .field-diagram, .field-wrap {
       page-break-inside: avoid !important;
       break-inside: avoid !important;
     }
 
-    .notes-box, .notes {
+    .notes-box, .notes, .meta-bar {
       page-break-inside: avoid !important;
       break-inside: avoid !important;
     }
@@ -944,12 +1281,19 @@ export function generatePlaybookBinderPrintHTML(options: PlaybookBinderPrintOpti
       display: table-header-group !important;
     }
 
-    .card, [class*="card"], .box, .container {
+    .card, [class*="card"], .box, .container, .playbook-container {
       page-break-inside: auto !important;
       break-inside: auto !important;
       overflow: visible !important;
       height: auto !important;
       max-height: none !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      border: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      margin: 0 !important;
+      padding: 0 !important;
     }
 
     .playbook-top-bar {
@@ -981,21 +1325,65 @@ export function generatePlaybookBinderPrintHTML(options: PlaybookBinderPrintOpti
       color: #64748b !important;
     }
 
+    @media print {
+      html, body {
+        background: #ffffff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: block !important;
+        width: 100% !important;
+        float: none !important;
+      }
+      .cover-page, .playbook-section {
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        display: block !important;
+        clear: both !important;
+        float: none !important;
+      }
+      .cover-page {
+        border: 4px double #0f172a !important;
+        padding: 0.25in !important;
+        min-height: 9.6in !important;
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+      .playbook-section {
+        border: none !important;
+        padding: 0 !important;
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+      .playbook-section:last-child {
+        page-break-after: auto !important;
+        break-after: auto !important;
+      }
+      .top-nav, .bottom-nav, select, button, .action-btn, .play-nav {
+        display: none !important;
+      }
+    }
+
     @media screen {
       body {
         background: #0f172a;
-        padding: 20px 10px;
+        padding: 24px 12px;
         margin: 0;
+        display: block !important;
       }
       .cover-page, .playbook-section {
         background: #ffffff;
         color: #0f172a;
+        width: 8.5in;
         max-width: 8.5in;
-        margin: 0 auto 28px auto !important;
-        padding: 0.35in 0.4in !important;
+        margin: 0 auto 32px auto !important;
+        padding: 0.4in 0.45in !important;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         border-radius: 8px;
         min-height: 10.5in;
+        box-sizing: border-box;
       }
     }
   </style>
