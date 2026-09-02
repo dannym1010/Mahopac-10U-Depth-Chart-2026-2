@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Shield,
   Zap,
@@ -12,18 +12,16 @@ import {
   Users,
   Calendar,
   Settings,
-  ChevronUp,
   ChevronDown,
-  RotateCcw,
-  Check,
-  X,
-  GripVertical,
-  Star,
-  Sliders,
+  Sparkles,
   Smartphone,
+  FolderPlus,
+  Layers,
+  ChevronRight,
 } from 'lucide-react';
-import { UnitType, UserRole } from '../types';
+import { CustomTabGroup, UnitType, UserRole } from '../types';
 import { safeJSONParse, safeJSONSet } from '../services/storageService';
+import { TabGroupManagerModal } from './TabGroupManagerModal';
 
 interface NavigationTabsProps {
   activeUnit: UnitType;
@@ -34,6 +32,8 @@ interface NavigationTabsProps {
   defaultScreen?: UnitType;
   onSetDefaultScreen?: (screen: UnitType) => void;
   onOpenPreferencesModal?: () => void;
+  customGroups?: CustomTabGroup[];
+  onUpdateCustomGroups?: (groups: CustomTabGroup[]) => void;
 }
 
 export interface NavTabItem {
@@ -45,15 +45,15 @@ export interface NavTabItem {
 
 export const DEFAULT_NAV_TABS: NavTabItem[] = [
   { id: 'mobile_hub', label: '📱 Mobile Hub', icon: Smartphone },
-  { id: 'schedule', label: '📅 Season Schedule', icon: Calendar },
-  { id: 'compliance', label: '⚡ Practice Hours & Compliance', icon: Zap },
+  { id: 'schedule', label: '📅 Schedule', icon: Calendar },
+  { id: 'compliance', label: '⚡ Compliance & Hours', icon: Zap },
   { id: 'depth_chart', label: '📋 Depth Chart', icon: ClipboardList },
   { id: 'wristband', label: '⌚ Wristband', icon: Watch },
-  { id: 'scouting', label: '📊 Scouting', icon: FileSpreadsheet },
   { id: 'practice', label: '📋 Practice Plan', icon: ClipboardList },
-  { id: 'drills', label: '🏋️ Drills Library', icon: Dumbbell },
+  { id: 'drills', label: '🏋️ Drill Library', icon: Dumbbell },
+  { id: 'scouting', label: '📊 Scouting', icon: FileSpreadsheet },
   { id: 'guide', label: '📖 Playbooks & Guides', icon: BookOpen },
-  { id: 'users', label: '👥 Staff & Users', icon: Users, adminOnly: true },
+  { id: 'users', label: '👥 Staff & Access', icon: Users, adminOnly: true },
 ];
 
 export const NavigationTabs: React.FC<NavigationTabsProps> = ({
@@ -65,62 +65,115 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
   defaultScreen,
   onSetDefaultScreen,
   onOpenPreferencesModal,
+  customGroups: propCustomGroups,
+  onUpdateCustomGroups,
 }) => {
+  // Custom Tab Groups state (loaded from props or localStorage)
+  const [customGroups, setCustomGroups] = useState<CustomTabGroup[]>(() => {
+    if (propCustomGroups && Array.isArray(propCustomGroups)) return propCustomGroups;
+    return safeJSONParse<CustomTabGroup[]>('footballCustomTabGroups', []);
+  });
+
+  // Top Bar Tab Order (contains standalone tab IDs and custom group IDs)
   const [tabOrder, setTabOrder] = useState<string[]>(() => {
     const saved = safeJSONParse<string[]>('footballTopTabOrder', []);
     if (saved && Array.isArray(saved) && saved.length > 0) {
-      // Ensure all current valid tab ids exist in saved order
-      const validIds = DEFAULT_NAV_TABS.map((t) => t.id);
-      const filtered = saved.filter((id) => validIds.includes(id as UnitType));
-      validIds.forEach((id) => {
-        if (!filtered.includes(id)) filtered.push(id);
-      });
-      return filtered;
+      return saved;
     }
     return DEFAULT_NAV_TABS.map((t) => t.id);
   });
 
-  const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
+  const [isManagerModalOpen, setIsManagerModalOpen] = useState(false);
 
-  // Sync tab order changes to localStorage
+  // Sync tab order changes
   const handleSaveTabOrder = (newOrder: string[]) => {
     setTabOrder(newOrder);
     safeJSONSet('footballTopTabOrder', newOrder);
   };
 
-  const handleResetTabOrder = () => {
-    const defaultIds = DEFAULT_NAV_TABS.map((t) => t.id);
-    setTabOrder(defaultIds);
-    safeJSONSet('footballTopTabOrder', defaultIds);
+  // Sync custom groups changes
+  const handleSaveCustomGroups = (newGroups: CustomTabGroup[], newTabOrder?: string[]) => {
+    setCustomGroups(newGroups);
+    safeJSONSet('footballCustomTabGroups', newGroups);
+    if (onUpdateCustomGroups) {
+      onUpdateCustomGroups(newGroups);
+    }
+
+    if (newTabOrder) {
+      handleSaveTabOrder(newTabOrder);
+    } else {
+      // Clean up tabOrder so it includes valid custom groups and unassigned standalone tabs
+      const nestedTabIds = new Set(newGroups.flatMap((g) => g.tabIds));
+      const groupIds = new Set(newGroups.map((g) => g.id));
+
+      let updatedOrder = tabOrder.filter((id) => {
+        if (groupIds.has(id)) return true;
+        if (nestedTabIds.has(id as UnitType)) return false; // Hide standalone if it's nested
+        return DEFAULT_NAV_TABS.some((t) => t.id === id);
+      });
+
+      // Ensure newly created groups are in tabOrder
+      newGroups.forEach((g) => {
+        if (!updatedOrder.includes(g.id)) {
+          updatedOrder.push(g.id);
+        }
+      });
+
+      // Ensure unassigned standalone tabs are present
+      DEFAULT_NAV_TABS.forEach((t) => {
+        if (!nestedTabIds.has(t.id) && !updatedOrder.includes(t.id)) {
+          updatedOrder.push(t.id);
+        }
+      });
+
+      handleSaveTabOrder(updatedOrder);
+    }
   };
 
-  const handleMoveTab = (index: number, direction: 'up' | 'down') => {
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= tabOrder.length) return;
-    const newOrder = [...tabOrder];
-    const temp = newOrder[index];
-    newOrder[index] = newOrder[targetIndex];
-    newOrder[targetIndex] = temp;
-    handleSaveTabOrder(newOrder);
-  };
-
-  // Build sorted tabs list
   const tabMap = new Map(DEFAULT_NAV_TABS.map((t) => [t.id, t]));
-  const orderedTabs = tabOrder
-    .map((id) => tabMap.get(id as UnitType))
-    .filter((t): t is NavTabItem => Boolean(t))
-    .filter((tab) => !tab.adminOnly || userRole === 'admin');
 
-  // Check if active unit is one of the depth chart sub-units
+  // Find all tabs currently nested in any custom group
+  const allNestedTabIds = new Set(customGroups.flatMap((g) => g.tabIds));
+
+  // Find if active unit is inside a custom group
+  const activeGroup = customGroups.find((g) => {
+    if (g.tabIds.includes(activeUnit)) return true;
+    // If activeUnit is a depth chart sub-unit, check if depth_chart is in group
+    if (
+      ['offense', 'defense', 'st', 'groups', 'scrimmage'].includes(activeUnit) &&
+      g.tabIds.includes('depth_chart')
+    ) {
+      return true;
+    }
+    return false;
+  });
+
+  // Check if depth chart is active
   const isDepthChartActive =
     activeUnit === 'depth_chart' ||
     ['offense', 'defense', 'st', 'groups', 'scrimmage'].includes(activeUnit);
 
-  const handleTopTabClick = (tabId: UnitType) => {
+  const handleTopTabClick = (tabOrGroupId: string) => {
+    // 1. Check if clicked item is a Custom Tab Group
+    const matchedGroup = customGroups.find((g) => g.id === tabOrGroupId);
+    if (matchedGroup) {
+      const firstTab = matchedGroup.defaultTabId || matchedGroup.tabIds[0] || 'schedule';
+      if (firstTab === 'depth_chart') {
+        if (onSelectDepthSubUnit) {
+          onSelectDepthSubUnit(depthSubUnit || 'offense');
+        }
+        onSelectUnit(depthSubUnit || 'offense');
+      } else {
+        onSelectUnit(firstTab);
+      }
+      return;
+    }
+
+    // 2. Standalone Tab Click
+    const tabId = tabOrGroupId as UnitType;
     if (tabId === 'depth_chart') {
-      // If clicking depth chart, select current depthSubUnit or 'offense'
       if (['offense', 'defense', 'st', 'groups', 'scrimmage'].includes(activeUnit)) {
-        // already on a depth unit
+        // already in depth chart unit
       } else {
         onSelectUnit(depthSubUnit || 'offense');
       }
@@ -129,46 +182,117 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
     }
   };
 
+  const handleSubTabClick = (tabId: UnitType) => {
+    if (tabId === 'depth_chart') {
+      onSelectUnit(depthSubUnit || 'offense');
+    } else {
+      onSelectUnit(tabId);
+    }
+  };
+
+  // Build rendered top bar items
+  const visibleTopBarItems = tabOrder
+    .map((id) => {
+      const customGroup = customGroups.find((g) => g.id === id);
+      if (customGroup) {
+        return {
+          type: 'group' as const,
+          id: customGroup.id,
+          label: customGroup.label,
+          icon: customGroup.icon || '📁',
+          tabIds: customGroup.tabIds,
+          group: customGroup,
+        };
+      }
+      const standardTab = tabMap.get(id as UnitType);
+      if (standardTab && !allNestedTabIds.has(standardTab.id)) {
+        if (standardTab.adminOnly && userRole !== 'admin') return null;
+        return {
+          type: 'tab' as const,
+          id: standardTab.id,
+          label: standardTab.label,
+          icon: standardTab.icon,
+          tab: standardTab,
+        };
+      }
+      return null;
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
   return (
     <>
-      <div className="hidden md:block bg-slate-800/95 backdrop-blur-md border-b border-slate-700/80 sticky top-[108px] z-30 shadow-md print:hidden">
+      {/* 1. TOP STICKY NAVIGATION BAR */}
+      <div className="hidden md:block bg-slate-950/90 backdrop-blur-md border-b border-slate-800 sticky top-[108px] z-30 shadow-md print:hidden">
         <div className="max-w-[1700px] mx-auto px-4 py-2 flex items-center justify-between gap-3">
-          {/* Scrollable Nav Tabs */}
+          {/* Scrollable Nav Tabs List */}
           <div className="flex gap-2 overflow-x-auto no-scrollbar items-center py-0.5 flex-1 min-w-0">
-            {orderedTabs.map((tab) => {
-              const Icon = tab.icon;
+            {visibleTopBarItems.map((item) => {
+              if (item.type === 'group') {
+                const isGroupActive = activeGroup?.id === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleTopTabClick(item.id)}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black tracking-tight whitespace-nowrap transition-all select-none border active:scale-95 cursor-pointer ${
+                      isGroupActive
+                        ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-black shadow-lg shadow-indigo-600/30 border-indigo-400 ring-1 ring-indigo-400/40'
+                        : 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    <span className="text-sm select-none">{item.icon}</span>
+                    <span>{item.label}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                        isGroupActive
+                          ? 'bg-white/20 text-white'
+                          : 'bg-slate-800 text-slate-400 border border-slate-700'
+                      }`}
+                    >
+                      {item.tabIds.length}
+                    </span>
+                    <ChevronDown
+                      className={`w-3 h-3 transition-transform ${
+                        isGroupActive ? 'rotate-180 text-white' : 'text-slate-500'
+                      }`}
+                    />
+                  </button>
+                );
+              }
+
+              // Standalone standard tab
+              const Icon = item.icon;
               const isActive =
-                tab.id === 'depth_chart' ? isDepthChartActive : activeUnit === tab.id;
+                item.id === 'depth_chart' ? isDepthChartActive : activeUnit === item.id;
               const isDefaultTab =
-                (defaultScreen || 'schedule') === tab.id ||
-                (defaultScreen === 'offense' && tab.id === 'depth_chart');
+                (defaultScreen || 'schedule') === item.id ||
+                (defaultScreen === 'offense' && item.id === 'depth_chart');
 
               return (
                 <button
-                  key={tab.id}
-                  onClick={() => handleTopTabClick(tab.id)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black tracking-tight whitespace-nowrap transition-all select-none border active:scale-95 ${
+                  key={item.id}
+                  onClick={() => handleTopTabClick(item.id)}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black tracking-tight whitespace-nowrap transition-all select-none border active:scale-95 cursor-pointer ${
                     isActive
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-600/30 border-indigo-500/50 ring-1 ring-white/10'
-                      : 'bg-slate-900/80 hover:bg-slate-700/80 text-slate-300 hover:text-white border-slate-700/80 hover:border-slate-600'
+                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-black shadow-lg shadow-indigo-600/30 border-indigo-400 ring-1 ring-indigo-400/40'
+                      : 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-800 hover:border-slate-700'
                   }`}
                 >
                   <Icon
                     className={`w-3.5 h-3.5 ${
-                      isActive ? 'text-white' : 'text-slate-300'
+                      isActive ? 'text-white stroke-[2.5]' : 'text-slate-400'
                     }`}
                   />
-                  <span>{tab.label}</span>
+                  <span>{item.label}</span>
                   {isDefaultTab && (
                     <span
                       title="⭐ Default Landing Screen"
-                      className={`text-[9px] px-1 py-0.2 rounded font-bold ${
+                      className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold ${
                         isActive
-                          ? 'bg-white/20 text-amber-300'
-                          : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
+                          ? 'bg-white/20 text-white'
+                          : 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/30'
                       }`}
                     >
-                      ★ Default
+                      ★
                     </span>
                   )}
                 </button>
@@ -176,176 +300,71 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
             })}
           </div>
 
-          {/* Quick Actions: Defaults & Reorder */}
+          {/* "+ New Tab Group / Manage Tabs" Button */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {onOpenPreferencesModal && (
-              <button
-                onClick={onOpenPreferencesModal}
-                title="Select Default Screen & Team"
-                className="px-2.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-750 text-amber-400 hover:text-amber-300 border border-amber-500/40 hover:border-amber-400 text-[11px] font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
-              >
-                <Star className="w-3.5 h-3.5 fill-amber-400/20 text-amber-400" />
-                <span className="hidden sm:inline">Set Defaults</span>
-              </button>
-            )}
-
-            {/* Reorder Tabs Action Button */}
             <button
-              onClick={() => setIsReorderModalOpen(true)}
-              title="Reorder Navigation Tabs"
-              className="px-2.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-700/80 text-slate-400 hover:text-slate-200 border border-slate-700 text-[11px] font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
+              onClick={() => setIsManagerModalOpen(true)}
+              title="Create new tab groups, nest tabs into sub-menus, and reorder navigation"
+              className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-indigo-300 hover:text-indigo-200 border border-slate-800 hover:border-indigo-500/40 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
             >
-              <Settings className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Reorder</span>
+              <FolderPlus className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden lg:inline">+ Custom Tabs</span>
+              <span className="lg:hidden">Tabs</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Reorder Navigation Tabs Modal */}
-      {isReorderModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
-            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-850">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-400">
-                  <Settings className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-black text-slate-100 text-base">Reorder &amp; Default Screen</h3>
-                  <p className="text-xs text-slate-400">Reorder top navigation tabs and pick your default startup screen</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsReorderModalOpen(false)}
-                className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* 2. DYNAMIC SUB-NAVIGATION BAR (For Active Custom Tab Groups) */}
+      {activeGroup && (
+        <div className="bg-slate-900/95 border-b border-slate-800/90 px-4 py-2 sticky top-[154px] z-25 shadow-md print:hidden animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="max-w-[1700px] mx-auto flex items-center gap-2.5 overflow-x-auto no-scrollbar">
+            <span className="px-2.5 py-1 text-[11px] font-black uppercase text-indigo-300 tracking-wider flex items-center gap-1.5 shrink-0 bg-indigo-500/10 rounded-xl border border-indigo-500/25">
+              <span>{activeGroup.icon || '📁'}</span>
+              <span>{activeGroup.label} Sub-Menu:</span>
+            </span>
 
-            {/* Modal Tab List */}
-            <div className="p-5 overflow-y-auto space-y-2 max-h-[55vh]">
-              {tabOrder.map((tabId, index) => {
-                const tabInfo = tabMap.get(tabId as UnitType);
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+              {activeGroup.tabIds.map((childTabId) => {
+                const tabInfo = tabMap.get(childTabId);
                 if (!tabInfo) return null;
                 const Icon = tabInfo.icon;
-                const isFirst = index === 0;
-                const isLast = index === tabOrder.length - 1;
-                const isDefaultTab =
-                  (defaultScreen || 'schedule') === tabId ||
-                  (defaultScreen === 'offense' && tabId === 'depth_chart');
+                const isChildActive =
+                  childTabId === 'depth_chart'
+                    ? isDepthChartActive
+                    : activeUnit === childTabId;
 
                 return (
-                  <div
-                    key={tabId}
-                    className={`flex items-center justify-between p-3 rounded-2xl transition-all border ${
-                      isDefaultTab
-                        ? 'bg-amber-950/20 border-amber-500/50 shadow-inner'
-                        : 'bg-slate-800/80 border-slate-700/80 hover:border-slate-600'
+                  <button
+                    key={childTabId}
+                    onClick={() => handleSubTabClick(childTabId)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap select-none active:scale-95 cursor-pointer ${
+                      isChildActive
+                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400/40'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800 bg-slate-950/60 border border-slate-800'
                     }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="w-6 h-6 rounded-lg bg-slate-900 border border-slate-700 text-slate-400 font-mono text-xs font-black flex items-center justify-center shrink-0">
-                        {index + 1}
-                      </span>
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Icon className="w-4 h-4 text-indigo-400 shrink-0" />
-                        <span className="font-bold text-xs text-slate-200 truncate">
-                          {tabInfo.label}
-                        </span>
-                        {tabInfo.adminOnly && (
-                          <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 text-[9px] font-black uppercase">
-                            Admin
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      {/* Set Default Screen Button */}
-                      {onSetDefaultScreen && (
-                        <button
-                          type="button"
-                          onClick={() => onSetDefaultScreen(tabId as UnitType)}
-                          title={
-                            isDefaultTab
-                              ? '⭐ Default Startup Screen'
-                              : 'Set as Default Startup Screen'
-                          }
-                          className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all ${
-                            isDefaultTab
-                              ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
-                              : 'text-slate-400 hover:text-amber-300 hover:bg-slate-900 border border-slate-700'
-                          }`}
-                        >
-                          <Star
-                            className={`w-3 h-3 ${
-                              isDefaultTab ? 'fill-amber-400 text-amber-400' : 'text-slate-400'
-                            }`}
-                          />
-                          <span>{isDefaultTab ? 'Default' : 'Set Default'}</span>
-                        </button>
-                      )}
-
-                      {/* Move Up / Down Buttons */}
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          disabled={isFirst}
-                          onClick={() => handleMoveTab(index, 'up')}
-                          title="Move Up"
-                          className={`p-1.5 rounded-xl border transition-all ${
-                            isFirst
-                              ? 'text-slate-600 border-slate-800 cursor-not-allowed'
-                              : 'text-slate-300 hover:text-white bg-slate-900 border-slate-700 hover:border-slate-500 active:scale-95'
-                          }`}
-                        >
-                          <ChevronUp className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isLast}
-                          onClick={() => handleMoveTab(index, 'down')}
-                          title="Move Down"
-                          className={`p-1.5 rounded-xl border transition-all ${
-                            isLast
-                              ? 'text-slate-600 border-slate-800 cursor-not-allowed'
-                              : 'text-slate-300 hover:text-white bg-slate-900 border-slate-700 hover:border-slate-500 active:scale-95'
-                          }`}
-                        >
-                          <ChevronDown className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                    <Icon className="w-3.5 h-3.5 text-indigo-300" />
+                    <span>{tabInfo.label}</span>
+                  </button>
                 );
               })}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-slate-800 bg-slate-850 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={handleResetTabOrder}
-                className="px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-rose-400 bg-slate-900 border border-slate-700 rounded-xl flex items-center gap-1.5 hover:border-rose-500/40 transition-colors"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset Order</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsReorderModalOpen(false)}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
-              >
-                <Check className="w-4 h-4" />
-                <span>Done</span>
-              </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* 3. TAB GROUP & NAVIGATION MANAGER MODAL */}
+      <TabGroupManagerModal
+        isOpen={isManagerModalOpen}
+        onClose={() => setIsManagerModalOpen(false)}
+        customGroups={customGroups}
+        onSaveCustomGroups={handleSaveCustomGroups}
+        tabOrder={tabOrder}
+        onSaveTabOrder={handleSaveTabOrder}
+        defaultScreen={defaultScreen}
+        userRole={userRole}
+      />
     </>
   );
 };

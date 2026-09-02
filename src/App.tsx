@@ -103,6 +103,7 @@ import { MobileHubView } from './components/MobileHubView';
 import { RosterManagerModal } from './components/RosterManagerModal';
 import { PracticeWizardGeneratedResult } from './components/PracticeWizardModal';
 import { PreferencesModal } from './components/PreferencesModal';
+import { ThemeGalleryModal } from './components/ThemeGalleryModal';
 import { SeasonConfigModal } from './components/SeasonConfigModal';
 import {
   AuthModal,
@@ -267,6 +268,10 @@ export default function App() {
 
   // Modal Dialog States
   const [isPreferencesModalOpen, setIsPreferencesModalOpen] = useState(false);
+  const [isThemeGalleryOpen, setIsThemeGalleryOpen] = useState(false);
+  const [activeThemeId, setActiveThemeId] = useState<string>(() =>
+    safeJSONParse('footballActiveThemeId', 'electric_volt')
+  );
   const [isSeasonConfigModalOpen, setIsSeasonConfigModalOpen] = useState(false);
   const [isCopyWeekModalOpen, setIsCopyWeekModalOpen] = useState(false);
   const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
@@ -5093,6 +5098,7 @@ function mergeRemoteWeeklyData(
         userAssignedTeamIds={currentUserCoach?.assignedTeamIds}
         onOpenManageTeams={() => setActiveUnit('users')}
         onOpenPreferencesModal={() => setIsPreferencesModalOpen(true)}
+        onOpenThemeGallery={() => setIsThemeGalleryOpen(true)}
         onForceSave={handleForceSave}
         onForceRefresh={handleForceRefresh}
       />
@@ -5161,6 +5167,7 @@ function mergeRemoteWeeklyData(
                 }}
                 onOpenPreferencesModal={() => setIsPreferencesModalOpen(true)}
                 onOpenScheduleModal={() => setActiveUnit('schedule')}
+                onOpenThemeGallery={() => setIsThemeGalleryOpen(true)}
               />
             )}
 
@@ -6168,6 +6175,17 @@ function mergeRemoteWeeklyData(
         onSetDefaultScreen={handleSetDefaultScreen}
         userRole={userRole}
         currentUserEmail={currentUser?.email || 'dannym1010@gmail.com'}
+        onOpenThemeGallery={() => setIsThemeGalleryOpen(true)}
+      />
+
+      <ThemeGalleryModal
+        isOpen={isThemeGalleryOpen}
+        onClose={() => setIsThemeGalleryOpen(false)}
+        selectedThemeId={activeThemeId}
+        onSelectTheme={(id) => {
+          setActiveThemeId(id);
+          safeJSONSet('footballActiveThemeId', id);
+        }}
       />
 
       <SeasonConfigModal

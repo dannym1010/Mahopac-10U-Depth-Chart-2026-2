@@ -115,6 +115,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   const [isAddPracticeModalOpen, setIsAddPracticeModalOpen] = useState(false);
   const [isCadenceWizardOpen, setIsCadenceWizardOpen] = useState(false);
   const [isTeamSnapSyncOpen, setIsTeamSnapSyncOpen] = useState(false);
+  const [isToolsDropdownOpen, setIsToolsDropdownOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
   const [scoreModalEvent, setScoreModalEvent] = useState<ScheduleEvent | null>(null);
 
@@ -632,140 +633,221 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   return (
     <div className="space-y-6 max-w-[1700px] mx-auto">
       {/* Top Banner Toolbar */}
-      <div className="bg-slate-800/95 backdrop-blur-md p-4 md:p-5 rounded-3xl border border-slate-700/80 shadow-xl print:hidden flex flex-col gap-4">
+      <div className="bg-slate-850/95 backdrop-blur-md p-4 md:p-5 rounded-3xl border border-slate-750/90 shadow-xl print:hidden flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Title & Season Overview */}
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-amber-500/20 border border-amber-500/30 text-amber-300 flex items-center justify-center font-black shadow-inner">
-              <CalendarIcon className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-amber-400/15 border border-amber-400/30 text-amber-300 flex items-center justify-center font-black shadow-inner shrink-0">
+              <CalendarIcon className="w-5 h-5 text-amber-400" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="font-black text-base md:text-lg text-slate-100 tracking-tight">
-                  {activeTeam ? activeTeam.name : 'Mahopac Football'} Season Schedule &amp; Games
+                  {activeTeam ? activeTeam.name : 'Mahopac Football'} Schedule
                 </h2>
                 {stats.record && (
-                  <span className="px-2.5 py-0.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black rounded-lg">
-                    Record: {stats.record}
+                  <span className="px-2 py-0.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-black rounded-lg">
+                    {stats.record}
                   </span>
                 )}
-                <span className="px-2 py-0.5 bg-amber-400/20 border border-amber-400/40 text-amber-300 text-[10px] font-black rounded-lg">
-                  {stats.totalGames} Games
-                </span>
-                <span className="px-2 py-0.5 bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-[10px] font-black rounded-lg">
-                  {stats.totalPractices} Practices
+                <span className="px-2 py-0.5 bg-slate-800 border border-slate-700 text-slate-300 text-[11px] font-bold rounded-lg">
+                  {stats.totalGames} Games &bull; {stats.totalPractices} Practices
                 </span>
               </div>
-              <p className="text-xs text-slate-300 font-medium mt-0.5">
-                Automatically synchronizes game dates to Scouting Reports &amp; practices to Practice Generator
+              <p className="text-xs text-slate-400 font-medium mt-0.5">
+                Manage games, practices, and automatic syncing across weekly playbooks
               </p>
             </div>
           </div>
 
           {/* Quick Action Buttons */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap relative">
             {userRole === 'admin' && (
               <>
                 <button
                   onClick={() => setIsAddGameModalOpen(true)}
-                  className="px-3.5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl border border-amber-500 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+                  className="px-3.5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl border border-amber-400/80 shadow-md shadow-amber-400/10 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
                 >
-                  <Plus className="w-3.5 h-3.5 text-slate-950" />
-                  <span>+ Add Game</span>
+                  <Plus className="w-3.5 h-3.5 text-slate-950 stroke-[3]" />
+                  <span>+ Game</span>
                 </button>
 
                 <button
                   onClick={() => setIsAddPracticeModalOpen(true)}
-                  className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl border border-indigo-500 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+                  className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl border border-indigo-500/80 shadow-md shadow-indigo-600/20 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
                 >
-                  <Plus className="w-3.5 h-3.5 text-white" />
-                  <span>+ Add Practice</span>
+                  <Plus className="w-3.5 h-3.5 text-white stroke-[3]" />
+                  <span>+ Practice</span>
+                </button>
+
+                {/* Consolidated Tools & Sync Dropdown */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsToolsDropdownOpen(!isToolsDropdownOpen)}
+                    className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+                      isToolsDropdownOpen
+                        ? 'bg-slate-700 text-white border-slate-500 ring-2 ring-indigo-500/30'
+                        : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-700 hover:border-slate-600'
+                    }`}
+                    title="Schedule tools, sync and exports"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Tools &amp; Sync</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isToolsDropdownOpen ? 'rotate-180 text-amber-300' : 'text-slate-400'}`} />
+                  </button>
+
+                  {isToolsDropdownOpen && (
+                    <>
+                      {/* Click outside backdrop */}
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsToolsDropdownOpen(false)}
+                      />
+                      <div className="absolute right-0 top-full mt-1.5 w-64 bg-slate-900 border border-slate-700/90 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                        <div className="px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-400 tracking-wider border-b border-slate-800 mb-1">
+                          Schedule Tools &amp; Actions
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setIsToolsDropdownOpen(false);
+                            setIsCadenceWizardOpen(true);
+                          }}
+                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-200 hover:text-amber-300 hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <div className="w-6 h-6 rounded-lg bg-amber-400/15 border border-amber-400/30 flex items-center justify-center shrink-0">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                          </div>
+                          <div>
+                            <div>Practice Wizard</div>
+                            <div className="text-[10px] text-slate-400 font-normal">Generate recurring Tue/Thu schedule</div>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setIsToolsDropdownOpen(false);
+                            setIsTeamSnapSyncOpen(true);
+                          }}
+                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-200 hover:text-orange-300 hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <div className="w-6 h-6 rounded-lg bg-orange-500/15 border border-orange-500/30 flex items-center justify-center shrink-0">
+                            <RefreshCw className="w-3.5 h-3.5 text-orange-400" />
+                          </div>
+                          <div>
+                            <div>Sync TeamSnap</div>
+                            <div className="text-[10px] text-slate-400 font-normal">Import via iCal link, CSV, or text</div>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setIsToolsDropdownOpen(false);
+                            handleExportICS();
+                          }}
+                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-200 hover:text-indigo-300 hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <div className="w-6 h-6 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                            <Download className="w-3.5 h-3.5 text-indigo-400" />
+                          </div>
+                          <div>
+                            <div>Export iCal (.ics)</div>
+                            <div className="text-[10px] text-slate-400 font-normal">Sync with Apple/Google Calendar</div>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setIsToolsDropdownOpen(false);
+                            handleCopySchedule();
+                          }}
+                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-200 hover:text-emerald-300 hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <div className="w-6 h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-emerald-400" />}
+                          </div>
+                          <div>
+                            <div>{copied ? 'Copied to Clipboard!' : 'Copy Schedule Text'}</div>
+                            <div className="text-[10px] text-slate-400 font-normal">Formatted for email or team text</div>
+                          </div>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+
+            {userRole !== 'admin' && (
+              <>
+                <button
+                  onClick={handleExportICS}
+                  className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                  title="Download iCal (.ics) file"
+                >
+                  <Download className="w-3.5 h-3.5 text-indigo-300" />
+                  <span>iCal</span>
                 </button>
 
                 <button
-                  onClick={() => setIsCadenceWizardOpen(true)}
-                  className="px-3 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
-                  title="Generate recurring Tuesday & Thursday practice schedule"
+                  onClick={handleCopySchedule}
+                  className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                  title="Copy schedule text"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="hidden sm:inline">Practice Wizard</span>
-                </button>
-
-                <button
-                  onClick={() => setIsTeamSnapSyncOpen(true)}
-                  className="px-3.5 py-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 text-white font-black text-xs rounded-xl border border-orange-400/40 shadow-md flex items-center gap-1.5 transition-all active:scale-95"
-                  title="Import / Sync Schedule directly from TeamSnap (iCal feed, CSV, or text)"
-                >
-                  <RefreshCw className="w-3.5 h-3.5 text-white" />
-                  <span>Sync TeamSnap</span>
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-indigo-300" />}
+                  <span>{copied ? 'Copied' : 'Copy'}</span>
                 </button>
               </>
             )}
 
             <button
-              onClick={handleExportICS}
-              className="px-3 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
-              title="Download iCal (.ics) file to import into Apple / Google Calendar"
-            >
-              <Download className="w-3.5 h-3.5 text-indigo-300" />
-              <span className="hidden sm:inline">Sync iCal</span>
-            </button>
-
-            <button
-              onClick={handleCopySchedule}
-              className="px-3 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
-              title="Copy formatted schedule text for team emails or texts"
-            >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-indigo-300" />}
-              <span>{copied ? 'Copied' : 'Copy'}</span>
-            </button>
-
-            <button
               onClick={() => triggerPrint()}
-              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-100 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+              className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+              title="Print Schedule"
             >
-              <Printer className="w-3.5 h-3.5 text-slate-300" />
+              <Printer className="w-3.5 h-3.5 text-slate-400" />
               <span>Print</span>
             </button>
           </div>
         </div>
 
         {/* View Switcher, Filter Pills & Search Bar */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-slate-700/60 text-xs items-center">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-750/70 text-xs">
           {/* View Modes */}
-          <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-700 w-fit">
+          <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-750 shrink-0">
             <button
               onClick={() => setViewMode('timeline')}
-              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 viewMode === 'timeline'
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <ClipboardList className="w-3.5 h-3.5" />
-              <span>Weekly Agenda</span>
+              <span>Agenda</span>
             </button>
             <button
               onClick={() => setViewMode('month')}
-              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 viewMode === 'month'
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <CalendarDays className="w-3.5 h-3.5" />
-              <span>Month Calendar</span>
+              <span>Calendar</span>
             </button>
             <button
               onClick={() => setViewMode('grid')}
-              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 viewMode === 'grid'
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <ListFilter className="w-3.5 h-3.5" />
-              <span>Season Table</span>
+              <span>Table</span>
             </button>
           </div>
 
@@ -773,19 +855,19 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
             {(
               [
-                { id: 'all', label: 'All Events' },
+                { id: 'all', label: 'All' },
                 { id: 'game', label: '🏈 Games' },
                 { id: 'practice', label: '📋 Practices' },
-                { id: 'scrimmage', label: '⚔️ Scrimmage' },
+                { id: 'scrimmage', label: '⚔️ Scrimmages' },
               ] as { id: FilterType; label: string }[]
             ).map((filter) => (
               <button
                 key={filter.id}
                 onClick={() => setTypeFilter(filter.id)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all border ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer ${
                   typeFilter === filter.id
-                    ? 'bg-amber-400 text-slate-950 border-amber-500 font-black shadow-xs'
-                    : 'bg-slate-900/60 text-slate-300 border-slate-700/80 hover:border-slate-600'
+                    ? 'bg-amber-400 text-slate-950 border-amber-400 font-black shadow-xs'
+                    : 'bg-slate-900/70 text-slate-300 border-slate-750 hover:border-slate-600 hover:text-white'
                 }`}
               >
                 {filter.label}
@@ -793,69 +875,13 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             ))}
           </div>
 
-          {/* Season Phase Pills & Week Filter & Quick Search */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Season Phase Selector */}
-            <div className="flex items-center gap-1 bg-slate-900/90 p-0.5 rounded-xl border border-slate-700">
-              <button
-                onClick={() => {
-                  setPhaseFilter('all');
-                  setWeekFilter('all');
-                }}
-                className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                  phaseFilter === 'all'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => {
-                  setPhaseFilter('pre');
-                  setWeekFilter('all');
-                }}
-                className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                  phaseFilter === 'pre'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                ⚡ Pre
-              </button>
-              <button
-                onClick={() => {
-                  setPhaseFilter('regular');
-                  setWeekFilter('all');
-                }}
-                className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                  phaseFilter === 'regular'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                🏈 Reg
-              </button>
-              <button
-                onClick={() => {
-                  setPhaseFilter('playoffs');
-                  setWeekFilter('all');
-                }}
-                className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                  phaseFilter === 'playoffs'
-                    ? 'bg-amber-500 text-slate-950'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                🏆 Playoff
-              </button>
-            </div>
-
-            <div className="flex items-center gap-1.5 shrink-0">
+          {/* Week Filter & Search Box */}
+          <div className="flex items-center gap-2 flex-1 max-w-md justify-end">
+            <div className="flex items-center gap-1 shrink-0">
               <select
                 value={weekFilter}
                 onChange={(e) => setWeekFilter(e.target.value)}
-                className="bg-slate-900 text-slate-200 font-bold text-xs px-2.5 py-1.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400 shrink-0"
+                className="bg-slate-900 text-slate-200 font-bold text-xs px-2.5 py-1.5 rounded-xl border border-slate-750 focus:outline-none focus:border-amber-400 shrink-0 cursor-pointer"
               >
                 <option value="all">All Weeks</option>
                 {(() => {
@@ -912,21 +938,21 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                 <button
                   type="button"
                   onClick={onOpenSeasonConfigModal}
-                  className="p-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-amber-400 border border-slate-700 rounded-xl transition-all cursor-pointer"
-                  title="Customize Season Weeks & Dropdown Text"
+                  className="p-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-amber-400 border border-slate-750 rounded-xl transition-all cursor-pointer"
+                  title="Customize Season Weeks"
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
 
-            <div className="relative flex-1 min-w-[140px]">
+            <div className="relative flex-1 min-w-[120px]">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search events, notes..."
-                className="w-full bg-slate-900 text-slate-100 font-medium text-xs pl-7 pr-3 py-1.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
+                placeholder="Search schedule..."
+                className="w-full bg-slate-900 text-slate-100 font-medium text-xs pl-7 pr-3 py-1.5 rounded-xl border border-slate-750 focus:outline-none focus:border-amber-400"
               />
               <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2 top-2" />
               {searchQuery && (

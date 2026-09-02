@@ -322,6 +322,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
   });
   const [formationNameInput, setFormationNameInput] = useState('');
   const [formationTemplateKey, setFormationTemplateKey] = useState('');
+  const [isPlaybookActionsDropdownOpen, setIsPlaybookActionsDropdownOpen] = useState(false);
+  const [openFormationMenuId, setOpenFormationMenuId] = useState<string | null>(null);
 
   // Dedicated In-App Delete Formation Confirmation Modal Target
   const [deleteFormationTarget, setDeleteFormationTarget] = useState<{
@@ -644,29 +646,67 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
       )}
 
       {/* Top Action & Filter Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-800/95 backdrop-blur-md p-4 rounded-3xl border border-slate-700/80 shadow-xl print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-850/95 backdrop-blur-md p-4 rounded-3xl border border-slate-750/90 shadow-xl print:hidden">
         <div className="flex items-center gap-2.5 flex-wrap">
           {activeTeam && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/90 rounded-xl border border-indigo-500/30 text-xs shadow-inner">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/90 rounded-xl border border-slate-700/80 text-xs shadow-inner">
               <span className="text-[10px] font-black uppercase text-indigo-400 font-mono">
-                Team Playbook:
+                Team:
               </span>
               <span className="font-bold text-white">{activeTeam.name}</span>
             </div>
           )}
 
-          {/* Quick Lock / Unlock Status Button in Toolbar */}
-          {!isLockedByOther && !isHeldByMe && onAcquireLock && userRole === 'admin' && (
+          {/* View Mode Switcher (Mobile Cards vs Field Diagram) */}
+          <div className="flex items-center bg-slate-900/90 border border-slate-750 p-1 rounded-xl shadow-inner print:hidden">
             <button
-              onClick={onAcquireLock}
-              className="px-3 py-1.5 bg-slate-900/90 hover:bg-slate-750 text-indigo-300 hover:text-white rounded-xl border border-indigo-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Lock this unit so other coaches cannot overwrite your changes"
+              type="button"
+              onClick={() => setViewMode('mobile_cards')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                viewMode === 'mobile_cards'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Full-width cards and player assignment matrix"
             >
-              <Lock className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Lock for Me</span>
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Cards</span>
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => setViewMode('field')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                viewMode === 'field'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Field formation diagram"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Field</span>
+            </button>
+          </div>
 
+          {/* On-screen view filter */}
+          <div className="flex items-center gap-1.5 bg-slate-900/90 border border-slate-750 px-2.5 py-1.5 rounded-xl">
+            <Filter className="w-3.5 h-3.5 text-indigo-400" />
+            <select
+              value={filterViewId}
+              onChange={(e) => setFilterViewId(e.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-100 focus:outline-none cursor-pointer"
+            >
+              <option value="ALL" className="bg-slate-900 text-slate-100">All Formations ({unitFormations.length})</option>
+              {unitFormations.map((f) => (
+                <option key={f.id} value={f.id} className="bg-slate-900 text-slate-100">
+                  {f.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Action Controls & Consolidated Dropdown */}
+        <div className="flex items-center gap-2 flex-wrap relative">
           {userRole === 'admin' && (
             <>
               <button
@@ -685,116 +725,149 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                     unit,
                   });
                 }}
-                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/20 border border-indigo-500/30 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/20 border border-indigo-500/80 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>
-                  Add{' '}
-                  {unit === 'offense'
-                    ? 'Offensive'
-                    : unit === 'defense'
-                    ? 'Defensive'
-                    : unit === 'st'
-                    ? 'Special Teams'
-                    : 'Depth Chart'}{' '}
-                  Formation
+                  + Formation
                 </span>
               </button>
 
-              {teams.length > 1 && onCopyFormationsFromTeam && (
+              {/* Playbook Tools Dropdown */}
+              <div className="relative">
                 <button
-                  onClick={() => {
-                    if (isLockedByOther) {
-                      if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Would you like to take over editing control?`)) {
-                        if (onTakeOverLock) onTakeOverLock();
-                      }
-                      return;
-                    }
-                    setShowCopyModal(true);
-                  }}
-                  className="px-3 py-2 bg-slate-900 hover:bg-slate-750 text-indigo-300 font-bold text-xs rounded-xl border border-indigo-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
-                  title="Copy formations from another team's playbook"
+                  type="button"
+                  onClick={() => setIsPlaybookActionsDropdownOpen(!isPlaybookActionsDropdownOpen)}
+                  className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+                    isPlaybookActionsDropdownOpen
+                      ? 'bg-slate-700 text-white border-slate-500 ring-2 ring-indigo-500/30'
+                      : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-750 hover:border-slate-600'
+                  }`}
+                  title="Playbook tools and options"
                 >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>Clone from Team...</span>
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Actions</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isPlaybookActionsDropdownOpen ? 'rotate-180 text-amber-300' : 'text-slate-400'}`} />
                 </button>
-              )}
+
+                {isPlaybookActionsDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsPlaybookActionsDropdownOpen(false)}
+                    />
+                    <div className="absolute right-0 top-full mt-1.5 w-64 bg-slate-900 border border-slate-700/90 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-400 tracking-wider border-b border-slate-800 mb-1">
+                        Playbook &amp; Depth Chart Actions
+                      </div>
+
+                      {onOpenCopyWeekModal && (
+                        <button
+                          onClick={() => {
+                            setIsPlaybookActionsDropdownOpen(false);
+                            onOpenCopyWeekModal();
+                          }}
+                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-200 hover:text-indigo-300 hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <div className="w-6 h-6 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                            <Copy className="w-3.5 h-3.5 text-indigo-400" />
+                          </div>
+                          <div>
+                            <div>Copy Week Lineup...</div>
+                            <div className="text-[10px] text-slate-400 font-normal">Copy formations or player spots to any week</div>
+                          </div>
+                        </button>
+                      )}
+
+                      {teams.length > 1 && onCopyFormationsFromTeam && (
+                        <button
+                          onClick={() => {
+                            setIsPlaybookActionsDropdownOpen(false);
+                            if (isLockedByOther) {
+                              if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Would you like to take over editing control?`)) {
+                                if (onTakeOverLock) onTakeOverLock();
+                              }
+                              return;
+                            }
+                            setShowCopyModal(true);
+                          }}
+                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-200 hover:text-amber-300 hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <div className="w-6 h-6 rounded-lg bg-amber-400/15 border border-amber-400/30 flex items-center justify-center shrink-0">
+                            <Layers className="w-3.5 h-3.5 text-amber-400" />
+                          </div>
+                          <div>
+                            <div>Clone from Team...</div>
+                            <div className="text-[10px] text-slate-400 font-normal">Import formations from another team</div>
+                          </div>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          setIsPlaybookActionsDropdownOpen(false);
+                          onOpenSelectivePrintModal(unit);
+                        }}
+                        className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-200 hover:text-amber-300 hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-amber-400/15 border border-amber-400/30 flex items-center justify-center shrink-0">
+                          <Printer className="w-3.5 h-3.5 text-amber-400" />
+                        </div>
+                        <div>
+                          <div>Selective Print Sheets</div>
+                          <div className="text-[10px] text-slate-400 font-normal">Choose specific formations to print</div>
+                        </div>
+                      </button>
+
+                      {!isLockedByOther && !isHeldByMe && onAcquireLock && (
+                        <button
+                          onClick={() => {
+                            setIsPlaybookActionsDropdownOpen(false);
+                            onAcquireLock();
+                          }}
+                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-200 hover:text-emerald-300 hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <div className="w-6 h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                            <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                          </div>
+                          <div>
+                            <div>Lock Playbook for Me</div>
+                            <div className="text-[10px] text-slate-400 font-normal">Prevent edits from other coaches</div>
+                          </div>
+                        </button>
+                      )}
+
+                      {isHeldByMe && onReleaseLock && (
+                        <button
+                          onClick={() => {
+                            setIsPlaybookActionsDropdownOpen(false);
+                            onReleaseLock();
+                          }}
+                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-200 hover:text-slate-100 hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                        >
+                          <div className="w-6 h-6 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
+                            <Unlock className="w-3.5 h-3.5 text-slate-300" />
+                          </div>
+                          <div>
+                            <div>Release Lock</div>
+                            <div className="text-[10px] text-slate-400 font-normal">Allow other coaches to edit</div>
+                          </div>
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
             </>
           )}
 
-          {/* View Mode Switcher (Mobile Cards vs Field Diagram) */}
-          <div className="flex items-center bg-slate-900/90 border border-slate-700 p-1 rounded-2xl shadow-inner print:hidden">
-            <button
-              type="button"
-              onClick={() => setViewMode('mobile_cards')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
-                viewMode === 'mobile_cards'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-              }`}
-              title="Optimized full-width mobile depth chart with large readable names and 1-touch controls"
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span>Mobile Cards</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('field')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
-                viewMode === 'field'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-              }`}
-              title="Tactical football formation diagram"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Field Diagram</span>
-            </button>
-          </div>
-
-          {/* On-screen view filter */}
-          <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700 px-3 py-1.5 rounded-xl">
-            <Filter className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="text-xs font-black text-slate-200">Filter View:</span>
-            <select
-              value={filterViewId}
-              onChange={(e) => setFilterViewId(e.target.value)}
-              className="bg-slate-800 border border-slate-600 text-xs font-bold text-slate-100 rounded-lg px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-            >
-              <option value="ALL">All Formations ({unitFormations.length})</option>
-              {unitFormations.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          {userRole === 'admin' && onOpenCopyWeekModal && (
-            <button
-              onClick={onOpenCopyWeekModal}
-              className="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer border border-indigo-500/40"
-              title="Copy any week formations and/or player positions to any other week"
-            >
-              <Copy className="w-3.5 h-3.5" />
-              <span>Copy Week...</span>
-            </button>
-          )}
           <button
             onClick={() => triggerPrint()}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-100 font-bold text-xs rounded-xl border border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+            className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-xs rounded-xl border border-slate-750 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+            title="Print Depth Chart Formations"
           >
-            <Printer className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Print All</span>
-          </button>
-          <button
-            onClick={() => onOpenSelectivePrintModal(unit)}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Selective Print</span>
+            <Printer className="w-3.5 h-3.5 text-slate-400" />
+            <span>Print</span>
           </button>
         </div>
       </div>
@@ -1114,11 +1187,6 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         </span>
                                       </div>
                                     </div>
-                                    {userRole === 'admin' && (
-                                      <span className="text-[8px] font-black text-slate-500 group-hover:text-amber-300 uppercase px-0.5 rounded shrink-0">
-                                        Swap
-                                      </span>
-                                    )}
                                   </div>
                                 ) : (
                                   <button
@@ -1179,11 +1247,6 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         </span>
                                       </div>
                                     </div>
-                                    {userRole === 'admin' && (
-                                      <span className="text-[8px] font-black text-slate-500 group-hover:text-amber-300 uppercase px-0.5 rounded shrink-0">
-                                        Swap
-                                      </span>
-                                    )}
                                   </div>
                                 ) : (
                                   <button
@@ -1244,11 +1307,6 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         </span>
                                       </div>
                                     </div>
-                                    {userRole === 'admin' && (
-                                      <span className="text-[8px] font-black text-slate-500 group-hover:text-blue-300 uppercase px-0.5 rounded shrink-0">
-                                        Swap
-                                      </span>
-                                    )}
                                   </div>
                                 ) : (
                                   <button
@@ -1605,20 +1663,22 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                     className="flex items-center gap-1.5 flex-wrap print:hidden"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <button
-                      onClick={() => onMoveFormation(form.id, -1)}
-                      title="Move Formation Up"
-                      className="p-1.5 text-slate-300 hover:text-indigo-400 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                    >
-                      <ArrowUp className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => onMoveFormation(form.id, 1)}
-                      title="Move Formation Down"
-                      className="p-1.5 text-slate-300 hover:text-indigo-400 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                    >
-                      <ArrowDown className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center bg-slate-900 border border-slate-750 rounded-xl p-0.5 shadow-xs">
+                      <button
+                        onClick={() => onMoveFormation(form.id, -1)}
+                        title="Move Formation Up"
+                        className="p-1 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 rounded-lg text-xs transition-all cursor-pointer"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => onMoveFormation(form.id, 1)}
+                        title="Move Formation Down"
+                        className="p-1 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 rounded-lg text-xs transition-all cursor-pointer"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                     <button
                       onClick={() => {
                         setRowLabelInput('Secondary Level');
@@ -1627,7 +1687,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                           isNew: true,
                         });
                       }}
-                      className="px-2.5 py-1 text-xs font-bold bg-slate-900/90 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl transition-all flex items-center gap-1 shadow-xs cursor-pointer"
+                      className="px-2.5 py-1.5 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-750 rounded-xl transition-all flex items-center gap-1 shadow-xs cursor-pointer"
                     >
                       <Plus className="w-3 h-3 text-indigo-400" />
                       <span>Add Row</span>
@@ -1642,11 +1702,10 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                           unit: form.unit,
                         });
                       }}
-                      title="Duplicate formation with all players"
-                      className="px-2.5 py-1 text-xs font-bold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 rounded-xl transition-all flex items-center gap-1 shadow-xs cursor-pointer"
+                      title="Duplicate formation"
+                      className="p-1.5 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 border border-slate-750 rounded-xl transition-all cursor-pointer"
                     >
-                      <Copy className="w-3 h-3" />
-                      <span className="hidden sm:inline">Duplicate</span>
+                      <Copy className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => {
@@ -1659,7 +1718,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                         });
                       }}
                       title="Rename formation"
-                      className="p-1.5 text-slate-300 hover:text-indigo-400 hover:bg-slate-700 border border-slate-700 rounded-xl transition-all cursor-pointer"
+                      className="p-1.5 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 border border-slate-750 rounded-xl transition-all cursor-pointer"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
@@ -1671,7 +1730,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                         });
                       }}
                       title="Delete formation"
-                      className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 border border-rose-900/40 rounded-xl transition-all cursor-pointer"
+                      className="p-1.5 text-rose-400/80 hover:text-rose-300 hover:bg-rose-950/40 border border-rose-900/30 rounded-xl transition-all cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -1720,6 +1779,24 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                             className="flex items-center gap-1.5 print:hidden"
                             onClick={(e) => e.stopPropagation()}
                           >
+                            {/* Add Position Button */}
+                            <button
+                              onClick={() => {
+                                const emptyIdx = positionsList.indexOf(null);
+                                setCustomPosInput('');
+                                setPositionPickerTarget({
+                                  formId: form.id,
+                                  rIdx,
+                                  pIdx: emptyIdx !== -1 ? emptyIdx : positionsList.length,
+                                  isEdit: false,
+                                });
+                              }}
+                              className="px-2.5 py-1 text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 rounded-xl flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+                            >
+                              <Plus className="w-3 h-3 text-emerald-400" />
+                              <span>+ Pos</span>
+                            </button>
+
                             {/* Quick Slot Stepper Controls: [ - ] [ Slots (N) ] [ + ] */}
                             <div className="flex items-center bg-slate-800 border border-slate-700 rounded-xl p-0.5 shadow-xs">
                               <button
@@ -1757,35 +1834,6 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                 <Plus className="w-3 h-3" />
                               </button>
                             </div>
-
-                            {/* Add Empty Slot Button */}
-                            <button
-                              onClick={() => handleQuickAddSlot(form.id, rIdx, positionsList.length)}
-                              disabled={positionsList.length >= 12}
-                              title="Add an empty spacing slot to this row"
-                              className="px-2.5 py-1 text-[10.5px] font-bold bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 rounded-xl flex items-center gap-1 transition-all cursor-pointer shadow-xs disabled:opacity-40"
-                            >
-                              <SquarePlus className="w-3 h-3 text-indigo-400" />
-                              <span>+ Empty Slot</span>
-                            </button>
-
-                            {/* Add Position Button */}
-                            <button
-                              onClick={() => {
-                                const emptyIdx = positionsList.indexOf(null);
-                                setCustomPosInput('');
-                                setPositionPickerTarget({
-                                  formId: form.id,
-                                  rIdx,
-                                  pIdx: emptyIdx !== -1 ? emptyIdx : positionsList.length,
-                                  isEdit: false,
-                                });
-                              }}
-                              className="px-2.5 py-1 text-[10.5px] font-bold bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 rounded-xl flex items-center gap-1 transition-all cursor-pointer shadow-xs"
-                            >
-                              <Plus className="w-3 h-3 text-emerald-400" />
-                              <span>+ Pos</span>
-                            </button>
 
                             {/* Delete Row Button */}
                             <button

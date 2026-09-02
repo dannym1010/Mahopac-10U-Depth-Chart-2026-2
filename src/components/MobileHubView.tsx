@@ -63,6 +63,7 @@ interface MobileHubViewProps {
   onQuickAttendanceSave?: (record: AttendanceRecord) => void;
   onOpenPreferencesModal?: () => void;
   onOpenScheduleModal?: () => void;
+  onOpenThemeGallery?: () => void;
 }
 
 const getPlayerFullName = (p: RosterPlayer): string => {
@@ -96,6 +97,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
   onQuickAttendanceSave,
   onOpenPreferencesModal,
   onOpenScheduleModal,
+  onOpenThemeGallery,
 }) => {
   // Mobile Hub active tab: 'starters' | 'roster' | 'attendance'
   const [hubTab, setHubTab] = useState<'starters' | 'roster' | 'attendance'>('starters');
@@ -708,6 +710,35 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
           <span className="text-[10px] font-bold text-slate-300">Playbook</span>
         </button>
       </div>
+
+      {/* =========================================================================
+          5. THEME SCHEME SHOWCASE BANNER
+          ========================================================================= */}
+      {onOpenThemeGallery && (
+        <button
+          type="button"
+          onClick={onOpenThemeGallery}
+          className="w-full bg-gradient-to-r from-slate-900 via-indigo-950/60 to-slate-900 border border-indigo-500/30 hover:border-indigo-400/60 p-3 rounded-2xl flex items-center justify-between gap-3 text-left shadow-lg active:scale-98 transition-all group cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-amber-300" />
+            </div>
+            <div>
+              <div className="text-xs font-black text-white group-hover:text-indigo-200 flex items-center gap-1.5">
+                <span>Visual Theme Schemes</span>
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-indigo-500/30 text-indigo-300 border border-indigo-400/40">
+                  5 Presets
+                </span>
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium">
+                Preview Volt Neon, Championship Gold, Cyber Cobalt &amp; more
+              </div>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
+        </button>
+      )}
 
       {/* =========================================================================
           5. PLAYER DETAIL MODAL

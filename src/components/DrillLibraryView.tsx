@@ -18,8 +18,45 @@ import {
   ChevronDown,
   ChevronUp,
   CheckCircle2,
+  Sparkles,
+  Smartphone,
+  Layers,
+  Copy,
+  Check,
+  Zap,
 } from 'lucide-react';
 import { DrillFolder, DrillItem, UserRole } from '../types';
+
+interface DrillLibraryViewProps {
+  cascadingDrills: DrillFolder[];
+  collapsedFolders: Record<string, boolean>;
+  onToggleFolder: (pathKey: string) => void;
+  onAddTopFolder: () => void;
+  onAddSubfolder: (pathKey: string) => void;
+  onRenameFolder: (pathKey: string) => void;
+  onDeleteFolder: (pathKey: string) => void;
+  onMoveFolder: (pathKey: string, direction: -1 | 1) => void;
+  onAddDrill: (pathKey: string) => void;
+  onUpdateDrill: (
+    pathKey: string,
+    drillIdx: number,
+    field: keyof DrillItem,
+    value: string
+  ) => void;
+  onDeleteDrill: (pathKey: string, drillIdx: number) => void;
+  onMoveDrillToFolder: (
+    sourcePath: string,
+    drillIdx: number,
+    targetPath: string
+  ) => void;
+  onExportCSV: () => void;
+  onImportCSVClick: () => void;
+  onExportJSON: () => void;
+  onImportJSONClick: () => void;
+  onResetDefaults: () => void;
+  onForceSyncCloud: () => void;
+  userRole: UserRole;
+}
 
 interface DrillRowItemProps {
   drill: DrillItem;
@@ -85,7 +122,7 @@ const DrillRowItem: React.FC<DrillRowItemProps> = ({
     <div
       draggable={userRole === 'admin'}
       onDragStart={onDragStart}
-      className="grid grid-cols-12 gap-2.5 p-3 rounded-2xl bg-slate-950/80 border border-slate-800/80 hover:border-slate-700 items-start transition-all"
+      className="grid grid-cols-12 gap-2.5 p-3 rounded-2xl bg-slate-950 border border-slate-800 hover:border-indigo-500/40 items-start transition-all"
     >
       {/* Drill Name */}
       <div className="col-span-12 md:col-span-3 flex items-start gap-2">
@@ -105,7 +142,7 @@ const DrillRowItem: React.FC<DrillRowItemProps> = ({
           }}
           onChange={(e) => handleNameChange(e.target.value)}
           placeholder="Drill Title"
-          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-transparent disabled:border-transparent"
+          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs font-bold text-indigo-300 focus:outline-none focus:border-indigo-400 disabled:bg-transparent disabled:border-transparent"
         />
       </div>
 
@@ -124,7 +161,7 @@ const DrillRowItem: React.FC<DrillRowItemProps> = ({
           }}
           onChange={(e) => handleDescChange(e.target.value)}
           placeholder="Setup instructions, number of players, cone placement..."
-          className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs font-medium text-slate-300 leading-relaxed focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-600"
+          className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs font-medium text-slate-300 leading-relaxed focus:outline-none focus:border-indigo-400 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-600"
         />
       </div>
 
@@ -143,7 +180,7 @@ const DrillRowItem: React.FC<DrillRowItemProps> = ({
           }}
           onChange={(e) => handleKeyChange(e.target.value)}
           placeholder="Key coaching cues (e.g. eyes on hips)..."
-          className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs font-medium text-slate-300 leading-relaxed focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-600"
+          className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs font-medium text-emerald-300/90 leading-relaxed focus:outline-none focus:border-emerald-400 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-600"
         />
       </div>
 
@@ -156,70 +193,40 @@ const DrillRowItem: React.FC<DrillRowItemProps> = ({
               onChange={(e) =>
                 onMoveDrillToFolder(pathKey, drillIdx, e.target.value)
               }
-              className="bg-slate-900 border border-slate-800 rounded-xl px-2 py-1 text-[11px] font-semibold text-slate-300 max-w-[115px] truncate focus:outline-none"
+              className="bg-slate-900 border border-slate-800 rounded-xl px-2 py-1 text-[11px] font-semibold text-slate-300 max-w-[115px] truncate focus:outline-none focus:border-indigo-400"
             >
               {allFolders.map((f) => (
                 <option key={f.path} value={f.path}>
-                  ↳ {f.name}
+                  {f.name}
                 </option>
               ))}
             </select>
             <button
               onClick={() => onDeleteDrill(pathKey, drillIdx)}
               title="Delete Drill"
-              className="p-1.5 hover:bg-rose-950/50 text-rose-400 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-rose-950/40 text-slate-500 hover:text-rose-400 rounded-xl transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           </>
-        ) : null}
+        ) : (
+          <span className="text-[10px] text-slate-500 italic">Read-only</span>
+        )}
       </div>
     </div>
   );
 };
 
-interface DrillLibraryViewProps {
-  cascadingDrills: DrillFolder[];
-  collapsedFolders: Record<string, boolean>;
-  userRole: UserRole;
-  onToggleFolder: (pathKey: string) => void;
-  onAddTopFolder: () => void;
-  onAddSubfolder: (pathKey: string) => void;
-  onAddDrill: (pathKey: string) => void;
-  onRenameFolder: (pathKey: string) => void;
-  onDeleteFolder: (pathKey: string) => void;
-  onMoveFolder: (pathKey: string, direction: number) => void;
-  onUpdateDrill: (
-    pathKey: string,
-    drillIdx: number,
-    field: keyof DrillItem,
-    value: string
-  ) => void;
-  onDeleteDrill: (pathKey: string, drillIdx: number) => void;
-  onMoveDrillToFolder: (
-    sourcePath: string,
-    drillIdx: number,
-    targetPath: string
-  ) => void;
-  onExportCSV: () => void;
-  onImportCSVClick: () => void;
-  onExportJSON: () => void;
-  onImportJSONClick: () => void;
-  onForceSyncCloud: () => void;
-  onResetDefaults: () => void;
-}
-
 export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
   cascadingDrills,
   collapsedFolders,
-  userRole,
   onToggleFolder,
   onAddTopFolder,
   onAddSubfolder,
-  onAddDrill,
   onRenameFolder,
   onDeleteFolder,
   onMoveFolder,
+  onAddDrill,
   onUpdateDrill,
   onDeleteDrill,
   onMoveDrillToFolder,
@@ -227,89 +234,120 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
   onImportCSVClick,
   onExportJSON,
   onImportJSONClick,
-  onForceSyncCloud,
   onResetDefaults,
+  onForceSyncCloud,
+  userRole,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [draggedDrill, setDraggedDrill] = useState<{
     sourcePath: string;
     drillIndex: number;
   } | null>(null);
-
   const [dragOverFolderPath, setDragOverFolderPath] = useState<string | null>(
     null
   );
 
-  // Helper to collect all folder paths for "Move to..." dropdown
-  const getAllFoldersList = (
-    list: DrillFolder[],
-    parentPath = ''
-  ): { path: string; name: string }[] => {
-    const results: { path: string; name: string }[] = [];
-    list.forEach((f, idx) => {
-      const pathKey = parentPath === '' ? String(idx) : `${parentPath}_${idx}`;
-      results.push({ path: pathKey, name: f.name });
-      if (f.subfolders && f.subfolders.length > 0) {
-        results.push(...getAllFoldersList(f.subfolders, pathKey));
-      }
-    });
-    return results;
-  };
+  // View Mode: 'cards' (Mobile Sideline Cards) vs 'tree' (Master Tree View)
+  const [viewMode, setViewMode] = useState<'cards' | 'tree'>('cards');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [copiedDrillId, setCopiedDrillId] = useState<string | null>(null);
 
-  const allFolders = getAllFoldersList(cascadingDrills);
+  // Flatten all folders for dropdown selector
+  const allFolders = useMemo(() => {
+    const list: { path: string; name: string }[] = [];
+    const traverse = (folders: DrillFolder[], parentPath = '') => {
+      folders.forEach((f, idx) => {
+        const path = parentPath ? `${parentPath}_${idx}` : String(idx);
+        list.push({ path, name: f.name });
+        if (f.subfolders && f.subfolders.length > 0) {
+          traverse(f.subfolders, path);
+        }
+      });
+    };
+    traverse(cascadingDrills);
+    return list;
+  }, [cascadingDrills]);
 
-  // Total drill count
-  const countTotalDrills = (folders: DrillFolder[]): number => {
-    let count = 0;
-    folders.forEach((f) => {
-      count += f.drills?.length || 0;
-      if (f.subfolders) count += countTotalDrills(f.subfolders);
-    });
-    return count;
-  };
+  // Flatten all drills into an indexed list for fast mobile search & category filtering
+  const flattenedDrillList = useMemo(() => {
+    const list: {
+      drill: DrillItem;
+      folderName: string;
+      pathKey: string;
+      drillIdx: number;
+    }[] = [];
 
-  const totalDrillsCount = useMemo(
-    () => countTotalDrills(cascadingDrills),
-    [cascadingDrills]
-  );
+    const traverse = (folders: DrillFolder[], parentPath = '') => {
+      folders.forEach((f, idx) => {
+        const pathKey = parentPath ? `${parentPath}_${idx}` : String(idx);
+        (f.drills || []).forEach((drill, dIdx) => {
+          list.push({
+            drill,
+            folderName: f.name,
+            pathKey,
+            drillIdx: dIdx,
+          });
+        });
+        if (f.subfolders && f.subfolders.length > 0) {
+          traverse(f.subfolders, pathKey);
+        }
+      });
+    };
 
-  // Search filtering logic
+    traverse(cascadingDrills);
+    return list;
+  }, [cascadingDrills]);
+
+  // Extract unique category names
+  const categoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    cascadingDrills.forEach((f) => set.add(f.name));
+    return Array.from(set);
+  }, [cascadingDrills]);
+
+  // Total count of drills
+  const totalDrillsCount = flattenedDrillList.length;
+
   const query = searchTerm.trim().toLowerCase();
 
-  // Helper to check if a drill matches search
-  const isDrillMatch = (drill: DrillItem): boolean => {
+  // Filter drills for mobile card view
+  const filteredCardDrills = useMemo(() => {
+    return flattenedDrillList.filter(({ drill, folderName }) => {
+      // Category filter
+      if (selectedCategory !== 'all' && folderName !== selectedCategory) {
+        return false;
+      }
+      // Search term filter
+      if (!query) return true;
+      const name = (drill.name || '').toLowerCase();
+      const desc = (drill.desc || '').toLowerCase();
+      const key = (drill.key || '').toLowerCase();
+      const cat = folderName.toLowerCase();
+      return (
+        name.includes(query) ||
+        desc.includes(query) ||
+        key.includes(query) ||
+        cat.includes(query)
+      );
+    });
+  }, [flattenedDrillList, selectedCategory, query]);
+
+  // Helper: check if a drill matches query
+  const isDrillMatch = (drill: DrillItem) => {
     if (!query) return true;
-    return (
-      (drill.name || '').toLowerCase().includes(query) ||
-      (drill.desc || '').toLowerCase().includes(query) ||
-      (drill.key || '').toLowerCase().includes(query)
-    );
+    const name = (drill.name || '').toLowerCase();
+    const desc = (drill.desc || '').toLowerCase();
+    const key = (drill.key || '').toLowerCase();
+    return name.includes(query) || desc.includes(query) || key.includes(query);
   };
 
-  // Helper to check if folder has matching drills or subfolders
+  // Helper: check if a folder or its subfolders have any drill matches
   const folderHasMatch = (folder: DrillFolder): boolean => {
     if (!query) return true;
-    if ((folder.name || '').toLowerCase().includes(query)) return true;
     if (folder.drills?.some(isDrillMatch)) return true;
     if (folder.subfolders?.some(folderHasMatch)) return true;
     return false;
   };
-
-  // Count search match results
-  const matchingDrillsCount = useMemo(() => {
-    if (!query) return totalDrillsCount;
-    let matches = 0;
-    const checkNode = (folders: DrillFolder[]) => {
-      folders.forEach((f) => {
-        f.drills?.forEach((d) => {
-          if (isDrillMatch(d)) matches++;
-        });
-        if (f.subfolders) checkNode(f.subfolders);
-      });
-    };
-    checkNode(cascadingDrills);
-    return matches;
-  }, [cascadingDrills, query, totalDrillsCount]);
 
   // Handle expand/collapse all
   const handleExpandAll = () => {
@@ -328,18 +366,24 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
     });
   };
 
-  // Recursive folder node renderer
+  // Copy drill info to clipboard
+  const handleCopyDrill = (drill: DrillItem, folderName: string, id: string) => {
+    const text = `🏈 ${drill.name} (${folderName})\n📋 Setup: ${drill.desc}\n⚡ Key Coaching Cues: ${drill.key}`;
+    navigator.clipboard?.writeText(text);
+    setCopiedDrillId(id);
+    setTimeout(() => setCopiedDrillId(null), 2200);
+  };
+
+  // Recursive folder node renderer for Master Tree Mode
   const renderFolderNode = (
     folder: DrillFolder,
     pathKey: string,
     depth = 0
   ) => {
-    // If search active and this folder has no matches, skip
     if (query && !folderHasMatch(folder)) {
       return null;
     }
 
-    // When searching, force folder open if it contains matching items
     const isCollapsed = query ? false : Boolean(collapsedFolders[pathKey]);
     const isDragOver = dragOverFolderPath === pathKey;
 
@@ -354,7 +398,7 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
     return (
       <div
         key={pathKey}
-        className="border border-slate-700/80 rounded-3xl bg-slate-800/95 backdrop-blur-md shadow-xl overflow-hidden transition-all mb-4"
+        className="border border-slate-800 rounded-3xl bg-slate-900/90 backdrop-blur-md shadow-xl overflow-hidden transition-all mb-4"
         style={{ marginLeft: depth > 0 ? `${depth * 16}px` : 0 }}
       >
         {/* Folder Header */}
@@ -386,22 +430,22 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
           onClick={() => onToggleFolder(pathKey)}
           className={`px-5 py-3.5 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors border-b ${
             isDragOver
-              ? 'bg-indigo-950/80 border-indigo-500 ring-2 ring-indigo-500/50'
+              ? 'bg-indigo-950/80 border-indigo-400 ring-2 ring-indigo-400/50'
               : isCollapsed
-              ? 'bg-slate-900/60 hover:bg-slate-900 border-slate-700/60'
-              : 'bg-slate-900/90 hover:bg-slate-900 border-slate-700'
+              ? 'bg-slate-950/80 hover:bg-slate-900 border-slate-800'
+              : 'bg-slate-900/95 hover:bg-slate-900 border-slate-800'
           }`}
         >
           <div className="flex items-center gap-3 min-w-0">
             {isCollapsed ? (
-              <Folder className="w-4 h-4 text-amber-400 flex-shrink-0" />
+              <Folder className="w-4 h-4 text-indigo-400 flex-shrink-0" />
             ) : (
-              <FolderOpen className="w-4 h-4 text-amber-400 flex-shrink-0" />
+              <FolderOpen className="w-4 h-4 text-indigo-400 flex-shrink-0" />
             )}
             <span className="font-black text-sm md:text-base text-slate-100 truncate tracking-tight">
               {folder.name}
             </span>
-            <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+            <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-800 text-indigo-300 border border-slate-700">
               {query ? `${visibleDrills.length} match` : `${totalFolderDrills} drills`}
             </span>
           </div>
@@ -415,21 +459,21 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
               <button
                 onClick={() => onMoveFolder(pathKey, -1)}
                 title="Move Folder Up"
-                className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
+                className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-indigo-300 transition-colors cursor-pointer"
               >
                 <ArrowUp className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => onMoveFolder(pathKey, 1)}
                 title="Move Folder Down"
-                className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
+                className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-indigo-300 transition-colors cursor-pointer"
               >
                 <ArrowDown className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => onAddSubfolder(pathKey)}
                 title="Add Subfolder"
-                className="px-2.5 py-1 text-[11px] font-bold bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-200 rounded-xl flex items-center gap-1 shadow-sm transition-all"
+                className="px-2.5 py-1 text-[11px] font-bold bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-200 rounded-xl flex items-center gap-1 shadow-sm transition-all cursor-pointer"
               >
                 <Plus className="w-3 h-3 text-indigo-400" />
                 <span>Sub</span>
@@ -437,7 +481,7 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
               <button
                 onClick={() => onAddDrill(pathKey)}
                 title="Add Drill"
-                className="px-2.5 py-1 text-[11px] font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl flex items-center gap-1 shadow-md shadow-indigo-600/30 transition-all"
+                className="px-2.5 py-1 text-[11px] font-black bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl flex items-center gap-1 shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
               >
                 <Plus className="w-3 h-3" />
                 <span>Drill</span>
@@ -445,14 +489,14 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
               <button
                 onClick={() => onRenameFolder(pathKey)}
                 title="Rename Folder"
-                className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
+                className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-indigo-300 transition-colors cursor-pointer"
               >
                 <Edit2 className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => onDeleteFolder(pathKey)}
                 title="Delete Folder"
-                className="p-1 hover:bg-rose-950/50 rounded-lg text-rose-400 transition-colors"
+                className="p-1 hover:bg-rose-950/50 rounded-lg text-rose-400 transition-colors cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -462,7 +506,7 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
 
         {/* Folder Body (Subfolders & Drills) */}
         {!isCollapsed && (
-          <div className="p-4 md:p-5 space-y-4 bg-slate-900/60">
+          <div className="p-4 md:p-5 space-y-4 bg-slate-950/60">
             {/* Render Subfolders */}
             {folder.subfolders && folder.subfolders.length > 0 && (
               <div className="space-y-3">
@@ -475,8 +519,8 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
             {/* Render Drills */}
             {visibleDrills && visibleDrills.length > 0 ? (
               <div className="space-y-2.5">
-                {/* Drill Table Column Header */}
-                <div className="grid grid-cols-12 gap-2 text-[10.5px] font-black uppercase text-slate-500 px-3 pb-1 border-b border-slate-800/80">
+                {/* Table Header */}
+                <div className="grid grid-cols-12 gap-2 text-[10.5px] font-black uppercase text-slate-500 px-3 pb-1 border-b border-slate-800">
                   <div className="col-span-12 md:col-span-3">Drill Name</div>
                   <div className="col-span-12 md:col-span-5">Setup &amp; Instructions</div>
                   <div className="col-span-12 md:col-span-2">Coaching Focus / Key</div>
@@ -484,7 +528,6 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
                 </div>
 
                 {visibleDrills.map((drill, dIdx) => {
-                  // Find original index in folder.drills
                   const origIdx = (folder.drills || []).indexOf(drill);
                   const drillIndex = origIdx >= 0 ? origIdx : dIdx;
 
@@ -511,7 +554,7 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
                 <div className="text-center py-6 text-xs text-slate-500 italic border border-dashed border-slate-800 rounded-2xl">
                   {query
                     ? 'No drills match your search in this folder.'
-                    : 'Drag drills here or click "+ Drill" to add exercises.'}
+                    : 'Click "+ Drill" to add exercises to this folder.'}
                 </div>
               )
             )}
@@ -522,12 +565,13 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-12">
       {/* Top Action Toolbar */}
-      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-4 md:p-5 print:hidden space-y-4">
+      <div className="bg-slate-950/95 backdrop-blur-md rounded-3xl border border-slate-800 shadow-xl p-4 md:p-5 print:hidden space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Header Title & Pill */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 flex items-center justify-center font-black shadow-inner">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 flex items-center justify-center font-black shadow-inner">
               <Dumbbell className="w-5 h-5" />
             </div>
             <div>
@@ -535,127 +579,282 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
                 <h2 className="font-black text-base md:text-lg text-slate-100 tracking-tight">
                   Master Drill Library &amp; Install Database
                 </h2>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-black">
-                  {totalDrillsCount} Saved Drills
+                <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-black">
+                  {totalDrillsCount} Drills
                 </span>
               </div>
-              <p className="text-xs text-slate-300 font-medium">
-                Organized by category, agility circuits, positional skills, tackling form &amp; install scripts
+              <p className="text-xs text-slate-400 font-medium">
+                Varsity football drills organized for fast sideline recall &amp; practice install
               </p>
             </div>
           </div>
 
+          {/* View Mode Toggle & Top Action Buttons */}
           <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={onExportCSV}
-              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-emerald-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
-            >
-              <Download className="w-3.5 h-3.5 text-emerald-400" />
-              <span>CSV Export</span>
-            </button>
-            <button
-              onClick={onImportCSVClick}
-              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-emerald-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
-            >
-              <Upload className="w-3.5 h-3.5 text-emerald-400" />
-              <span>CSV Import</span>
-            </button>
-            <button
-              onClick={onExportJSON}
-              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-indigo-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
-            >
-              <Download className="w-3.5 h-3.5 text-indigo-400" />
-              <span>JSON</span>
-            </button>
-            <button
-              onClick={onImportJSONClick}
-              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-sky-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
-            >
-              <Upload className="w-3.5 h-3.5 text-sky-400" />
-              <span>JSON</span>
-            </button>
-            <button
-              onClick={onForceSyncCloud}
-              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-600/30 transition-all"
-            >
-              <Cloud className="w-3.5 h-3.5" />
-              <span>Push to Cloud</span>
-            </button>
-            {userRole === 'admin' && (
-              <>
-                <button
-                  onClick={onResetDefaults}
-                  className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded-xl transition-all border border-slate-700"
-                  title="Reset to default drills"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={onAddTopFolder}
-                  className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all active:scale-95"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Top Folder</span>
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Live Search Bar & Expand/Collapse Controls */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-700/60">
-          <div className="relative flex-1 min-w-[240px] max-w-lg">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search all 120+ drills, keywords (e.g. 'Tackle', 'Donut', 'Rip', 'Snap', 'Cover')..."
-              className="w-full bg-slate-900/90 border border-slate-700 rounded-2xl pl-9 pr-9 py-2 text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all shadow-inner"
-            />
-            {searchTerm && (
+            {/* View Mode Selector */}
+            <div className="bg-slate-900 p-1 rounded-2xl border border-slate-800 flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-0.5 rounded-md hover:bg-slate-800"
+                onClick={() => setViewMode('cards')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === 'cards'
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
               >
-                <X className="w-3.5 h-3.5" />
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>Sideline Cards</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('tree')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === 'tree'
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Master Tree</span>
+              </button>
+            </div>
+
+            {/* Quick Add Top Folder */}
+            {userRole === 'admin' && (
+              <button
+                onClick={onAddTopFolder}
+                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Category</span>
               </button>
             )}
           </div>
+        </div>
 
-          <div className="flex items-center gap-2">
-            {searchTerm && (
-              <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-3 py-1.5 rounded-xl">
-                Found {matchingDrillsCount} matching drill{matchingDrillsCount === 1 ? '' : 's'}
-              </span>
+        {/* Live Search Bar & Horizontal Category Filter Pills */}
+        <div className="space-y-3 pt-3 border-t border-slate-800">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="relative flex-1 min-w-[240px] max-w-lg">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search drills, cues (e.g. 'Tackle', 'Donut', 'Rip', 'Cover 3', 'RPO')..."
+                className="w-full bg-slate-900 border border-slate-700/80 rounded-2xl pl-10 pr-9 py-2 text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-indigo-400 transition-all shadow-inner"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 rounded-md hover:bg-slate-800"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Tree Mode Controls */}
+            {viewMode === 'tree' && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExpandAll}
+                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                  title="Expand all categories"
+                >
+                  <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Expand All</span>
+                </button>
+                <button
+                  onClick={handleCollapseAll}
+                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                  title="Collapse all categories"
+                >
+                  <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Collapse All</span>
+                </button>
+              </div>
             )}
+          </div>
+
+          {/* Quick Category Chips for Mobile & Sideline Filtering */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
             <button
-              onClick={handleExpandAll}
-              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all"
-              title="Expand all categories & subfolders"
+              type="button"
+              onClick={() => setSelectedCategory('all')}
+              className={`px-3 py-1 rounded-xl text-xs font-black whitespace-nowrap transition-all border cursor-pointer ${
+                selectedCategory === 'all'
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+              }`}
             >
-              <ChevronDown className="w-3.5 h-3.5 text-amber-400" />
-              <span>Expand All</span>
+              All Categories ({flattenedDrillList.length})
             </button>
-            <button
-              onClick={handleCollapseAll}
-              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all"
-              title="Collapse all categories & subfolders"
-            >
-              <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
-              <span>Collapse All</span>
-            </button>
+            {categoryOptions.map((cat) => {
+              const count = flattenedDrillList.filter((d) => d.folderName === cat).length;
+              const isSelected = selectedCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer ${
+                    isSelected
+                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm font-black'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                  }`}
+                >
+                  <span>{cat}</span>
+                  <span className={`ml-1.5 text-[10px] ${isSelected ? 'text-indigo-200 font-black' : 'text-slate-500'}`}>
+                    ({count})
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Drill Folders Tree */}
-      <div className="space-y-4">
-        {cascadingDrills.map((folder, idx) =>
-          renderFolderNode(folder, String(idx), 0)
-        )}
-      </div>
+      {/* =========================================================================
+          MODE 1: MOBILE SIDELINE CARD VIEW (Optimized for Touch & Handheld Devices)
+          ========================================================================= */}
+      {viewMode === 'cards' && (
+        <div className="space-y-3">
+          {/* Active Filter Header */}
+          <div className="flex items-center justify-between px-1">
+            <div className="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <span>Showing {filteredCardDrills.length} Drills</span>
+              {selectedCategory !== 'all' && (
+                <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] normal-case font-bold">
+                  {selectedCategory}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Drill Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {filteredCardDrills.map(({ drill, folderName, pathKey, drillIdx }) => {
+              const cardId = `${pathKey}_${drillIdx}`;
+              const isCopied = copiedDrillId === cardId;
+
+              return (
+                <div
+                  key={drill.id || cardId}
+                  className="bg-slate-900/95 border border-slate-800 hover:border-indigo-500/50 rounded-2xl p-4 shadow-xl flex flex-col justify-between gap-3 transition-all group"
+                >
+                  <div className="space-y-2.5">
+                    {/* Card Header: Title + Category Badge + Copy Action */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400/90 block mb-0.5 truncate">
+                          {folderName}
+                        </span>
+                        <h3 className="font-black text-sm text-slate-100 group-hover:text-indigo-300 transition-colors leading-snug">
+                          {drill.name || 'Untitled Drill'}
+                        </h3>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleCopyDrill(drill, folderName, cardId)}
+                        title="Copy Drill to Clipboard"
+                        className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-indigo-300 transition-all shrink-0 cursor-pointer"
+                      >
+                        {isCopied ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Setup & Instructions */}
+                    {drill.desc && (
+                      <div className="bg-slate-950/60 rounded-xl p-2.5 border border-slate-850">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                          📋 Setup &amp; Execution:
+                        </span>
+                        <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">
+                          {drill.desc}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Key Coaching Cues */}
+                    {drill.key && (
+                      <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-xl p-2.5">
+                        <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1 mb-1">
+                          <Zap className="w-3 h-3 text-emerald-400" />
+                          <span>Key Coaching Focus:</span>
+                        </span>
+                        <p className="text-xs font-bold text-emerald-200/90 leading-relaxed">
+                          {drill.key}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card Footer Actions (Admin Controls) */}
+                  {userRole === 'admin' && (
+                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                      <select
+                        value={pathKey}
+                        onChange={(e) =>
+                          onMoveDrillToFolder(pathKey, drillIdx, e.target.value)
+                        }
+                        className="bg-slate-950 border border-slate-800 text-[10px] font-bold text-slate-400 rounded-lg px-2 py-1 max-w-[140px] truncate focus:outline-none focus:border-indigo-400"
+                        title="Move to category"
+                      >
+                        {allFolders.map((f) => (
+                          <option key={f.path} value={f.path}>
+                            {f.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => onDeleteDrill(pathKey, drillIdx)}
+                          className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
+                          title="Delete Drill"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {filteredCardDrills.length === 0 && (
+            <div className="text-center py-12 bg-slate-900/60 border border-dashed border-slate-800 rounded-3xl p-6">
+              <Dumbbell className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+              <p className="text-sm font-bold text-slate-300">
+                No drills found matching "{searchTerm}"
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Try searching for another keyword or select "All Categories".
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODE 2: MASTER FOLDER TREE VIEW (For Deep Playbook Organizing & Structuring)
+          ========================================================================= */}
+      {viewMode === 'tree' && (
+        <div className="space-y-4">
+          {cascadingDrills.map((folder, idx) =>
+            renderFolderNode(folder, String(idx), 0)
+          )}
+        </div>
+      )}
     </div>
   );
 };

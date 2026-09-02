@@ -17,6 +17,15 @@ export type UnitType =
 
 export type UserRole = 'admin' | 'assistant';
 
+export interface CustomTabGroup {
+  id: string;
+  label: string;
+  icon?: string; // emoji or icon name
+  color?: string; // e.g. "indigo", "emerald", "amber", "cyan", "rose", "purple"
+  tabIds: UnitType[];
+  defaultTabId?: UnitType;
+}
+
 export interface Team {
   id: string;
   name: string;

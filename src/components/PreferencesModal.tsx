@@ -18,9 +18,14 @@ import {
   Swords,
   Sparkles,
   Smartphone,
+  Download,
+  Upload,
+  Cloud,
+  RefreshCw,
+  Sliders,
+  Copy,
 } from 'lucide-react';
 import { UnitType, Team, UserRole } from '../types';
-import { DEFAULT_NAV_TABS } from './NavigationTabs';
 
 interface PreferencesModalProps {
   isOpen: boolean;
@@ -38,6 +43,15 @@ interface PreferencesModalProps {
   ) => void;
   userRole: UserRole;
   currentUserEmail?: string;
+  onOpenThemeGallery?: () => void;
+  onOpenSeasonConfigModal?: () => void;
+  onOpenManageTeams?: () => void;
+  onOpenCopyWeekModal?: () => void;
+  onExportData?: () => void;
+  onImportClick?: () => void;
+  onResetData?: () => void;
+  onForceSave?: () => void;
+  onForceRefresh?: () => void;
 }
 
 interface ScreenOption {
@@ -53,7 +67,7 @@ interface ScreenOption {
 const SCREEN_OPTIONS: ScreenOption[] = [
   {
     id: 'mobile_hub',
-    name: 'Mobile Coach Hub (Phone Quick Start)',
+    name: 'Mobile Coach Hub (Sideline Command)',
     category: 'Mobile & Fast Access',
     description: 'Thumb-friendly game day dashboard with big touch buttons, next game countdown, attendance, and instant pocket depth chart access',
     icon: Smartphone,
@@ -99,52 +113,52 @@ const SCREEN_OPTIONS: ScreenOption[] = [
   {
     id: 'depth_chart',
     subUnit: 'groups',
-    name: 'Depth Chart — Position Groups',
+    name: 'Position Groups & Rooms',
     category: 'Depth Chart',
-    description: 'QB, RB, WR/TE, OL, DL, LB, DB position group hierarchies and depth orders',
+    description: 'QB, RB, WR, OL, DL, LB, DB meeting rosters and unit grouping overview',
     icon: Users,
   },
   {
-    id: 'scrimmage',
+    id: 'depth_chart',
     subUnit: 'scrimmage',
-    name: 'Practice / Scrimmage Rotation',
+    name: 'Gold vs Blue Scrimmage Matchups',
     category: 'Depth Chart',
-    description: 'Live 11-on-11 scrimmage rotation matrix and playing-time balance',
+    description: 'Inter-squad scrimmage lineups, team color cards, and head-to-head depth',
     icon: Swords,
   },
   {
     id: 'wristband',
-    name: 'Wristband Builder',
-    category: 'Playcalling',
-    description: 'Color-coded QB & player wristband cards, custom numbering, and printable inserts',
+    name: 'Wristband Playbook Inserts',
+    category: 'Game Day Operations',
+    description: 'Quarterback / Coach 4.5" x 2.25" physical inserts, multi-tier callout grids, and wristband cards',
     icon: Watch,
   },
   {
-    id: 'scouting',
-    name: 'Scouting & Tendencies',
-    category: 'Strategy',
-    description: 'Opponent scouting reports, defensive coverage tendencies, and game strategy',
-    icon: FileSpreadsheet,
-  },
-  {
     id: 'practice',
-    name: 'Practice Plan & Itinerary',
-    category: 'Coaching',
-    description: 'Minute-by-minute practice schedule, multi-station rotations, and coach assignments',
+    name: 'Practice Plan & Scripts',
+    category: 'Practice Preparation',
+    description: 'Multi-period practice itinerary, period timers, station breakouts, and install scripts',
     icon: ClipboardList,
   },
   {
     id: 'drills',
-    name: 'Drills Library',
-    category: 'Coaching',
-    description: 'Categorized drill repository with station instructions, diagrams, and equipment',
+    name: 'Master Drill Library',
+    category: 'Practice Preparation',
+    description: 'Comprehensive 120+ football agility, positional, tackling, and coaching cue database',
     icon: Dumbbell,
   },
   {
+    id: 'scouting',
+    name: 'Scouting & Tendencies',
+    category: 'Game Day Operations',
+    description: 'Opponent tendencies, down & distance matrices, personnel breakdowns, and defensive fronts',
+    icon: FileSpreadsheet,
+  },
+  {
     id: 'guide',
-    name: 'Playbooks & Guides',
-    category: 'Coaching',
-    description: 'Offense & defense playbook reference cards, rulebooks, and coach guides',
+    name: 'Playbooks & Play Art Guides',
+    category: 'Reference & Guides',
+    description: 'Offensive and defensive system playbook sheets, route trees, and coaching manuals',
     icon: BookOpen,
   },
   {
@@ -170,8 +184,17 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
   onSetDefaultScreen,
   userRole,
   currentUserEmail,
+  onOpenThemeGallery,
+  onOpenSeasonConfigModal,
+  onOpenManageTeams,
+  onOpenCopyWeekModal,
+  onExportData,
+  onImportClick,
+  onResetData,
+  onForceSave,
+  onForceRefresh,
 }) => {
-  const [activeTab, setActiveTab] = useState<'screen' | 'team'>('screen');
+  const [activeTab, setActiveTab] = useState<'screen' | 'team' | 'tools' | 'data'>('screen');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -215,80 +238,92 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
+      <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-850">
+        <div className="p-5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/95">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-400 shadow-inner">
-              <Settings className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shadow-inner">
+              <Sliders className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-black text-slate-100 text-base flex items-center gap-2">
-                <span>App Defaults &amp; Preferences</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  User Settings
+              <h3 className="font-black text-zinc-100 text-base flex items-center gap-2">
+                <span>Coach Settings &amp; Sideline Tools</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  Carbon &amp; Gold
                 </span>
               </h3>
-              <p className="text-xs text-slate-400 font-medium">
+              <p className="text-xs text-zinc-400 font-medium">
                 {currentUserEmail ? (
                   <span>
-                    Saving startup preferences for <strong className="text-indigo-300 font-bold">{currentUserEmail}</strong>
+                    Saving preferences for <strong className="text-amber-400 font-bold">{currentUserEmail}</strong>
                   </span>
                 ) : (
-                  <span>Choose your default team and landing screen when launching the application</span>
+                  <span>Manage startup defaults, season calendar, visual schemes, and data backups</span>
                 )}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Tab Navigation (Default Screen vs Default Team) */}
-        <div className="px-5 pt-3 border-b border-slate-800 bg-slate-850/50 flex gap-2">
+        {/* Tab Navigation (Default Screen | Default Team | Sideline Tools | Data & Backup) */}
+        <div className="px-5 pt-3 border-b border-zinc-800 bg-zinc-900/50 flex gap-2 overflow-x-auto no-scrollbar">
           <button
             onClick={() => setActiveTab('screen')}
-            className={`px-4 py-2.5 rounded-t-xl text-xs font-black tracking-tight border-b-2 flex items-center gap-2 transition-all ${
+            className={`px-3.5 py-2 rounded-t-xl text-xs font-black tracking-tight border-b-2 flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'screen'
-                ? 'border-indigo-500 text-white bg-slate-800/80 shadow-xs'
-                : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                ? 'border-amber-400 text-amber-300 bg-zinc-850 shadow-xs'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Default Landing Screen</span>
-            {defaultScreen && (
-              <span className="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px] font-mono font-bold capitalize">
-                {defaultScreen === 'depth_chart' ? defaultDepthSubUnit || 'Offense' : defaultScreen}
-              </span>
-            )}
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Default Screen</span>
           </button>
           <button
             onClick={() => setActiveTab('team')}
-            className={`px-4 py-2.5 rounded-t-xl text-xs font-black tracking-tight border-b-2 flex items-center gap-2 transition-all ${
+            className={`px-3.5 py-2 rounded-t-xl text-xs font-black tracking-tight border-b-2 flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'team'
-                ? 'border-indigo-500 text-white bg-slate-800/80 shadow-xs'
-                : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                ? 'border-amber-400 text-amber-300 bg-zinc-850 shadow-xs'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
             }`}
           >
             <Users className="w-3.5 h-3.5 text-amber-400" />
-            <span>Default Startup Team</span>
-            {defaultTeamId && (
-              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">
-                {teams.find((t) => t.id === defaultTeamId)?.name || 'Selected'}
-              </span>
-            )}
+            <span>Default Team</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('tools')}
+            className={`px-3.5 py-2 rounded-t-xl text-xs font-black tracking-tight border-b-2 flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'tools'
+                ? 'border-amber-400 text-amber-300 bg-zinc-850 shadow-xs'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5 text-amber-400" />
+            <span>Season &amp; Themes</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('data')}
+            className={`px-3.5 py-2 rounded-t-xl text-xs font-black tracking-tight border-b-2 flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'data'
+                ? 'border-amber-400 text-amber-300 bg-zinc-850 shadow-xs'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+            }`}
+          >
+            <Cloud className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Backup &amp; Sync</span>
           </button>
         </div>
 
         {/* Toast Alert Banner */}
         {toastMessage && (
-          <div className="mx-5 mt-4 p-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
-            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+          <div className="mx-5 mt-4 p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+            <Check className="w-4 h-4 text-amber-400 shrink-0" />
             <span>{toastMessage}</span>
           </div>
         )}
@@ -298,81 +333,70 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
           {/* TAB 1: DEFAULT SCREEN SELECTION */}
           {activeTab === 'screen' && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3.5 flex items-center justify-between">
                 <div>
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">
-                    Select Default Startup Screen
+                  <h4 className="text-xs font-black text-zinc-200 uppercase tracking-wider">
+                    Startup Landing Page
                   </h4>
-                  <p className="text-[11px] text-slate-400">
-                    The app will automatically open to this screen every time you open or refresh.
+                  <p className="text-[11px] text-zinc-400">
+                    The chosen screen loads immediately when you open or refresh the app.
                   </p>
                 </div>
+                <span className="px-2.5 py-1 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/40 text-xs font-mono font-bold capitalize">
+                  {defaultScreen === 'depth_chart' ? defaultDepthSubUnit || 'Offense' : defaultScreen}
+                </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                 {availableScreenOptions.map((opt) => {
                   const Icon = opt.icon;
                   const isDefault = isCurrentScreenDefault(opt);
-                  const isCurrentlyActive =
-                    activeUnit === opt.id ||
-                    (opt.id === 'depth_chart' &&
-                      ['offense', 'defense', 'st', 'groups'].includes(activeUnit) &&
-                      activeUnit === opt.subUnit);
 
                   return (
                     <div
-                      key={`${opt.id}-${opt.subUnit || 'main'}`}
+                      key={`${opt.id}_${opt.subUnit || 'main'}`}
                       onClick={() => handleSelectDefaultScreen(opt.id, opt.subUnit)}
-                      className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between select-none ${
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none flex flex-col justify-between gap-2.5 ${
                         isDefault
-                          ? 'bg-indigo-950/40 border-indigo-500 shadow-md shadow-indigo-600/20 ring-1 ring-indigo-500/40'
-                          : 'bg-slate-800/70 border-slate-700/80 hover:bg-slate-800 hover:border-slate-600'
+                          ? 'bg-amber-950/30 border-amber-400 shadow-md shadow-amber-950/40 ring-1 ring-amber-400/50'
+                          : 'bg-zinc-900/80 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-850'
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
                           <div
-                            className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
                               isDefault
-                                ? 'bg-indigo-600 text-white border-indigo-400/50 shadow-xs'
-                                : 'bg-slate-900 text-slate-400 border-slate-700'
+                                ? 'bg-gradient-to-br from-amber-400 to-yellow-500 text-zinc-950 shadow-md font-black'
+                                : 'bg-zinc-800 text-zinc-300'
                             }`}
                           >
                             <Icon className="w-4 h-4" />
                           </div>
-                          <div className="min-w-0">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-tight">
+                          <div>
+                            <div className="font-black text-xs text-zinc-100 flex items-center gap-1.5">
+                              <span>{opt.name}</span>
+                              {opt.adminOnly && (
+                                <span className="px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 text-[8px] font-black uppercase">
+                                  Admin
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] font-bold text-amber-400/90 uppercase tracking-tight">
                               {opt.category}
-                            </span>
-                            <span className="font-bold text-xs text-slate-100 block truncate">
-                              {opt.name}
                             </span>
                           </div>
                         </div>
 
-                        {/* Status Badges */}
-                        <div className="flex items-center gap-1 shrink-0">
-                          {isDefault ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-400/20 text-amber-300 border border-amber-400/30 flex items-center gap-1 shadow-xs">
-                              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                              <span>Default</span>
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSelectDefaultScreen(opt.id, opt.subUnit);
-                              }}
-                              className="px-2 py-0.5 rounded-lg text-[10px] font-bold text-slate-400 hover:text-amber-300 hover:bg-slate-900 border border-transparent hover:border-slate-700 transition-colors"
-                            >
-                              Set Default
-                            </button>
-                          )}
-                        </div>
+                        {isDefault && (
+                          <span className="flex items-center gap-1 text-[10px] font-black text-zinc-950 bg-amber-400 px-2 py-0.5 rounded-full shadow-xs shrink-0">
+                            <Star className="w-2.5 h-2.5 fill-zinc-950" />
+                            <span>Active Default</span>
+                          </span>
+                        )}
                       </div>
 
-                      <p className="text-[11px] text-slate-400 leading-snug pl-10">
+                      <p className="text-[11px] text-zinc-400 leading-relaxed">
                         {opt.description}
                       </p>
                     </div>
@@ -385,93 +409,97 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
           {/* TAB 2: DEFAULT TEAM SELECTION */}
           {activeTab === 'team' && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3.5 flex items-center justify-between">
                 <div>
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">
-                    Select Default Startup Team
+                  <h4 className="text-xs font-black text-zinc-200 uppercase tracking-wider">
+                    Startup Default Team
                   </h4>
-                  <p className="text-[11px] text-slate-400">
-                    The chosen team's roster, schedule, depth charts and playbooks will load automatically on launch.
+                  <p className="text-[11px] text-zinc-400">
+                    Your preferred squad automatically selected upon launching.
                   </p>
                 </div>
+                {onOpenManageTeams && userRole === 'admin' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenManageTeams();
+                    }}
+                    className="px-3 py-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-amber-500/30 transition-all cursor-pointer"
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Manage Teams</span>
+                  </button>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                {teams.map((team) => {
-                  const isDefault = (defaultTeamId || teams[0]?.id) === team.id;
-                  const isCurrentlyActive = activeTeamId === team.id;
+              <div className="space-y-2.5">
+                {teams.map((t) => {
+                  const isDefault = defaultTeamId === t.id;
+                  const isCurrentActive = activeTeamId === t.id;
 
                   return (
                     <div
-                      key={team.id}
-                      onClick={() => handleSelectDefaultTeam(team.id)}
-                      className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between select-none ${
+                      key={t.id}
+                      onClick={() => handleSelectDefaultTeam(t.id)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                         isDefault
-                          ? 'bg-amber-950/30 border-amber-500 shadow-md shadow-amber-500/20 ring-1 ring-amber-500/40'
-                          : 'bg-slate-800/70 border-slate-700/80 hover:bg-slate-800 hover:border-slate-600'
+                          ? 'bg-amber-950/30 border-amber-400 shadow-md ring-1 ring-amber-400/50'
+                          : 'bg-zinc-900/80 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-850'
                       }`}
                     >
-                      <div>
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="flex items-center gap-2">
-                            <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center text-amber-400 shadow-inner">
-                              <span className="text-base">🏈</span>
-                            </div>
-                            <div>
-                              <h5 className="font-bold text-sm text-slate-100 leading-tight">
-                                {team.name}
-                              </h5>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                {team.ageGroup && (
-                                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                                    {team.ageGroup}
-                                  </span>
-                                )}
-                                {team.season && (
-                                  <span className="text-[10px] text-slate-400 font-medium">
-                                    {team.season}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Star Default Badge / Button */}
-                          {isDefault ? (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-400/20 text-amber-300 border border-amber-400/30 flex items-center gap-1 shadow-xs">
-                              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                              <span>Default Team</span>
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSelectDefaultTeam(team.id);
-                              }}
-                              className="px-2.5 py-1 rounded-xl text-[11px] font-bold text-slate-300 hover:text-amber-300 bg-slate-900 hover:bg-slate-750 border border-slate-700 hover:border-amber-500/40 transition-all flex items-center gap-1"
-                            >
-                              <Star className="w-3 h-3 text-slate-400" />
-                              <span>Set Default</span>
-                            </button>
-                          )}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 border ${
+                            isDefault
+                              ? 'bg-amber-400 text-zinc-950 border-amber-300 shadow-md'
+                              : 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                          }`}
+                        >
+                          🏈
                         </div>
-
-                        {team.headCoachName && (
-                          <p className="text-xs text-slate-400 mt-2">
-                            Head Coach: <strong className="text-slate-200">{team.headCoachName}</strong>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-sm text-zinc-100 truncate">
+                              {t.name}
+                            </span>
+                            {t.ageGroup && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
+                                {t.ageGroup}
+                              </span>
+                            )}
+                            {isCurrentActive && (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                Viewing Now
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-zinc-400 truncate">
+                            {t.season ? `${t.season} Season • ` : ''}
+                            {t.headCoachName
+                              ? `Coach: ${t.headCoachName}`
+                              : 'Roster & Depth Charts'}
                           </p>
-                        )}
+                        </div>
                       </div>
 
-                      <div className="mt-3 pt-3 border-t border-slate-700/60 flex items-center justify-between text-[11px]">
-                        <span className={isCurrentlyActive ? 'text-indigo-400 font-bold' : 'text-slate-500'}>
-                          {isCurrentlyActive ? '● Active Session Team' : '○ Standby Team'}
-                        </span>
-                        {isDefault && (
-                          <span className="text-amber-400 font-bold flex items-center gap-1">
-                            <Check className="w-3.5 h-3.5" /> Selected Startup Default
-                          </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isDefault ? (
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 text-zinc-950 font-black text-xs shadow-xs">
+                            <Star className="w-3.5 h-3.5 fill-zinc-950" />
+                            <span>Default Team</span>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectDefaultTeam(t.id);
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 text-xs font-bold transition-all"
+                          >
+                            Set Default
+                          </button>
                         )}
                       </div>
                     </div>
@@ -480,10 +508,233 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* TAB 3: SEASON & THEMES QUICK TOOLS */}
+          {activeTab === 'tools' && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Season Configuration Tool */}
+                {onOpenSeasonConfigModal && (
+                  <div
+                    onClick={() => {
+                      onClose();
+                      onOpenSeasonConfigModal();
+                    }}
+                    className="p-4 rounded-2xl bg-zinc-900/90 border border-zinc-800 hover:border-amber-500/50 hover:bg-zinc-850 transition-all cursor-pointer flex flex-col justify-between gap-3 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <Calendar className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-zinc-100 group-hover:text-amber-300 transition-colors">
+                          Configure Season &amp; Weeks
+                        </h4>
+                        <p className="text-[11px] text-zinc-400">
+                          Set total regular season weeks, preseason dates, and playoffs
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1 self-end">
+                      <span>Open Calendar Setup</span>
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                )}
+
+                {/* Theme Schemes Gallery Tool */}
+                {onOpenThemeGallery && (
+                  <div
+                    onClick={() => {
+                      onClose();
+                      onOpenThemeGallery();
+                    }}
+                    className="p-4 rounded-2xl bg-zinc-900/90 border border-zinc-800 hover:border-amber-500/50 hover:bg-zinc-850 transition-all cursor-pointer flex flex-col justify-between gap-3 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <Sparkles className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-zinc-100 group-hover:text-amber-300 transition-colors">
+                          Sideline Visual Themes
+                        </h4>
+                        <p className="text-[11px] text-zinc-400">
+                          Preview 5 varsity presets: Carbon Gold, Electric Volt, Cyber Cobalt &amp; more
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1 self-end">
+                      <span>Theme Showcase</span>
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                )}
+
+                {/* Copy Week Data */}
+                {onOpenCopyWeekModal && (
+                  <div
+                    onClick={() => {
+                      onClose();
+                      onOpenCopyWeekModal();
+                    }}
+                    className="p-4 rounded-2xl bg-zinc-900/90 border border-zinc-800 hover:border-amber-500/50 hover:bg-zinc-850 transition-all cursor-pointer flex flex-col justify-between gap-3 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <Copy className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-zinc-100 group-hover:text-cyan-300 transition-colors">
+                          Clone / Copy Week Lineups
+                        </h4>
+                        <p className="text-[11px] text-zinc-400">
+                          Duplicate offensive/defensive depth charts and formations into next week
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-bold text-cyan-400 flex items-center gap-1 self-end">
+                      <span>Launch Week Cloner</span>
+                      <Copy className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                )}
+
+                {/* Manage Staff & Teams */}
+                {onOpenManageTeams && userRole === 'admin' && (
+                  <div
+                    onClick={() => {
+                      onClose();
+                      onOpenManageTeams();
+                    }}
+                    className="p-4 rounded-2xl bg-zinc-900/90 border border-zinc-800 hover:border-amber-500/50 hover:bg-zinc-850 transition-all cursor-pointer flex flex-col justify-between gap-3 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <Users className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-zinc-100 group-hover:text-indigo-300 transition-colors">
+                          Manage Staff &amp; Team Rosters
+                        </h4>
+                        <p className="text-[11px] text-zinc-400">
+                          Add assistant coaches, assign team privileges, and edit age groups
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-bold text-indigo-400 flex items-center gap-1 self-end">
+                      <span>Open Staff Directory</span>
+                      <Users className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: DATA BACKUP & CLOUD SYNC */}
+          {activeTab === 'data' && (
+            <div className="space-y-3">
+              <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Cloud className="w-4 h-4 text-emerald-400" />
+                    <h4 className="text-xs font-black text-zinc-100 uppercase tracking-wider">
+                      Live Cloud Sync &amp; Storage
+                    </h4>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Real-Time Database
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400">
+                  All changes to rosters, formations, depth charts, wristband callouts, and practice scripts are stored persistently in cloud storage.
+                </p>
+
+                <div className="flex items-center gap-2 pt-1 flex-wrap">
+                  {onForceSave && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onForceSave();
+                        showToast('✓ Forced immediate full cloud sync');
+                      }}
+                      className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
+                    >
+                      <Cloud className="w-3.5 h-3.5" />
+                      <span>Force Save to Cloud</span>
+                    </button>
+                  )}
+
+                  {onForceRefresh && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onForceRefresh();
+                        showToast('✓ Pulled latest data from cloud');
+                      }}
+                      className="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs rounded-xl flex items-center gap-1.5 border border-zinc-700 transition-all active:scale-95 cursor-pointer"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Refresh / Pull Cloud</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Offline Backup & File Archive */}
+              {userRole === 'admin' && (
+                <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 space-y-3">
+                  <h4 className="text-xs font-black text-zinc-100 uppercase tracking-wider flex items-center gap-2">
+                    <Download className="w-4 h-4 text-amber-400" />
+                    <span>File Backup &amp; Offline Archive</span>
+                  </h4>
+                  <p className="text-xs text-zinc-400">
+                    Download a full snapshot of your playbooks, depth charts, rosters, and practice itineraries as a portable .json file.
+                  </p>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {onExportData && (
+                      <button
+                        type="button"
+                        onClick={onExportData}
+                        className="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-amber-300 font-bold text-xs rounded-xl flex items-center gap-1.5 border border-amber-500/40 hover:border-amber-400 transition-all active:scale-95 cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Export Backup (.json)</span>
+                      </button>
+                    )}
+
+                    {onImportClick && (
+                      <button
+                        type="button"
+                        onClick={onImportClick}
+                        className="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-cyan-300 font-bold text-xs rounded-xl flex items-center gap-1.5 border border-cyan-500/40 hover:border-cyan-400 transition-all active:scale-95 cursor-pointer"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Import Backup (.json)</span>
+                      </button>
+                    )}
+
+                    {onResetData && (
+                      <button
+                        type="button"
+                        onClick={onResetData}
+                        className="px-3.5 py-2 bg-rose-950/40 hover:bg-rose-900/50 text-rose-300 font-bold text-xs rounded-xl flex items-center gap-1.5 border border-rose-500/40 transition-all active:scale-95 cursor-pointer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Reset App State</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-850 flex items-center justify-between">
+        <div className="p-4 border-t border-zinc-800 bg-zinc-900/95 flex items-center justify-between gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => {
@@ -491,15 +742,16 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
               if (teams.length > 0) onSetDefaultTeam(teams[0].id);
               showToast('Reset to standard defaults: Season Schedule & First Team');
             }}
-            className="px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-rose-400 bg-slate-900 border border-slate-700 rounded-xl flex items-center gap-1.5 hover:border-rose-500/40 transition-colors"
+            className="px-3 py-2 text-xs font-bold text-zinc-400 hover:text-rose-400 bg-zinc-900 border border-zinc-700 rounded-xl flex items-center gap-1.5 hover:border-rose-500/40 transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset to Standard Defaults</span>
+            <span>Reset Defaults</span>
           </button>
+
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+            className="px-6 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-zinc-950 font-black text-xs rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/25 active:scale-95 transition-all cursor-pointer"
           >
             <Check className="w-4 h-4" />
             <span>Done</span>
