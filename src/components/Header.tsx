@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   Sparkles,
   Zap,
+  Smartphone,
 } from 'lucide-react';
 import { UserRole, SeasonConfig, Team, formatWeekLabel } from '../types';
 import { getAutoActiveWeek, getSeasonWeekList, getWeekDisplayLabelWithOpponent } from '../utils/seasonWeekUtils';
@@ -42,6 +43,7 @@ interface HeaderProps {
   onOpenCopyWeekModal: () => void;
   activeUnit?: string;
   onNavigateToSchedule?: () => void;
+  onNavigateToMobileHub?: () => void;
   seasonConfig?: SeasonConfig;
   onOpenSeasonConfigModal?: () => void;
   teams?: Team[];
@@ -75,6 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCopyWeekModal,
   activeUnit,
   onNavigateToSchedule,
+  onNavigateToMobileHub,
   seasonConfig,
   onOpenSeasonConfigModal,
   teams = [],
@@ -197,8 +200,23 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
-        {/* Right: Sync Status & Consolidated Mobile Menu Button */}
+        {/* Right: Quick HUD & Consolidated Mobile Menu Button */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {onNavigateToMobileHub && (
+            <button
+              type="button"
+              onClick={onNavigateToMobileHub}
+              className={`px-2 py-1 rounded-xl text-xs font-black flex items-center gap-1 transition-all cursor-pointer border active:scale-95 ${
+                activeUnit === 'mobile_hub'
+                  ? 'bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-600/40'
+                  : 'bg-slate-900 text-indigo-300 border-slate-700 hover:border-indigo-500/50'
+              }`}
+              title="Open Mobile Coach HUD"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>HUD</span>
+            </button>
+          )}
           <div
             title={syncStatus.text}
             className="w-2.5 h-2.5 rounded-full animate-pulse shadow-sm shadow-indigo-400/50"
@@ -314,6 +332,22 @@ export const Header: React.FC<HeaderProps> = ({
               {userRole === 'admin' ? 'COACH ADMIN' : 'VIEWER'}
             </span>
           </div>
+
+          {/* MOBILE HUD SWITCHER BUTTON (Desktop) */}
+          {onNavigateToMobileHub && (
+            <button
+              onClick={onNavigateToMobileHub}
+              title="Open Mobile Field HUD (Practice Plan, Starters, Attendance, Guides)"
+              className={`px-3 py-1.5 text-xs font-black rounded-xl flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer border ${
+                activeUnit === 'mobile_hub'
+                  ? 'bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-600/30'
+                  : 'bg-slate-900 hover:bg-slate-850 text-indigo-300 border-slate-700 hover:border-indigo-500/50'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Mobile HUD</span>
+            </button>
+          )}
 
           {/* UNIFIED "SETTINGS & TOOLS" BUTTON (Consolidates Defaults, Themes, Season Config, Backup, Sync) */}
           {onOpenPreferencesModal && (
@@ -511,6 +545,24 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Quick Actions List */}
             <div className="space-y-2 text-xs">
+              {/* Jump to Mobile HUD */}
+              {onNavigateToMobileHub && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onNavigateToMobileHub();
+                  }}
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-indigo-950/40 hover:bg-indigo-900/50 text-indigo-200 font-bold border border-indigo-500/40 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Smartphone className="w-4 h-4 text-indigo-400" />
+                    <span>Open Mobile Field HUD</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-indigo-400" />
+                </button>
+              )}
+
               {/* Force Save */}
               {onForceSave && (
                 <button

@@ -5132,6 +5132,7 @@ function mergeRemoteWeeklyData(
         syncStatus={syncStatus}
         activeUnit={activeUnit}
         onNavigateToSchedule={() => setActiveUnit('schedule')}
+        onNavigateToMobileHub={() => setActiveUnit('mobile_hub')}
         onSignOut={() => {
           const { auth } = getFirebaseServices();
           if (auth) auth.signOut().then(() => window.location.reload());
@@ -5219,11 +5220,18 @@ function mergeRemoteWeeklyData(
                 }}
                 onQuickAttendanceSave={(rec) => {
                   setAttendanceLogs((prev) => {
-                    const updated = [rec, ...prev];
+                    // Update or prepend record for the date
+                    const filtered = prev.filter((r) => r.id !== rec.id && r.date !== rec.date);
+                    const updated = [rec, ...filtered];
                     safeJSONSet('footballAttendanceLogs', updated);
                     return updated;
                   });
                   saveStateToStorage('attendance');
+                }}
+                attendanceLogs={attendanceLogs}
+                onSelectPractice={(id) => {
+                  setCurrentPracticeId(id);
+                  safeJSONSet('footballCurrentPracticeId', id);
                 }}
                 onOpenPreferencesModal={() => setIsPreferencesModalOpen(true)}
                 onOpenScheduleModal={() => setActiveUnit('schedule')}

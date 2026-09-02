@@ -44,7 +44,7 @@ export interface NavTabItem {
 }
 
 export const DEFAULT_NAV_TABS: NavTabItem[] = [
-  { id: 'mobile_hub', label: '📱 Mobile Hub', icon: Smartphone },
+  { id: 'mobile_hub', label: '📱 Mobile HUD', icon: Smartphone },
   { id: 'schedule', label: '📅 Schedule', icon: Calendar },
   { id: 'compliance', label: '⚡ Compliance & Hours', icon: Zap },
   { id: 'depth_chart', label: '📋 Depth Chart', icon: ClipboardList },
@@ -78,6 +78,11 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
   const [tabOrder, setTabOrder] = useState<string[]>(() => {
     const saved = safeJSONParse<string[]>('footballTopTabOrder', []);
     if (saved && Array.isArray(saved) && saved.length > 0) {
+      const allDefaultIds = DEFAULT_NAV_TABS.map((t) => t.id);
+      const missing = allDefaultIds.filter((id) => !saved.includes(id));
+      if (missing.length > 0) {
+        return [...missing, ...saved];
+      }
       return saved;
     }
     return DEFAULT_NAV_TABS.map((t) => t.id);
@@ -222,8 +227,8 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
   return (
     <>
       {/* 1. TOP STICKY NAVIGATION BAR */}
-      <div className="hidden md:block bg-slate-950/90 backdrop-blur-md border-b border-slate-800 sticky top-[108px] z-30 shadow-md print:hidden">
-        <div className="max-w-[1700px] mx-auto px-4 py-2 flex items-center justify-between gap-3">
+      <div className="bg-slate-950/95 backdrop-blur-md border-b border-slate-800 sticky top-0 md:top-[108px] z-30 shadow-md print:hidden">
+        <div className="max-w-[1700px] mx-auto px-3 md:px-4 py-1.5 md:py-2 flex items-center justify-between gap-2 md:gap-3">
           {/* Scrollable Nav Tabs List */}
           <div className="flex gap-2 overflow-x-auto no-scrollbar items-center py-0.5 flex-1 min-w-0">
             {visibleTopBarItems.map((item) => {

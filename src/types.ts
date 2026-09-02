@@ -55,6 +55,7 @@ export interface SeasonConfig {
 
 export interface AttendanceRecord {
   id: string;
+  teamId?: string; // Links attendance log to a specific team
   date: string;
   week: string;
   title: string;
@@ -87,6 +88,7 @@ export interface ScheduleEvent {
   time?: string; // alias for startTime
   dayOfWeek?: string;
   endTime?: string; // e.g. "11:00" or "19:00"
+  durationMinutes?: number; // event duration in minutes
   location: string; // e.g. "Mahopac High School - Turf Field"
   locationType?: 'home' | 'away' | 'neutral';
   opponent?: string; // e.g. "Carmel Rams 10U" (for games/scrimmages)
@@ -348,6 +350,10 @@ export interface PracticePeriod {
   category: string;
   format: 'static' | 'rotating';
   stations: PracticeStation[];
+  name?: string;
+  title?: string;
+  duration?: number;
+  durationMinutes?: number;
 }
 
 export interface PracticePlan {

@@ -34,6 +34,12 @@ import {
   Eye,
   Code,
   Maximize2,
+  Minimize2,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Download,
+  Copy,
   FileCode,
   Layers,
 } from 'lucide-react';
@@ -237,6 +243,8 @@ interface MobileHubViewProps {
   onSetDefaultScreen: (screen: UnitType) => void;
   onNavigateToUnit: (unit: UnitType, subUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage') => void;
   onQuickAttendanceSave?: (record: AttendanceRecord) => void;
+  attendanceLogs?: AttendanceRecord[];
+  onSelectPractice?: (id: string) => void;
   onOpenPreferencesModal?: () => void;
   onOpenScheduleModal?: () => void;
   onOpenThemeGallery?: () => void;
@@ -261,6 +269,35 @@ const getPlayerPos = (p: RosterPlayer): string => {
   return p.primaryPosition || p.offensivePosition || p.defensivePosition || 'ATH';
 };
 
+const getLocalDateString = (d: Date = new Date()): string => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const formatFullDateLabel = (dateStr: string): string => {
+  if (!dateStr) return '';
+  try {
+    const parts = dateStr.split('T')[0].split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const d = new Date(year, month, day);
+      return d.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    }
+  } catch {
+    // fallback
+  }
+  return dateStr;
+};
+
 export const MobileHubView: React.FC<MobileHubViewProps> = ({
   activeTeam,
   teams,
@@ -278,6 +315,8 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
   onSetDefaultScreen,
   onNavigateToUnit,
   onQuickAttendanceSave,
+  attendanceLogs = [],
+  onSelectPractice,
   onOpenPreferencesModal,
   onOpenScheduleModal,
   onOpenThemeGallery,
@@ -301,19 +340,39 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
 }) => {
   // Mobile Hub active tab: 'starters' | 'roster' | 'attendance'
   const [hubTab, setHubTab] = useState<'starters' | 'roster' | 'attendance'>('starters');
-  const [starterUnit, setStarterUnit] = useState<'offense' | 'defense'>('offense');
+  
+  // Starters state: Unit, Team String & Formation
+  const [starterUnit, setStarterUnit] = useState<'offense' | 'defense' | 'st'>('offense');
+  const [starterString, setStarterString] = useState<'black' | 'gold' | 'blue' | 'sub' | 'matrix'>('black');
+  const [selectedFormationId, setSelectedFormationId] = useState<string>('');
+
   const [playerSearch, setPlayerSearch] = useState('');
+
+  // Attendance Date state (defaults to today)
+  const [attendanceDate, setAttendanceDate] = useState<string>(() => getLocalDateString());
   const [attendancePresent, setAttendancePresent] = useState<Set<string>>(() => {
-    return new Set(roster.map((r) => r.id || r.num));
+    return new Set(roster.map((r) => r.num));
   });
   const [attendanceSavedToast, setAttendanceSavedToast] = useState(false);
+  const [attendanceToastMessage, setAttendanceToastMessage] = useState('');
   const [selectedPlayerModal, setSelectedPlayerModal] = useState<RosterPlayer | null>(null);
 
+  // When attendanceDate changes, load existing log if available
+  React.useEffect(() => {
+    const existing = attendanceLogs.find(
+      (log) => log.date === attendanceDate && (!log.teamId || log.teamId === activeTeam.id)
+    );
+    if (existing && Array.isArray(existing.presentPlayerNums)) {
+      setAttendancePresent(new Set(existing.presentPlayerNums));
+    } else {
+      setAttendancePresent(new Set(roster.map((r) => r.num)));
+    }
+  }, [attendanceDate, attendanceLogs, activeTeam.id, roster]);
+
   // Guides section state
-  const [selectedGuideCategory, setSelectedGuideCategory] = useState<string>(() => {
-    return activeGuideMain || (guideOrder.main && guideOrder.main[0]) || 'Offense';
-  });
+  const [selectedGuideCategory, setSelectedGuideCategory] = useState<string>('all');
   const [guideSearchTerm, setGuideSearchTerm] = useState('');
+  const [guideZoom, setGuideZoom] = useState<number>(100);
   const [quickViewGuideModal, setQuickViewGuideModal] = useState<{
     title: string;
     category: string;
@@ -329,46 +388,53 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
     return Object.keys(guideTree || {});
   }, [guideOrder, guideTree]);
 
-  // Documents under the selected category (or filtered by search term)
+  // Flattened list of ALL available guides across categories
+  const allGuidesList = useMemo(() => {
+    const list: { category: string; name: string; content: string }[] = [];
+    guideCategories.forEach((cat) => {
+      const subs = (guideOrder?.sub && guideOrder.sub[cat]) || (guideTree[cat] ? Object.keys(guideTree[cat]) : []);
+      subs.forEach((docName) => {
+        list.push({
+          category: cat,
+          name: docName,
+          content: guideTree[cat]?.[docName] || '',
+        });
+      });
+    });
+    return list;
+  }, [guideCategories, guideOrder, guideTree]);
+
+  // Documents under the selected category (or all if 'all' is selected), with search applied
   const currentCategoryDocs = useMemo(() => {
-    const list = (guideOrder?.sub && guideOrder.sub[selectedGuideCategory]) ||
-      (guideTree[selectedGuideCategory] ? Object.keys(guideTree[selectedGuideCategory]) : []);
-    
-    if (!guideSearchTerm.trim()) {
-      return list.map((docName) => ({
+    let list: { category: string; name: string; content: string }[] = [];
+
+    if (selectedGuideCategory === 'all') {
+      list = allGuidesList;
+    } else {
+      const subs = (guideOrder?.sub && guideOrder.sub[selectedGuideCategory]) ||
+        (guideTree[selectedGuideCategory] ? Object.keys(guideTree[selectedGuideCategory]) : []);
+      list = subs.map((docName) => ({
         category: selectedGuideCategory,
         name: docName,
         content: guideTree[selectedGuideCategory]?.[docName] || '',
       }));
     }
+    
+    if (!guideSearchTerm.trim()) {
+      return list;
+    }
 
-    // If search term is present, search across all categories
+    // If search term is present, filter across name and category
     const term = guideSearchTerm.toLowerCase().trim();
-    const results: { category: string; name: string; content: string }[] = [];
-    guideCategories.forEach((cat) => {
-      const subs = (guideOrder?.sub && guideOrder.sub[cat]) || (guideTree[cat] ? Object.keys(guideTree[cat]) : []);
-      subs.forEach((docName) => {
-        if (docName.toLowerCase().includes(term) || cat.toLowerCase().includes(term)) {
-          results.push({
-            category: cat,
-            name: docName,
-            content: guideTree[cat]?.[docName] || '',
-          });
-        }
-      });
-    });
-    return results;
-  }, [selectedGuideCategory, guideTree, guideOrder, guideSearchTerm, guideCategories]);
+    return allGuidesList.filter((doc) =>
+      doc.name.toLowerCase().includes(term) || doc.category.toLowerCase().includes(term)
+    );
+  }, [selectedGuideCategory, allGuidesList, guideTree, guideOrder, guideSearchTerm]);
 
   // Total count of guides across all categories
   const totalGuidesCount = useMemo(() => {
-    let count = 0;
-    guideCategories.forEach((cat) => {
-      const subs = (guideOrder?.sub && guideOrder.sub[cat]) || (guideTree[cat] ? Object.keys(guideTree[cat]) : []);
-      count += subs.length;
-    });
-    return count;
-  }, [guideCategories, guideOrder, guideTree]);
+    return allGuidesList.length;
+  }, [allGuidesList]);
 
   // Helper to open a guide in the studio
   const handleOpenGuideInStudio = (category: string, docName: string) => {
@@ -379,6 +445,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
 
   // Helper to preview guide content in modal
   const handlePreviewGuide = (category: string, docName: string, content: string) => {
+    setGuideZoom(100);
     setQuickViewGuideModal({
       title: docName,
       category,
@@ -389,6 +456,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
 
   // Helper to preview template
   const handlePreviewStarterTemplate = (tpl: typeof QUICK_GUIDE_TEMPLATES[0]) => {
+    setGuideZoom(100);
     setQuickViewGuideModal({
       title: tpl.title,
       category: tpl.category,
@@ -397,79 +465,230 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
     });
   };
 
-  // Determine Next / Upcoming Event for Active Team
-  const upcomingEvent = useMemo(() => {
+  // Helper to navigate prev/next inside the reader modal
+  const handleNavigateReaderGuide = (direction: -1 | 1) => {
+    if (!quickViewGuideModal) return;
+    if (quickViewGuideModal.isStarterTemplate) return;
+
+    const currentIdx = allGuidesList.findIndex(
+      (g) => g.category === quickViewGuideModal.category && g.name === quickViewGuideModal.title
+    );
+    if (currentIdx === -1) return;
+
+    let targetIdx = currentIdx + direction;
+    if (targetIdx < 0) targetIdx = allGuidesList.length - 1;
+    if (targetIdx >= allGuidesList.length) targetIdx = 0;
+
+    const targetGuide = allGuidesList[targetIdx];
+    if (targetGuide) {
+      setQuickViewGuideModal({
+        title: targetGuide.name,
+        category: targetGuide.category,
+        content: targetGuide.content,
+        isStarterTemplate: false,
+      });
+    }
+  };
+
+  // =========================================================================
+  // 1. PRACTICE PLAN & CURRENT DAY SCHEDULE RESOLVER
+  // "on the mobile hub instead of showing practice with directions can you current
+  // days practice plan link(like the next up of the schedule). It should show this
+  // until after the practice is over."
+  // =========================================================================
+  const todayStr = useMemo(() => getLocalDateString(new Date()), []);
+
+  const todayPracticeInfo = useMemo(() => {
+    const now = new Date();
+
+    // 1. Look for today's practice event in schedule
+    const todayEvent = (scheduleEvents || []).find((e) => {
+      if (!e || !e.date || e.isCancelled) return false;
+      const cleanDate = e.date.split('T')[0];
+      return cleanDate === todayStr && e.type === 'practice';
+    });
+
+    // 2. Look for today's practice plan
+    const todayPlan = (practicePlans || []).find((p) => {
+      if (!p || !p.date) return false;
+      return p.date.split('T')[0] === todayStr;
+    }) || (todayEvent?.linkedPracticePlanId 
+      ? (practicePlans || []).find((p) => p.id === todayEvent.linkedPracticePlanId)
+      : null);
+
+    if (!todayEvent && !todayPlan) {
+      return null;
+    }
+
+    // Determine start and end time
+    const timeStr = todayEvent?.time || '5:30 PM';
+    const durationMinutes = todayEvent?.durationMinutes || 90;
+
+    let isOver = false;
+    let isLiveNow = false;
+
+    try {
+      const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+      if (match) {
+        let hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        const meridiem = (match[3] || '').toUpperCase();
+        if (meridiem === 'PM' && hours < 12) hours += 12;
+        if (meridiem === 'AM' && hours === 12) hours = 0;
+
+        const startDt = new Date();
+        startDt.setHours(hours, minutes, 0, 0);
+
+        const endDt = new Date(startDt.getTime() + durationMinutes * 60 * 1000);
+
+        if (now.getTime() > endDt.getTime()) {
+          isOver = true;
+        } else if (now.getTime() >= startDt.getTime() && now.getTime() <= endDt.getTime()) {
+          isLiveNow = true;
+        }
+      }
+    } catch {
+      isOver = false;
+    }
+
+    const planToUse = todayPlan || (practicePlans.length > 0 ? practicePlans[0] : null);
+
+    return {
+      event: todayEvent,
+      plan: planToUse,
+      timeStr,
+      durationMinutes,
+      isOver,
+      isLiveNow,
+    };
+  }, [scheduleEvents, practicePlans, todayStr]);
+
+  // Determine Next / Upcoming Event for Active Team (fallback when today's practice is over or absent)
+  const nextUpcomingEvent = useMemo(() => {
     if (!scheduleEvents || scheduleEvents.length === 0) return null;
     const now = new Date();
     const sorted = [...scheduleEvents]
-      .filter((e) => e && e.date)
+      .filter((e) => e && e.date && !e.isCancelled)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    const cleanWk = currentWeek.replace(/^Week\s+/i, '').trim();
-    const currentWeekEvent = sorted.find((e) => {
-      const eWk = (e.week || '').replace(/^Week\s+/i, '').trim();
-      return eWk === cleanWk;
+    const futureEvents = sorted.filter((e) => {
+      const eDate = new Date(e.date + 'T23:59:59');
+      return eDate.getTime() >= now.getTime();
     });
-    if (currentWeekEvent) return currentWeekEvent;
 
-    const future = sorted.find((e) => new Date(e.date + 'T23:59:59').getTime() >= now.getTime());
-    return future || sorted[0];
-  }, [scheduleEvents, currentWeek]);
+    if (futureEvents.length > 0) {
+      // If today's practice is over, skip today's practice event
+      if (todayPracticeInfo?.isOver) {
+        const next = futureEvents.find((e) => e.date.split('T')[0] !== todayStr);
+        if (next) return next;
+      }
+      return futureEvents[0];
+    }
 
-  // Starters preview calculation for Offense & Defense
-  const offensiveFormation = useMemo(() => {
-    return formations.find((f) => f && f.unit === 'offense') || formations[0];
-  }, [formations]);
+    return sorted[sorted.length - 1] || null;
+  }, [scheduleEvents, todayPracticeInfo, todayStr]);
 
-  const defensiveFormation = useMemo(() => {
-    return formations.find((f) => f && f.unit === 'defense') || formations[1];
-  }, [formations]);
+  // Handler to jump directly to a practice plan
+  const handleOpenPracticePlan = (planId?: string) => {
+    if (planId && onSelectPractice) {
+      onSelectPractice(planId);
+    } else if (practicePlans[0]?.id && onSelectPractice) {
+      onSelectPractice(practicePlans[0].id);
+    }
+    onNavigateToUnit('practice');
+  };
 
-  const offenseStarters = useMemo(() => {
-    if (!offensiveFormation || !offensiveFormation.rows) return [];
-    const starters: { posName: string; playerName: string; playerNum: string }[] = [];
-    offensiveFormation.rows.forEach((row) => {
+  // =========================================================================
+  // 2. TEAM STARTERS BREAKDOWN (Black, Gold, Blue, and Sub Section)
+  // =========================================================================
+  const unitFormations = useMemo(() => {
+    return formations.filter((f) => f && f.unit === starterUnit);
+  }, [formations, starterUnit]);
+
+  // Keep selected formation in sync with the current unit
+  const activeFormation = useMemo(() => {
+    if (selectedFormationId) {
+      const found = unitFormations.find((f) => f.id === selectedFormationId);
+      if (found) return found;
+    }
+    return unitFormations[0] || formations.find((f) => f.unit === starterUnit) || formations[0];
+  }, [unitFormations, selectedFormationId, formations, starterUnit]);
+
+  // Extract all position depth slots for the active formation
+  const formationPositionsData = useMemo(() => {
+    if (!activeFormation || !activeFormation.rows) return [];
+
+    const list: {
+      posId: string;
+      posName: string;
+      rowLabel?: string;
+      blackPlayer: { num: string; name: string; player?: RosterPlayer } | null;
+      goldPlayer: { num: string; name: string; player?: RosterPlayer } | null;
+      bluePlayer: { num: string; name: string; player?: RosterPlayer } | null;
+      subPlayers: { num: string; name: string; depthIdx: number; player?: RosterPlayer }[];
+    }[] = [];
+
+    activeFormation.rows.forEach((row) => {
       if (!row || !row.positions) return;
       row.positions.forEach((pos) => {
         if (!pos) return;
         const assigned = depthChart[pos.id] || [];
-        const topItem = assigned[0];
-        const topNum = typeof topItem === 'string' ? topItem : topItem?.playerNum || topItem?.num || '';
-        if (topNum) {
-          const p = roster.find((r) => r.num === topNum);
-          starters.push({
-            posName: pos.name,
-            playerName: p ? getPlayerFullName(p) : `#${topNum}`,
-            playerNum: topNum,
-          });
-        }
-      });
-    });
-    return starters;
-  }, [offensiveFormation, depthChart, roster]);
 
-  const defenseStarters = useMemo(() => {
-    if (!defensiveFormation || !defensiveFormation.rows) return [];
-    const starters: { posName: string; playerName: string; playerNum: string }[] = [];
-    defensiveFormation.rows.forEach((row) => {
-      if (!row || !row.positions) return;
-      row.positions.forEach((pos) => {
-        if (!pos) return;
-        const assigned = depthChart[pos.id] || [];
-        const topItem = assigned[0];
-        const topNum = typeof topItem === 'string' ? topItem : topItem?.playerNum || topItem?.num || '';
-        if (topNum) {
-          const p = roster.find((r) => r.num === topNum);
-          starters.push({
-            posName: pos.name,
-            playerName: p ? getPlayerFullName(p) : `#${topNum}`,
-            playerNum: topNum,
-          });
+        const getPlayerDetails = (item: any) => {
+          if (!item) return null;
+          const num = typeof item === 'string' ? item : item.playerNum || item.num || '';
+          if (!num) return null;
+          const p = roster.find((r) => r.num === num);
+          return {
+            num,
+            name: p ? getPlayerFullName(p) : `#${num}`,
+            player: p,
+          };
+        };
+
+        const blackPlayer = getPlayerDetails(assigned[0]);
+        const goldPlayer = getPlayerDetails(assigned[1]);
+        const bluePlayer = getPlayerDetails(assigned[2]);
+        const subPlayers: { num: string; name: string; depthIdx: number; player?: RosterPlayer }[] = [];
+
+        for (let i = 3; i < assigned.length; i++) {
+          const detail = getPlayerDetails(assigned[i]);
+          if (detail) {
+            subPlayers.push({ ...detail, depthIdx: i });
+          }
         }
+
+        list.push({
+          posId: pos.id,
+          posName: pos.name,
+          rowLabel: row.label,
+          blackPlayer,
+          goldPlayer,
+          bluePlayer,
+          subPlayers,
+        });
       });
     });
-    return starters;
-  }, [defensiveFormation, depthChart, roster]);
+
+    return list;
+  }, [activeFormation, depthChart, roster]);
+
+  // Counts of assigned players across teams/strings
+  const stringCounts = useMemo(() => {
+    let blackCount = 0;
+    let goldCount = 0;
+    let blueCount = 0;
+    let subCount = 0;
+
+    formationPositionsData.forEach((pos) => {
+      if (pos.blackPlayer) blackCount++;
+      if (pos.goldPlayer) goldCount++;
+      if (pos.bluePlayer) blueCount++;
+      subCount += pos.subPlayers.length;
+    });
+
+    return { blackCount, goldCount, blueCount, subCount, totalPositions: formationPositionsData.length };
+  }, [formationPositionsData]);
 
   // Filtered Roster for Quick Search
   const filteredRoster = useMemo(() => {
@@ -486,24 +705,35 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
     });
   }, [roster, playerSearch]);
 
-  const handleToggleAttendance = (playerId: string) => {
+  const handleToggleAttendance = (playerNum: string) => {
     setAttendancePresent((prev) => {
       const next = new Set(prev);
-      if (next.has(playerId)) {
-        next.delete(playerId);
+      if (next.has(playerNum)) {
+        next.delete(playerNum);
       } else {
-        next.add(playerId);
+        next.add(playerNum);
       }
       return next;
     });
   };
 
   const handleSelectAllAttendance = () => {
-    setAttendancePresent(new Set(roster.map((r) => r.id || r.num)));
+    setAttendancePresent(new Set(roster.map((r) => r.num)));
   };
 
   const handleClearAllAttendance = () => {
     setAttendancePresent(new Set());
+  };
+
+  const handleShiftAttendanceDate = (days: number) => {
+    try {
+      const parts = attendanceDate.split('-');
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      d.setDate(d.getDate() + days);
+      setAttendanceDate(getLocalDateString(d));
+    } catch {
+      // ignore
+    }
   };
 
   const handleSaveAttendance = () => {
@@ -513,78 +743,145 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
       .map((r) => r.num)
       .filter((num) => !attendancePresent.has(num));
 
+    const dateFormatted = formatFullDateLabel(attendanceDate);
+
     const record: AttendanceRecord = {
-      id: `att_${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
+      id: `att_${attendanceDate}_${Date.now()}`,
+      date: attendanceDate,
       week: currentWeek,
-      title: `Practice Attendance (${formatWeekLabel(currentWeek)})`,
+      teamId: activeTeam.id,
+      title: `Practice Attendance • ${dateFormatted}`,
       sessionType: 'padded',
       hours: 1.5,
       presentPlayerNums: presentNums,
       absentPlayerNums: absentNums,
       timestamp: Date.now(),
-      notes: `Mobile Quick Check-in (${presentNums.length}/${roster.length} present)`,
+      notes: `Mobile Quick Check-in (${presentNums.length}/${roster.length} present on ${attendanceDate})`,
     };
+
     onQuickAttendanceSave(record);
+    setAttendanceToastMessage(`✓ Attendance logged for ${dateFormatted} (${presentNums.length}/${roster.length} Present)`);
     setAttendanceSavedToast(true);
-    setTimeout(() => setAttendanceSavedToast(false), 3000);
+    setTimeout(() => setAttendanceSavedToast(false), 3500);
   };
 
-  const currentStartersList = starterUnit === 'offense' ? offenseStarters : defenseStarters;
+  const existingDateLog = useMemo(() => {
+    return attendanceLogs.find(
+      (log) => log.date === attendanceDate && (!log.teamId || log.teamId === activeTeam.id)
+    );
+  }, [attendanceLogs, attendanceDate, activeTeam.id]);
 
   return (
     <div className="space-y-4 pb-24 md:pb-8 max-w-xl mx-auto text-slate-100">
       {/* =========================================================================
-          1. UPCOMING EVENT / GAME DAY HERO CARD
+          1. PRACTICE PLAN / UPCOMING EVENT HERO CARD
           ========================================================================= */}
-      {upcomingEvent ? (
-        <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950/80 rounded-3xl border border-indigo-500/30 p-4 shadow-xl relative overflow-hidden">
-          <div className="flex items-center justify-between gap-2 mb-2.5">
+      {todayPracticeInfo && !todayPracticeInfo.isOver ? (
+        // SHOW TODAY'S PRACTICE PLAN HERO (UNTIL PRACTICE IS OVER)
+        <div className="bg-gradient-to-br from-slate-900 via-emerald-950/60 to-slate-900 rounded-3xl border border-emerald-500/40 p-4 shadow-2xl relative overflow-hidden space-y-3">
+          {/* Top Status Strip */}
+          <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span
-                className={`px-2.5 py-1 rounded-xl text-[11px] font-black tracking-wider uppercase flex items-center gap-1 ${
-                  upcomingEvent.type === 'game'
-                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                    : upcomingEvent.type === 'scrimmage'
-                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                className={`px-2.5 py-1 rounded-xl text-[11px] font-black tracking-wider uppercase flex items-center gap-1.5 shadow-xs ${
+                  todayPracticeInfo.isLiveNow
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse'
+                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                 }`}
               >
-                {upcomingEvent.type === 'game' ? '🏈 GAME' : upcomingEvent.type === 'scrimmage' ? '⚡ SCRIMMAGE' : '📋 PRACTICE'}
+                {todayPracticeInfo.isLiveNow ? (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping inline-block" />
+                    <span>LIVE PRACTICE NOW</span>
+                  </>
+                ) : (
+                  <>
+                    <ClipboardList className="w-3.5 h-3.5" />
+                    <span>TODAY&apos;S PRACTICE PLAN</span>
+                  </>
+                )}
               </span>
-              {upcomingEvent.locationType && (
-                <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
-                  {upcomingEvent.locationType}
-                </span>
+              <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
+                {activeTeam.name}
+              </span>
+            </div>
+
+            <div className="text-xs font-black text-amber-300 flex items-center gap-1 bg-slate-900/90 px-2.5 py-1 rounded-xl border border-slate-800">
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span>{todayPracticeInfo.timeStr}</span>
+            </div>
+          </div>
+
+          {/* Practice Title & Info */}
+          <div>
+            <h2 className="text-lg font-black text-white tracking-tight flex items-center gap-1.5">
+              <span>{todayPracticeInfo.plan?.title || todayPracticeInfo.event?.title || `Practice • ${formatFullDateLabel(todayStr)}`}</span>
+            </h2>
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-300 mt-1 flex-wrap">
+              <span className="text-emerald-400 font-bold">{formatFullDateLabel(todayStr)}</span>
+              <span>&bull;</span>
+              <span>{todayPracticeInfo.durationMinutes} Min Session</span>
+              {todayPracticeInfo.event?.attireCategory && (
+                <>
+                  <span>&bull;</span>
+                  <span className="px-1.5 py-0.2 bg-slate-800 rounded text-[10px] font-black text-amber-300 uppercase">
+                    {todayPracticeInfo.event.attireCategory}
+                  </span>
+                </>
               )}
             </div>
-            <span className="text-xs font-black text-amber-300 flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5" />
-              <span>{upcomingEvent.time || '10:00 AM'}</span>
-            </span>
           </div>
 
-          <div className="mb-3">
-            <h2 className="text-lg font-black text-white tracking-tight">
-              {upcomingEvent.opponent ? `vs ${upcomingEvent.opponent}` : upcomingEvent.title}
-            </h2>
-            <p className="text-xs font-semibold text-slate-300 mt-0.5">
-              {upcomingEvent.date}
-            </p>
-          </div>
+          {/* Drill Periods Summary if available */}
+          {todayPracticeInfo.plan?.periods && todayPracticeInfo.plan.periods.length > 0 && (
+            <div className="bg-slate-950/70 rounded-2xl p-2.5 border border-slate-800/80 space-y-1.5">
+              <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400">
+                <span>{todayPracticeInfo.plan.periods.length} Planned Periods</span>
+                <span className="text-emerald-400">
+                  {todayPracticeInfo.plan.periods.reduce((sum, p) => sum + (p.durationMinutes || p.duration || 0), 0) || todayPracticeInfo.durationMinutes} Min Total
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+                {todayPracticeInfo.plan.periods.slice(0, 5).map((period, pIdx) => (
+                  <span
+                    key={pIdx}
+                    className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-800 text-slate-300 whitespace-nowrap border border-slate-700/60 shrink-0"
+                  >
+                    {period.name || period.title || `Period ${pIdx + 1}`}
+                  </span>
+                ))}
+                {todayPracticeInfo.plan.periods.length > 5 && (
+                  <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap px-1">
+                    +{todayPracticeInfo.plan.periods.length - 5} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
-          {/* Location & Directions */}
-          {upcomingEvent.location && (
-            <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-slate-700/60">
-              <div className="flex items-center gap-1.5 min-w-0 text-xs text-slate-300">
-                <MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                <span className="truncate font-medium">{upcomingEvent.location}</span>
+          {/* Primary Action Button: Open Today's Practice Plan */}
+          <button
+            type="button"
+            onClick={() => handleOpenPracticePlan(todayPracticeInfo.plan?.id)}
+            className="w-full py-3 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs sm:text-sm rounded-2xl shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer border border-emerald-400/40"
+          >
+            <ClipboardList className="w-4 h-4" />
+            <span>Open Today&apos;s Practice Plan</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+
+          {/* Location & Directions (Compact secondary) */}
+          {todayPracticeInfo.event?.location && (
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80 text-xs text-slate-400">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span className="truncate font-medium">{todayPracticeInfo.event.location}</span>
               </div>
               <a
-                href={`https://maps.google.com/?q=${encodeURIComponent(upcomingEvent.location)}`}
+                href={`https://maps.google.com/?q=${encodeURIComponent(todayPracticeInfo.event.location)}`}
                 target="_blank"
                 rel="noreferrer"
-                className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[11px] rounded-xl flex items-center gap-1 shrink-0 active:scale-95 transition-all shadow-xs"
+                className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 shrink-0"
               >
                 <span>Directions</span>
                 <ExternalLink className="w-3 h-3" />
@@ -592,17 +889,93 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
             </div>
           )}
         </div>
+      ) : nextUpcomingEvent ? (
+        // SHOW NEXT SCHEDULE EVENT (PRACTICE OR GAME)
+        <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950/80 rounded-3xl border border-indigo-500/30 p-4 shadow-xl relative overflow-hidden space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span
+                className={`px-2.5 py-1 rounded-xl text-[11px] font-black tracking-wider uppercase flex items-center gap-1 ${
+                  nextUpcomingEvent.type === 'game'
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                    : nextUpcomingEvent.type === 'scrimmage'
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                }`}
+              >
+                {nextUpcomingEvent.type === 'game' ? '🏈 NEXT GAME' : nextUpcomingEvent.type === 'scrimmage' ? '⚡ NEXT SCRIMMAGE' : '📋 NEXT PRACTICE'}
+              </span>
+              {nextUpcomingEvent.locationType && (
+                <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
+                  {nextUpcomingEvent.locationType}
+                </span>
+              )}
+            </div>
+            <span className="text-xs font-black text-amber-300 flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-xl border border-slate-800">
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span>{nextUpcomingEvent.time || '10:00 AM'}</span>
+            </span>
+          </div>
+
+          <div>
+            <h2 className="text-lg font-black text-white tracking-tight">
+              {nextUpcomingEvent.opponent ? `vs ${nextUpcomingEvent.opponent}` : nextUpcomingEvent.title}
+            </h2>
+            <p className="text-xs font-semibold text-slate-300 mt-0.5">
+              {formatFullDateLabel(nextUpcomingEvent.date)}
+            </p>
+          </div>
+
+          {/* Action button if practice */}
+          {nextUpcomingEvent.type === 'practice' ? (
+            <button
+              type="button"
+              onClick={() => handleOpenPracticePlan(nextUpcomingEvent.linkedPracticePlanId)}
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98"
+            >
+              <ClipboardList className="w-4 h-4" />
+              <span>View Practice Plan</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          ) : (
+            nextUpcomingEvent.location && (
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800">
+                <div className="flex items-center gap-1.5 min-w-0 text-xs text-slate-300">
+                  <MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span className="truncate font-medium">{nextUpcomingEvent.location}</span>
+                </div>
+                <a
+                  href={`https://maps.google.com/?q=${encodeURIComponent(nextUpcomingEvent.location)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[11px] rounded-xl flex items-center gap-1 shrink-0 active:scale-95 transition-all shadow-xs"
+                >
+                  <span>Directions</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )
+          )}
+        </div>
       ) : (
-        <div className="bg-slate-900/90 rounded-3xl border border-slate-700/80 p-4 text-center space-y-1 shadow-lg">
+        <div className="bg-slate-900/90 rounded-3xl border border-slate-700/80 p-4 text-center space-y-1.5 shadow-lg">
           <p className="text-xs font-black text-indigo-300 uppercase tracking-wider">
             {activeTeam.name} • {formatWeekLabel(currentWeek)}
           </p>
           <p className="text-sm font-bold text-white">Ready for Practice &amp; Game Day</p>
+          <button
+            type="button"
+            onClick={() => handleOpenPracticePlan()}
+            className="mt-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl inline-flex items-center gap-1.5 cursor-pointer"
+          >
+            <ClipboardList className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Open Practice Plans</span>
+          </button>
         </div>
       )}
 
       {/* =========================================================================
-          2. CORE LAUNCH PAD TILES (Depth Chart, Practice Plan, Drills Library, Wristband)
+          2. CORE LAUNCH PAD TILES (Depth Chart, Practice Plan, Playbook Guides, Wristband)
           ========================================================================= */}
       <div className="grid grid-cols-2 gap-2.5">
         {/* 1. Depth Chart (Mobile View) */}
@@ -649,25 +1022,25 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
           </div>
         </button>
 
-        {/* 3. Drills Library (Mobile View) */}
+        {/* 3. Playbook Guides (Replaces Drills on main HUD) */}
         <button
           type="button"
-          onClick={() => onNavigateToUnit('drills')}
+          onClick={() => onNavigateToUnit('guide')}
           className="bg-gradient-to-br from-cyan-950/90 via-slate-900 to-slate-900 border border-cyan-500/40 hover:border-cyan-400 p-3.5 rounded-2xl text-left shadow-lg active:scale-98 transition-all group cursor-pointer relative overflow-hidden"
         >
           <div className="flex items-center justify-between mb-2">
             <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center justify-center">
-              <Dumbbell className="w-4 h-4" />
+              <BookOpen className="w-4 h-4" />
             </div>
             <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-              Mobile View
+              {totalGuidesCount} Docs
             </span>
           </div>
           <div className="text-sm font-black text-white group-hover:text-cyan-200">
-            Drills Library
+            Playbook Guides
           </div>
           <div className="text-[11px] text-slate-400 font-medium truncate">
-            Technique &amp; Catalog
+            Schemes, Plays &amp; Installs
           </div>
         </button>
 
@@ -695,24 +1068,74 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
       </div>
 
       {/* =========================================================================
+          COACHING SHORTCUTS STRIP (Drills, Schedule, Hours, Scouting, Playbook Studio)
+          ========================================================================= */}
+      <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 pt-0.5">
+        <button
+          type="button"
+          onClick={() => onNavigateToUnit('drills')}
+          className="bg-slate-900/90 border border-slate-800 hover:border-cyan-500/40 p-2.5 rounded-2xl flex flex-col items-center text-center gap-1 active:scale-95 transition-all cursor-pointer group shadow-xs"
+        >
+          <Dumbbell className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
+          <span className="text-[10px] font-bold text-slate-300">Drills</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onNavigateToUnit('schedule')}
+          className="bg-slate-900/90 border border-slate-800 hover:border-purple-500/40 p-2.5 rounded-2xl flex flex-col items-center text-center gap-1 active:scale-95 transition-all cursor-pointer group shadow-xs"
+        >
+          <Calendar className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
+          <span className="text-[10px] font-bold text-slate-300">Schedule</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onNavigateToUnit('compliance')}
+          className="bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 p-2.5 rounded-2xl flex flex-col items-center text-center gap-1 active:scale-95 transition-all cursor-pointer group shadow-xs"
+        >
+          <Zap className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
+          <span className="text-[10px] font-bold text-slate-300">Hours</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onNavigateToUnit('scouting')}
+          className="bg-slate-900/90 border border-slate-800 hover:border-rose-500/40 p-2.5 rounded-2xl flex flex-col items-center text-center gap-1 active:scale-95 transition-all cursor-pointer group shadow-xs"
+        >
+          <Target className="w-4 h-4 text-rose-400 group-hover:scale-110 transition-transform" />
+          <span className="text-[10px] font-bold text-slate-300">Scouting</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onNavigateToUnit('guide')}
+          className="hidden sm:flex bg-slate-900/90 border border-slate-800 hover:border-indigo-500/40 p-2.5 rounded-2xl flex-col items-center text-center gap-1 active:scale-95 transition-all cursor-pointer group shadow-xs"
+        >
+          <BookOpen className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
+          <span className="text-[10px] font-bold text-slate-300">Studio</span>
+        </button>
+      </div>
+
+      {/* =========================================================================
           3. DEDICATED GUIDES SECTION (Playbooks, Scheme Cards & Installs)
           ========================================================================= */}
-      <div className="bg-slate-850 rounded-3xl border border-indigo-500/30 p-3.5 shadow-xl space-y-3 relative overflow-hidden">
+      <div className="bg-slate-850 rounded-3xl border border-cyan-500/30 p-3.5 sm:p-4 shadow-xl space-y-3.5 relative overflow-hidden">
         {/* Guides Section Header */}
         <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 flex items-center justify-center shrink-0 shadow-inner">
-              <BookOpen className="w-5 h-5 text-indigo-300" />
+            <div className="w-9 h-9 rounded-2xl bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 flex items-center justify-center shrink-0 shadow-inner">
+              <BookOpen className="w-5 h-5 text-cyan-300" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h2 className="text-sm font-black text-white tracking-tight">Guides</h2>
-                <span className="px-1.5 py-0.2 rounded-md text-[10px] font-black uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                <h2 className="text-sm font-black text-white tracking-tight">Playbook &amp; Guides</h2>
+                <span className="px-1.5 py-0.2 rounded-md text-[10px] font-black uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                   {totalGuidesCount} Docs
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 font-medium">
-                Playbooks, Schemes &amp; Install Sheets
+                Schemes, Plays, Installs &amp; Assignment Cards
               </p>
             </div>
           </div>
@@ -720,15 +1143,40 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
           <button
             type="button"
             onClick={() => onNavigateToUnit('guide')}
-            className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1 active:scale-95 transition-all shadow-md shadow-indigo-600/30 cursor-pointer shrink-0"
+            className="px-2.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs rounded-xl flex items-center gap-1 active:scale-95 transition-all shadow-md shadow-cyan-600/30 cursor-pointer shrink-0"
           >
             <span>Studio</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Category Switcher Tabs */}
+        {/* Category Switcher Tabs (Like Drills library) */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {/* 'All' Tab */}
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedGuideCategory('all');
+              setGuideSearchTerm('');
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+              selectedGuideCategory === 'all' && !guideSearchTerm
+                ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
+                : 'bg-slate-900/90 text-slate-400 hover:text-slate-200 border border-slate-800'
+            }`}
+          >
+            <span>All</span>
+            <span
+              className={`text-[10px] px-1 py-0.2 rounded-md font-mono ${
+                selectedGuideCategory === 'all' && !guideSearchTerm
+                  ? 'bg-cyan-700/80 text-cyan-100'
+                  : 'bg-slate-800 text-slate-500'
+              }`}
+            >
+              {totalGuidesCount}
+            </span>
+          </button>
+
           {guideCategories.map((cat) => {
             const isSelected = selectedGuideCategory === cat && !guideSearchTerm;
             const subCount = (guideOrder?.sub && guideOrder.sub[cat]?.length) ||
@@ -743,14 +1191,14 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                 }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
                   isSelected
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                    ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
                     : 'bg-slate-900/90 text-slate-400 hover:text-slate-200 border border-slate-800'
                 }`}
               >
                 <span>{cat}</span>
                 <span
                   className={`text-[10px] px-1 py-0.2 rounded-md font-mono ${
-                    isSelected ? 'bg-indigo-700/80 text-indigo-100' : 'bg-slate-800 text-slate-500'
+                    isSelected ? 'bg-cyan-700/80 text-cyan-100' : 'bg-slate-800 text-slate-500'
                   }`}
                 >
                   {subCount}
@@ -768,7 +1216,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
             placeholder="Search playbooks, schemes &amp; guides..."
             value={guideSearchTerm}
             onChange={(e) => setGuideSearchTerm(e.target.value)}
-            className="w-full pl-8 pr-8 py-2 bg-slate-900 border border-slate-750 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+            className="w-full pl-8 pr-8 py-2 bg-slate-900 border border-slate-750 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
           />
           {guideSearchTerm && (
             <button
@@ -781,8 +1229,8 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
           )}
         </div>
 
-        {/* Document Cards List */}
-        <div className="space-y-2 max-h-72 overflow-y-auto pr-0.5">
+        {/* Document Cards List (Styled Like Drills Library) */}
+        <div className="space-y-2 max-h-80 overflow-y-auto pr-0.5">
           {currentCategoryDocs.length > 0 ? (
             currentCategoryDocs.map((doc) => {
               const hasContent = Boolean(doc.content && doc.content.trim().length > 0);
@@ -791,15 +1239,15 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
               return (
                 <div
                   key={`${doc.category}_${doc.name}`}
-                  className="bg-slate-900/90 border border-slate-800 hover:border-slate-700 p-2.5 rounded-2xl flex items-center justify-between gap-2.5 transition-all shadow-xs"
+                  className="bg-slate-900/95 border border-slate-800 hover:border-cyan-500/40 p-3 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all shadow-xs"
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex items-start sm:items-center gap-3 min-w-0">
                     <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                         hasContent
                           ? isPdf
                             ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                            : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                            : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
                           : 'bg-slate-800 text-slate-400 border border-slate-700'
                       }`}
                     >
@@ -811,24 +1259,23 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                         <BookOpen className="w-4 h-4" />
                       )}
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-white truncate">{doc.name}</span>
-                        {guideSearchTerm && (
-                          <span className="text-[9px] px-1 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">
-                            {doc.category}
-                          </span>
-                        )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs sm:text-sm font-black text-white truncate">{doc.name}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700 font-bold uppercase tracking-wider">
+                          {doc.category}
+                        </span>
                       </div>
-                      <div className="flex items-center gap-1.5 mt-0.5">
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         {hasContent ? (
-                          <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
-                            {isPdf ? 'PDF Guide' : 'HTML Schematic'}
+                          <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+                            {isPdf ? 'PDF Install Guide' : 'Interactive Schematic'}
                           </span>
                         ) : (
-                          <span className="text-[10px] text-slate-500 font-medium">
-                            Template Ready
+                          <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-500 inline-block"></span>
+                            Blank Section • Ready in Studio
                           </span>
                         )}
                       </div>
@@ -836,49 +1283,50 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                   </div>
 
                   {/* Actions for Document */}
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
                     <button
                       type="button"
                       onClick={() => handlePreviewGuide(doc.category, doc.name, doc.content)}
-                      className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
-                      title="Quick Read / View"
+                      className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-black flex items-center gap-1.5 transition-all shadow-md shadow-cyan-600/25 active:scale-95 cursor-pointer"
+                      title="Open Fullscreen Reader"
                     >
-                      <Eye className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>Read</span>
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Read / View</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => handleOpenGuideInStudio(doc.category, doc.name)}
-                      className="p-1.5 rounded-xl bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-400 transition-all active:scale-95 cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
                       title="Open in Playbook Studio"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Studio</span>
                     </button>
                   </div>
                 </div>
               );
             })
           ) : (
-            <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 text-center space-y-1">
-              <p className="text-xs font-bold text-slate-300">No guides matching search</p>
+            <div className="p-6 bg-slate-900 rounded-2xl border border-slate-800 text-center space-y-1.5">
+              <p className="text-xs font-bold text-slate-300">No guides matching filter</p>
               <p className="text-[11px] text-slate-500">
-                Clear filter or add new guide sections in the Studio.
+                Clear search query or create new sections in the Playbook Studio.
               </p>
             </div>
           )}
         </div>
 
         {/* Fast Starter Templates Strip */}
-        <div className="pt-2 border-t border-slate-800">
+        <div className="pt-2.5 border-t border-slate-800">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-amber-400" />
-              <span>Quick Scheme Templates</span>
+            <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Quick Scheme Reference Cards</span>
             </span>
-            <span className="text-[10px] text-slate-500">Tap to preview</span>
+            <span className="text-[10px] text-slate-500 font-medium">1-Tap Preview</span>
           </div>
 
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-3 gap-2">
             {QUICK_GUIDE_TEMPLATES.map((tpl) => (
               <button
                 key={tpl.id}
@@ -942,72 +1390,386 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
           </button>
         </div>
 
-        {/* TAB CONTENT 1: STARTERS */}
+        {/* TAB CONTENT 1: STARTERS (BLACK, GOLD, BLUE, SUB SECTION) */}
         {hubTab === 'starters' && (
           <div className="space-y-3">
-            {/* Unit Sub-Toggle (Offense vs Defense) */}
+            {/* Unit Selector: Offense, Defense, Special Teams */}
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
+              <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setStarterUnit('offense')}
-                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all ${
+                  onClick={() => {
+                    setStarterUnit('offense');
+                    setSelectedFormationId('');
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                     starterUnit === 'offense'
                       ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  Offense ({offenseStarters.length})
+                  Offense
                 </button>
                 <button
                   type="button"
-                  onClick={() => setStarterUnit('defense')}
-                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all ${
+                  onClick={() => {
+                    setStarterUnit('defense');
+                    setSelectedFormationId('');
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                     starterUnit === 'defense'
                       ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  Defense ({defenseStarters.length})
+                  Defense
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStarterUnit('st');
+                    setSelectedFormationId('');
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                    starterUnit === 'st'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  ST
                 </button>
               </div>
 
+              {/* Formation Dropdown if multiple formations exist */}
+              {unitFormations.length > 1 && (
+                <select
+                  value={activeFormation?.id || ''}
+                  onChange={(e) => setSelectedFormationId(e.target.value)}
+                  aria-label="Select Formation"
+                  className="bg-slate-900 border border-slate-700 text-slate-200 text-xs font-bold rounded-xl px-2 py-1 focus:outline-none max-w-[130px] truncate"
+                >
+                  {unitFormations.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+
               <button
                 type="button"
-                onClick={() => onNavigateToUnit('depth_chart', starterUnit)}
-                className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
+                onClick={() => onNavigateToUnit('depth_chart', starterUnit as any)}
+                className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-0.5 cursor-pointer shrink-0"
               >
                 <span>Full Chart</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {/* Starters Grid */}
-            <div className="grid grid-cols-2 gap-2">
-              {currentStartersList.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex items-center gap-2"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-black text-amber-400 font-mono font-black text-xs flex items-center justify-center shrink-0 border border-zinc-700">
-                    #{item.playerNum}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[11px] font-black text-indigo-300 uppercase tracking-tight">
-                      {item.posName}
-                    </div>
-                    <div className="text-xs font-bold text-slate-100 truncate">
-                      {item.playerName}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {currentStartersList.length === 0 && (
-                <div className="col-span-2 p-4 text-center text-xs text-slate-400 bg-slate-900/60 rounded-xl">
-                  No starters assigned yet in this unit.
-                </div>
-              )}
+            {/* Team / String Breakdown Selector (Black, Blue, Gold, Sub Section, All Matrix) */}
+            <div className="grid grid-cols-5 gap-1 p-1 bg-slate-900/90 rounded-2xl border border-slate-800">
+              {/* 1. Black Team (1st String) */}
+              <button
+                type="button"
+                onClick={() => setStarterString('black')}
+                className={`py-1.5 px-1 rounded-xl text-center flex flex-col items-center gap-0.5 transition-all cursor-pointer ${
+                  starterString === 'black'
+                    ? 'bg-slate-950 text-amber-300 border border-amber-400/60 shadow-md ring-1 ring-amber-400/40'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                <span className="text-[11px] font-black leading-none">⬛ Black</span>
+                <span className="text-[9px] font-bold opacity-80">1st ({stringCounts.blackCount})</span>
+              </button>
+
+              {/* 2. Blue Team (3rd / Blue String) */}
+              <button
+                type="button"
+                onClick={() => setStarterString('blue')}
+                className={`py-1.5 px-1 rounded-xl text-center flex flex-col items-center gap-0.5 transition-all cursor-pointer ${
+                  starterString === 'blue'
+                    ? 'bg-blue-600 text-white font-black border border-blue-400 shadow-md'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                <span className="text-[11px] font-black leading-none">🟦 Blue</span>
+                <span className="text-[9px] font-bold opacity-80">Blue ({stringCounts.blueCount})</span>
+              </button>
+
+              {/* 3. Gold Team (2nd / Gold String) */}
+              <button
+                type="button"
+                onClick={() => setStarterString('gold')}
+                className={`py-1.5 px-1 rounded-xl text-center flex flex-col items-center gap-0.5 transition-all cursor-pointer ${
+                  starterString === 'gold'
+                    ? 'bg-amber-400 text-slate-950 font-black border border-amber-500 shadow-md'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                <span className="text-[11px] font-black leading-none">🟨 Gold</span>
+                <span className="text-[9px] font-bold opacity-80">Gold ({stringCounts.goldCount})</span>
+              </button>
+
+              {/* 4. Sub Section (Reserves / Backups) */}
+              <button
+                type="button"
+                onClick={() => setStarterString('sub')}
+                className={`py-1.5 px-1 rounded-xl text-center flex flex-col items-center gap-0.5 transition-all cursor-pointer ${
+                  starterString === 'sub'
+                    ? 'bg-purple-900/90 text-purple-200 font-black border border-purple-400/60 shadow-md'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                <span className="text-[11px] font-black leading-none">🟪 Sub</span>
+                <span className="text-[9px] font-bold opacity-80">Sub ({stringCounts.subCount})</span>
+              </button>
+
+              {/* 5. Matrix (All 4 Strings / Teams) */}
+              <button
+                type="button"
+                onClick={() => setStarterString('matrix')}
+                className={`py-1.5 px-1 rounded-xl text-center flex flex-col items-center gap-0.5 transition-all cursor-pointer ${
+                  starterString === 'matrix'
+                    ? 'bg-indigo-600 text-white font-black border border-indigo-400 shadow-md'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                <span className="text-[11px] font-black leading-none">📊 Matrix</span>
+                <span className="text-[9px] font-bold opacity-80">All 4</span>
+              </button>
             </div>
+
+            {/* Active Formation Banner & Position Count */}
+            <div className="flex items-center justify-between px-1 text-[11px] text-slate-400">
+              <span className="font-bold text-slate-300">
+                Scheme: <span className="text-white">{activeFormation?.name || 'Standard'}</span>
+              </span>
+              <span className="text-[10px] font-mono">
+                {formationPositionsData.length} Positions on Field
+              </span>
+            </div>
+
+            {/* POSITION CARDS DISPLAY */}
+            {starterString !== 'matrix' ? (
+              // SINGLE STRING VIEW (BLACK, GOLD, BLUE, OR SUB)
+              <div className="grid grid-cols-2 gap-2">
+                {formationPositionsData.map((pos) => {
+                  let playerObj =
+                    starterString === 'black'
+                      ? pos.blackPlayer
+                      : starterString === 'gold'
+                      ? pos.goldPlayer
+                      : starterString === 'blue'
+                      ? pos.bluePlayer
+                      : null;
+
+                  const isSub = starterString === 'sub';
+                  const subList = pos.subPlayers;
+
+                  return (
+                    <div
+                      key={pos.posId}
+                      className={`bg-slate-900/90 border rounded-2xl p-2.5 flex flex-col justify-between transition-all ${
+                        starterString === 'black'
+                          ? 'border-slate-800 hover:border-amber-400/40'
+                          : starterString === 'gold'
+                          ? 'border-slate-800 hover:border-amber-400/60'
+                          : starterString === 'blue'
+                          ? 'border-slate-800 hover:border-blue-500/60'
+                          : 'border-slate-800 hover:border-purple-500/60'
+                      }`}
+                    >
+                      {/* Position Tag Header */}
+                      <div className="flex items-center justify-between gap-1 mb-1.5">
+                        <span className="text-[11px] font-black text-indigo-300 uppercase tracking-tight">
+                          {pos.posName}
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[9px] font-black uppercase ${
+                            starterString === 'black'
+                              ? 'bg-slate-950 text-amber-300 border border-amber-400/30'
+                              : starterString === 'gold'
+                              ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
+                              : starterString === 'blue'
+                              ? 'bg-blue-500/20 text-blue-300 border border-blue-400/30'
+                              : 'bg-purple-500/20 text-purple-300 border border-purple-400/30'
+                          }`}
+                        >
+                          {starterString === 'black'
+                            ? '1st String'
+                            : starterString === 'gold'
+                            ? '2nd String'
+                            : starterString === 'blue'
+                            ? '3rd String'
+                            : 'Sub / Backup'}
+                        </span>
+                      </div>
+
+                      {/* Player Row or Sub List */}
+                      {isSub ? (
+                        subList.length > 0 ? (
+                          <div className="space-y-1">
+                            {subList.map((sub, sIdx) => (
+                              <div
+                                key={sIdx}
+                                onClick={() => sub.player && setSelectedPlayerModal(sub.player)}
+                                className="flex items-center gap-1.5 p-1 rounded-lg bg-slate-950/60 border border-purple-500/20 cursor-pointer hover:bg-slate-800 transition-colors"
+                              >
+                                <div className="w-6 h-6 rounded bg-purple-950 text-purple-300 font-mono font-black text-[10px] flex items-center justify-center shrink-0 border border-purple-700/60">
+                                  #{sub.num}
+                                </div>
+                                <span className="text-xs font-bold text-slate-200 truncate">
+                                  {sub.name}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-2 text-center text-[10px] text-slate-500 italic bg-slate-950/40 rounded-xl border border-slate-800/60">
+                            No Subs Assigned
+                          </div>
+                        )
+                      ) : playerObj ? (
+                        <div
+                          onClick={() => playerObj?.player && setSelectedPlayerModal(playerObj.player)}
+                          className="flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
+                        >
+                          <div
+                            className={`w-8 h-8 rounded-xl font-mono font-black text-xs flex items-center justify-center shrink-0 border ${
+                              starterString === 'black'
+                                ? 'bg-black text-amber-400 border-zinc-700'
+                                : starterString === 'gold'
+                                ? 'bg-amber-400 text-slate-950 border-amber-500 font-black'
+                                : 'bg-blue-600 text-white border-blue-400 font-black'
+                            }`}
+                          >
+                            #{playerObj.num}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-black text-slate-100 truncate">
+                              {playerObj.name}
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-medium truncate">
+                              {playerObj.player ? getPlayerPos(playerObj.player) : 'ATH'}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onNavigateToUnit('depth_chart', starterUnit as any)}
+                          className="p-2 text-center text-[10px] text-slate-500 hover:text-slate-300 italic bg-slate-950/40 rounded-xl border border-dashed border-slate-800 hover:border-slate-700 cursor-pointer transition-colors"
+                        >
+                          + Unassigned
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              // ALL 4 STRINGS MATRIX VIEW (Dense Multi-tier cards)
+              <div className="space-y-2">
+                {formationPositionsData.map((pos) => (
+                  <div
+                    key={pos.posId}
+                    className="bg-slate-900/90 border border-slate-800 rounded-2xl p-2.5 space-y-2"
+                  >
+                    <div className="flex items-center justify-between pb-1 border-b border-slate-800/80">
+                      <span className="text-xs font-black text-indigo-300 uppercase tracking-tight">
+                        {pos.posName}
+                      </span>
+                      {pos.rowLabel && (
+                        <span className="text-[10px] font-bold text-slate-500">{pos.rowLabel}</span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-xs">
+                      {/* Black */}
+                      <div
+                        onClick={() => pos.blackPlayer?.player && setSelectedPlayerModal(pos.blackPlayer.player)}
+                        className={`p-1.5 rounded-xl border flex items-center gap-1.5 ${
+                          pos.blackPlayer
+                            ? 'bg-slate-950 border-amber-400/30 text-slate-200 cursor-pointer hover:border-amber-400'
+                            : 'bg-slate-950/40 border-slate-800 text-slate-500'
+                        }`}
+                      >
+                        <span className="w-5 h-5 rounded bg-black text-amber-400 font-mono font-black text-[10px] flex items-center justify-center shrink-0 border border-zinc-700">
+                          {pos.blackPlayer ? `#${pos.blackPlayer.num}` : '-'}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[9px] font-black text-amber-400 uppercase leading-none">Black (1st)</div>
+                          <div className="text-[11px] font-bold truncate">
+                            {pos.blackPlayer ? pos.blackPlayer.name : 'None'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Gold */}
+                      <div
+                        onClick={() => pos.goldPlayer?.player && setSelectedPlayerModal(pos.goldPlayer.player)}
+                        className={`p-1.5 rounded-xl border flex items-center gap-1.5 ${
+                          pos.goldPlayer
+                            ? 'bg-amber-950/40 border-amber-500/40 text-slate-200 cursor-pointer hover:border-amber-400'
+                            : 'bg-slate-950/40 border-slate-800 text-slate-500'
+                        }`}
+                      >
+                        <span className="w-5 h-5 rounded bg-amber-400 text-slate-950 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
+                          {pos.goldPlayer ? `#${pos.goldPlayer.num}` : '-'}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[9px] font-black text-amber-300 uppercase leading-none">Gold (2nd)</div>
+                          <div className="text-[11px] font-bold truncate">
+                            {pos.goldPlayer ? pos.goldPlayer.name : 'None'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Blue */}
+                      <div
+                        onClick={() => pos.bluePlayer?.player && setSelectedPlayerModal(pos.bluePlayer.player)}
+                        className={`p-1.5 rounded-xl border flex items-center gap-1.5 ${
+                          pos.bluePlayer
+                            ? 'bg-blue-950/40 border-blue-500/40 text-slate-200 cursor-pointer hover:border-blue-400'
+                            : 'bg-slate-950/40 border-slate-800 text-slate-500'
+                        }`}
+                      >
+                        <span className="w-5 h-5 rounded bg-blue-600 text-white font-mono font-black text-[10px] flex items-center justify-center shrink-0">
+                          {pos.bluePlayer ? `#${pos.bluePlayer.num}` : '-'}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[9px] font-black text-blue-300 uppercase leading-none">Blue (3rd)</div>
+                          <div className="text-[11px] font-bold truncate">
+                            {pos.bluePlayer ? pos.bluePlayer.name : 'None'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sub */}
+                      <div
+                        className={`p-1.5 rounded-xl border flex items-center gap-1.5 ${
+                          pos.subPlayers.length > 0
+                            ? 'bg-purple-950/40 border-purple-500/40 text-slate-200'
+                            : 'bg-slate-950/40 border-slate-800 text-slate-500'
+                        }`}
+                      >
+                        <span className="w-5 h-5 rounded bg-purple-900 text-purple-200 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
+                          {pos.subPlayers.length > 0 ? `${pos.subPlayers.length}` : '0'}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[9px] font-black text-purple-300 uppercase leading-none">Sub / Res</div>
+                          <div className="text-[11px] font-bold truncate">
+                            {pos.subPlayers.length > 0
+                              ? pos.subPlayers.map((s) => `#${s.num}`).join(', ')
+                              : 'None'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -1074,7 +1836,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
               })}
               {filteredRoster.length === 0 && (
                 <div className="p-4 text-center text-xs text-slate-400 bg-slate-900/60 rounded-xl">
-                  No players matched "{playerSearch}".
+                  No players matched &quot;{playerSearch}&quot;.
                 </div>
               )}
             </div>
@@ -1084,44 +1846,129 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
         {/* TAB CONTENT 3: QUICK ATTENDANCE */}
         {hubTab === 'attendance' && (
           <div className="space-y-3">
-            {/* Action Bar */}
-            <div className="flex items-center justify-between gap-2">
+            {/* 1. ATTENDANCE DATE CONTROLLER BANNER */}
+            <div className="bg-gradient-to-r from-slate-900 via-indigo-950/50 to-slate-900 border border-indigo-500/30 rounded-2xl p-3 space-y-2.5 shadow-md">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                    <Calendar className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-white flex items-center gap-1.5">
+                      <span>{formatFullDateLabel(attendanceDate)}</span>
+                      {attendanceDate === todayStr ? (
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          Today
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-slate-800 text-slate-400 border border-slate-700">
+                          Past / Future
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-medium">
+                      Attendance Session Log Date
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setAttendanceDate(todayStr)}
+                  disabled={attendanceDate === todayStr}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
+                    attendanceDate === todayStr
+                      ? 'opacity-40 text-slate-500 bg-slate-800 cursor-default'
+                      : 'bg-indigo-600 hover:bg-indigo-500 text-white active:scale-95'
+                  }`}
+                >
+                  Jump to Today
+                </button>
+              </div>
+
+              {/* Interactive Date Change Controls */}
+              <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => handleShiftAttendanceDate(-1)}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                  title="Previous Day"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Prev Day</span>
+                </button>
+
+                <div className="relative flex-1 max-w-[170px]">
+                  <input
+                    type="date"
+                    value={attendanceDate}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setAttendanceDate(e.target.value);
+                      }
+                    }}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1 text-xs font-mono font-bold text-center text-indigo-200 focus:outline-none focus:border-indigo-400 cursor-pointer"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleShiftAttendanceDate(1)}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                  title="Next Day"
+                >
+                  <span>Next Day</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Notice if existing log is loaded */}
+              {existingDateLog && (
+                <div className="p-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-[10px] font-bold text-emerald-300 text-center flex items-center justify-center gap-1">
+                  <Check className="w-3 h-3 text-emerald-400" />
+                  <span>Existing log loaded for this date ({existingDateLog.presentPlayerNums?.length || 0} Present). Saving will update it.</span>
+                </div>
+              )}
+            </div>
+
+            {/* 2. Action Bar */}
+            <div className="flex items-center justify-between gap-2 px-1">
               <div className="text-xs font-black text-slate-200">
-                <span>{attendancePresent.size}</span> / <span>{roster.length} Present</span>
+                <span className="text-emerald-400">{attendancePresent.size}</span> / <span>{roster.length} Present</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={handleSelectAllAttendance}
-                  className="px-2 py-1 rounded-lg text-[10px] font-black bg-slate-900 text-slate-300 hover:text-white border border-slate-700"
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-slate-900 text-slate-300 hover:text-white border border-slate-700 cursor-pointer active:scale-95"
                 >
-                  All
+                  All Present
                 </button>
                 <button
                   type="button"
                   onClick={handleClearAllAttendance}
-                  className="px-2 py-1 rounded-lg text-[10px] font-black bg-slate-900 text-slate-300 hover:text-white border border-slate-700"
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-slate-900 text-slate-300 hover:text-white border border-slate-700 cursor-pointer active:scale-95"
                 >
-                  Clear
+                  Clear All
                 </button>
               </div>
             </div>
 
-            {/* Player Grid for Quick Tap */}
+            {/* 3. Player Grid for Quick Tap */}
             <div className="grid grid-cols-2 gap-1.5 max-h-64 overflow-y-auto pr-0.5">
               {roster.map((player) => {
-                const pid = player.id || player.num;
-                const isPresent = attendancePresent.has(pid);
+                const isPresent = attendancePresent.has(player.num);
                 const fullName = getPlayerFullName(player);
+                const pos = getPlayerPos(player);
 
                 return (
                   <button
-                    key={pid}
+                    key={player.id || player.num}
                     type="button"
-                    onClick={() => handleToggleAttendance(pid)}
-                    className={`p-2 rounded-xl text-left flex items-center justify-between gap-1.5 border transition-all cursor-pointer ${
+                    onClick={() => handleToggleAttendance(player.num)}
+                    className={`p-2 rounded-xl text-left flex items-center justify-between gap-1.5 border transition-all cursor-pointer active:scale-98 ${
                       isPresent
-                        ? 'bg-emerald-950/60 border-emerald-500/60 text-white'
+                        ? 'bg-emerald-950/60 border-emerald-500/60 text-white shadow-xs'
                         : 'bg-slate-900/80 border-slate-800 text-slate-400 opacity-60'
                     }`}
                   >
@@ -1129,33 +1976,42 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                       <span className="font-mono font-black text-xs shrink-0 text-amber-300">
                         #{player.num}
                       </span>
-                      <span className="text-xs font-bold truncate">
-                        {fullName}
-                      </span>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold truncate">
+                          {fullName}
+                        </div>
+                        <div className="text-[9px] text-slate-400 font-medium">
+                          {pos}
+                        </div>
+                      </div>
                     </div>
                     {isPresent ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <div className="w-5 h-5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center shrink-0">
+                        <Check className="w-3.5 h-3.5" />
+                      </div>
                     ) : (
-                      <X className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                      <div className="w-5 h-5 rounded-md bg-slate-800 text-slate-600 border border-slate-700 flex items-center justify-center shrink-0">
+                        <X className="w-3 h-3" />
+                      </div>
                     )}
                   </button>
                 );
               })}
             </div>
 
-            {/* Save Attendance Button */}
+            {/* 4. Save Attendance Button */}
             <button
               type="button"
               onClick={handleSaveAttendance}
               className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-black text-xs rounded-xl shadow-lg shadow-emerald-600/20 border border-emerald-500/30 flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Save Practice Attendance</span>
+              <span>Save Attendance for {formatFullDateLabel(attendanceDate)}</span>
             </button>
 
             {attendanceSavedToast && (
-              <div className="p-2 bg-emerald-500/20 border border-emerald-500/40 rounded-xl text-xs font-bold text-emerald-300 text-center animate-in fade-in">
-                ✓ Attendance logged successfully for {formatWeekLabel(currentWeek)}!
+              <div className="p-2.5 bg-emerald-500/20 border border-emerald-500/40 rounded-xl text-xs font-bold text-emerald-300 text-center animate-in fade-in">
+                {attendanceToastMessage || `✓ Attendance logged successfully for ${formatFullDateLabel(attendanceDate)}!`}
               </div>
             )}
           </div>
@@ -1299,35 +2155,192 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
       )}
 
       {/* =========================================================================
-          6. QUICK VIEW PLAYBOOK & GUIDE MODAL
+          6. STATE-OF-THE-ART FULL-SCREEN SIDELINE GUIDE READER MODAL
           ========================================================================= */}
       {quickViewGuideModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-            {/* Modal Header */}
-            <div className="p-3.5 sm:p-4 bg-slate-850 border-b border-slate-700 flex items-center justify-between gap-3 shrink-0">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-2xl bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 flex items-center justify-center shrink-0">
-                  <BookOpen className="w-5 h-5 text-indigo-300" />
+        <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col w-screen h-[100dvh] overflow-hidden animate-in fade-in">
+          {/* Reader Top Command Bar */}
+          <div className="px-3 py-2.5 sm:px-4 sm:py-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0 shadow-lg z-10">
+            {/* Left: Back & Title */}
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                type="button"
+                onClick={() => setQuickViewGuideModal(null)}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer shrink-0 active:scale-95 flex items-center gap-1 text-xs font-bold"
+                title="Back to Mobile Hub"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Back</span>
+              </button>
+
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h3 className="text-xs sm:text-sm font-black text-white truncate max-w-[200px] sm:max-w-md">
+                    {quickViewGuideModal.title}
+                  </h3>
+                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                    {quickViewGuideModal.category}
+                  </span>
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="text-sm sm:text-base font-black text-white truncate">
-                      {quickViewGuideModal.title}
-                    </h3>
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                      {quickViewGuideModal.category}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 font-medium truncate">
-                    {quickViewGuideModal.isStarterTemplate
-                      ? 'Starter Scheme Reference Card'
-                      : 'Sideline Document & Playbook Viewer'}
-                  </p>
-                </div>
+                <p className="text-[10px] text-slate-400 font-medium truncate hidden sm:block">
+                  {quickViewGuideModal.isStarterTemplate
+                    ? 'Starter Reference Card'
+                    : 'Sideline Document & Scheme Reader'}
+                </p>
+              </div>
+            </div>
+
+            {/* Center: Prev / Next Guide Navigator */}
+            {!quickViewGuideModal.isStarterTemplate && allGuidesList.length > 1 && (
+              <div className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleNavigateReaderGuide(-1)}
+                  className="p-1 sm:px-2 sm:py-1 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-xs font-bold flex items-center gap-0.5 cursor-pointer active:scale-95"
+                  title="Previous Guide"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="hidden md:inline">Prev</span>
+                </button>
+                <span className="text-[10px] text-slate-400 font-mono px-1">
+                  {allGuidesList.findIndex(
+                    (g) =>
+                      g.category === quickViewGuideModal.category &&
+                      g.name === quickViewGuideModal.title
+                  ) + 1}{' '}
+                  / {allGuidesList.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleNavigateReaderGuide(1)}
+                  className="p-1 sm:px-2 sm:py-1 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-xs font-bold flex items-center gap-0.5 cursor-pointer active:scale-95"
+                  title="Next Guide"
+                >
+                  <span className="hidden md:inline">Next</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Right: Controls & Studio Link */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Zoom Controls */}
+              <div className="hidden sm:flex items-center gap-0.5 bg-slate-800/80 p-0.5 rounded-xl border border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setGuideZoom((z) => Math.max(75, z - 25))}
+                  className="p-1 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white cursor-pointer"
+                  title="Zoom Out"
+                >
+                  <ZoomOut className="w-3.5 h-3.5" />
+                </button>
+                <span className="text-[10px] font-mono text-slate-300 px-1 font-bold min-w-[36px] text-center">
+                  {guideZoom}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setGuideZoom((z) => Math.min(175, z + 25))}
+                  className="p-1 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white cursor-pointer"
+                  title="Zoom In"
+                >
+                  <ZoomIn className="w-3.5 h-3.5" />
+                </button>
+                {guideZoom !== 100 && (
+                  <button
+                    type="button"
+                    onClick={() => setGuideZoom(100)}
+                    className="p-1 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white cursor-pointer"
+                    title="Reset Zoom"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              {/* Open in Studio Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  const cat = quickViewGuideModal.category;
+                  const doc = quickViewGuideModal.title;
+                  setQuickViewGuideModal(null);
+                  handleOpenGuideInStudio(cat, doc);
+                }}
+                className="px-2.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs rounded-xl flex items-center gap-1 active:scale-95 transition-all shadow-xs cursor-pointer"
+                title="Edit in Playbook Studio"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Studio</span>
+              </button>
+
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setQuickViewGuideModal(null)}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer active:scale-95"
+                title="Close Viewer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Reader Body / Full Screen Viewer */}
+          <div className="flex-1 w-full bg-slate-950 overflow-auto relative p-2 sm:p-4 flex flex-col items-center">
+            {quickViewGuideModal.content && quickViewGuideModal.content.trim().length > 0 ? (
+              quickViewGuideModal.content.startsWith('data:application/pdf') ||
+              quickViewGuideModal.content.endsWith('.pdf') ? (
+                <div className="w-full h-full max-w-5xl flex-1 flex flex-col bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
+                  <div className="p-2 bg-slate-850 border-b border-slate-800 flex items-center justify-between text-xs px-3">
+                    <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-rose-400" />
+                      <span>PDF Document</span>
+                    </span>
+                    <a
+                      href={quickViewGuideModal.content}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[10px] font-bold rounded-lg flex items-center gap-1"
+                    >
+                      <span>Open in Full Browser Tab</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                  <iframe
+                    src={quickViewGuideModal.content}
+                    title={quickViewGuideModal.title}
+                    className="w-full flex-1 border-0 bg-slate-900"
+                  />
+                </div>
+              ) : (
+                <div className="w-full h-full max-w-5xl flex-1 flex flex-col bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
+                  <div
+                    className="w-full flex-1 overflow-auto bg-slate-950 transition-transform duration-200"
+                    style={{
+                      transform: guideZoom !== 100 ? `scale(${guideZoom / 100})` : undefined,
+                      transformOrigin: 'top center',
+                    }}
+                  >
+                    <iframe
+                      srcDoc={quickViewGuideModal.content}
+                      title={quickViewGuideModal.title}
+                      className="w-full h-full min-h-[75vh] border-0 bg-transparent"
+                      sandbox="allow-scripts allow-same-origin"
+                    />
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="max-w-md w-full my-auto p-8 bg-slate-900 rounded-3xl border border-slate-800 text-center space-y-4 shadow-2xl">
+                <div className="w-14 h-14 rounded-2xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mx-auto flex items-center justify-center">
+                  <FileCode className="w-7 h-7" />
+                </div>
+                <div className="space-y-1.5">
+                  <h4 className="text-base font-black text-white">No Schematic Document Yet</h4>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    This section ({quickViewGuideModal.category} &bull; {quickViewGuideModal.title}) is currently empty. Open in the Playbook Studio to create custom HTML schematics, upload PDF install sheets, or apply standard starter schemes.
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
@@ -1336,85 +2349,51 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                     setQuickViewGuideModal(null);
                     handleOpenGuideInStudio(cat, doc);
                   }}
-                  className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1 active:scale-95 transition-all shadow-xs cursor-pointer"
+                  className="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs rounded-xl inline-flex items-center justify-center gap-1.5 shadow-md shadow-cyan-600/30 active:scale-95 transition-all cursor-pointer"
                 >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Open in</span> Studio
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setQuickViewGuideModal(null)}
-                  className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
+                  <span>Open in Playbook Studio</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
-            </div>
+            )}
+          </div>
 
-            {/* Modal Body / Viewer */}
-            <div className="p-3 sm:p-4 flex-1 overflow-y-auto bg-slate-950 space-y-3">
-              {quickViewGuideModal.content && quickViewGuideModal.content.trim().length > 0 ? (
-                quickViewGuideModal.content.startsWith('data:application/pdf') ||
-                quickViewGuideModal.content.endsWith('.pdf') ? (
-                  <div className="w-full h-[60vh] bg-slate-900 rounded-2xl overflow-hidden border border-slate-800">
-                    <iframe
-                      src={quickViewGuideModal.content}
-                      title={quickViewGuideModal.title}
-                      className="w-full h-full border-0"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full min-h-[50vh] bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-inner">
-                    <iframe
-                      srcDoc={quickViewGuideModal.content}
-                      title={quickViewGuideModal.title}
-                      className="w-full h-[60vh] border-0 bg-transparent"
-                      sandbox="allow-scripts allow-same-origin"
-                    />
-                  </div>
-                )
-              ) : (
-                <div className="p-8 bg-slate-900 rounded-2xl border border-slate-800 text-center space-y-3 my-6">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 mx-auto flex items-center justify-center">
-                    <FileCode className="w-6 h-6" />
-                  </div>
-                  <div className="space-y-1 max-w-sm mx-auto">
-                    <h4 className="text-sm font-black text-white">No Schematic Document Yet</h4>
-                    <p className="text-xs text-slate-400">
-                      This playbook section is currently blank. Open in the Studio to write custom HTML schematics, upload PDF install packs, or paste template cards.
-                    </p>
-                  </div>
+          {/* Quick-Jump Floating Bottom Bar */}
+          {!quickViewGuideModal.isStarterTemplate && (
+            <div className="p-2 sm:p-2.5 bg-slate-900 border-t border-slate-800 flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0 z-10">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-2 shrink-0 flex items-center gap-1">
+                <BookOpen className="w-3 h-3 text-cyan-400" />
+                <span>Jump:</span>
+              </span>
+
+              {allGuidesList.map((g) => {
+                const isActive =
+                  g.category === quickViewGuideModal.category && g.name === quickViewGuideModal.title;
+                return (
                   <button
+                    key={`${g.category}_${g.name}`}
                     type="button"
                     onClick={() => {
-                      const cat = quickViewGuideModal.category;
-                      const doc = quickViewGuideModal.title;
-                      setQuickViewGuideModal(null);
-                      handleOpenGuideInStudio(cat, doc);
+                      setQuickViewGuideModal({
+                        title: g.name,
+                        category: g.category,
+                        content: g.content,
+                        isStarterTemplate: false,
+                      });
                     }}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl inline-flex items-center gap-1.5 shadow-md shadow-indigo-600/30 active:scale-95 transition-all cursor-pointer"
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1 shrink-0 cursor-pointer ${
+                      isActive
+                        ? 'bg-cyan-600 text-white shadow-xs'
+                        : 'bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-750'
+                    }`}
                   >
-                    <span>Open in Playbook Studio</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <span className="text-[9px] opacity-75">{g.category}:</span>
+                    <span>{g.name}</span>
                   </button>
-                </div>
-              )}
+                );
+              })}
             </div>
-
-            {/* Modal Footer */}
-            <div className="p-3 bg-slate-850 border-t border-slate-800 flex items-center justify-between gap-2 shrink-0 text-xs">
-              <span className="text-[11px] text-slate-400 font-medium">
-                {quickViewGuideModal.category} &bull; {quickViewGuideModal.title}
-              </span>
-              <button
-                type="button"
-                onClick={() => setQuickViewGuideModal(null)}
-                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition-all cursor-pointer"
-              >
-                Close Viewer
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       )}
     </div>
