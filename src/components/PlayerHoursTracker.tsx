@@ -45,6 +45,7 @@ import { getSeasonWeekList } from '../utils/seasonWeekUtils';
 import { triggerPrint } from '../utils/printUtils';
 import { DEFAULT_SEASON_CONFIG } from '../data/initialData';
 import { SeasonConfigModal } from './SeasonConfigModal';
+import { WeeklyAttendanceTracker } from './WeeklyAttendanceTracker';
 
 interface PlayerHoursTrackerProps {
   roster: RosterPlayer[];
@@ -60,6 +61,8 @@ interface PlayerHoursTrackerProps {
   onOpenRosterManager: () => void;
   onUpdateSeasonConfig?: (config: SeasonConfig) => void;
   onUpdateAttendanceLogs?: (logs: AttendanceRecord[]) => void;
+  onAddScheduleEvent?: (event: ScheduleEvent) => void;
+  onUpdateScheduleEvent?: (event: ScheduleEvent) => void;
 }
 
 export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
@@ -76,8 +79,10 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
   onOpenRosterManager,
   onUpdateSeasonConfig,
   onUpdateAttendanceLogs,
+  onAddScheduleEvent,
+  onUpdateScheduleEvent,
 }) => {
-  const [activeTab, setActiveTab] = useState<'roster_hours' | 'attendance_log'>('roster_hours');
+  const [activeTab, setActiveTab] = useState<'weekly_matrix' | 'roster_hours' | 'attendance_log'>('weekly_matrix');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'needs_conditioning' | 'needs_pads' | 'fully_cleared'>('all');
   const [selectedWeekForLog, setSelectedWeekForLog] = useState<string>(currentWeek || '0');
@@ -466,9 +471,21 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
         </div>
       </div>
 
-      {/* Main View Mode Selector (Roster Compliance vs Attendance Roll Call History) */}
-      <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-2">
-        <div className="flex items-center gap-2">
+      {/* Main View Mode Selector (Weekly Matrix vs Roster Compliance vs Attendance Roll Call History) */}
+      <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setActiveTab('weekly_matrix')}
+            className={`px-4 py-2 rounded-2xl text-xs font-black flex items-center gap-2 transition-all ${
+              activeTab === 'weekly_matrix'
+                ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
+                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Weekly Attendance Grid</span>
+          </button>
           <button
             type="button"
             onClick={() => setActiveTab('roster_hours')}
@@ -516,6 +533,22 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
           </select>
         </div>
       </div>
+
+      {/* VIEW 0: Weekly Attendance Grid Matrix */}
+      {activeTab === 'weekly_matrix' && (
+        <WeeklyAttendanceTracker
+          roster={roster}
+          userRole={userRole}
+          currentWeek={selectedWeekForLog || currentWeek}
+          scheduleEvents={scheduleEvents}
+          seasonConfig={seasonConfig}
+          attendanceLogs={attendanceLogs}
+          onUpdateRoster={onUpdateRoster}
+          onUpdateAttendanceLogs={onUpdateAttendanceLogs}
+          onAddScheduleEvent={onAddScheduleEvent}
+          onUpdateScheduleEvent={onUpdateScheduleEvent}
+        />
+      )}
 
       {/* VIEW 1: Player Hours Compliance Grid */}
       {activeTab === 'roster_hours' && (

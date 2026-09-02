@@ -343,7 +343,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
   
   // Starters state: Unit, Team String & Formation
   const [starterUnit, setStarterUnit] = useState<'offense' | 'defense' | 'st'>('offense');
-  const [starterString, setStarterString] = useState<'black' | 'gold' | 'blue' | 'sub' | 'matrix'>('black');
+  const [starterString, setStarterString] = useState<'black' | 'blue' | 'gold' | 'sub' | 'matrix'>('black');
   const [selectedFormationId, setSelectedFormationId] = useState<string>('');
 
   const [playerSearch, setPlayerSearch] = useState('');
@@ -356,6 +356,12 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
   const [attendanceSavedToast, setAttendanceSavedToast] = useState(false);
   const [attendanceToastMessage, setAttendanceToastMessage] = useState('');
   const [selectedPlayerModal, setSelectedPlayerModal] = useState<RosterPlayer | null>(null);
+
+  // Mobile Practice Plan Viewer Modal state
+  const [mobileViewingPlan, setMobileViewingPlan] = useState<PracticePlan | null>(null);
+  const [activeRunningPeriodIdx, setActiveRunningPeriodIdx] = useState<number>(0);
+  const [mobilePlanFontSize, setMobilePlanFontSize] = useState<'normal' | 'large'>('normal');
+  const [selectedMobilePeriodFilter, setSelectedMobilePeriodFilter] = useState<number | 'all'>('all');
 
   // When attendanceDate changes, load existing log if available
   React.useEffect(() => {
@@ -490,6 +496,25 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
     }
   };
 
+  // Quick scheduled practice dates for attendance jump
+  const scheduledPracticeDates = useMemo(() => {
+    return (scheduleEvents || [])
+      .filter((e) => e && e.date && e.type === 'practice' && !e.isCancelled && (!e.teamId || e.teamId === activeTeam.id))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(0, 8);
+  }, [scheduleEvents, activeTeam.id]);
+
+  const formatShortDateChip = (dateStr: string) => {
+    try {
+      const parts = dateStr.split('T')[0].split('-');
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        return d.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' });
+      }
+    } catch {}
+    return dateStr;
+  };
+
   // =========================================================================
   // 1. PRACTICE PLAN & CURRENT DAY SCHEDULE RESOLVER
   // "on the mobile hub instead of showing practice with directions can you current
@@ -588,12 +613,21 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
     return sorted[sorted.length - 1] || null;
   }, [scheduleEvents, todayPracticeInfo, todayStr]);
 
-  // Handler to jump directly to a practice plan
+  // Handler to jump directly to a practice plan or open mobile reader
   const handleOpenPracticePlan = (planId?: string) => {
+    let target = planId ? (practicePlans || []).find((p) => p.id === planId) : null;
+    if (!target) {
+      target = todayPracticeInfo?.plan || (practicePlans && practicePlans.length > 0 ? practicePlans[0] : null);
+    }
+    if (target) {
+      if (planId && onSelectPractice) {
+        onSelectPractice(planId);
+      }
+      setMobileViewingPlan(target);
+      return;
+    }
     if (planId && onSelectPractice) {
       onSelectPractice(planId);
-    } else if (practicePlans[0]?.id && onSelectPractice) {
-      onSelectPractice(practicePlans[0].id);
     }
     onNavigateToUnit('practice');
   };
@@ -859,103 +893,122 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
             </div>
           )}
 
-          {/* Primary Action Button: Open Today's Practice Plan */}
+          {/* Primary Action Button: Open Today's Practice Plan in Reader */}
           <button
             type="button"
             onClick={() => handleOpenPracticePlan(todayPracticeInfo.plan?.id)}
             className="w-full py-3 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs sm:text-sm rounded-2xl shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer border border-emerald-400/40"
           >
-            <ClipboardList className="w-4 h-4" />
-            <span>Open Today&apos;s Practice Plan</span>
+            <Eye className="w-4 h-4" />
+            <span>Open Today&apos;s Practice Plan (Sideline View)</span>
             <ArrowRight className="w-4 h-4" />
           </button>
 
-          {/* Location & Directions (Compact secondary) */}
+          {/* Location details (without directions link) */}
           {todayPracticeInfo.event?.location && (
-            <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80 text-xs text-slate-400">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span className="truncate font-medium">{todayPracticeInfo.event.location}</span>
-              </div>
-              <a
-                href={`https://maps.google.com/?q=${encodeURIComponent(todayPracticeInfo.event.location)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 shrink-0"
-              >
-                <span>Directions</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+            <div className="flex items-center gap-1.5 pt-1 border-t border-slate-800/80 text-xs text-slate-400">
+              <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span className="truncate font-medium">{todayPracticeInfo.event.location}</span>
             </div>
           )}
         </div>
       ) : nextUpcomingEvent ? (
-        // SHOW NEXT SCHEDULE EVENT (PRACTICE OR GAME)
-        <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950/80 rounded-3xl border border-indigo-500/30 p-4 shadow-xl relative overflow-hidden space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span
-                className={`px-2.5 py-1 rounded-xl text-[11px] font-black tracking-wider uppercase flex items-center gap-1 ${
-                  nextUpcomingEvent.type === 'game'
-                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                    : nextUpcomingEvent.type === 'scrimmage'
-                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                }`}
-              >
-                {nextUpcomingEvent.type === 'game' ? '🏈 NEXT GAME' : nextUpcomingEvent.type === 'scrimmage' ? '⚡ NEXT SCRIMMAGE' : '📋 NEXT PRACTICE'}
-              </span>
-              {nextUpcomingEvent.locationType && (
-                <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
-                  {nextUpcomingEvent.locationType}
-                </span>
-              )}
-            </div>
-            <span className="text-xs font-black text-amber-300 flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-xl border border-slate-800">
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
-              <span>{nextUpcomingEvent.time || '10:00 AM'}</span>
-            </span>
-          </div>
-
-          <div>
-            <h2 className="text-lg font-black text-white tracking-tight">
-              {nextUpcomingEvent.opponent ? `vs ${nextUpcomingEvent.opponent}` : nextUpcomingEvent.title}
-            </h2>
-            <p className="text-xs font-semibold text-slate-300 mt-0.5">
-              {formatFullDateLabel(nextUpcomingEvent.date)}
-            </p>
-          </div>
-
-          {/* Action button if practice */}
-          {nextUpcomingEvent.type === 'practice' ? (
-            <button
-              type="button"
-              onClick={() => handleOpenPracticePlan(nextUpcomingEvent.linkedPracticePlanId)}
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98"
-            >
-              <ClipboardList className="w-4 h-4" />
-              <span>View Practice Plan</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          ) : (
-            nextUpcomingEvent.location && (
-              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800">
-                <div className="flex items-center gap-1.5 min-w-0 text-xs text-slate-300">
-                  <MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                  <span className="truncate font-medium">{nextUpcomingEvent.location}</span>
+        // SHOW NEXT SCHEDULE EVENT (OR TODAY'S PRACTICE OVER NOTICE + NEXT EVENT)
+        <div className="space-y-2.5">
+          {todayPracticeInfo && todayPracticeInfo.isOver && (
+            <div className="bg-slate-900/90 rounded-2xl border border-slate-800 px-3.5 py-2.5 flex items-center justify-between gap-2 shadow-md">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-500" />
+                <div>
+                  <div className="text-xs font-bold text-slate-200">Today&apos;s Practice is Complete</div>
+                  <div className="text-[10px] text-slate-400">{todayPracticeInfo.timeStr} Session Ended</div>
                 </div>
-                <a
-                  href={`https://maps.google.com/?q=${encodeURIComponent(nextUpcomingEvent.location)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[11px] rounded-xl flex items-center gap-1 shrink-0 active:scale-95 transition-all shadow-xs"
-                >
-                  <span>Directions</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
               </div>
-            )
+              <button
+                type="button"
+                onClick={() => handleOpenPracticePlan(todayPracticeInfo.plan?.id)}
+                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+              >
+                <ClipboardList className="w-3.5 h-3.5" />
+                <span>Review Plan</span>
+              </button>
+            </div>
           )}
+
+          <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950/80 rounded-3xl border border-indigo-500/30 p-4 shadow-xl relative overflow-hidden space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-black tracking-wider uppercase flex items-center gap-1 ${
+                    nextUpcomingEvent.type === 'game'
+                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                      : nextUpcomingEvent.type === 'scrimmage'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  }`}
+                >
+                  {nextUpcomingEvent.type === 'game' ? '🏈 NEXT GAME' : nextUpcomingEvent.type === 'scrimmage' ? '⚡ NEXT SCRIMMAGE' : '📋 NEXT PRACTICE'}
+                </span>
+                {nextUpcomingEvent.locationType && (
+                  <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
+                    {nextUpcomingEvent.locationType}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs font-black text-amber-300 flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-xl border border-slate-800">
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+                <span>{nextUpcomingEvent.time || '10:00 AM'}</span>
+              </span>
+            </div>
+
+            <div>
+              <h2 className="text-lg font-black text-white tracking-tight">
+                {nextUpcomingEvent.opponent ? `vs ${nextUpcomingEvent.opponent}` : nextUpcomingEvent.title}
+              </h2>
+              <p className="text-xs font-semibold text-slate-300 mt-0.5">
+                {formatFullDateLabel(nextUpcomingEvent.date)}
+              </p>
+            </div>
+
+            {/* Action button if practice */}
+            {nextUpcomingEvent.type === 'practice' ? (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => handleOpenPracticePlan(nextUpcomingEvent.linkedPracticePlanId)}
+                  className="w-full py-3 bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-black text-xs sm:text-sm rounded-2xl shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>Open Practice Plan (Sideline View)</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                {nextUpcomingEvent.location && (
+                  <div className="flex items-center gap-1.5 pt-1 border-t border-slate-800 text-xs text-slate-400">
+                    <MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                    <span className="truncate font-medium">{nextUpcomingEvent.location}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              nextUpcomingEvent.location && (
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800">
+                  <div className="flex items-center gap-1.5 min-w-0 text-xs text-slate-300">
+                    <MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                    <span className="truncate font-medium">{nextUpcomingEvent.location}</span>
+                  </div>
+                  <a
+                    href={`https://maps.google.com/?q=${encodeURIComponent(nextUpcomingEvent.location)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[11px] rounded-xl flex items-center gap-1 shrink-0 active:scale-95 transition-all shadow-xs"
+                  >
+                    <span>Directions</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )
+            )}
+          </div>
         </div>
       ) : (
         <div className="bg-slate-900/90 rounded-3xl border border-slate-700/80 p-4 text-center space-y-1.5 shadow-lg">
@@ -966,9 +1019,9 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
           <button
             type="button"
             onClick={() => handleOpenPracticePlan()}
-            className="mt-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl inline-flex items-center gap-1.5 cursor-pointer"
+            className="mt-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-emerald-300 text-xs font-bold rounded-xl inline-flex items-center gap-1.5 cursor-pointer"
           >
-            <ClipboardList className="w-3.5 h-3.5 text-emerald-400" />
+            <Eye className="w-3.5 h-3.5 text-emerald-400" />
             <span>Open Practice Plans</span>
           </button>
         </div>
@@ -1003,7 +1056,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
         {/* 2. Practice Plan (Mobile View) */}
         <button
           type="button"
-          onClick={() => onNavigateToUnit('practice')}
+          onClick={() => handleOpenPracticePlan(todayPracticeInfo?.plan?.id)}
           className="bg-gradient-to-br from-emerald-950/90 via-slate-900 to-slate-900 border border-emerald-500/40 hover:border-emerald-400 p-3.5 rounded-2xl text-left shadow-lg active:scale-98 transition-all group cursor-pointer relative overflow-hidden"
         >
           <div className="flex items-center justify-between mb-2">
@@ -1705,26 +1758,6 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                         </div>
                       </div>
 
-                      {/* Gold */}
-                      <div
-                        onClick={() => pos.goldPlayer?.player && setSelectedPlayerModal(pos.goldPlayer.player)}
-                        className={`p-1.5 rounded-xl border flex items-center gap-1.5 ${
-                          pos.goldPlayer
-                            ? 'bg-amber-950/40 border-amber-500/40 text-slate-200 cursor-pointer hover:border-amber-400'
-                            : 'bg-slate-950/40 border-slate-800 text-slate-500'
-                        }`}
-                      >
-                        <span className="w-5 h-5 rounded bg-amber-400 text-slate-950 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
-                          {pos.goldPlayer ? `#${pos.goldPlayer.num}` : '-'}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-[9px] font-black text-amber-300 uppercase leading-none">Gold (2nd)</div>
-                          <div className="text-[11px] font-bold truncate">
-                            {pos.goldPlayer ? pos.goldPlayer.name : 'None'}
-                          </div>
-                        </div>
-                      </div>
-
                       {/* Blue */}
                       <div
                         onClick={() => pos.bluePlayer?.player && setSelectedPlayerModal(pos.bluePlayer.player)}
@@ -1741,6 +1774,26 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                           <div className="text-[9px] font-black text-blue-300 uppercase leading-none">Blue (3rd)</div>
                           <div className="text-[11px] font-bold truncate">
                             {pos.bluePlayer ? pos.bluePlayer.name : 'None'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Gold */}
+                      <div
+                        onClick={() => pos.goldPlayer?.player && setSelectedPlayerModal(pos.goldPlayer.player)}
+                        className={`p-1.5 rounded-xl border flex items-center gap-1.5 ${
+                          pos.goldPlayer
+                            ? 'bg-amber-950/40 border-amber-500/40 text-slate-200 cursor-pointer hover:border-amber-400'
+                            : 'bg-slate-950/40 border-slate-800 text-slate-500'
+                        }`}
+                      >
+                        <span className="w-5 h-5 rounded bg-amber-400 text-slate-950 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
+                          {pos.goldPlayer ? `#${pos.goldPlayer.num}` : '-'}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[9px] font-black text-amber-300 uppercase leading-none">Gold (2nd)</div>
+                          <div className="text-[11px] font-bold truncate">
+                            {pos.goldPlayer ? pos.goldPlayer.name : 'None'}
                           </div>
                         </div>
                       </div>
@@ -1847,28 +1900,24 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
         {hubTab === 'attendance' && (
           <div className="space-y-3">
             {/* 1. ATTENDANCE DATE CONTROLLER BANNER */}
-            <div className="bg-gradient-to-r from-slate-900 via-indigo-950/50 to-slate-900 border border-indigo-500/30 rounded-2xl p-3 space-y-2.5 shadow-md">
+            <div className="bg-gradient-to-r from-slate-900 via-indigo-950/60 to-slate-900 border border-indigo-500/40 rounded-2xl p-3 space-y-3 shadow-md">
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center shrink-0">
-                    <Calendar className="w-4 h-4" />
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>ATTENDANCE SESSION DATE</span>
                   </div>
-                  <div>
-                    <div className="text-xs font-black text-white flex items-center gap-1.5">
-                      <span>{formatFullDateLabel(attendanceDate)}</span>
-                      {attendanceDate === todayStr ? (
-                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                          Today
-                        </span>
-                      ) : (
-                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-slate-800 text-slate-400 border border-slate-700">
-                          Past / Future
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-medium">
-                      Attendance Session Log Date
-                    </div>
+                  <div className="text-sm font-black text-white flex items-center gap-2 mt-0.5">
+                    <span>{formatFullDateLabel(attendanceDate)}</span>
+                    {attendanceDate === todayStr ? (
+                      <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                        TODAY
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-slate-800 text-slate-400 border border-slate-700">
+                        PAST / CUSTOM DATE
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -1876,10 +1925,10 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                   type="button"
                   onClick={() => setAttendanceDate(todayStr)}
                   disabled={attendanceDate === todayStr}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
+                  className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black transition-all cursor-pointer ${
                     attendanceDate === todayStr
                       ? 'opacity-40 text-slate-500 bg-slate-800 cursor-default'
-                      : 'bg-indigo-600 hover:bg-indigo-500 text-white active:scale-95'
+                      : 'bg-indigo-600 hover:bg-indigo-500 text-white active:scale-95 shadow-xs'
                   }`}
                 >
                   Jump to Today
@@ -1887,34 +1936,32 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
               </div>
 
               {/* Interactive Date Change Controls */}
-              <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-slate-800">
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => handleShiftAttendanceDate(-1)}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1 active:scale-95 cursor-pointer"
                   title="Previous Day"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                   <span>Prev Day</span>
                 </button>
 
-                <div className="relative flex-1 max-w-[170px]">
+                <div className="flex-1 max-w-[170px]">
                   <input
                     type="date"
                     value={attendanceDate}
                     onChange={(e) => {
-                      if (e.target.value) {
-                        setAttendanceDate(e.target.value);
-                      }
+                      if (e.target.value) setAttendanceDate(e.target.value);
                     }}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1 text-xs font-mono font-bold text-center text-indigo-200 focus:outline-none focus:border-indigo-400 cursor-pointer"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2 py-1.5 text-xs font-mono font-bold text-center text-indigo-200 focus:outline-none focus:border-indigo-400 cursor-pointer"
                   />
                 </div>
 
                 <button
                   type="button"
                   onClick={() => handleShiftAttendanceDate(1)}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1 active:scale-95 cursor-pointer"
                   title="Next Day"
                 >
                   <span>Next Day</span>
@@ -1922,11 +1969,39 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                 </button>
               </div>
 
+              {/* Quick Scheduled Practice Chips if available */}
+              {scheduledPracticeDates.length > 0 && (
+                <div className="pt-2 border-t border-slate-800/80 space-y-1">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Quick Jump to Scheduled Practice Date:
+                  </div>
+                  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+                    {scheduledPracticeDates.map((evt) => (
+                      <button
+                        key={evt.id || evt.date}
+                        type="button"
+                        onClick={() => setAttendanceDate(evt.date.split('T')[0])}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
+                          attendanceDate === evt.date.split('T')[0]
+                            ? 'bg-indigo-600 text-white border-indigo-400 font-black shadow-xs'
+                            : 'bg-slate-800/90 text-slate-300 border-slate-700 hover:bg-slate-750'
+                        }`}
+                      >
+                        {formatShortDateChip(evt.date)} ({evt.time || 'Practice'})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Notice if existing log is loaded */}
               {existingDateLog && (
-                <div className="p-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-[10px] font-bold text-emerald-300 text-center flex items-center justify-center gap-1">
-                  <Check className="w-3 h-3 text-emerald-400" />
-                  <span>Existing log loaded for this date ({existingDateLog.presentPlayerNums?.length || 0} Present). Saving will update it.</span>
+                <div className="p-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-[11px] font-bold text-emerald-300 text-center flex items-center justify-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>
+                    Recorded for this date: {existingDateLog.presentPlayerNums?.length || 0} Present,{' '}
+                    {existingDateLog.absentPlayerNums?.length || 0} Absent. Saving will update this log.
+                  </span>
                 </div>
               )}
             </div>
@@ -2394,6 +2469,300 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* =========================================================================
+          MOBILE PRACTICE PLAN VIEWER MODAL (READING & SIDELINE FOCUSED)
+          "When i mobile view can you make it so its easier to see the practice plan.
+          This view is more about viewing it and not editing it"
+          ========================================================================= */}
+      {mobileViewingPlan && (
+        <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex flex-col overflow-hidden animate-in fade-in duration-200">
+          {/* Top Header */}
+          <div className="p-3 sm:p-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <button
+                type="button"
+                onClick={() => setMobileViewingPlan(null)}
+                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 flex items-center justify-center shrink-0 active:scale-95 transition-all cursor-pointer"
+                title="Close Viewer"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Sideline View
+                  </span>
+                  <span className="text-[11px] font-bold text-slate-400">
+                    {formatFullDateLabel(mobileViewingPlan.date || todayStr)}
+                  </span>
+                </div>
+                <h1 className="text-sm sm:text-base font-black text-white truncate mt-0.5">
+                  {mobileViewingPlan.title || 'Practice Plan'}
+                </h1>
+              </div>
+            </div>
+
+            {/* Quick Actions Header: Font Zoom & Full Editor */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setMobilePlanFontSize((prev) => (prev === 'normal' ? 'large' : 'normal'))}
+                className={`px-2 py-1.5 rounded-xl border text-xs font-black flex items-center gap-1 transition-all cursor-pointer ${
+                  mobilePlanFontSize === 'large'
+                    ? 'bg-amber-400 text-slate-950 border-amber-500 shadow-sm'
+                    : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-750'
+                }`}
+                title="Toggle font size for field readability"
+              >
+                <span className="text-[10px]">Text:</span>
+                <span>{mobilePlanFontSize === 'large' ? 'Large' : 'Normal'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (onSelectPractice) onSelectPractice(mobileViewingPlan.id);
+                  onNavigateToUnit('practice');
+                  setMobileViewingPlan(null);
+                }}
+                className="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs flex items-center gap-1 active:scale-95 transition-all cursor-pointer shadow-sm"
+                title="Open in full practice editor"
+              >
+                <Code className="w-3.5 h-3.5 hidden sm:inline" />
+                <span>Full Editor</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Session Summary Pill Strip */}
+          <div className="px-3 py-2 bg-slate-900/60 border-b border-slate-800/80 flex items-center justify-between gap-2 overflow-x-auto scrollbar-none text-xs shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-slate-400 font-medium">Session:</span>
+              <span className="font-black text-emerald-400">
+                {(mobileViewingPlan.periods || mobileViewingPlan.plan || []).reduce(
+                  (sum, p) => sum + (p.durationMinutes || p.duration || p.time || 0),
+                  0
+                )}{' '}
+                Minutes Total
+              </span>
+              <span className="text-slate-600">•</span>
+              <span className="font-bold text-slate-300">
+                {(mobileViewingPlan.periods || mobileViewingPlan.plan || []).length} Periods
+              </span>
+            </div>
+
+            {mobileViewingPlan.startTime && (
+              <div className="flex items-center gap-1 text-[11px] font-bold text-amber-300 shrink-0">
+                <Clock className="w-3 h-3 text-amber-400" />
+                <span>{mobileViewingPlan.startTime} Start</span>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Period Filter Tabs */}
+          <div className="px-3 py-2 bg-slate-950 border-b border-slate-800 flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
+            <button
+              type="button"
+              onClick={() => setSelectedMobilePeriodFilter('all')}
+              className={`px-3 py-1 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
+                selectedMobilePeriodFilter === 'all'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              All Periods
+            </button>
+            {(mobileViewingPlan.periods || mobileViewingPlan.plan || []).map((p, pIdx) => {
+              const isActiveRunning = activeRunningPeriodIdx === pIdx;
+              const isSelected = selectedMobilePeriodFilter === pIdx;
+              return (
+                <button
+                  key={pIdx}
+                  type="button"
+                  onClick={() => setSelectedMobilePeriodFilter(pIdx)}
+                  className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer border ${
+                    isSelected
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-xs'
+                      : isActiveRunning
+                      ? 'bg-slate-800 text-amber-300 border-amber-400/60'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                  }`}
+                >
+                  <span>P{pIdx + 1}</span>
+                  <span className="text-[10px] opacity-80">({p.durationMinutes || p.duration || p.time || 0}m)</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Practice Content Body */}
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
+            {/* Live Sideline Progress Tracker Bar */}
+            <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 rounded-2xl border border-slate-700/80 p-3 shadow-md flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[10px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>LIVE SIDELINE TRACKER</span>
+                </div>
+                <div className="text-xs font-black text-white truncate mt-0.5">
+                  Active Period: #
+                  {activeRunningPeriodIdx + 1} &bull;{' '}
+                  {(mobileViewingPlan.periods || mobileViewingPlan.plan || [])[activeRunningPeriodIdx]?.name ||
+                    (mobileViewingPlan.periods || mobileViewingPlan.plan || [])[activeRunningPeriodIdx]?.title ||
+                    'Select Period'}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  disabled={activeRunningPeriodIdx <= 0}
+                  onClick={() => setActiveRunningPeriodIdx((prev) => Math.max(0, prev - 1))}
+                  className="px-2 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-200 text-xs font-bold rounded-lg cursor-pointer transition-all"
+                >
+                  &larr; Prev
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    activeRunningPeriodIdx >=
+                    (mobileViewingPlan.periods || mobileViewingPlan.plan || []).length - 1
+                  }
+                  onClick={() =>
+                    setActiveRunningPeriodIdx((prev) =>
+                      Math.min((mobileViewingPlan.periods || mobileViewingPlan.plan || []).length - 1, prev + 1)
+                    )
+                  }
+                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-white text-xs font-black rounded-lg cursor-pointer transition-all shadow-xs"
+                >
+                  Next Period &rarr;
+                </button>
+              </div>
+            </div>
+
+            {/* List of Periods */}
+            {(mobileViewingPlan.periods || mobileViewingPlan.plan || [])
+              .map((period, pIdx) => ({ period, pIdx }))
+              .filter(({ pIdx }) => selectedMobilePeriodFilter === 'all' || selectedMobilePeriodFilter === pIdx)
+              .map(({ period, pIdx }) => {
+                const isRunning = activeRunningPeriodIdx === pIdx;
+                const duration = period.durationMinutes || period.duration || period.time || 0;
+                const stations = period.stations || [];
+
+                return (
+                  <div
+                    key={pIdx}
+                    className={`rounded-2xl border transition-all p-3.5 space-y-3 ${
+                      isRunning
+                        ? 'bg-slate-900/95 border-emerald-500/80 shadow-lg shadow-emerald-950/40 ring-1 ring-emerald-500/40'
+                        : 'bg-slate-900/80 border-slate-800'
+                    }`}
+                  >
+                    {/* Period Header */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                            isRunning
+                              ? 'bg-emerald-500 text-slate-950'
+                              : 'bg-slate-800 text-indigo-300 border border-slate-700'
+                          }`}
+                        >
+                          Period {pIdx + 1}
+                        </span>
+
+                        {period.category && (
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase bg-slate-800/90 text-amber-300 border border-slate-700">
+                            {period.category}
+                          </span>
+                        )}
+
+                        {period.format && (
+                          <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase bg-slate-800 text-slate-400">
+                            {period.format}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-white bg-slate-950 px-2 py-1 rounded-xl border border-slate-800">
+                          {duration} min
+                        </span>
+                        {!isRunning && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveRunningPeriodIdx(pIdx)}
+                            className="text-[10px] font-bold text-slate-400 hover:text-emerald-300 transition-colors cursor-pointer"
+                          >
+                            Set Active
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Period Title */}
+                    <h3
+                      className={`font-black text-white tracking-tight ${
+                        mobilePlanFontSize === 'large' ? 'text-lg sm:text-xl' : 'text-base'
+                      }`}
+                    >
+                      {period.name || period.title || `Period ${pIdx + 1}`}
+                    </h3>
+
+                    {/* Stations / Drills Display */}
+                    {stations.length > 0 ? (
+                      <div className="space-y-2 pt-1">
+                        {stations.map((stn, sIdx) => (
+                          <div
+                            key={sIdx}
+                            className="bg-slate-950/80 rounded-xl border border-slate-800 p-2.5 space-y-1.5"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-black text-indigo-300">
+                                {stn.name || `Station ${sIdx + 1}`}
+                              </span>
+                              {stn.coach && (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-indigo-950 text-indigo-300 border border-indigo-700/50">
+                                  👤 {stn.coach}
+                                </span>
+                              )}
+                            </div>
+
+                            {stn.desc && (
+                              <p
+                                className={`text-slate-200 font-semibold leading-relaxed ${
+                                  mobilePlanFontSize === 'large' ? 'text-sm' : 'text-xs'
+                                }`}
+                              >
+                                {stn.desc}
+                              </p>
+                            )}
+
+                            {stn.focus && (
+                              <div className="flex items-start gap-1.5 pt-1 text-[11px] text-amber-300/90 font-medium">
+                                <span className="font-bold shrink-0 text-amber-400">Key Focus:</span>
+                                <span>{stn.focus}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-slate-400 italic bg-slate-950/40 p-2.5 rounded-xl border border-slate-800/60">
+                        Full-team period with no station rotations.
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+            {/* Bottom spacer */}
+            <div className="h-6" />
+          </div>
         </div>
       )}
     </div>

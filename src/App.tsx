@@ -5922,6 +5922,8 @@ function mergeRemoteWeeklyData(
                 attendanceLogs={attendanceLogs}
                 onUpdatePlayer={handleUpdatePlayerInRoster}
                 onUpdateRoster={handleUpdateRoster}
+                onAddScheduleEvent={handleAddScheduleEvent}
+                onUpdateScheduleEvent={(event) => handleUpdateScheduleEvent(event.id, event)}
                 onOpenAddPlayerModal={() => {
                   setEditingPlayerForModal(null);
                   setIsRosterModalOpen(true);

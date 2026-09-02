@@ -30,6 +30,7 @@ import {
   Users,
   CheckCircle2,
   Filter,
+  Eye,
 } from 'lucide-react';
 import {
   PracticePlan,
@@ -150,6 +151,12 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   const [stationGroupFilters, setStationGroupFilters] = useState<Record<string, string>>({});
   const [isPrintMenuOpen, setIsPrintMenuOpen] = useState(false);
   const printMenuRef = useRef<HTMLDivElement>(null);
+
+  // Sideline / View-Only Mode State (Optimized for Mobile and Field Reading)
+  const [viewOnlyMode, setViewOnlyMode] = useState<boolean>(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  const [viewFilterPeriod, setViewFilterPeriod] = useState<number | 'all'>('all');
+  const [viewFontSize, setViewFontSize] = useState<'normal' | 'large'>('normal');
+  const [activeViewingPeriodIdx, setActiveViewingPeriodIdx] = useState<number>(0);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -816,6 +823,36 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 <span>Season Schedule</span>
               </button>
             )}
+
+            {/* View Mode vs Edit Mode Toggle (Elevated for field and mobile use) */}
+            <div className="flex items-center bg-slate-900 p-1 rounded-2xl border border-slate-700/80 shadow-inner">
+              <button
+                type="button"
+                onClick={() => setViewOnlyMode(true)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+                  viewOnlyMode
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Switch to viewing-focused sideline mode (easy to read on phone/tablet, no edit clutter)"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>View Mode</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewOnlyMode(false)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+                  !viewOnlyMode
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Switch to full editing mode"
+              >
+                <Edit className="w-3.5 h-3.5" />
+                <span>Edit Mode</span>
+              </button>
+            </div>
 
             {/* Multi-Mode Smart Print Button */}
             <div className="relative inline-flex items-center" ref={printMenuRef}>
@@ -1823,8 +1860,231 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
         </div>
       </div>
 
+      {/* View-Focused Sideline Reader (Mobile & Field Friendly) */}
+      {viewOnlyMode && (
+        <div className="print:hidden space-y-4 animate-in fade-in duration-200">
+          {/* Top Banner with Text Size and Period Count */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center justify-center font-black">
+                <Eye className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-white uppercase tracking-wider">
+                    Sideline Viewing Mode
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Read-Only
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-400 mt-0.5">
+                  Optimized for fast reading on phones, tablets, and field conditions.
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setViewFontSize((prev) => (prev === 'normal' ? 'large' : 'normal'))}
+                className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  viewFontSize === 'large'
+                    ? 'bg-amber-400 text-slate-950 border-amber-500 font-black shadow-sm'
+                    : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-750'
+                }`}
+              >
+                <span>Font Size:</span>
+                <span className="font-black uppercase">{viewFontSize === 'large' ? 'Large' : 'Normal'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setViewOnlyMode(false)}
+                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-indigo-300 border border-slate-700 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+              >
+                <Edit className="w-3.5 h-3.5" />
+                <span>Switch to Edit</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Period Selector Strip */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              type="button"
+              onClick={() => setViewFilterPeriod('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
+                viewFilterPeriod === 'all'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+              }`}
+            >
+              All Periods ({currentPlanPeriods.length})
+            </button>
+            {currentPlanPeriods.map((period, pIdx) => {
+              const isSelected = viewFilterPeriod === pIdx;
+              const isActive = activeViewingPeriodIdx === pIdx;
+              return (
+                <button
+                  key={pIdx}
+                  type="button"
+                  onClick={() => setViewFilterPeriod(pIdx)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer border flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-md font-black'
+                      : isActive
+                      ? 'bg-slate-900 text-amber-300 border-amber-400/60'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                  }`}
+                >
+                  <span>P{pIdx + 1}</span>
+                  <span className="text-[10px] opacity-80 font-mono">({period.time || 0}m)</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Mobile-Friendly Period Cards */}
+          <div className="space-y-4">
+            {currentPlanPeriods
+              .map((period, pIdx) => ({ period, pIdx }))
+              .filter(({ pIdx }) => viewFilterPeriod === 'all' || viewFilterPeriod === pIdx)
+              .map(({ period, pIdx }) => {
+                // Calculate time string
+                let runningMin = currentStartMinutes;
+                for (let i = 0; i < pIdx; i++) {
+                  runningMin += Number(currentPlanPeriods[i]?.time) || 0;
+                }
+                const pDuration = Number(period.time) || 0;
+                const pEndMin = runningMin + pDuration;
+                const timeSpanStr = `${formatTimeMinutes(runningMin)} - ${formatTimeMinutes(pEndMin)}`;
+
+                const rawStations = Array.isArray(period.stations) ? period.stations : [];
+                const validStations = rawStations.filter((st): st is PracticeStation => Boolean(st && typeof st === 'object'));
+                const isRunning = activeViewingPeriodIdx === pIdx;
+
+                return (
+                  <div
+                    key={pIdx}
+                    className={`rounded-3xl border transition-all p-4 sm:p-5 space-y-3.5 shadow-xl ${
+                      isRunning
+                        ? 'bg-slate-850 border-emerald-500/70 ring-1 ring-emerald-500/30'
+                        : 'bg-slate-850/90 border-slate-700/80'
+                    }`}
+                  >
+                    {/* Period Header */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-750">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider bg-indigo-600 text-white shadow-xs">
+                          Period {pIdx + 1}
+                        </span>
+
+                        {period.category && (
+                          <span className="px-2.5 py-1 rounded-xl text-xs font-black uppercase bg-slate-900 text-amber-300 border border-slate-700">
+                            {period.category}
+                          </span>
+                        )}
+
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase bg-slate-900 text-slate-300 border border-slate-800">
+                          {period.format === 'rotating' ? '🔄 Stations Rotate' : 'Static Whole-Group'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900 text-white font-mono text-xs font-black border border-slate-750">
+                          <Clock className="w-3.5 h-3.5 text-amber-400" />
+                          <span>{timeSpanStr}</span>
+                          <span className="text-emerald-400 font-sans">({pDuration}m)</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setActiveViewingPeriodIdx(pIdx)}
+                          className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+                            isRunning
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                              : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
+                          }`}
+                        >
+                          {isRunning ? 'Active Live' : 'Set Active'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Stations / Drills in this Period */}
+                    <div className="space-y-3">
+                      {validStations.map((station, sIdx) => (
+                        <div
+                          key={sIdx}
+                          className="bg-slate-900/90 rounded-2xl border border-slate-750 p-3.5 sm:p-4 space-y-2.5"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              {validStations.length > 1 && (
+                                <span className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center font-black text-xs">
+                                  {sIdx + 1}
+                                </span>
+                              )}
+                              <h4
+                                className={`font-black text-white tracking-tight ${
+                                  viewFontSize === 'large' ? 'text-base sm:text-lg' : 'text-sm sm:text-base'
+                                }`}
+                              >
+                                {station.name || `Drill Station ${sIdx + 1}`}
+                              </h4>
+                            </div>
+
+                            {station.coach && (
+                              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-950/80 border border-indigo-700/50 text-indigo-200 text-xs font-black">
+                                <Users className="w-3.5 h-3.5 text-indigo-400" />
+                                <span>Coach: {station.coach}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {station.desc && (
+                            <p
+                              className={`text-slate-200 leading-relaxed font-medium whitespace-pre-wrap ${
+                                viewFontSize === 'large' ? 'text-sm sm:text-base' : 'text-xs sm:text-sm'
+                              }`}
+                            >
+                              {station.desc}
+                            </p>
+                          )}
+
+                          {station.focus && (
+                            <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-2.5 text-amber-200 flex items-start gap-2">
+                              <span className="font-black text-amber-400 uppercase text-[11px] shrink-0 mt-0.5">
+                                Key Focus:
+                              </span>
+                              <span
+                                className={`font-semibold ${
+                                  viewFontSize === 'large' ? 'text-xs sm:text-sm' : 'text-xs'
+                                }`}
+                              >
+                                {station.focus}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      {validStations.length === 0 && (
+                        <div className="p-3 text-center text-xs text-slate-400 italic">
+                          No drill stations listed for this period.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
       {/* Main Practice Schedule Table */}
-      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl overflow-visible print:bg-transparent print:border-none print:shadow-none print:rounded-none print:p-0 print:m-0">
+      <div className={`bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl overflow-visible print:bg-transparent print:border-none print:shadow-none print:rounded-none print:p-0 print:m-0 ${viewOnlyMode ? 'hidden print:block' : ''}`}>
         <div className="overflow-x-auto print:overflow-visible">
           <table className="w-full border-collapse practice-table text-xs">
             <thead>
