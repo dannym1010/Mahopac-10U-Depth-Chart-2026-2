@@ -75,7 +75,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "LCB",
     conditioningHours: 10,
     paddedHours: 10,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "4",
@@ -89,7 +89,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "RCB",
     conditioningHours: 10,
     paddedHours: 10,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "6",
@@ -103,7 +103,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "E9 (DE)",
     conditioningHours: 10,
     paddedHours: 10,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "7",
@@ -117,7 +117,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "S (OLB)",
     conditioningHours: 10,
     paddedHours: 10,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "8",
@@ -131,7 +131,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "FS",
     conditioningHours: 10,
     paddedHours: 8.5,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 3 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 3 }
   },
   {
     num: "10",
@@ -146,7 +146,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     conditioningHours: 10,
     paddedHours: 10,
     isCaptain: true,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "11",
@@ -160,7 +160,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "LCB",
     conditioningHours: 10,
     paddedHours: 10,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "12",
@@ -174,7 +174,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "R (OLB)",
     conditioningHours: 10,
     paddedHours: 7.5,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 3 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 3 }
   },
   {
     num: "13",
@@ -188,7 +188,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "M (MLB)",
     conditioningHours: 10,
     paddedHours: 10,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "15",
@@ -202,7 +202,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "E5 (DE)",
     conditioningHours: 10,
     paddedHours: 10,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "17",
@@ -216,7 +216,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "T3 (DT)",
     conditioningHours: 10,
     paddedHours: 6,
-    weeklyHours: { "0": 5, "1": 3.5, "2": 3 }
+    weeklyHours: { "pre-1": 5, "1": 3.5, "2": 3 }
   },
   {
     num: "19",
@@ -230,7 +230,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "RCB",
     conditioningHours: 10,
     paddedHours: 10,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "20",
@@ -245,7 +245,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     conditioningHours: 10,
     paddedHours: 10,
     isCaptain: true,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "21",
@@ -259,7 +259,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "W (OLB)",
     conditioningHours: 10,
     paddedHours: 10,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "22",
@@ -273,7 +273,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "LCB",
     conditioningHours: 8.5,
     paddedHours: 0,
-    weeklyHours: { "0": 4.5, "1": 4, "2": 0 }
+    weeklyHours: { "pre-1": 4.5, "1": 4, "2": 0 }
   },
   {
     num: "27",
@@ -287,7 +287,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "M (MLB)",
     conditioningHours: 10,
     paddedHours: 10,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "33",
@@ -301,7 +301,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "E9 (DE)",
     conditioningHours: 10,
     paddedHours: 10,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "34",
@@ -315,7 +315,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "T1 (DT)",
     conditioningHours: 10,
     paddedHours: 9,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "40",
@@ -329,7 +329,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "W (OLB)",
     conditioningHours: 10,
     paddedHours: 10,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "44",
@@ -343,7 +343,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "T3 (DT)",
     conditioningHours: 6,
     paddedHours: 0,
-    weeklyHours: { "0": 3, "1": 3, "2": 0 }
+    weeklyHours: { "pre-1": 3, "1": 3, "2": 0 }
   },
   {
     num: "48",
@@ -357,7 +357,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "T1 (DT)",
     conditioningHours: 10,
     paddedHours: 10,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "50",
@@ -372,7 +372,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     conditioningHours: 10,
     paddedHours: 10,
     isCaptain: true,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "52",
@@ -386,7 +386,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "T3 (DT)",
     conditioningHours: 10,
     paddedHours: 10,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "56",
@@ -401,7 +401,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     conditioningHours: 10,
     paddedHours: 10,
     isCaptain: true,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   },
   {
     num: "66",
@@ -415,7 +415,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "T1 (DT)",
     conditioningHours: 10,
     paddedHours: 7.5,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 3.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 3.5 }
   },
   {
     num: "99",
@@ -429,7 +429,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     defensivePosition: "T3 (DT)",
     conditioningHours: 10,
     paddedHours: 10,
-    weeklyHours: { "0": 5, "1": 4.5, "2": 4.5 }
+    weeklyHours: { "pre-1": 5, "1": 4.5, "2": 4.5 }
   }
 ];
 
@@ -2077,20 +2077,153 @@ export const DEFAULT_SEASON_CONFIG: SeasonConfig = {
   }
 };
 
+const ALL_10U_ROSTER_NUMS = [
+  "2", "4", "6", "7", "8", "9", "10", "11", "12", "14", "15", "17", "18", "21", "22", "24", "27", "33", "34", "40", "44", "48", "50", "55", "77", "88", "99"
+];
+
 export const DEFAULT_ATTENDANCE_LOGS: AttendanceRecord[] = [
+  // Pre-Season Week 1 (Starts Monday 8/3)
   {
-    id: "att_pre_1",
-    date: "2026-08-25",
-    week: "pre-4",
-    title: "Preseason Conditioning Practice #1",
+    id: "att_pre_1_1",
+    scheduleEventId: "ts_evt_2",
+    date: "2026-08-03",
+    week: "pre-1",
+    title: "First Day of Practice",
+    sessionType: "conditioning",
+    hours: 2.5,
+    location: "Main Field",
+    presentPlayerNums: ALL_10U_ROSTER_NUMS.filter((n) => n !== "34" && n !== "44"),
+    absentPlayerNums: ["34", "44"],
+    notes: "Mandatory Heat & Acclimatization conditioning. Helmets, tees & shorts only.",
+    timestamp: 1722690000000,
+  },
+  {
+    id: "att_pre_1_2",
+    scheduleEventId: "ts_evt_3",
+    date: "2026-08-04",
+    week: "pre-1",
+    title: "Practice",
+    sessionType: "conditioning",
+    hours: 2.5,
+    location: "Main Field",
+    presentPlayerNums: ALL_10U_ROSTER_NUMS.filter((n) => n !== "24"),
+    absentPlayerNums: ["24"],
+    notes: "Day 2 conditioning, individual fundamentals and sprint mechanics.",
+    timestamp: 1722776400000,
+  },
+  {
+    id: "att_pre_1_3",
+    scheduleEventId: "ts_evt_4",
+    date: "2026-08-05",
+    week: "pre-1",
+    title: "DeMatteo Clinic",
     sessionType: "conditioning",
     hours: 1.5,
     location: "Main Field",
-    presentPlayerNums: [],
+    presentPlayerNums: [...ALL_10U_ROSTER_NUMS],
     absentPlayerNums: [],
-    notes: "Mandatory Heat & Acclimatization conditioning. Helmets, tees & shorts only.",
-    timestamp: 1724600000000,
-  }
+    notes: "DeMatteo blocking & pursuit angles clinic. Full team attendance.",
+    timestamp: 1722862800000,
+  },
+  {
+    id: "att_pre_1_4",
+    scheduleEventId: "ts_evt_6",
+    date: "2026-08-06",
+    week: "pre-1",
+    title: "Practice",
+    sessionType: "conditioning",
+    hours: 1.5,
+    location: "Main Field",
+    presentPlayerNums: ALL_10U_ROSTER_NUMS.filter((n) => n !== "44"),
+    absentPlayerNums: ["44"],
+    notes: "Week 1 review, base alignments and agility circuit.",
+    timestamp: 1722949200000,
+  },
+
+  // Pre-Season Week 2 (Starts Monday 8/10)
+  {
+    id: "att_pre_2_1",
+    scheduleEventId: "ts_evt_7",
+    date: "2026-08-10",
+    week: "pre-2",
+    title: "Practice",
+    sessionType: "conditioning",
+    hours: 2.5,
+    location: "Main Field",
+    presentPlayerNums: [...ALL_10U_ROSTER_NUMS],
+    absentPlayerNums: [],
+    notes: "Conditioning completion session. Regular attendees clear 10h threshold for pads.",
+    timestamp: 1723294800000,
+  },
+  {
+    id: "att_pre_2_2",
+    scheduleEventId: "ts_evt_8",
+    date: "2026-08-11",
+    week: "pre-2",
+    title: "Practice",
+    sessionType: "padded",
+    hours: 2.5,
+    location: "Main Field",
+    presentPlayerNums: [...ALL_10U_ROSTER_NUMS],
+    absentPlayerNums: [],
+    playerSessionTypes: {
+      "24": "conditioning",
+      "34": "conditioning",
+      "44": "conditioning",
+    },
+    notes: "First padded contact session for cleared players. Players 24, 34, 44 on conditioning catch-up.",
+    timestamp: 1723381200000,
+  },
+  {
+    id: "att_pre_2_3",
+    scheduleEventId: "ts_evt_9",
+    date: "2026-08-12",
+    week: "pre-2",
+    title: "Practice",
+    sessionType: "padded",
+    hours: 2.5,
+    location: "Main Field",
+    presentPlayerNums: [...ALL_10U_ROSTER_NUMS],
+    absentPlayerNums: [],
+    playerSessionTypes: {
+      "44": "conditioning",
+    },
+    notes: "Padded contact tackling circuit. Player 44 continues conditioning catch-up.",
+    timestamp: 1723467600000,
+  },
+  {
+    id: "att_pre_2_4",
+    scheduleEventId: "ts_evt_10",
+    date: "2026-08-13",
+    week: "pre-2",
+    title: "Practice",
+    sessionType: "padded",
+    hours: 2.5,
+    location: "Main Field",
+    presentPlayerNums: [...ALL_10U_ROSTER_NUMS],
+    absentPlayerNums: [],
+    playerSessionTypes: {
+      "44": "conditioning",
+    },
+    notes: "Full team team session. Player 44 completes 10h conditioning requirement.",
+    timestamp: 1723554000000,
+  },
+
+  // Pre-Season Week 3 (Starts Monday 8/17)
+  {
+    id: "att_pre_3_1",
+    scheduleEventId: "ts_evt_11",
+    date: "2026-08-17",
+    week: "pre-3",
+    title: "Practice",
+    sessionType: "padded",
+    hours: 2.5,
+    location: "Main Field",
+    presentPlayerNums: ALL_10U_ROSTER_NUMS.filter((n) => n !== "8"),
+    absentPlayerNums: ["8"],
+    notes: "Padded team session. Cleared players reach 10h contact threshold for scrimmages.",
+    timestamp: 1723903200000,
+  },
 ];
 
 export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [

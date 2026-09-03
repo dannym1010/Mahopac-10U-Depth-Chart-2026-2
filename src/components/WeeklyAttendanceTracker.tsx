@@ -36,6 +36,7 @@ import {
 } from '../types';
 import { getSeasonWeekList, isDateInWeek, getWeekDateRange } from '../utils/seasonWeekUtils';
 import { triggerPrint } from '../utils/printUtils';
+import { calculatePlayerHours, syncEntireRosterWithLogs } from '../utils/hoursCalculation';
 
 export interface WeeklyPracticeSession {
   id: string;
@@ -331,63 +332,12 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
     return map;
   }, [weekSessions, attendanceLogs, roster]);
 
-  // Recalculate roster hours based on attendance logs and individual player session types using delta tracking
+  // Recalculate roster hours based on attendance logs and individual player session types
   const syncRosterHoursFromLogs = useCallback(
     (currentRoster: RosterPlayer[], updatedLogs: AttendanceRecord[]) => {
-      return currentRoster.map((player) => {
-        // Calculate hours in previous attendanceLogs to find exact delta
-        let prevCond = 0;
-        let prevPadded = 0;
-        attendanceLogs.forEach((log) => {
-          if (log.presentPlayerNums?.includes(player.num)) {
-            const h = Number(log.hours || 0);
-            const attire = log.playerSessionTypes?.[player.num] || log.sessionType;
-            if (attire === 'conditioning') prevCond += h;
-            else if (attire === 'padded') prevPadded += h;
-          }
-        });
-
-        // Calculate hours in updatedLogs
-        let nextCond = 0;
-        let nextPadded = 0;
-        let activeWeekHours = 0;
-        const newWeeklyHours: Record<string, number> = { ...(player.weeklyHours || {}) };
-
-        updatedLogs.forEach((log) => {
-          if (log.presentPlayerNums?.includes(player.num)) {
-            const h = Number(log.hours || 0);
-            const attire = log.playerSessionTypes?.[player.num] || log.sessionType;
-            if (attire === 'conditioning') nextCond += h;
-            else if (attire === 'padded') nextPadded += h;
-
-            if (log.week === selectedWeek || (log.date && isDateInWeek(log.date, selectedWeek))) {
-              activeWeekHours += h;
-            } else if (log.week) {
-              newWeeklyHours[log.week] = Math.round(((newWeeklyHours[log.week] || 0) + h) * 10) / 10;
-            }
-          }
-        });
-
-        newWeeklyHours[selectedWeek] = Math.round(activeWeekHours * 10) / 10;
-
-        const condDelta = nextCond - prevCond;
-        const padDelta = nextPadded - prevPadded;
-
-        const baseCond = Number(player.conditioningHours || 0);
-        const basePadded = Number(player.paddedHours || 0);
-
-        const finalCond = Math.max(0, Math.round((baseCond + condDelta) * 10) / 10);
-        const finalPadded = Math.max(0, Math.round((basePadded + padDelta) * 10) / 10);
-
-        return {
-          ...player,
-          conditioningHours: finalCond,
-          paddedHours: finalPadded,
-          weeklyHours: newWeeklyHours,
-        };
-      });
+      return syncEntireRosterWithLogs(currentRoster, updatedLogs, selectedWeek, seasonConfig);
     },
-    [selectedWeek, attendanceLogs]
+    [selectedWeek, seasonConfig]
   );
 
   // Toggle single attendance checkmark for (session x player)
@@ -1436,6 +1386,10 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                         <div className="text-[10px] uppercase font-bold text-slate-400">Pre-Season</div>
                         <div className="text-xs font-mono font-black text-slate-200">Total Hours</div>
                       </th>
+                      <th className="p-3 font-black text-indigo-300 text-center w-24 bg-slate-950 border-r border-slate-800">
+                        <div className="text-[10px] uppercase font-bold text-indigo-400/80">This Week</div>
+                        <div className="text-xs font-mono font-black">Practice</div>
+                      </th>
                     </>
                   ) : (
                     <>
@@ -1748,6 +1702,17 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                               {preSeasonTotal} hrs
                             </span>
                           </td>
+
+                          {/* Pre-Season: This Week Hours */}
+                          <td className="p-2.5 text-center font-mono border-r border-slate-800 bg-slate-950/20">
+                            <span
+                              className={`text-xs font-black ${
+                                thisWeekHours > 0 ? 'text-indigo-300' : 'text-slate-500'
+                              }`}
+                            >
+                              {thisWeekHours.toFixed(1)} hrs
+                            </span>
+                          </td>
                         </>
                       ) : (
                         <>
@@ -2048,11 +2013,7 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 font-mono">
                   {roster.map((player) => {
-                    const comp = calculatePlayerCompliance(player);
-                    const totalHours = Object.values(player.weeklyHours || {}).reduce(
-                      (acc, v) => acc + Number(v || 0),
-                      0
-                    );
+                    const calc = calculatePlayerHours(player, attendanceLogs, selectedWeek, seasonConfig);
 
                     return (
                       <tr key={player.num} className="hover:bg-slate-850 transition-colors">
@@ -2061,13 +2022,13 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                           {player.firstName} {player.lastName}
                         </td>
                         <td className="p-2 text-center text-amber-300 font-bold">
-                          {comp.conditioningHours.toFixed(1)}h
+                          {calc.conditioningHours.toFixed(1)}h
                         </td>
                         <td className="p-2 text-center text-sky-300 font-bold">
-                          {comp.paddedHours.toFixed(1)}h
+                          {calc.paddedHours.toFixed(1)}h
                         </td>
                         {weekList.map((w) => {
-                          const h = player.weeklyHours?.[w.key] || 0;
+                          const h = calc.weeklyHours?.[w.key] || 0;
                           return (
                             <td key={w.key} className="p-2 text-center text-slate-300">
                               {h > 0 ? `${Number(h).toFixed(1)}h` : '—'}
@@ -2075,7 +2036,7 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                           );
                         })}
                         <td className="p-2 text-center font-black text-emerald-400">
-                          {totalHours.toFixed(1)} hrs
+                          {calc.totalSeasonHours.toFixed(1)} hrs
                         </td>
                       </tr>
                     );

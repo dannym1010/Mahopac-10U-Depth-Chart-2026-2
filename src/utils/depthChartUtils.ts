@@ -23,6 +23,16 @@ export function normalizeRoster(
       const rName = (p.rosterName || lName || fName || '').trim();
       const team = (p.teamId || 'team_10u').trim();
 
+      // Sanitize weeklyHours and migrate any legacy '0' week key to 'pre-1'
+      const rawWeekly =
+        p.weeklyHours && typeof p.weeklyHours === 'object' ? { ...p.weeklyHours } : {};
+      if (rawWeekly['0'] !== undefined) {
+        if (rawWeekly['pre-1'] === undefined) {
+          rawWeekly['pre-1'] = rawWeekly['0'];
+        }
+        delete rawWeekly['0'];
+      }
+
       return {
         num: cleanNum,
         firstName: fName,
@@ -38,7 +48,7 @@ export function normalizeRoster(
         paddedHours: typeof p.paddedHours === 'number' ? p.paddedHours : 10,
         isCaptain: Boolean(p.isCaptain),
         notes: (p.notes || '').trim(),
-        weeklyHours: p.weeklyHours || { '0': 5, '1': 4.5, '2': 4.5 },
+        weeklyHours: Object.keys(rawWeekly).length > 0 ? rawWeekly : { 'pre-1': 0 },
       };
     });
 

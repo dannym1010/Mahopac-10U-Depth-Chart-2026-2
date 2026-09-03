@@ -43,6 +43,7 @@ import {
 } from '../types';
 import { getSeasonWeekList } from '../utils/seasonWeekUtils';
 import { triggerPrint } from '../utils/printUtils';
+import { calculatePlayerHours, syncEntireRosterWithLogs } from '../utils/hoursCalculation';
 import { DEFAULT_SEASON_CONFIG } from '../data/initialData';
 import { SeasonConfigModal } from './SeasonConfigModal';
 import { WeeklyAttendanceTracker } from './WeeklyAttendanceTracker';
@@ -250,39 +251,7 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
       else if (stat === 'excused') excusedNums.push(p.num);
     });
 
-    // 1. Update Roster hours for present players
-    const updatedRoster = roster.map((player) => {
-      if (playerAttendanceStatus[player.num] !== 'present') {
-        return player;
-      }
-
-      const currentCond = Number(player.conditioningHours || 0);
-      const currentPadded = Number(player.paddedHours || 0);
-
-      let newCond = currentCond;
-      let newPadded = currentPadded;
-
-      if (logSessionType === 'conditioning') {
-        newCond = parseFloat((currentCond + hoursToAdd).toFixed(1));
-      } else {
-        newPadded = parseFloat((currentPadded + hoursToAdd).toFixed(1));
-      }
-
-      const newWeekly = { ...(player.weeklyHours || {}) };
-      const currentWkVal = Number(newWeekly[selectedWeekForLog] || 0);
-      newWeekly[selectedWeekForLog] = parseFloat((currentWkVal + hoursToAdd).toFixed(1));
-
-      return {
-        ...player,
-        conditioningHours: newCond,
-        paddedHours: newPadded,
-        weeklyHours: newWeekly,
-      };
-    });
-
-    onUpdateRoster(updatedRoster);
-
-    // 2. Create and append Attendance Record
+    // 1. Create and append Attendance Record
     const newRecord: AttendanceRecord = {
       id: `att_${Date.now()}`,
       date: logSessionDate,
@@ -298,8 +267,13 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
       timestamp: Date.now(),
     };
 
+    const updatedLogs = [newRecord, ...attendanceLogs];
+    const updatedRoster = syncEntireRosterWithLogs(roster, updatedLogs, selectedWeekForLog, seasonConfig);
+
+    onUpdateRoster(updatedRoster);
+
     if (onUpdateAttendanceLogs) {
-      onUpdateAttendanceLogs([newRecord, ...attendanceLogs]);
+      onUpdateAttendanceLogs(updatedLogs);
     }
 
     setShowLogAttendanceModal(false);
@@ -310,37 +284,11 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
     if (userRole !== 'admin') return;
     const logToDelete = attendanceLogs.find((r) => r.id === recordId);
     if (window.confirm(`Are you sure you want to remove attendance log "${logToDelete?.title || 'Practice'}"? Credited hours will be reversed.`)) {
-      if (logToDelete && (logToDelete.hours || 0) > 0 && onUpdateRoster) {
-        const updatedRoster = roster.map((player) => {
-          const wasPresent = logToDelete.presentPlayerNums?.includes(player.num);
-          if (wasPresent) {
-            const logWeek = logToDelete.week || currentWeek;
-            const curWeekly = player.weeklyHours?.[logWeek] || 0;
-            const newWeekly = Math.max(0, +(curWeekly - logToDelete.hours).toFixed(2));
-            let newCond = player.conditioningHours || 0;
-            let newPadded = player.paddedHours || 0;
-            const playerAttire = logToDelete.playerSessionTypes?.[player.num] || logToDelete.sessionType;
-            if (playerAttire === 'conditioning') {
-              newCond = Math.max(0, +(newCond - logToDelete.hours).toFixed(2));
-            } else {
-              newPadded = Math.max(0, +(newPadded - logToDelete.hours).toFixed(2));
-            }
-            return {
-              ...player,
-              weeklyHours: {
-                ...player.weeklyHours,
-                [logWeek]: newWeekly,
-              },
-              conditioningHours: newCond,
-              paddedHours: newPadded,
-            };
-          }
-          return player;
-        });
-        onUpdateRoster(updatedRoster);
-      }
+      const updatedLogs = attendanceLogs.filter((r) => r.id !== recordId);
+      const updatedRoster = syncEntireRosterWithLogs(roster, updatedLogs, currentWeek, seasonConfig);
+      onUpdateRoster(updatedRoster);
       if (onUpdateAttendanceLogs) {
-        onUpdateAttendanceLogs(attendanceLogs.filter((r) => r.id !== recordId));
+        onUpdateAttendanceLogs(updatedLogs);
       }
     }
   };
@@ -652,17 +600,14 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
           {/* Player Cards Compliance Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredRoster.map((player) => {
+              const calc = calculatePlayerHours(player, attendanceLogs, selectedWeekForLog, seasonConfig);
               const comp = calculatePlayerCompliance(player);
               const condProgress = Math.min(100, (comp.conditioningHours / CONDITIONING_HOURS_REQUIRED) * 100);
               const padProgress = Math.min(100, (comp.paddedHours / PADDED_HOURS_REQUIRED) * 100);
-              const thisWeekHours = Number(player.weeklyHours?.[selectedWeekForLog] || 0);
-
-              // Calculate player attendance count from attendanceLogs
-              const attendedCount = (attendanceLogs || []).filter((log) =>
-                Array.isArray(log?.presentPlayerNums) && log.presentPlayerNums.includes(player.num)
-              ).length;
-              const totalLoggedPractices = (attendanceLogs || []).length;
-              const attRate = totalLoggedPractices > 0 ? Math.round((attendedCount / totalLoggedPractices) * 100) : 100;
+              const thisWeekHours = calc.thisWeekHours;
+              const attendedCount = calc.attendedCount;
+              const totalLoggedPractices = calc.totalSessionsCount;
+              const attRate = calc.attendanceRate;
 
               return (
                 <div
