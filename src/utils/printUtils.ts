@@ -1354,8 +1354,12 @@ export function generatePlaybookBinderPrintHTML(options: PlaybookBinderPrintOpti
       .playbook-section {
         border: none !important;
         padding: 0 !important;
+        page-break-before: always !important;
+        break-before: page !important;
         page-break-after: always !important;
         break-after: page !important;
+        display: block !important;
+        clear: both !important;
       }
       .playbook-section:last-child {
         page-break-after: auto !important;

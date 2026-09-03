@@ -30,29 +30,31 @@ export interface TeamSnapSyncResult {
 }
 
 /**
- * Infer the season week string from an event date (e.g. '2026-09-05' -> '1', '2026-08-20' -> 'pre-1')
+ * Infer the season week string from an event date (e.g. '2026-09-05' -> '1', '2026-08-20' -> 'pre-3').
+ * NOTE: Weeks ALWAYS start on Monday and end on Sunday.
+ * Week 1 begins on Monday, August 31, 2026.
  */
-export function inferWeekFromDate(dateStr: string, seasonStartDateStr: string = '2026-09-01'): string {
+export function inferWeekFromDate(dateStr: string, seasonStartMonday: string = '2026-08-31'): string {
   try {
     const [y, m, d] = dateStr.split('-').map(Number);
-    const eventDate = new Date(y, m - 1, d);
-    const [sy, sm, sd] = seasonStartDateStr.split('-').map(Number);
-    const seasonStart = new Date(sy, sm - 1, sd);
+    const eventDate = new Date(y, m - 1, d, 12, 0, 0);
+    const [sy, sm, sd] = seasonStartMonday.split('-').map(Number);
+    const seasonStart = new Date(sy, sm - 1, sd, 12, 0, 0);
 
-    // If event is before season start date, it's pre-season
     const diffMs = eventDate.getTime() - seasonStart.getTime();
-    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) {
-      if (diffDays >= -7) return 'pre-4';
-      if (diffDays >= -14) return 'pre-3';
-      if (diffDays >= -21) return 'pre-2';
-      return 'pre-1';
+      if (diffDays >= -7) return '0'; // Pre-Season Week 4 (Aug 24-30, 2026)
+      if (diffDays >= -14) return 'pre-3'; // Pre-Season Week 3 (Aug 17-23, 2026)
+      if (diffDays >= -21) return 'pre-2'; // Pre-Season Week 2 (Aug 10-16, 2026)
+      return 'pre-1'; // Pre-Season Week 1 (Aug 03-09, 2026)
     }
 
     const weekNum = Math.floor(diffDays / 7) + 1;
     if (weekNum <= 8) return String(weekNum);
-    if (weekNum <= 10) return 'playoffs';
+    if (weekNum === 9) return 'playoffs';
+    if (weekNum >= 10) return 'championship';
     return String(weekNum);
   } catch {
     return '1';

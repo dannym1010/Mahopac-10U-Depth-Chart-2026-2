@@ -34,7 +34,7 @@ import {
   CONDITIONING_HOURS_REQUIRED,
   PADDED_HOURS_REQUIRED,
 } from '../types';
-import { getSeasonWeekList } from '../utils/seasonWeekUtils';
+import { getSeasonWeekList, isDateInWeek } from '../utils/seasonWeekUtils';
 import { triggerPrint } from '../utils/printUtils';
 
 export interface WeeklyPracticeSession {
@@ -182,11 +182,13 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
         const isPracticeType = e.type === 'practice' || e.type === 'scrimmage' || e.type === 'walkthrough';
         if (!isPracticeType) return false;
         
-        // Match week
-        const evWeek = (e.week || '').replace(/^Week\s+/i, '').trim();
-        const curWeek = selectedWeek.replace(/^Week\s+/i, '').trim();
+        // Exact Monday-to-Sunday date range match
+        if (e.date && isDateInWeek(e.date, selectedWeek)) return true;
+
+        // Fallback to week key matching
+        const evWeek = (e.week || '').replace(/^Week\s+/i, '').trim().toLowerCase();
+        const curWeek = selectedWeek.replace(/^Week\s+/i, '').trim().toLowerCase();
         if (evWeek === curWeek) return true;
-        if (curWeek === '0' && (evWeek === '0' || evWeek.startsWith('pre'))) return true;
         return false;
       })
       .forEach((evt) => {
@@ -195,7 +197,7 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
         const isCond =
           evt.title?.toLowerCase().includes('cond') ||
           evt.focusOrNotes?.toLowerCase().includes('cond') ||
-          isPreSeason && !evt.title?.toLowerCase().includes('pad');
+          (isPreSeason && !evt.title?.toLowerCase().includes('pad'));
 
         sessionsMap.set(evt.id, {
           id: evt.id,
@@ -215,10 +217,10 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
     attendanceLogs
       .filter((log) => {
         if (!log) return false;
-        const logWeek = (log.week || '').replace(/^Week\s+/i, '').trim();
-        const curWeek = selectedWeek.replace(/^Week\s+/i, '').trim();
+        if (log.date && isDateInWeek(log.date, selectedWeek)) return true;
+        const logWeek = (log.week || '').replace(/^Week\s+/i, '').trim().toLowerCase();
+        const curWeek = selectedWeek.replace(/^Week\s+/i, '').trim().toLowerCase();
         if (logWeek === curWeek) return true;
-        if (curWeek === '0' && (logWeek === '0' || logWeek.startsWith('pre'))) return true;
         return false;
       })
       .forEach((log) => {
@@ -237,8 +239,6 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
             title: log.title || existing.title,
           });
         }
-        // NOTE: We intentionally do NOT resurrect attendance logs whose schedule event has been deleted.
-        // If a practice was deleted, it will no longer display on the attendance tracker.
       });
 
     // Sort chronologically by date
@@ -254,7 +254,10 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
     weekSessions.forEach((session) => {
       // Find matching attendance record
       const record = attendanceLogs.find(
-        (l) => l.date === session.date || l.id === session.id
+        (l) =>
+          l.date === session.date ||
+          l.id === session.id ||
+          (session.scheduleEventId && l.scheduleEventId === session.scheduleEventId)
       );
 
       if (record) {
@@ -264,9 +267,6 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
         presentList.forEach((num) => {
           map.set(`${session.id}_${num}`, true);
         });
-      } else {
-        // If not logged yet, check if player has weekly hours for this week > 0
-        // We leave unlogged practices default unchecked until coach marks them
       }
     });
 
@@ -281,8 +281,8 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
         let newPaddedHours = 0;
         const newWeeklyHours: Record<string, number> = { ...(player.weeklyHours || {}) };
 
-        // Reset hours for the active week to recalculate cleanly
-        newWeeklyHours[selectedWeek] = 0;
+        // Recalculate this selected week hours cleanly from zero
+        let activeWeekHours = 0;
 
         // Sum across all logs for this player
         updatedLogs.forEach((log) => {
@@ -294,11 +294,16 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
             } else if (log.sessionType === 'padded') {
               newPaddedHours += h;
             }
-            if (log.week) {
-              newWeeklyHours[log.week] = (newWeeklyHours[log.week] || 0) + h;
+
+            if (log.week === selectedWeek || (log.date && isDateInWeek(log.date, selectedWeek))) {
+              activeWeekHours += h;
+            } else if (log.week) {
+              newWeeklyHours[log.week] = Math.round(((newWeeklyHours[log.week] || 0) + h) * 10) / 10;
             }
           }
         });
+
+        newWeeklyHours[selectedWeek] = Math.round(activeWeekHours * 10) / 10;
 
         // Ensure we don't zero out historical pre-season base hours if baseline existed
         const baseCond = Math.max(newCondHours, Number(player.conditioningHours || 0));
@@ -376,34 +381,10 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
       onUpdateAttendanceLogs(updatedLogs);
     }
 
-    // Update Roster weekly hours and acclimatization hours
-    const updatedRoster = roster.map((p) => {
-      if (p.num !== playerNum) return p;
-
-      const delta = willBePresent ? session.hours : -session.hours;
-      const currentWeekly = { ...(p.weeklyHours || {}) };
-      const currentWeekVal = Number(currentWeekly[selectedWeek] || 0);
-      currentWeekly[selectedWeek] = Math.max(0, Math.round((currentWeekVal + delta) * 10) / 10);
-
-      let newCond = Number(p.conditioningHours || 0);
-      let newPadded = Number(p.paddedHours || 0);
-
-      if (session.sessionType === 'conditioning') {
-        newCond = Math.max(0, Math.round((newCond + delta) * 10) / 10);
-      } else {
-        newPadded = Math.max(0, Math.round((newPadded + delta) * 10) / 10);
-      }
-
-      return {
-        ...p,
-        weeklyHours: currentWeekly,
-        conditioningHours: newCond,
-        paddedHours: newPadded,
-      };
-    });
-
+    // Recalculate roster hours directly from attendance logs
+    const updatedRoster = syncRosterHoursFromLogs(roster, updatedLogs);
     onUpdateRoster(updatedRoster);
-    triggerSaveToast(`✓ Saved: #${playerNum} ${willBePresent ? 'Attended (+ ' + session.hours + 'h)' : 'Absent'}`);
+    triggerSaveToast(`✓ Saved: #${playerNum} ${willBePresent ? 'Attended (+' + session.hours + 'h)' : 'Absent'}`);
   };
 
   // Mark all players present for a practice column
@@ -412,7 +393,7 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
 
     const allNums = roster.map((p) => p.num);
     let existingLog = attendanceLogs.find(
-      (l) => l.date === session.date || l.id === session.id
+      (l) => l.date === session.date || l.id === session.id || (session.scheduleEventId && l.scheduleEventId === session.scheduleEventId)
     );
 
     let updatedLogs: AttendanceRecord[];
@@ -450,31 +431,7 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
       onUpdateAttendanceLogs(updatedLogs);
     }
 
-    // Update roster hours
-    const updatedRoster = roster.map((p) => {
-      const wasPresent = Boolean(attendanceLookup.get(`${session.id}_${p.num}`));
-      if (wasPresent) return p; // already credited
-
-      const currentWeekly = { ...(p.weeklyHours || {}) };
-      const currentVal = Number(currentWeekly[selectedWeek] || 0);
-      currentWeekly[selectedWeek] = Math.round((currentVal + session.hours) * 10) / 10;
-
-      let newCond = Number(p.conditioningHours || 0);
-      let newPadded = Number(p.paddedHours || 0);
-      if (session.sessionType === 'conditioning') {
-        newCond = Math.round((newCond + session.hours) * 10) / 10;
-      } else {
-        newPadded = Math.round((newPadded + session.hours) * 10) / 10;
-      }
-
-      return {
-        ...p,
-        weeklyHours: currentWeekly,
-        conditioningHours: newCond,
-        paddedHours: newPadded,
-      };
-    });
-
+    const updatedRoster = syncRosterHoursFromLogs(roster, updatedLogs);
     onUpdateRoster(updatedRoster);
     triggerSaveToast(`✓ All ${roster.length} players marked present for ${session.title} (${session.hours}h credited)`);
   };
@@ -485,7 +442,7 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
 
     const allNums = roster.map((p) => p.num);
     let existingLog = attendanceLogs.find(
-      (l) => l.date === session.date || l.id === session.id
+      (l) => l.date === session.date || l.id === session.id || (session.scheduleEventId && l.scheduleEventId === session.scheduleEventId)
     );
 
     let updatedLogs: AttendanceRecord[];
@@ -520,31 +477,7 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
       onUpdateAttendanceLogs(updatedLogs);
     }
 
-    // Deduct hours from roster
-    const updatedRoster = roster.map((p) => {
-      const wasPresent = Boolean(attendanceLookup.get(`${session.id}_${p.num}`));
-      if (!wasPresent) return p;
-
-      const currentWeekly = { ...(p.weeklyHours || {}) };
-      const currentVal = Number(currentWeekly[selectedWeek] || 0);
-      currentWeekly[selectedWeek] = Math.max(0, Math.round((currentVal - session.hours) * 10) / 10);
-
-      let newCond = Number(p.conditioningHours || 0);
-      let newPadded = Number(p.paddedHours || 0);
-      if (session.sessionType === 'conditioning') {
-        newCond = Math.max(0, Math.round((newCond - session.hours) * 10) / 10);
-      } else {
-        newPadded = Math.max(0, Math.round((newPadded - session.hours) * 10) / 10);
-      }
-
-      return {
-        ...p,
-        weeklyHours: currentWeekly,
-        conditioningHours: newCond,
-        paddedHours: newPadded,
-      };
-    });
-
+    const updatedRoster = syncRosterHoursFromLogs(roster, updatedLogs);
     onUpdateRoster(updatedRoster);
     triggerSaveToast(`✕ Cleared attendance for ${session.title}`);
   };
@@ -954,14 +887,14 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
     let totalPlayerHoursThisWeek = 0;
 
     roster.forEach((p) => {
-      const pHours = Number(p.weeklyHours?.[selectedWeek] || 0);
-      totalPlayerHoursThisWeek += pHours;
-
+      let pHours = 0;
       weekSessions.forEach((s) => {
         if (attendanceLookup.get(`${s.id}_${p.num}`)) {
           totalCheckmarks++;
+          pHours += s.hours;
         }
       });
+      totalPlayerHoursThisWeek += pHours;
     });
 
     const maxChecks = roster.length * (totalPossibleSessions || 1);
@@ -970,12 +903,12 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
 
     return {
       sessionsCount: weekSessions.length,
-      scheduledHours: weekScheduledHours.toFixed(1),
+      scheduledHours: (Math.round(weekScheduledHours * 10) / 10).toFixed(1),
       totalCheckmarks,
       overallRate,
-      totalPlayerHoursThisWeek: totalPlayerHoursThisWeek.toFixed(1),
+      totalPlayerHoursThisWeek: (Math.round(totalPlayerHoursThisWeek * 10) / 10).toFixed(1),
     };
-  }, [weekSessions, roster, selectedWeek, attendanceLookup]);
+  }, [weekSessions, roster, attendanceLookup]);
 
   return (
     <div className="space-y-4">
@@ -1400,7 +1333,11 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
               <tbody className="divide-y divide-slate-800/60 text-xs">
                 {filteredRoster.map((player) => {
                   const comp = calculatePlayerCompliance(player);
-                  const thisWeekHours = Number(player.weeklyHours?.[selectedWeek] || 0);
+                  const thisWeekHours = Math.round(
+                    weekSessions
+                      .filter((s) => Boolean(attendanceLookup.get(`${s.id}_${player.num}`)))
+                      .reduce((sum, s) => sum + s.hours, 0) * 10
+                  ) / 10;
 
                   // Calculate total season hours
                   const totalSeasonHours = Object.values(player.weeklyHours || {}).reduce(

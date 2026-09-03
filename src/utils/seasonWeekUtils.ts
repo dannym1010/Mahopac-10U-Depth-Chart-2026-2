@@ -193,6 +193,68 @@ export function getWeekDisplayLabelWithOpponent(
 }
 
 /**
+ * Returns the exact Monday-to-Sunday date range for any season week.
+ * Weeks ALWAYS start on Monday and end on Sunday.
+ * Base Week 1 Monday for 2026 is 2026-08-31.
+ */
+export function getWeekDateRange(
+  weekKey: string,
+  seasonStartMonday: string = '2026-08-31'
+): { startDate: string; endDate: string } {
+  const clean = (weekKey || '').toLowerCase().trim().replace(/^week\s+/i, '');
+
+  let weekOffset = 0; // 0 is Week 1 (Monday Aug 31 - Sunday Sep 06, 2026)
+  if (clean === '0' || clean === 'pre-4' || clean === 'pre4') {
+    weekOffset = -1; // Aug 24 - Aug 30, 2026
+  } else if (clean === 'pre-3' || clean === 'pre3') {
+    weekOffset = -2; // Aug 17 - Aug 23, 2026
+  } else if (clean === 'pre-2' || clean === 'pre2') {
+    weekOffset = -3; // Aug 10 - Aug 16, 2026
+  } else if (clean === 'pre-1' || clean === 'pre1') {
+    weekOffset = -4; // Aug 03 - Aug 09, 2026
+  } else if (clean === 'playoffs' || clean === 'playoff') {
+    weekOffset = 8; // Oct 26 - Nov 01, 2026
+  } else if (clean === 'championship') {
+    weekOffset = 9; // Nov 02 - Nov 08, 2026
+  } else {
+    const num = parseInt(clean, 10);
+    if (!isNaN(num)) {
+      weekOffset = num - 1;
+    }
+  }
+
+  const [y, m, d] = seasonStartMonday.split('-').map(Number);
+  const baseDate = new Date(y, m - 1, d, 12, 0, 0);
+  const startDateObj = new Date(baseDate);
+  startDateObj.setDate(baseDate.getDate() + weekOffset * 7);
+
+  const endDateObj = new Date(startDateObj);
+  endDateObj.setDate(startDateObj.getDate() + 6);
+
+  const pad = (n: number) => (n < 10 ? '0' + n : String(n));
+  const formatIso = (dt: Date) => `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+
+  return {
+    startDate: formatIso(startDateObj),
+    endDate: formatIso(endDateObj),
+  };
+}
+
+/**
+ * Checks whether a given date (YYYY-MM-DD) falls within a week (Monday to Sunday).
+ */
+export function isDateInWeek(
+  dateStr: string,
+  weekKey: string,
+  seasonStartMonday: string = '2026-08-31'
+): boolean {
+  if (!dateStr || !weekKey) return false;
+  const cleanDate = dateStr.trim();
+  const range = getWeekDateRange(weekKey, seasonStartMonday);
+  return cleanDate >= range.startDate && cleanDate <= range.endDate;
+}
+
+/**
  * Calculates the current active depth chart / season week automatically:
  * 1. Week 1 starts the Monday before the 1st regular season game (Aug 31, 2026).
  * 2. Before that date, it is Pre-Season (Week 0).

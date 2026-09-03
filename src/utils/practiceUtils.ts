@@ -86,9 +86,18 @@ export function calculateWeekFolderForDate(
     }
   }
 
-  // 2. Canonical 2026 dates boundary check
+  // 2. Canonical 2026 dates boundary check (Weeks start on Monday)
   const cleanDate = dateStr.trim();
-  if (cleanDate < '2026-08-31') {
+  if (cleanDate >= '2026-08-24' && cleanDate <= '2026-08-30') {
+    return 'Preseason Wk 4';
+  }
+  if (cleanDate >= '2026-08-17' && cleanDate <= '2026-08-23') {
+    return 'Preseason Wk 3';
+  }
+  if (cleanDate >= '2026-08-10' && cleanDate <= '2026-08-16') {
+    return 'Preseason Wk 2';
+  }
+  if (cleanDate <= '2026-08-09') {
     return 'Preseason Wk 1';
   }
   if (cleanDate >= '2026-08-31' && cleanDate <= '2026-09-06') {

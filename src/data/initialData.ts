@@ -414,7 +414,7 @@ export const MASTER_ROSTER: RosterPlayer[] = [
     offensivePosition: "LG",
     defensivePosition: "T1 (DT)",
     conditioningHours: 10,
-    paddedHours: 8,
+    paddedHours: 7.5,
     weeklyHours: { "0": 5, "1": 4.5, "2": 3.5 }
   },
   {
