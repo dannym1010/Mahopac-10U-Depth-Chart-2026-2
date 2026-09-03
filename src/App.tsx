@@ -177,12 +177,29 @@ export default function App() {
   const [seasonConfig, setSeasonConfig] = useState<SeasonConfig>(() =>
     safeJSONParse('footballSeasonConfig', DEFAULT_SEASON_CONFIG)
   );
-  const [attendanceLogs, setAttendanceLogs] = useState<AttendanceRecord[]>(() =>
-    safeJSONParse('footballAttendanceLogs', DEFAULT_ATTENDANCE_LOGS)
-  );
+  const [attendanceLogs, setAttendanceLogs] = useState<AttendanceRecord[]>(() => {
+    const saved = safeJSONParse('footballAttendanceLogs', null);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      const hasWeek1 = saved.some(
+        (l: AttendanceRecord) => l.week === '1' || l.scheduleEventId === 'evt_w1_p0'
+      );
+      if (!hasWeek1) {
+        const week1Defaults = DEFAULT_ATTENDANCE_LOGS.filter((l) => l.week === '1');
+        if (week1Defaults.length > 0) {
+          const merged = [...saved, ...week1Defaults];
+          safeJSONSet('footballAttendanceLogs', merged);
+          return merged;
+        }
+      }
+      return saved;
+    }
+    return DEFAULT_ATTENDANCE_LOGS;
+  });
   const [roster, setRoster] = useState<RosterPlayer[]>(() => {
     const saved = safeJSONParse('footballRoster', null);
-    return normalizeRoster(saved, true);
+    const normalized = normalizeRoster(saved, true);
+    safeJSONSet('footballRoster', normalized);
+    return normalized;
   });
   const [teams, setTeams] = useState<Team[]>(() =>
     safeJSONParse('footballTeams', DEFAULT_TEAMS)

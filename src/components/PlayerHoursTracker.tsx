@@ -137,9 +137,9 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
       setLogSessionTitle(evt.title);
       setLogSessionDate(evt.date);
       setLogSessionLocation(evt.location || 'Crane Road');
-      setSelectedWeekForLog(evt.week || '0');
+      setSelectedWeekForLog(evt.week || 'pre-1');
       // If event title has "Conditioning", set to conditioning, else if padded
-      if (evt.title.toLowerCase().includes('cond') || evt.week === '0') {
+      if (evt.title.toLowerCase().includes('cond') || evt.week === 'pre-1') {
         setLogSessionType('conditioning');
       } else {
         setLogSessionType('padded');
@@ -299,25 +299,26 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
     const newCount = Math.max(1, Math.min(10, editPreseasonCount));
     
     // Auto-generate week labels based on preseason count
-    const customLabels: Record<string, string> = {
-      '0': 'Preseason Wk 1 (Conditioning)',
-      'pre-1': 'Preseason Wk 1 (Conditioning)',
-      'pre-2': 'Preseason Wk 2 (Conditioning & Shells)',
-      'pre-3': 'Preseason Wk 3 (Pads & Fundamentals)',
-      'pre-4': 'Preseason Wk 4 (Pads & Scrimmage)',
-    };
+    const customLabels: Record<string, string> = {};
+    const preKeys: string[] = [];
 
     for (let i = 1; i <= newCount; i++) {
-      customLabels[String(i)] = `Preseason Wk ${i} (${i <= 2 ? 'Conditioning' : 'Padded & Scrimmage'})`;
+      const k = `pre-${i}`;
+      preKeys.push(k);
+      customLabels[k] = `Preseason Wk ${i} (${i <= 2 ? 'Conditioning' : 'Pads & Fundamentals'})`;
     }
-    for (let i = newCount + 1; i <= newCount + 8; i++) {
-      customLabels[String(i)] = `Regular Season • Week ${i - newCount}`;
+
+    for (let i = 1; i <= 8; i++) {
+      customLabels[String(i)] = `Regular Season • Week ${i}`;
     }
+
+    customLabels['playoffs'] = 'Playoffs';
+    customLabels['championship'] = 'Championship';
 
     const updatedConfig: SeasonConfig = {
       preseasonWeeksCount: newCount,
       regularSeasonWeeksCount: 8,
-      preseasonWeekKeys: ['0', 'pre-2', 'pre-3', 'pre-4', '1', '2', '3', '4'].slice(0, newCount + 2),
+      preseasonWeekKeys: preKeys,
       customWeekLabels: customLabels,
     };
 

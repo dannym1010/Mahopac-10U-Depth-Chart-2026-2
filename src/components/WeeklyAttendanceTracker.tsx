@@ -1567,20 +1567,33 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
               {/* Table Rows: Each Roster Player */}
               <tbody className="divide-y divide-slate-800/60 text-xs">
                 {filteredRoster.map((player) => {
-                  const comp = calculatePlayerCompliance(player);
+                  const calc = calculatePlayerHours(player, attendanceLogs, selectedWeek, seasonConfig);
+                  const comp = calculatePlayerCompliance({
+                    ...player,
+                    conditioningHours: calc.conditioningHours,
+                    paddedHours: calc.paddedHours,
+                  });
+
+                  // Live interactive calculation for current week based on checkboxes
                   const thisWeekHours = Math.round(
                     weekSessions
                       .filter((s) => Boolean(attendanceLookup.get(`${s.id}_${player.num}`)))
                       .reduce((sum, s) => sum + s.hours, 0) * 10
                   ) / 10;
 
-                  // Calculate total season hours
-                  const totalSeasonHours = Object.values(player.weeklyHours || {}).reduce(
-                    (sum, val) => sum + Number(val || 0),
+                  // Calculate total season hours: other weeks from calc + this week live from interactive checkboxes
+                  const otherWeeksHours = Object.entries(calc.weeklyHours || {}).reduce(
+                    (sum, [wk, val]) => (wk !== selectedWeek ? sum + Number(val || 0) : sum),
                     0
                   );
+                  const totalSeasonHours = Math.round((otherWeeksHours + thisWeekHours) * 10) / 10;
 
-                  const preSeasonTotal = (comp.conditioningHours + comp.paddedHours).toFixed(1);
+                  const preSeasonTotal = (
+                    (calc.weeklyHours['pre-1'] || 0) +
+                    (calc.weeklyHours['pre-2'] || 0) +
+                    (calc.weeklyHours['pre-3'] || 0) +
+                    (calc.weeklyHours['pre-4'] || 0)
+                  ).toFixed(1);
 
                   return (
                     <tr

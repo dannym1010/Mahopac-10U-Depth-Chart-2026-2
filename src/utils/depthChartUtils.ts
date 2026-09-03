@@ -24,13 +24,37 @@ export function normalizeRoster(
       const team = (p.teamId || 'team_10u').trim();
 
       // Sanitize weeklyHours and migrate any legacy '0' week key to 'pre-1'
-      const rawWeekly =
+      const rawWeekly: Record<string, number> =
         p.weeklyHours && typeof p.weeklyHours === 'object' ? { ...p.weeklyHours } : {};
       if (rawWeekly['0'] !== undefined) {
         if (rawWeekly['pre-1'] === undefined) {
           rawWeekly['pre-1'] = rawWeekly['0'];
         }
         delete rawWeekly['0'];
+      }
+
+      // Migrate legacy 14h mock { "pre-1": 5, "1": 4.5, "2": 4.5 } to full season progression
+      if (rawWeekly['pre-1'] === 5 && rawWeekly['1'] === 4.5 && (rawWeekly['2'] === 4.5 || rawWeekly['2'] === 3 || rawWeekly['2'] === 3.5)) {
+        rawWeekly['pre-1'] = 8;
+        rawWeekly['pre-2'] = 10;
+        rawWeekly['pre-3'] = 2.5;
+        rawWeekly['pre-4'] = 0;
+        rawWeekly['1'] = 4.5;
+        delete rawWeekly['2'];
+      } else if (rawWeekly['pre-1'] === 4.5 && rawWeekly['1'] === 4 && rawWeekly['2'] === 0) {
+        rawWeekly['pre-1'] = 7;
+        rawWeekly['pre-2'] = 7.5;
+        rawWeekly['pre-3'] = 2.5;
+        rawWeekly['pre-4'] = 0;
+        rawWeekly['1'] = 4.0;
+        delete rawWeekly['2'];
+      } else if (rawWeekly['pre-1'] === 3 && rawWeekly['1'] === 3 && rawWeekly['2'] === 0) {
+        rawWeekly['pre-1'] = 5.5;
+        rawWeekly['pre-2'] = 7.5;
+        rawWeekly['pre-3'] = 2.5;
+        rawWeekly['pre-4'] = 0;
+        rawWeekly['1'] = 3.0;
+        delete rawWeekly['2'];
       }
 
       return {
