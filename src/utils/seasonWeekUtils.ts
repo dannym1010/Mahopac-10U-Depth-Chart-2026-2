@@ -116,7 +116,7 @@ export function getSeasonWeekList(config?: SeasonConfig): WeekOption[] {
 
   // Pre-season weeks
   for (let i = 1; i <= preCount; i++) {
-    const key = i === 1 ? '0' : `pre-${i}`;
+    const key = `pre-${i}`;
     const defaultLabel = `Pre-Season Week ${i}`;
     list.push({
       key,
@@ -204,14 +204,14 @@ export function getWeekDateRange(
   const clean = (weekKey || '').toLowerCase().trim().replace(/^week\s+/i, '');
 
   let weekOffset = 0; // 0 is Week 1 (Monday Aug 31 - Sunday Sep 06, 2026)
-  if (clean === '0' || clean === 'pre-4' || clean === 'pre4') {
-    weekOffset = -1; // Aug 24 - Aug 30, 2026
-  } else if (clean === 'pre-3' || clean === 'pre3') {
-    weekOffset = -2; // Aug 17 - Aug 23, 2026
-  } else if (clean === 'pre-2' || clean === 'pre2') {
-    weekOffset = -3; // Aug 10 - Aug 16, 2026
-  } else if (clean === 'pre-1' || clean === 'pre1') {
-    weekOffset = -4; // Aug 03 - Aug 09, 2026
+  if (clean === 'pre-1' || clean === 'pre1' || clean === 'preseason-1' || clean === '0') {
+    weekOffset = -4; // Aug 03 - Aug 09, 2026 (Pre-Season Week 1 starts on Monday 8/3)
+  } else if (clean === 'pre-2' || clean === 'pre2' || clean === 'preseason-2') {
+    weekOffset = -3; // Aug 10 - Aug 16, 2026 (Pre-Season Week 2)
+  } else if (clean === 'pre-3' || clean === 'pre3' || clean === 'preseason-3') {
+    weekOffset = -2; // Aug 17 - Aug 23, 2026 (Pre-Season Week 3)
+  } else if (clean === 'pre-4' || clean === 'pre4' || clean === 'preseason-4') {
+    weekOffset = -1; // Aug 24 - Aug 30, 2026 (Pre-Season Week 4)
   } else if (clean === 'playoffs' || clean === 'playoff') {
     weekOffset = 8; // Oct 26 - Nov 01, 2026
   } else if (clean === 'championship') {
@@ -308,8 +308,16 @@ export function getAutoActiveWeek(
 
   // 1. If today is strictly before Week 1 Monday, we are in Pre-Season
   if (today < week1Monday) {
+    let preWeek = 'pre-1';
+    if (today >= '2026-08-24') {
+      preWeek = 'pre-4';
+    } else if (today >= '2026-08-17') {
+      preWeek = 'pre-3';
+    } else if (today >= '2026-08-10') {
+      preWeek = 'pre-2';
+    }
     return {
-      activeWeek: '0',
+      activeWeek: preWeek,
       reason: `Pre-Season Active (Week 1 begins Monday ${week1Monday})`,
       priorWeek: undefined,
       isAutoCalculated: true,

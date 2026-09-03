@@ -68,6 +68,7 @@ export interface AttendanceRecord {
   excusedPlayerNums?: string[];
   notes?: string;
   timestamp: number;
+  playerSessionTypes?: Record<string, 'conditioning' | 'padded'>; // Per-player override (e.g. conditioning for kids catching up while others are padded)
 }
 
 export type ScheduleEventType =

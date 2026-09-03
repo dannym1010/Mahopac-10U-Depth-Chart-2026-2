@@ -45,7 +45,7 @@ export function inferWeekFromDate(dateStr: string, seasonStartMonday: string = '
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) {
-      if (diffDays >= -7) return '0'; // Pre-Season Week 4 (Aug 24-30, 2026)
+      if (diffDays >= -7) return 'pre-4'; // Pre-Season Week 4 (Aug 24-30, 2026)
       if (diffDays >= -14) return 'pre-3'; // Pre-Season Week 3 (Aug 17-23, 2026)
       if (diffDays >= -21) return 'pre-2'; // Pre-Season Week 2 (Aug 10-16, 2026)
       return 'pre-1'; // Pre-Season Week 1 (Aug 03-09, 2026)

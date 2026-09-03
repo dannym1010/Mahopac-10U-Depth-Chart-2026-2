@@ -34,7 +34,7 @@ import {
   CONDITIONING_HOURS_REQUIRED,
   PADDED_HOURS_REQUIRED,
 } from '../types';
-import { getSeasonWeekList, isDateInWeek } from '../utils/seasonWeekUtils';
+import { getSeasonWeekList, isDateInWeek, getWeekDateRange } from '../utils/seasonWeekUtils';
 import { triggerPrint } from '../utils/printUtils';
 
 export interface WeeklyPracticeSession {
@@ -133,21 +133,21 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
   onDeleteScheduleEvent,
 }) => {
   // Selected week for weekly tracking
-  const [selectedWeek, setSelectedWeek] = useState<string>(currentWeek || '0');
+  const initialWeek = (currentWeek && currentWeek !== '0') ? currentWeek : 'pre-1';
+  const [selectedWeek, setSelectedWeek] = useState<string>(initialWeek);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'needs_conditioning' | 'needs_pads' | 'cleared'>('all');
   const [saveIndicator, setSaveIndicator] = useState<string | null>(null);
   const [showAddPracticeModal, setShowAddPracticeModal] = useState<boolean>(false);
   const [showSeasonSummaryModal, setShowSeasonSummaryModal] = useState<boolean>(false);
 
-  // New Practice Modal Form state
-  const [newPracticeDate, setNewPracticeDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
-  );
-  const [newPracticeTitle, setNewPracticeTitle] = useState<string>('Practice Session');
-  const [newPracticeTime, setNewPracticeTime] = useState<string>('5:30 PM - 7:30 PM');
-  const [newPracticeHours, setNewPracticeHours] = useState<number>(2.0);
-  const [newPracticeType, setNewPracticeType] = useState<'conditioning' | 'padded'>('conditioning');
+  // Sync if currentWeek changes from parent
+  React.useEffect(() => {
+    if (currentWeek) {
+      const normalized = currentWeek === '0' ? 'pre-1' : currentWeek;
+      setSelectedWeek(normalized);
+    }
+  }, [currentWeek]);
 
   // Week list from config
   const weekList = useMemo(() => getSeasonWeekList(seasonConfig), [seasonConfig]);
@@ -155,6 +155,38 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
     () => weekList.find((w) => w.key === selectedWeek) || weekList[0],
     [weekList, selectedWeek]
   );
+
+  // Exact start and end dates for selected week (Pre-Season Week 1 starts Mon 8/3/2026)
+  const weekDateRange = useMemo(() => getWeekDateRange(selectedWeek), [selectedWeek]);
+  const weekDateRangeLabel = useMemo(() => {
+    try {
+      const [sy, sm, sd] = weekDateRange.startDate.split('-').map(Number);
+      const [ey, em, ed] = weekDateRange.endDate.split('-').map(Number);
+      const sDate = new Date(sy, sm - 1, sd, 12, 0, 0);
+      const eDate = new Date(ey, em - 1, ed, 12, 0, 0);
+      const sStr = sDate.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' });
+      const eStr = eDate.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric', year: 'numeric' });
+      return `${sStr} – ${eStr}`;
+    } catch {
+      return `${weekDateRange.startDate} – ${weekDateRange.endDate}`;
+    }
+  }, [weekDateRange]);
+
+  // New Practice Modal Form state (default to selected week's Monday)
+  const [newPracticeDate, setNewPracticeDate] = useState<string>(
+    weekDateRange?.startDate || new Date().toISOString().split('T')[0]
+  );
+  const [newPracticeTitle, setNewPracticeTitle] = useState<string>('Practice Session');
+  const [newPracticeTime, setNewPracticeTime] = useState<string>('5:30 PM - 7:30 PM');
+  const [newPracticeHours, setNewPracticeHours] = useState<number>(2.0);
+  const [newPracticeType, setNewPracticeType] = useState<'conditioning' | 'padded'>('conditioning');
+
+  // Update default modal date whenever selectedWeek changes
+  React.useEffect(() => {
+    if (weekDateRange?.startDate) {
+      setNewPracticeDate(weekDateRange.startDate);
+    }
+  }, [weekDateRange.startDate]);
 
   // Check if current week is pre-season
   const isPreSeason = useMemo(() => {
@@ -273,27 +305,60 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
     return map;
   }, [weekSessions, attendanceLogs]);
 
-  // Recalculate roster hours based on attendance logs and direct changes
+  // Per-player attire lookup: Map of `${sessionId}_${playerNum}` -> 'conditioning' | 'padded'
+  const playerAttireLookup = useMemo(() => {
+    const map = new Map<string, 'conditioning' | 'padded'>();
+
+    weekSessions.forEach((session) => {
+      const record = attendanceLogs.find(
+        (l) =>
+          l.date === session.date ||
+          l.id === session.id ||
+          (session.scheduleEventId && l.scheduleEventId === session.scheduleEventId)
+      );
+
+      roster.forEach((player) => {
+        if (record?.playerSessionTypes?.[player.num]) {
+          map.set(`${session.id}_${player.num}`, record.playerSessionTypes[player.num]);
+        } else if (record?.sessionType) {
+          map.set(`${session.id}_${player.num}`, record.sessionType);
+        } else {
+          map.set(`${session.id}_${player.num}`, session.sessionType);
+        }
+      });
+    });
+
+    return map;
+  }, [weekSessions, attendanceLogs, roster]);
+
+  // Recalculate roster hours based on attendance logs and individual player session types using delta tracking
   const syncRosterHoursFromLogs = useCallback(
     (currentRoster: RosterPlayer[], updatedLogs: AttendanceRecord[]) => {
       return currentRoster.map((player) => {
-        let newCondHours = 0;
-        let newPaddedHours = 0;
+        // Calculate hours in previous attendanceLogs to find exact delta
+        let prevCond = 0;
+        let prevPadded = 0;
+        attendanceLogs.forEach((log) => {
+          if (log.presentPlayerNums?.includes(player.num)) {
+            const h = Number(log.hours || 0);
+            const attire = log.playerSessionTypes?.[player.num] || log.sessionType;
+            if (attire === 'conditioning') prevCond += h;
+            else if (attire === 'padded') prevPadded += h;
+          }
+        });
+
+        // Calculate hours in updatedLogs
+        let nextCond = 0;
+        let nextPadded = 0;
+        let activeWeekHours = 0;
         const newWeeklyHours: Record<string, number> = { ...(player.weeklyHours || {}) };
 
-        // Recalculate this selected week hours cleanly from zero
-        let activeWeekHours = 0;
-
-        // Sum across all logs for this player
         updatedLogs.forEach((log) => {
-          const isPresent = log.presentPlayerNums?.includes(player.num);
-          if (isPresent) {
+          if (log.presentPlayerNums?.includes(player.num)) {
             const h = Number(log.hours || 0);
-            if (log.sessionType === 'conditioning') {
-              newCondHours += h;
-            } else if (log.sessionType === 'padded') {
-              newPaddedHours += h;
-            }
+            const attire = log.playerSessionTypes?.[player.num] || log.sessionType;
+            if (attire === 'conditioning') nextCond += h;
+            else if (attire === 'padded') nextPadded += h;
 
             if (log.week === selectedWeek || (log.date && isDateInWeek(log.date, selectedWeek))) {
               activeWeekHours += h;
@@ -305,19 +370,24 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
 
         newWeeklyHours[selectedWeek] = Math.round(activeWeekHours * 10) / 10;
 
-        // Ensure we don't zero out historical pre-season base hours if baseline existed
-        const baseCond = Math.max(newCondHours, Number(player.conditioningHours || 0));
-        const basePadded = Math.max(newPaddedHours, Number(player.paddedHours || 0));
+        const condDelta = nextCond - prevCond;
+        const padDelta = nextPadded - prevPadded;
+
+        const baseCond = Number(player.conditioningHours || 0);
+        const basePadded = Number(player.paddedHours || 0);
+
+        const finalCond = Math.max(0, Math.round((baseCond + condDelta) * 10) / 10);
+        const finalPadded = Math.max(0, Math.round((basePadded + padDelta) * 10) / 10);
 
         return {
           ...player,
-          conditioningHours: Math.round(baseCond * 10) / 10,
-          paddedHours: Math.round(basePadded * 10) / 10,
+          conditioningHours: finalCond,
+          paddedHours: finalPadded,
           weeklyHours: newWeeklyHours,
         };
       });
     },
-    [selectedWeek]
+    [selectedWeek, attendanceLogs]
   );
 
   // Toggle single attendance checkmark for (session x player)
@@ -329,8 +399,18 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
 
     // Find or create AttendanceRecord for this session
     let existingLog = attendanceLogs.find(
-      (l) => l.date === session.date || l.id === session.id
+      (l) =>
+        l.date === session.date ||
+        l.id === session.id ||
+        (session.scheduleEventId && l.scheduleEventId === session.scheduleEventId)
     );
+
+    const player = roster.find((p) => p.num === playerNum);
+    const needsCond = (player?.conditioningHours || 0) < CONDITIONING_HOURS_REQUIRED;
+    // Smart default: if player hasn't cleared conditioning (<10h), smartly assign to conditioning catch-up
+    const playerAttire: 'conditioning' | 'padded' =
+      existingLog?.playerSessionTypes?.[playerNum] ||
+      (needsCond ? 'conditioning' : session.sessionType);
 
     let updatedLogs: AttendanceRecord[];
 
@@ -346,13 +426,18 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
         currentAbsent.add(playerNum);
       }
 
+      const updatedOverrides = {
+        ...(existingLog.playerSessionTypes || {}),
+        [playerNum]: playerAttire,
+      };
+
       const updatedRecord: AttendanceRecord = {
         ...existingLog,
         week: selectedWeek,
         hours: session.hours,
-        sessionType: session.sessionType,
         presentPlayerNums: Array.from(currentPresent),
         absentPlayerNums: Array.from(currentAbsent),
+        playerSessionTypes: updatedOverrides,
         timestamp: Date.now(),
       };
 
@@ -371,6 +456,7 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
         location: session.location || 'Crane Road',
         presentPlayerNums: willBePresent ? [playerNum] : [],
         absentPlayerNums: willBePresent ? [] : [playerNum],
+        playerSessionTypes: { [playerNum]: playerAttire },
         timestamp: Date.now(),
       };
       updatedLogs = [newRecord, ...attendanceLogs];
@@ -384,7 +470,153 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
     // Recalculate roster hours directly from attendance logs
     const updatedRoster = syncRosterHoursFromLogs(roster, updatedLogs);
     onUpdateRoster(updatedRoster);
-    triggerSaveToast(`✓ Saved: #${playerNum} ${willBePresent ? 'Attended (+' + session.hours + 'h)' : 'Absent'}`);
+
+    const attireText = playerAttire === 'conditioning' ? '⚡ Conditioning' : '🛡️ Pads';
+    triggerSaveToast(
+      `✓ #${playerNum} ${willBePresent ? `Present (${attireText}, +${session.hours}h)` : 'Marked Absent'}`
+    );
+  };
+
+  // Toggle individual player attire for a practice (Conditioning <-> Padded)
+  const handleTogglePlayerAttire = (
+    session: WeeklyPracticeSession,
+    playerNum: string,
+    forcedAttire?: 'conditioning' | 'padded'
+  ) => {
+    if (userRole !== 'admin') return;
+
+    let existingLog = attendanceLogs.find(
+      (l) =>
+        l.date === session.date ||
+        l.id === session.id ||
+        (session.scheduleEventId && l.scheduleEventId === session.scheduleEventId)
+    );
+
+    const currentAttire =
+      existingLog?.playerSessionTypes?.[playerNum] ||
+      existingLog?.sessionType ||
+      session.sessionType;
+
+    const nextAttire: 'conditioning' | 'padded' =
+      forcedAttire || (currentAttire === 'conditioning' ? 'padded' : 'conditioning');
+
+    let updatedLogs: AttendanceRecord[];
+
+    if (existingLog) {
+      const currentPresent = new Set(existingLog.presentPlayerNums || []);
+      currentPresent.add(playerNum);
+      const currentAbsent = new Set(existingLog.absentPlayerNums || []);
+      currentAbsent.delete(playerNum);
+
+      const updatedOverrides = {
+        ...(existingLog.playerSessionTypes || {}),
+        [playerNum]: nextAttire,
+      };
+
+      const updatedRecord: AttendanceRecord = {
+        ...existingLog,
+        week: selectedWeek,
+        hours: session.hours,
+        presentPlayerNums: Array.from(currentPresent),
+        absentPlayerNums: Array.from(currentAbsent),
+        playerSessionTypes: updatedOverrides,
+        timestamp: Date.now(),
+      };
+
+      updatedLogs = attendanceLogs.map((l) =>
+        l.id === existingLog!.id ? updatedRecord : l
+      );
+    } else {
+      const newRecord: AttendanceRecord = {
+        id: session.id.startsWith('att_') ? session.id : `att_${Date.now()}_${session.date}`,
+        date: session.date,
+        week: selectedWeek,
+        title: session.title,
+        sessionType: session.sessionType,
+        hours: session.hours,
+        location: session.location || 'Crane Road',
+        presentPlayerNums: [playerNum],
+        absentPlayerNums: [],
+        playerSessionTypes: { [playerNum]: nextAttire },
+        timestamp: Date.now(),
+      };
+      updatedLogs = [newRecord, ...attendanceLogs];
+    }
+
+    if (onUpdateAttendanceLogs) {
+      onUpdateAttendanceLogs(updatedLogs);
+    }
+
+    const updatedRoster = syncRosterHoursFromLogs(roster, updatedLogs);
+    onUpdateRoster(updatedRoster);
+
+    const playerObj = roster.find((p) => p.num === playerNum);
+    const pName = playerObj ? `${playerObj.firstName} ${playerObj.lastName}` : `#${playerNum}`;
+    triggerSaveToast(
+      `✓ #${playerNum} ${pName}: Switched to ${nextAttire === 'conditioning' ? '⚡ Conditioning' : '🛡️ Padded'} (${session.hours}h)`
+    );
+  };
+
+  // Set all present players in a session to a specific attire
+  const handleSetSessionAttireForAll = (
+    session: WeeklyPracticeSession,
+    targetAttire: 'conditioning' | 'padded'
+  ) => {
+    if (userRole !== 'admin') return;
+
+    let existingLog = attendanceLogs.find(
+      (l) =>
+        l.date === session.date ||
+        l.id === session.id ||
+        (session.scheduleEventId && l.scheduleEventId === session.scheduleEventId)
+    );
+
+    const presentList = existingLog?.presentPlayerNums || roster.map((p) => p.num);
+    const overrides: Record<string, 'conditioning' | 'padded'> = {
+      ...(existingLog?.playerSessionTypes || {}),
+    };
+    presentList.forEach((num) => {
+      overrides[num] = targetAttire;
+    });
+
+    let updatedLogs: AttendanceRecord[];
+    if (existingLog) {
+      updatedLogs = attendanceLogs.map((l) =>
+        l.id === existingLog!.id
+          ? {
+              ...l,
+              sessionType: targetAttire,
+              playerSessionTypes: overrides,
+              timestamp: Date.now(),
+            }
+          : l
+      );
+    } else {
+      const newRecord: AttendanceRecord = {
+        id: session.id.startsWith('att_') ? session.id : `att_${Date.now()}_${session.date}`,
+        date: session.date,
+        week: selectedWeek,
+        title: session.title,
+        sessionType: targetAttire,
+        hours: session.hours,
+        location: session.location || 'Crane Road',
+        presentPlayerNums: presentList,
+        absentPlayerNums: [],
+        playerSessionTypes: overrides,
+        timestamp: Date.now(),
+      };
+      updatedLogs = [newRecord, ...attendanceLogs];
+    }
+
+    if (onUpdateAttendanceLogs) {
+      onUpdateAttendanceLogs(updatedLogs);
+    }
+
+    const updatedRoster = syncRosterHoursFromLogs(roster, updatedLogs);
+    onUpdateRoster(updatedRoster);
+    triggerSaveToast(
+      `✓ Set all present players to ${targetAttire === 'conditioning' ? '⚡ Conditioning' : '🛡️ Pads'} for ${session.title}`
+    );
   };
 
   // Mark all players present for a practice column
@@ -393,8 +625,21 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
 
     const allNums = roster.map((p) => p.num);
     let existingLog = attendanceLogs.find(
-      (l) => l.date === session.date || l.id === session.id || (session.scheduleEventId && l.scheduleEventId === session.scheduleEventId)
+      (l) =>
+        l.date === session.date ||
+        l.id === session.id ||
+        (session.scheduleEventId && l.scheduleEventId === session.scheduleEventId)
     );
+
+    const overrides: Record<string, 'conditioning' | 'padded'> = {
+      ...(existingLog?.playerSessionTypes || {}),
+    };
+    roster.forEach((p) => {
+      if (!overrides[p.num]) {
+        const needsCond = (p.conditioningHours || 0) < CONDITIONING_HOURS_REQUIRED;
+        overrides[p.num] = needsCond ? 'conditioning' : session.sessionType;
+      }
+    });
 
     let updatedLogs: AttendanceRecord[];
     if (existingLog) {
@@ -407,6 +652,7 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
               sessionType: session.sessionType,
               presentPlayerNums: allNums,
               absentPlayerNums: [],
+              playerSessionTypes: overrides,
               timestamp: Date.now(),
             }
           : l
@@ -422,6 +668,7 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
         location: session.location || 'Crane Road',
         presentPlayerNums: allNums,
         absentPlayerNums: [],
+        playerSessionTypes: overrides,
         timestamp: Date.now(),
       };
       updatedLogs = [newRecord, ...attendanceLogs];
@@ -442,7 +689,10 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
 
     const allNums = roster.map((p) => p.num);
     let existingLog = attendanceLogs.find(
-      (l) => l.date === session.date || l.id === session.id || (session.scheduleEventId && l.scheduleEventId === session.scheduleEventId)
+      (l) =>
+        l.date === session.date ||
+        l.id === session.id ||
+        (session.scheduleEventId && l.scheduleEventId === session.scheduleEventId)
     );
 
     let updatedLogs: AttendanceRecord[];
@@ -486,9 +736,6 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
   const handleChangeSessionHours = (session: WeeklyPracticeSession, newHours: number) => {
     if (userRole !== 'admin' || newHours === session.hours) return;
 
-    const oldHours = session.hours;
-    const diff = newHours - oldHours;
-
     // Update attendance log
     let existingLog = attendanceLogs.find(
       (l) => l.date === session.date || l.id === session.id
@@ -529,36 +776,12 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
       }
     }
 
-    // Adjust roster hours for all players who are marked present
-    const updatedRoster = roster.map((p) => {
-      const isPresent = Boolean(attendanceLookup.get(`${session.id}_${p.num}`));
-      if (!isPresent) return p;
-
-      const currentWeekly = { ...(p.weeklyHours || {}) };
-      const currentVal = Number(currentWeekly[selectedWeek] || 0);
-      currentWeekly[selectedWeek] = Math.max(0, Math.round((currentVal + diff) * 10) / 10);
-
-      let newCond = Number(p.conditioningHours || 0);
-      let newPadded = Number(p.paddedHours || 0);
-      if (session.sessionType === 'conditioning') {
-        newCond = Math.max(0, Math.round((newCond + diff) * 10) / 10);
-      } else {
-        newPadded = Math.max(0, Math.round((newPadded + diff) * 10) / 10);
-      }
-
-      return {
-        ...p,
-        weeklyHours: currentWeekly,
-        conditioningHours: newCond,
-        paddedHours: newPadded,
-      };
-    });
-
+    const updatedRoster = syncRosterHoursFromLogs(roster, updatedLogs);
     onUpdateRoster(updatedRoster);
     triggerSaveToast(`✓ Updated practice duration to ${newHours}h`);
   };
 
-  // Toggle session attire: Conditioning vs Padded
+  // Toggle session default attire: Conditioning vs Padded
   const handleToggleSessionAttire = (session: WeeklyPracticeSession) => {
     if (userRole !== 'admin') return;
 
@@ -566,11 +789,15 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
       session.sessionType === 'conditioning' ? 'padded' : 'conditioning';
 
     let existingLog = attendanceLogs.find(
-      (l) => l.date === session.date || l.id === session.id
+      (l) =>
+        l.date === session.date ||
+        l.id === session.id ||
+        (session.scheduleEventId && l.scheduleEventId === session.scheduleEventId)
     );
 
     let updatedLogs: AttendanceRecord[];
     if (existingLog) {
+      // Keep existing player overrides
       updatedLogs = attendanceLogs.map((l) =>
         l.id === existingLog!.id ? { ...l, sessionType: newType } : l
       );
@@ -593,33 +820,9 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
       onUpdateAttendanceLogs(updatedLogs);
     }
 
-    // Re-attribute hours in roster for players present
-    const updatedRoster = roster.map((p) => {
-      const isPresent = Boolean(attendanceLookup.get(`${session.id}_${p.num}`));
-      if (!isPresent) return p;
-
-      let newCond = Number(p.conditioningHours || 0);
-      let newPadded = Number(p.paddedHours || 0);
-
-      if (newType === 'padded') {
-        // Shifted from conditioning to padded
-        newCond = Math.max(0, Math.round((newCond - session.hours) * 10) / 10);
-        newPadded = Math.round((newPadded + session.hours) * 10) / 10;
-      } else {
-        // Shifted from padded to conditioning
-        newPadded = Math.max(0, Math.round((newPadded - session.hours) * 10) / 10);
-        newCond = Math.round((newCond + session.hours) * 10) / 10;
-      }
-
-      return {
-        ...p,
-        conditioningHours: newCond,
-        paddedHours: newPadded,
-      };
-    });
-
+    const updatedRoster = syncRosterHoursFromLogs(roster, updatedLogs);
     onUpdateRoster(updatedRoster);
-    triggerSaveToast(`✓ Switched category to ${newType === 'conditioning' ? '⚡ Conditioning' : '🛡️ Padded'}`);
+    triggerSaveToast(`✓ Switched default category to ${newType === 'conditioning' ? '⚡ Conditioning' : '🛡️ Padded'}`);
   };
 
   // Add a new scheduled practice session for this week
@@ -792,7 +995,8 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
             const newWeekly = Math.max(0, +(curWeekly - log.hours).toFixed(2));
             let newCond = pCopy.conditioningHours || 0;
             let newPadded = pCopy.paddedHours || 0;
-            if (log.sessionType === 'conditioning') {
+            const playerAttire = log.playerSessionTypes?.[player.num] || log.sessionType;
+            if (playerAttire === 'conditioning') {
               newCond = Math.max(0, +(newCond - log.hours).toFixed(2));
             } else {
               newPadded = Math.max(0, +(newPadded - log.hours).toFixed(2));
@@ -956,11 +1160,18 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                   onChange={(e) => setSelectedWeek(e.target.value)}
                   className="bg-slate-950 border border-slate-700 hover:border-amber-400/60 rounded-xl px-3 py-1.5 text-sm md:text-base font-black text-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-400/40 cursor-pointer"
                 >
-                  {weekList.map((w) => (
-                    <option key={w.key} value={w.key}>
-                      {w.label} {w.phase === 'preseason' ? '⚡ (Acclimatization)' : '🏈'}
-                    </option>
-                  ))}
+                  {weekList.map((w) => {
+                    const range = getWeekDateRange(w.key);
+                    const [sy, sm, sd] = range.startDate.split('-').map(Number);
+                    const [ey, em, ed] = range.endDate.split('-').map(Number);
+                    const sStr = `${sm}/${sd}`;
+                    const eStr = `${em}/${ed}`;
+                    return (
+                      <option key={w.key} value={w.key}>
+                        {w.label} ({sStr} – {eStr}) {w.phase === 'preseason' ? '⚡ (Acclimatization)' : '🏈'}
+                      </option>
+                    );
+                  })}
                 </select>
 
                 <button
@@ -972,6 +1183,12 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
+              </div>
+
+              <div className="text-xs text-amber-400/90 font-mono font-bold mt-1.5 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>{weekDateRangeLabel}</span>
+                <span className="text-[10px] text-slate-400 font-normal">• Week starts Monday</span>
               </div>
             </div>
           </div>
@@ -1030,17 +1247,31 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
 
         {/* Acclimatization Rule Guide Banner if in Pre-Season */}
         {isPreSeason ? (
-          <div className="p-3 bg-gradient-to-r from-amber-950/40 via-slate-950 to-slate-950 border border-amber-500/30 rounded-2xl flex items-start gap-3">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 shrink-0 mt-0.5">
-              <Zap className="w-4 h-4" />
-            </div>
-            <div className="text-xs space-y-0.5">
-              <div className="font-black text-amber-300">
-                Pre-Season Acclimatization Hours Mandate (10h Conditioning + 10h Padded)
+          <div className="p-3.5 bg-gradient-to-r from-amber-950/40 via-slate-950 to-slate-950 border border-amber-500/30 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 shrink-0 mt-0.5">
+                <Zap className="w-4 h-4" />
               </div>
-              <p className="text-slate-300 text-[11px] leading-relaxed">
-                Athletes must complete <strong className="text-amber-200 font-bold">10 hours of conditioning</strong> in helmets and shorts before donning full pads, and an additional <strong className="text-sky-200 font-bold">10 hours of padded contact</strong> before interscholastic scrimmages or games. Checking attendance below automatically credits the scheduled practice duration (e.g. 2.0h or 2.5h) to each player.
-              </p>
+              <div className="text-xs space-y-0.5">
+                <div className="font-black text-amber-300 flex items-center gap-2 flex-wrap">
+                  <span>Pre-Season Acclimatization Hours (10h Conditioning + 10h Padded Contact)</span>
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-mono font-black border border-amber-500/40">
+                    Week 1 Starts Mon, Aug 3
+                  </span>
+                </div>
+                <p className="text-slate-300 text-[11px] leading-relaxed">
+                  Athletes must complete <strong className="text-amber-200 font-bold">10 hours of conditioning</strong> before full pads, and <strong className="text-sky-200 font-bold">10 hours of padded contact</strong> before scrimmages. <strong className="text-amber-300">Missed a day?</strong> You can mark individual players for conditioning while others wear pads: click any player's attire badge (<span className="px-1 py-0.5 rounded bg-amber-500/30 text-amber-200 font-mono text-[10px]">⚡ Cond</span> / <span className="px-1 py-0.5 rounded bg-sky-500/30 text-sky-200 font-mono text-[10px]">🛡️ Pads</span>) right in the grid!
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 text-[11px] font-mono self-end md:self-center">
+              <span className="px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold">
+                ⚡ 10.0h Cond
+              </span>
+              <span className="text-slate-600">→</span>
+              <span className="px-2 py-1 rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-300 font-bold">
+                🛡️ 10.0h Pads
+              </span>
             </div>
           </div>
         ) : (
@@ -1222,15 +1453,23 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                   {/* Practice Scheduled Date Columns */}
                   {weekSessions.map((session) => {
                     // Count present for this column
-                    const presentCount = roster.filter((p) =>
+                    const presentPlayers = roster.filter((p) =>
                       attendanceLookup.get(`${session.id}_${p.num}`)
-                    ).length;
+                    );
+                    const presentCount = presentPlayers.length;
                     const presentPct = Math.round((presentCount / (roster.length || 1)) * 100);
+
+                    const condCount = presentPlayers.filter(
+                      (p) =>
+                        (playerAttireLookup.get(`${session.id}_${p.num}`) || session.sessionType) ===
+                        'conditioning'
+                    ).length;
+                    const padCount = presentCount - condCount;
 
                     return (
                       <th
                         key={session.id}
-                        className="p-3 text-center border-r border-slate-800/80 min-w-[155px] max-w-[190px] bg-slate-950/90 hover:bg-slate-900/60 transition-colors"
+                        className="p-3 text-center border-r border-slate-800/80 min-w-[160px] max-w-[200px] bg-slate-950/90 hover:bg-slate-900/60 transition-colors"
                       >
                         <div className="space-y-1.5">
                           {/* Date & Day Header */}
@@ -1251,11 +1490,11 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                               <span>{session.hours} hrs</span>
                             </div>
 
-                            {/* Attire Category Badge (Click to toggle) */}
+                            {/* Attire Category Badge (Click to toggle default) */}
                             <button
                               type="button"
                               onClick={() => handleToggleSessionAttire(session)}
-                              title="Click to toggle between Conditioning and Padded Contact"
+                              title="Click to toggle session default between Conditioning and Padded Contact"
                               className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-tight border transition-all cursor-pointer ${
                                 session.sessionType === 'conditioning'
                                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
@@ -1286,42 +1525,84 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                             </div>
                           )}
 
-                          {/* Column Attendance Status & Quick Actions */}
+                          {/* Column Attendance Status & Conditioning vs Pads Breakdown */}
                           <div className="pt-1 border-t border-slate-800/80 flex items-center justify-between gap-1 text-[10px]">
                             <span className="font-mono font-bold text-emerald-400">
                               {presentCount}/{roster.length} ({presentPct}%)
                             </span>
 
-                            {userRole === 'admin' && (
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleCheckAllForSession(session)}
-                                  className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 border border-emerald-500/30 font-bold"
-                                  title="Check All Present"
-                                >
-                                  ✓ All
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleClearAllForSession(session)}
-                                  className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 font-bold"
-                                  title="Clear All"
-                                >
-                                  Clear
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteSession(session)}
-                                  className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 font-bold flex items-center gap-0.5"
-                                  title={`Delete practice "${session.title}" from schedule and attendance tracker`}
-                                >
-                                  <Trash2 className="w-2.5 h-2.5" />
-                                  <span>Del</span>
-                                </button>
+                            {isPreSeason && presentCount > 0 && (
+                              <div className="flex items-center gap-1 text-[9px] font-mono font-bold">
+                                {condCount > 0 && (
+                                  <span
+                                    className="text-amber-300 bg-amber-500/20 px-1 py-0.5 rounded border border-amber-500/30"
+                                    title={`${condCount} players in Conditioning`}
+                                  >
+                                    ⚡{condCount}
+                                  </span>
+                                )}
+                                {padCount > 0 && (
+                                  <span
+                                    className="text-sky-300 bg-sky-500/20 px-1 py-0.5 rounded border border-sky-500/30"
+                                    title={`${padCount} players in Pads`}
+                                  >
+                                    🛡️{padCount}
+                                  </span>
+                                )}
                               </div>
                             )}
                           </div>
+
+                          {/* Quick Actions for this Practice Column */}
+                          {userRole === 'admin' && (
+                            <div className="flex items-center justify-center gap-1 flex-wrap pt-0.5">
+                              <button
+                                type="button"
+                                onClick={() => handleCheckAllForSession(session)}
+                                className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 border border-emerald-500/30 font-bold text-[9px]"
+                                title="Check All Present (preserves conditioning/pads logic)"
+                              >
+                                ✓ All
+                              </button>
+                              {isPreSeason && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSetSessionAttireForAll(session, 'conditioning')}
+                                    className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 border border-amber-500/30 font-bold text-[9px]"
+                                    title="Set all present players to Conditioning attire"
+                                  >
+                                    ⚡ All
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSetSessionAttireForAll(session, 'padded')}
+                                    className="px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 border border-sky-500/30 font-bold text-[9px]"
+                                    title="Set all present players to Padded Contact attire"
+                                  >
+                                    🛡️ All
+                                  </button>
+                                </>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleClearAllForSession(session)}
+                                className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 font-bold text-[9px]"
+                                title="Clear All"
+                              >
+                                Clear
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSession(session)}
+                                className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 font-bold text-[9px] flex items-center gap-0.5"
+                                title={`Delete practice "${session.title}" from schedule and attendance tracker`}
+                              >
+                                <Trash2 className="w-2.5 h-2.5" />
+                                <span>Del</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </th>
                     );
@@ -1486,39 +1767,95 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                         </>
                       )}
 
-                      {/* Interactive Attendance Checkboxes per Practice Date Column */}
+                      {/* Interactive Attendance Checkboxes & Per-Player Attire Badges per Practice Date Column */}
                       {weekSessions.map((session) => {
                         const isAttended = Boolean(
                           attendanceLookup.get(`${session.id}_${player.num}`)
                         );
+                        const playerAttire =
+                          playerAttireLookup.get(`${session.id}_${player.num}`) || session.sessionType;
 
                         return (
                           <td
                             key={session.id}
-                            className="p-2 text-center border-r border-slate-800/60"
+                            className="p-2 text-center border-r border-slate-800/60 min-w-[160px]"
                           >
-                            <button
-                              type="button"
-                              onClick={() => handleToggleAttendance(session, player.num)}
-                              disabled={userRole !== 'admin'}
-                              className={`w-full py-2 px-1 rounded-xl flex items-center justify-center gap-1 transition-all font-mono font-bold cursor-pointer active:scale-95 ${
-                                isAttended
-                                  ? 'bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-300 shadow-xs'
-                                  : 'bg-slate-950/60 hover:bg-slate-800/60 border border-slate-800 text-slate-500 hover:text-slate-300'
-                              }`}
-                              title={`Click to mark #${player.num} ${isAttended ? 'absent' : 'present'} for ${session.title}`}
-                            >
-                              {isAttended ? (
-                                <>
+                            {isAttended ? (
+                              <div className="flex flex-col items-center justify-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleAttendance(session, player.num)}
+                                  disabled={userRole !== 'admin'}
+                                  className="w-full py-1.5 px-2 rounded-xl flex items-center justify-center gap-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-300 shadow-xs cursor-pointer active:scale-95 transition-all font-mono font-bold"
+                                  title={`Click to mark #${player.num} absent for ${session.title}`}
+                                >
                                   <div className="w-4 h-4 rounded-md bg-emerald-500 text-slate-950 flex items-center justify-center font-black">
                                     <Check className="w-3 h-3 stroke-[3]" />
                                   </div>
                                   <span className="text-[11px] font-black">{session.hours}h</span>
-                                </>
-                              ) : (
-                                <span className="text-xs text-slate-600 font-bold">—</span>
-                              )}
-                            </button>
+                                </button>
+
+                                {isPreSeason && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTogglePlayerAttire(session, player.num)}
+                                    disabled={userRole !== 'admin'}
+                                    title={`Click to switch #${player.num} to ${
+                                      playerAttire === 'conditioning'
+                                        ? 'Padded Contact (🛡️)'
+                                        : 'Conditioning (⚡)'
+                                    }`}
+                                    className={`w-full py-0.5 px-1.5 rounded-lg text-[9px] font-black uppercase tracking-tight flex items-center justify-center gap-1 border transition-all cursor-pointer active:scale-95 ${
+                                      playerAttire === 'conditioning'
+                                        ? 'bg-amber-500/25 text-amber-300 border-amber-500/50 hover:bg-amber-500/40 shadow-xs'
+                                        : 'bg-sky-500/25 text-sky-300 border-sky-500/50 hover:bg-sky-500/40 shadow-xs'
+                                    }`}
+                                  >
+                                    <span>
+                                      {playerAttire === 'conditioning' ? '⚡ Cond' : '🛡️ Pads'}
+                                    </span>
+                                    <span className="text-[8px] opacity-70 font-mono">⇄</span>
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center justify-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleAttendance(session, player.num)}
+                                  disabled={userRole !== 'admin'}
+                                  className="w-full py-1.5 px-1 rounded-xl bg-slate-950/60 hover:bg-slate-800/60 border border-slate-800 text-slate-500 hover:text-slate-300 flex items-center justify-center transition-all cursor-pointer font-bold active:scale-95"
+                                  title={`Click to mark #${player.num} present for ${session.title}`}
+                                >
+                                  <span className="text-xs font-mono font-bold">—</span>
+                                </button>
+
+                                {isPreSeason && userRole === 'admin' && (
+                                  <div className="flex items-center justify-center gap-1 w-full opacity-40 hover:opacity-100 transition-opacity">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleTogglePlayerAttire(session, player.num, 'conditioning')
+                                      }
+                                      title={`Mark #${player.num} present for Conditioning catch-up`}
+                                      className="px-1.5 py-0.5 rounded text-[8px] font-bold text-amber-400 hover:bg-amber-500/20 border border-amber-500/30"
+                                    >
+                                      +⚡
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleTogglePlayerAttire(session, player.num, 'padded')
+                                      }
+                                      title={`Mark #${player.num} present for Pads`}
+                                      className="px-1.5 py-0.5 rounded text-[8px] font-bold text-sky-400 hover:bg-sky-500/20 border border-sky-500/30"
+                                    >
+                                      +🛡️
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </td>
                         );
                       })}

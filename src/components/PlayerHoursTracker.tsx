@@ -87,7 +87,8 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
   const [activeTab, setActiveTab] = useState<'weekly_matrix' | 'roster_hours' | 'attendance_log'>('weekly_matrix');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'needs_conditioning' | 'needs_pads' | 'fully_cleared'>('all');
-  const [selectedWeekForLog, setSelectedWeekForLog] = useState<string>(currentWeek || '0');
+  const initialLogWeek = (currentWeek && currentWeek !== '0') ? currentWeek : 'pre-1';
+  const [selectedWeekForLog, setSelectedWeekForLog] = useState<string>(initialLogWeek);
   const [showLogAttendanceModal, setShowLogAttendanceModal] = useState(false);
   const [showSeasonConfigModal, setShowSeasonConfigModal] = useState(false);
 
@@ -318,7 +319,8 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
             const newWeekly = Math.max(0, +(curWeekly - logToDelete.hours).toFixed(2));
             let newCond = player.conditioningHours || 0;
             let newPadded = player.paddedHours || 0;
-            if (logToDelete.sessionType === 'conditioning') {
+            const playerAttire = logToDelete.playerSessionTypes?.[player.num] || logToDelete.sessionType;
+            if (playerAttire === 'conditioning') {
               newCond = Math.max(0, +(newCond - logToDelete.hours).toFixed(2));
             } else {
               newPadded = Math.max(0, +(newPadded - logToDelete.hours).toFixed(2));
