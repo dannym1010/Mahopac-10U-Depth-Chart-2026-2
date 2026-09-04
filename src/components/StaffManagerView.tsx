@@ -21,6 +21,7 @@ import {
   ExternalLink,
   CheckCheck,
   Link2,
+  Clock,
 } from 'lucide-react';
 import { StaffCoach, UserRole, Team, UnitType } from '../types';
 
@@ -433,6 +434,39 @@ Looking forward to a great season!`;
             )}
           </div>
 
+          {staffList.filter((c) => c.status === 'Pending' && !isMasterSuperAdminUser(c.email)).length > 0 && (
+            <div className="p-3.5 bg-amber-500/15 border border-amber-500/40 rounded-2xl flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                  <Clock className="w-4 h-4 animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-amber-200">
+                    {staffList.filter((c) => c.status === 'Pending' && !isMasterSuperAdminUser(c.email)).length} Coach Account(s) Awaiting Access Approval
+                  </h4>
+                  <p className="text-[11px] text-amber-300/80">
+                    These coaches cannot access the site. Click "Approve" below to grant access. Once approved, they remain approved until you remove them.
+                  </p>
+                </div>
+              </div>
+              {userRole === 'admin' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    staffList.forEach((c, i) => {
+                      if (c.status === 'Pending' && !isMasterSuperAdminUser(c.email)) {
+                        onToggleStaffApproval(i);
+                      }
+                    });
+                  }}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/30 transition-all cursor-pointer"
+                >
+                  ✓ Approve All Pending Coaches
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-xs">
               <thead>
@@ -637,13 +671,14 @@ Looking forward to a great season!`;
                               <>
                                 <button
                                   onClick={() => onToggleStaffApproval(idx)}
-                                  className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                  className={`px-3 py-1 rounded-xl text-xs font-black transition-all cursor-pointer ${
                                     isActive
-                                      ? 'bg-slate-900 hover:bg-slate-750 text-slate-300 border border-slate-700'
-                                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm shadow-emerald-600/30'
+                                      ? 'bg-slate-900 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-700 hover:border-rose-700/50'
+                                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30'
                                   }`}
+                                  title={isActive ? 'Deactivate and revoke site access for this coach' : 'Approve and grant full site access for this coach'}
                                 >
-                                  {isActive ? 'Deactivate' : 'Approve'}
+                                  {isActive ? 'Revoke Access' : '✓ Approve Coach'}
                                 </button>
                                 <button
                                   onClick={() => onRemoveStaffCoach(idx)}

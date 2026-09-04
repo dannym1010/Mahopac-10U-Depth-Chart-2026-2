@@ -97,13 +97,13 @@ export const ScriptsBox: React.FC<ScriptsBoxProps> = ({
             )}
           </div>
 
-          {/* Columns (1 vs 2) */}
+          {/* Columns (1, 2, 3, 4) */}
           <div className="flex items-center gap-1 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
             <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-0.5">
               <Columns className="w-3 h-3" />
               Cols:
             </span>
-            {[1, 2].map((cols) => (
+            {[1, 2, 3, 4].map((cols) => (
               <button
                 key={cols}
                 type="button"
@@ -164,6 +164,7 @@ export const ScriptsBox: React.FC<ScriptsBoxProps> = ({
             onSlotClick={() => onSlotClick(idx)}
             onClearSlot={() => onClearSlot(idx)}
             onDropPlay={(p) => onDropPlay(idx, p)}
+            onDirectUpdatePlay={(p) => onDropPlay(idx, p)}
           />
         ))}
       </div>

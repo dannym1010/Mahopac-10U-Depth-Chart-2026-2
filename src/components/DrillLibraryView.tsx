@@ -250,7 +250,70 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
   // View Mode: 'cards' (Mobile Sideline Cards) vs 'tree' (Master Tree View)
   const [viewMode, setViewMode] = useState<'cards' | 'tree'>('cards');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all');
   const [copiedDrillId, setCopiedDrillId] = useState<string | null>(null);
+
+  // Helper to normalize strings for robust category matching (stripping emoji, whitespace, punctuation)
+  const cleanCategoryStr = (str: string) =>
+    (str || '')
+      .toLowerCase()
+      .replace(/[\p{Emoji}\u200B-\u200D\uFE0F]/gu, '')
+      .replace(/[^a-z0-9]/g, '')
+      .trim();
+
+  // Helper: check if a drill belongs to a target category
+  const isDrillCategoryMatch = (
+    item: { topCategory: string; folderName: string; parentCategories: string[] },
+    targetCat: string
+  ) => {
+    if (!targetCat || targetCat === 'all') return true;
+    if (item.topCategory === targetCat || item.folderName === targetCat) return true;
+    if (item.parentCategories.includes(targetCat)) return true;
+
+    const targetClean = cleanCategoryStr(targetCat);
+    const topClean = cleanCategoryStr(item.topCategory);
+    const folderClean = cleanCategoryStr(item.folderName);
+
+    if (topClean === targetClean || folderClean === targetClean) return true;
+    if (item.parentCategories.some((p) => cleanCategoryStr(p) === targetClean)) return true;
+
+    if (
+      targetClean.includes('offense') &&
+      (topClean.includes('offense') ||
+        item.parentCategories.some((p) => cleanCategoryStr(p).includes('offense')))
+    ) {
+      return true;
+    }
+    if (
+      targetClean.includes('defense') &&
+      (topClean.includes('defense') ||
+        item.parentCategories.some((p) => cleanCategoryStr(p).includes('defense')))
+    ) {
+      return true;
+    }
+    if (
+      targetClean.includes('special') &&
+      (topClean.includes('special') ||
+        item.parentCategories.some((p) => cleanCategoryStr(p).includes('special')))
+    ) {
+      return true;
+    }
+    if (
+      targetClean.includes('warm') &&
+      (topClean.includes('warm') ||
+        item.parentCategories.some((p) => cleanCategoryStr(p).includes('warm')))
+    ) {
+      return true;
+    }
+    if (
+      targetClean.includes('general') &&
+      (topClean.includes('general') ||
+        item.parentCategories.some((p) => cleanCategoryStr(p).includes('general')))
+    ) {
+      return true;
+    }
+    return false;
+  };
 
   // Flatten all folders for dropdown selector
   const allFolders = useMemo(() => {
@@ -273,23 +336,35 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
     const list: {
       drill: DrillItem;
       folderName: string;
+      topCategory: string;
+      parentCategories: string[];
       pathKey: string;
       drillIdx: number;
     }[] = [];
 
-    const traverse = (folders: DrillFolder[], parentPath = '') => {
+    const traverse = (
+      folders: DrillFolder[],
+      parentPath = '',
+      topCategoryName = '',
+      ancestorNames: string[] = []
+    ) => {
       folders.forEach((f, idx) => {
         const pathKey = parentPath ? `${parentPath}_${idx}` : String(idx);
+        const topCat = topCategoryName || f.name;
+        const currentAncestors = [...ancestorNames, f.name];
+
         (f.drills || []).forEach((drill, dIdx) => {
           list.push({
             drill,
             folderName: f.name,
+            topCategory: topCat,
+            parentCategories: currentAncestors,
             pathKey,
             drillIdx: dIdx,
           });
         });
         if (f.subfolders && f.subfolders.length > 0) {
-          traverse(f.subfolders, pathKey);
+          traverse(f.subfolders, pathKey, topCat, currentAncestors);
         }
       });
     };
@@ -298,12 +373,26 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
     return list;
   }, [cascadingDrills]);
 
-  // Extract unique category names
+  // Extract unique top-level category names
   const categoryOptions = useMemo(() => {
     const set = new Set<string>();
     cascadingDrills.forEach((f) => set.add(f.name));
     return Array.from(set);
   }, [cascadingDrills]);
+
+  // Extract subcategories if a specific top-level category is selected
+  const subcategoryOptions = useMemo(() => {
+    if (selectedCategory === 'all') return [];
+    const matchedTop = cascadingDrills.find(
+      (f) =>
+        f.name === selectedCategory ||
+        cleanCategoryStr(f.name) === cleanCategoryStr(selectedCategory)
+    );
+    if (!matchedTop || !matchedTop.subfolders || matchedTop.subfolders.length === 0) {
+      return [];
+    }
+    return matchedTop.subfolders.map((sf) => sf.name);
+  }, [cascadingDrills, selectedCategory]);
 
   // Total count of drills
   const totalDrillsCount = flattenedDrillList.length;
@@ -312,25 +401,42 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
 
   // Filter drills for mobile card view
   const filteredCardDrills = useMemo(() => {
-    return flattenedDrillList.filter(({ drill, folderName }) => {
-      // Category filter
-      if (selectedCategory !== 'all' && folderName !== selectedCategory) {
-        return false;
+    return flattenedDrillList.filter(
+      ({ drill, folderName, topCategory, parentCategories }) => {
+        // Top Category filter
+        if (selectedCategory !== 'all') {
+          if (!isDrillCategoryMatch({ topCategory, folderName, parentCategories }, selectedCategory)) {
+            return false;
+          }
+        }
+
+        // Subcategory filter
+        if (selectedSubcategory !== 'all') {
+          if (
+            folderName !== selectedSubcategory &&
+            !parentCategories.includes(selectedSubcategory)
+          ) {
+            return false;
+          }
+        }
+
+        // Search term filter
+        if (!query) return true;
+        const name = (drill.name || '').toLowerCase();
+        const desc = (drill.desc || '').toLowerCase();
+        const key = (drill.key || '').toLowerCase();
+        const cat = folderName.toLowerCase();
+        const topCat = topCategory.toLowerCase();
+        return (
+          name.includes(query) ||
+          desc.includes(query) ||
+          key.includes(query) ||
+          cat.includes(query) ||
+          topCat.includes(query)
+        );
       }
-      // Search term filter
-      if (!query) return true;
-      const name = (drill.name || '').toLowerCase();
-      const desc = (drill.desc || '').toLowerCase();
-      const key = (drill.key || '').toLowerCase();
-      const cat = folderName.toLowerCase();
-      return (
-        name.includes(query) ||
-        desc.includes(query) ||
-        key.includes(query) ||
-        cat.includes(query)
-      );
-    });
-  }, [flattenedDrillList, selectedCategory, query]);
+    );
+  }, [flattenedDrillList, selectedCategory, selectedSubcategory, query]);
 
   // Helper: check if a drill matches query
   const isDrillMatch = (drill: DrillItem) => {
@@ -679,39 +785,87 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
           </div>
 
           {/* Quick Category Chips for Mobile & Sideline Filtering */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-            <button
-              type="button"
-              onClick={() => setSelectedCategory('all')}
-              className={`px-3 py-1 rounded-xl text-xs font-black whitespace-nowrap transition-all border cursor-pointer ${
-                selectedCategory === 'all'
-                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
-              }`}
-            >
-              All Categories ({flattenedDrillList.length})
-            </button>
-            {categoryOptions.map((cat) => {
-              const count = flattenedDrillList.filter((d) => d.folderName === cat).length;
-              const isSelected = selectedCategory === cat;
-              return (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory('all');
+                  setSelectedSubcategory('all');
+                }}
+                className={`px-3 py-1 rounded-xl text-xs font-black whitespace-nowrap transition-all border cursor-pointer ${
+                  selectedCategory === 'all'
+                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                }`}
+              >
+                All Categories ({flattenedDrillList.length})
+              </button>
+              {categoryOptions.map((cat) => {
+                const count = flattenedDrillList.filter((d) => isDrillCategoryMatch(d, cat)).length;
+                const isSelected = selectedCategory === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory(cat);
+                      setSelectedSubcategory('all');
+                    }}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer ${
+                      isSelected
+                        ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm font-black'
+                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                    }`}
+                  >
+                    <span>{cat}</span>
+                    <span className={`ml-1.5 text-[10px] ${isSelected ? 'text-indigo-200 font-black' : 'text-slate-500'}`}>
+                      ({count})
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Subcategories (Positions / Sub-groups) for Selected Category */}
+            {subcategoryOptions.length > 0 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 pl-1 border-l-2 border-indigo-500/50">
                 <button
-                  key={cat}
                   type="button"
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer ${
-                    isSelected
-                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm font-black'
+                  onClick={() => setSelectedSubcategory('all')}
+                  className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all border cursor-pointer ${
+                    selectedSubcategory === 'all'
+                      ? 'bg-indigo-600/90 text-white border-indigo-500 shadow-xs'
                       : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
                   }`}
                 >
-                  <span>{cat}</span>
-                  <span className={`ml-1.5 text-[10px] ${isSelected ? 'text-indigo-200 font-black' : 'text-slate-500'}`}>
-                    ({count})
-                  </span>
+                  All in {selectedCategory} ({flattenedDrillList.filter((d) => isDrillCategoryMatch(d, selectedCategory)).length})
                 </button>
-              );
-            })}
+                {subcategoryOptions.map((sub) => {
+                  const subCount = flattenedDrillList.filter(
+                    (d) =>
+                      isDrillCategoryMatch(d, selectedCategory) &&
+                      (d.folderName === sub || d.parentCategories.includes(sub))
+                  ).length;
+                  const isSubSelected = selectedSubcategory === sub;
+                  return (
+                    <button
+                      key={sub}
+                      type="button"
+                      onClick={() => setSelectedSubcategory(sub)}
+                      className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all border cursor-pointer ${
+                        isSubSelected
+                          ? 'bg-indigo-500 text-white border-indigo-400 shadow-xs'
+                          : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                      }`}
+                    >
+                      <span>{sub}</span>
+                      <span className="ml-1 text-[10px] opacity-80">({subCount})</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -723,11 +877,16 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
         <div className="space-y-3">
           {/* Active Filter Header */}
           <div className="flex items-center justify-between px-1">
-            <div className="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-2">
+            <div className="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-2 flex-wrap">
               <span>Showing {filteredCardDrills.length} Drills</span>
               {selectedCategory !== 'all' && (
                 <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] normal-case font-bold">
                   {selectedCategory}
+                </span>
+              )}
+              {selectedSubcategory !== 'all' && (
+                <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-750 text-[10px] normal-case font-bold">
+                  {selectedSubcategory}
                 </span>
               )}
             </div>
@@ -735,7 +894,7 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
 
           {/* Drill Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {filteredCardDrills.map(({ drill, folderName, pathKey, drillIdx }) => {
+            {filteredCardDrills.map(({ drill, folderName, topCategory, pathKey, drillIdx }) => {
               const cardId = `${pathKey}_${drillIdx}`;
               const isCopied = copiedDrillId === cardId;
 
@@ -749,7 +908,7 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400/90 block mb-0.5 truncate">
-                          {folderName}
+                          {topCategory && topCategory !== folderName ? `${topCategory} • ${folderName}` : folderName}
                         </span>
                         <h3 className="font-black text-sm text-slate-100 group-hover:text-indigo-300 transition-colors leading-snug">
                           {drill.name || 'Untitled Drill'}
@@ -850,9 +1009,43 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
           ========================================================================= */}
       {viewMode === 'tree' && (
         <div className="space-y-4">
-          {cascadingDrills.map((folder, idx) =>
-            renderFolderNode(folder, String(idx), 0)
+          {selectedCategory !== 'all' && (
+            <div className="flex items-center justify-between bg-slate-900/90 border border-indigo-500/30 rounded-xl px-3.5 py-2 text-xs">
+              <span className="text-slate-300 font-bold">
+                Filtering tree by: <span className="text-indigo-400 font-extrabold">{selectedCategory}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory('all');
+                  setSelectedSubcategory('all');
+                }}
+                className="text-xs text-slate-400 hover:text-white underline cursor-pointer"
+              >
+                Show All Categories
+              </button>
+            </div>
           )}
+          {cascadingDrills
+            .filter((folder) => {
+              if (selectedCategory === 'all') return true;
+              return (
+                folder.name === selectedCategory ||
+                cleanCategoryStr(folder.name) === cleanCategoryStr(selectedCategory) ||
+                (cleanCategoryStr(selectedCategory).includes('offense') &&
+                  cleanCategoryStr(folder.name).includes('offense')) ||
+                (cleanCategoryStr(selectedCategory).includes('defense') &&
+                  cleanCategoryStr(folder.name).includes('defense')) ||
+                (cleanCategoryStr(selectedCategory).includes('special') &&
+                  cleanCategoryStr(folder.name).includes('special')) ||
+                (cleanCategoryStr(selectedCategory).includes('warm') &&
+                  cleanCategoryStr(folder.name).includes('warm'))
+              );
+            })
+            .map((folder) => {
+              const origIdx = cascadingDrills.indexOf(folder);
+              return renderFolderNode(folder, String(origIdx >= 0 ? origIdx : 0), 0);
+            })}
         </div>
       )}
     </div>

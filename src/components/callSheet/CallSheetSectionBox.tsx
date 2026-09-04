@@ -115,6 +115,17 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
     }
   };
 
+  const handleDirectUpdatePlay = (slotIndex: number, play: CallSheetPlay) => {
+    if (onUpdateSection) {
+      const nextPlays = [...section.plays];
+      nextPlays[slotIndex] = play;
+      onUpdateSection({
+        ...section,
+        plays: nextPlays,
+      });
+    }
+  };
+
   const handleAddSlot = () => {
     if (onUpdateSection) {
       onUpdateSection({
@@ -266,13 +277,13 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
               </button>
             </div>
 
-            {/* Columns (1, 2, 3) */}
+            {/* Columns (1, 2, 3, 4) */}
             <div className="flex items-center gap-1 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
               <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-0.5">
                 <Columns className="w-3 h-3" />
                 Cols:
               </span>
-              {[1, 2, 3].map((cols) => (
+              {[1, 2, 3, 4].map((cols) => (
                 <button
                   key={cols}
                   type="button"
@@ -390,6 +401,7 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
               onSlotClick={() => onSlotClick(slotIdx)}
               onClearSlot={() => onClearSlot(slotIdx)}
               onDropPlay={(p) => onDropPlay(slotIdx, p)}
+              onDirectUpdatePlay={(p) => handleDirectUpdatePlay(slotIdx, p)}
             />
           );
         })}

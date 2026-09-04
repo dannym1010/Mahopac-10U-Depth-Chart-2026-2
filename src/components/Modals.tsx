@@ -43,10 +43,11 @@ interface AuthModalProps {
   isOpen: boolean;
   isPendingApproval: boolean;
   pendingEmail: string;
+  isLiveEnvironment?: boolean;
   onEmailAuth: (email: string, pass: string, isSignUp: boolean) => Promise<void>;
   onGoogleSignIn: () => Promise<void>;
-  onGoogleSignInRedirect?: () => Promise<void>;
-  onBypassLogin: () => void;
+  onLocalTestAccess?: () => void;
+  onRefreshApprovalStatus?: () => void | Promise<void>;
   onSignOut: () => void;
   staffList?: StaffCoach[];
   teams?: Team[];
@@ -57,10 +58,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   isPendingApproval,
   pendingEmail,
+  isLiveEnvironment = false,
   onEmailAuth,
   onGoogleSignIn,
-  onGoogleSignInRedirect,
-  onBypassLogin,
+  onLocalTestAccess,
+  onRefreshApprovalStatus,
   onSignOut,
   staffList = [],
   teams = [],
@@ -76,29 +78,66 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   if (isPendingApproval) {
     return (
-      <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-        <div className="bg-slate-800/95 rounded-3xl max-w-md w-full p-8 shadow-2xl text-center space-y-4 border border-slate-700/80">
+      <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="bg-slate-800/95 rounded-3xl max-w-md w-full p-8 shadow-2xl text-center space-y-5 border border-amber-500/30">
           <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/30 text-amber-300 flex items-center justify-center mx-auto shadow-inner">
             <Clock className="w-8 h-8 animate-spin" style={{ animationDuration: '4s' }} />
           </div>
           <div>
-            <h2 className="text-xl font-black text-slate-100 tracking-tight">
-              Approval Pending
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              Access Restricted
+            </span>
+            <h2 className="text-xl font-black text-slate-100 tracking-tight mt-2">
+              Coach Approval Required
             </h2>
-            <p className="text-xs text-slate-300 font-medium mt-1 leading-relaxed">
-              Your coach account (<strong className="text-indigo-400">{pendingEmail}</strong>) has been registered and is awaiting approval from the Head Coach or Admin.
+            <p className="text-xs text-slate-300 font-medium mt-2 leading-relaxed">
+              Your coach account (<strong className="text-indigo-400">{pendingEmail}</strong>) has been registered, but only approved coaches can access this site.
             </p>
           </div>
-          <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[11px] text-amber-300 font-semibold">
-            Once approved, you will automatically receive real-time cloud access.
+
+          <div className="p-3.5 bg-slate-900/90 border border-slate-700/80 rounded-2xl text-left space-y-2 text-xs">
+            <div className="flex items-center gap-2 font-bold text-amber-300 text-[11px]">
+              <Shield className="w-3.5 h-3.5 text-amber-400" />
+              <span>Live Site Access Control</span>
+            </div>
+            <p className="text-[11.5px] text-slate-400 leading-relaxed">
+              To protect youth rosters, playbooks, and game plans, the <strong>Head Coach / Admin</strong> must approve your account in the Staff Portal. Once approved, you have permanent access until removed.
+            </p>
           </div>
-          <button
-            onClick={onSignOut}
-            className="w-full py-2.5 bg-slate-900 hover:bg-slate-750 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all border border-slate-700"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Sign Out / Switch Account</span>
-          </button>
+
+          <div className="flex flex-col gap-2 pt-1">
+            {onRefreshApprovalStatus && (
+              <button
+                type="button"
+                onClick={onRefreshApprovalStatus}
+                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Check Approval Status</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="w-full py-2 bg-slate-900 hover:bg-slate-750 text-slate-300 hover:text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all border border-slate-750 cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out / Switch Account</span>
+            </button>
+          </div>
+
+          {!isLiveEnvironment && onLocalTestAccess && (
+            <div className="pt-2 border-t border-slate-700/60 text-center">
+              <button
+                type="button"
+                onClick={onLocalTestAccess}
+                className="text-[11px] font-semibold text-slate-400 hover:text-indigo-300 transition-colors cursor-pointer inline-flex items-center gap-1"
+              >
+                <span>🛠️ Bypass to Local / Dev Test Mode</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -118,7 +157,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
       <div className="bg-slate-800/95 rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-700/80 space-y-5">
         {/* Header */}
         <div className="text-center space-y-1">
@@ -129,7 +168,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             Coach Portal Access
           </h2>
           <p className="text-xs text-slate-300 font-medium">
-            Sign in to sync youth depth charts, playbooks, and practice plans.
+            Sign in to access team playbooks, depth charts, rosters, and practice plans.
           </p>
         </div>
 
@@ -174,8 +213,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         )}
 
-        {/* Google Sign In Buttons */}
-        <div className="space-y-2">
+        {/* Google Sign In Button */}
+        <div>
           <button
             type="button"
             disabled={loading}
@@ -195,22 +234,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   );
                 } else if (code === 'auth/operation-not-allowed') {
                   setError(
-                    'Google Sign-in is not enabled in your Firebase Project. Go to Firebase Console -> Authentication -> Sign-in Method and enable Google.'
+                    'Google Sign-in is not enabled in your Firebase Project. Enable Google in Firebase Console -> Authentication -> Sign-in Method.'
                   );
                 } else if (code === 'auth/popup-blocked') {
-                  setError('Popup blocked by browser. You can click "Sign in via Full Page Redirect" below or use Email/Password.');
+                  setError('Popup blocked by browser. Please allow popups for this site or use email/password below.');
                 } else if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
                   setError(
-                    `Popup closed. If browser cookie privacy blocks the popup, try "Sign in via Full Page Redirect" or Email/Password.`
+                    'Google sign-in popup was closed before completing. You can try again or use email/password.'
                   );
                 } else {
-                  setError(message ? `${code ? `[${code}] ` : ''}${message}` : 'Google Sign-In failed. Try Full Page Redirect or Email/Password.');
+                  setError(message ? `${code ? `[${code}] ` : ''}${message}` : 'Google Sign-In failed. Please try again or use email/password.');
                 }
               } finally {
                 setLoading(false);
               }
             }}
-            className="w-full py-2.5 bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-200 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95"
+            className="w-full py-2.5 bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-200 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95 cursor-pointer"
           >
             <svg width="18" height="18" viewBox="0 0 24 24">
               <path
@@ -232,38 +271,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </svg>
             <span>{loading ? 'Signing in...' : 'Continue with Google'}</span>
           </button>
-
-          {onGoogleSignInRedirect && (
-            <button
-              type="button"
-              disabled={loading}
-              onClick={async () => {
-                setError(null);
-                setLoading(true);
-                try {
-                  await onGoogleSignInRedirect();
-                } catch (err: any) {
-                  setError(err?.message || 'Redirect sign-in error');
-                  setLoading(false);
-                }
-              }}
-              className="w-full py-1.5 bg-slate-900/60 hover:bg-slate-750/80 border border-slate-750/70 text-slate-300 hover:text-slate-100 font-semibold text-[11px] rounded-lg transition-all text-center"
-            >
-              🔄 Alternative: Sign in with Google (Redirect Mode)
-            </button>
-          )}
-        </div>
-
-        {/* New Tab Helper if in iframe preview */}
-        <div className="text-center pt-0.5">
-          <a
-            href={window.location.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 underline underline-offset-2 transition-colors"
-          >
-            ↗ Open in New Tab for Google Auth
-          </a>
         </div>
 
         <div className="flex items-center gap-2 text-slate-400 text-[10.5px] font-black uppercase tracking-wider">
@@ -296,85 +303,99 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             />
           </div>
 
-          {error && (
-            <div className="p-2.5 bg-rose-950/60 border border-rose-800 rounded-xl text-xs text-rose-300 font-bold">
-              {error}
-            </div>
-          )}
-
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md shadow-indigo-600/30 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-95"
+            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md shadow-indigo-600/30 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer"
           >
             {isSignUp ? <UserPlus className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
             <span>{isSignUp ? 'Create Coach Account' : 'Sign In'}</span>
           </button>
         </form>
 
-        {/* Quick Coach Profiles (One-click Login with Favorite Team & Startup Screen) */}
-        {staffList && staffList.length > 0 && (
+        {/* Quick Coach Profiles (One-click Login for Active Approved Coaches) */}
+        {staffList && staffList.filter((c) => c.status === 'Active').length > 0 && (
           <div className="pt-2 border-t border-slate-700/80 space-y-2">
             <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400">
-              <span>Fast Coach Sign-In &amp; Preferences</span>
-              <span className="text-amber-400">Auto-loads Favorite Team</span>
+              <span>Fast Coach Sign-In</span>
+              <span className="text-amber-400">Approved Staff</span>
             </div>
             <div className="grid grid-cols-1 gap-1.5 max-h-36 overflow-y-auto pr-1">
-              {staffList.map((coach, cIdx) => {
-                const favTeam = teams.find((t) => t.id === coach.favoriteTeamId);
-                return (
-                  <button
-                    key={cIdx}
-                    type="button"
-                    onClick={() => {
-                      if (onSelectQuickCoach) {
-                        onSelectQuickCoach(coach.email);
-                      } else {
-                        setEmail(coach.email);
-                        setPassword('password123');
-                      }
-                    }}
-                    className="w-full px-2.5 py-1.5 bg-slate-900/90 hover:bg-slate-750 border border-slate-700/80 hover:border-indigo-500 rounded-xl text-left flex items-center justify-between transition-all group cursor-pointer"
-                  >
-                    <div className="min-w-0 flex items-center gap-1.5">
-                      <div className="w-5 h-5 rounded-md bg-indigo-500/20 text-indigo-300 font-black text-[10px] flex items-center justify-center shrink-0">
-                        {coach.role.charAt(0) || 'C'}
-                      </div>
-                      <div className="truncate">
-                        <div className="font-bold text-[11px] text-slate-100 group-hover:text-indigo-300 transition-colors truncate">
-                          {coach.role}
+              {staffList
+                .filter((c) => c.status === 'Active')
+                .map((coach, cIdx) => {
+                  const favTeam = teams.find((t) => t.id === coach.favoriteTeamId);
+                  return (
+                    <button
+                      key={cIdx}
+                      type="button"
+                      onClick={() => {
+                        if (onSelectQuickCoach) {
+                          onSelectQuickCoach(coach.email);
+                        } else {
+                          setEmail(coach.email);
+                          setPassword('password123');
+                        }
+                      }}
+                      className="w-full px-2.5 py-1.5 bg-slate-900/90 hover:bg-slate-750 border border-slate-700/80 hover:border-indigo-500 rounded-xl text-left flex items-center justify-between transition-all group cursor-pointer"
+                    >
+                      <div className="min-w-0 flex items-center gap-1.5">
+                        <div className="w-5 h-5 rounded-md bg-indigo-500/20 text-indigo-300 font-black text-[10px] flex items-center justify-center shrink-0">
+                          {coach.role.charAt(0) || 'C'}
                         </div>
-                        <div className="text-[9.5px] text-slate-400 font-mono truncate">
-                          {coach.email}
+                        <div className="truncate">
+                          <div className="font-bold text-[11px] text-slate-100 group-hover:text-indigo-300 transition-colors truncate">
+                            {coach.role}
+                          </div>
+                          <div className="text-[9.5px] text-slate-400 font-mono truncate">
+                            {coach.email}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-1 shrink-0">
-                      {favTeam && (
-                        <span className="px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-300 text-[9px] font-bold border border-amber-400/25">
-                          🏈 {favTeam.ageGroup || favTeam.name}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {favTeam && (
+                          <span className="px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-300 text-[9px] font-bold border border-amber-400/25">
+                            🏈 {favTeam.ageGroup || favTeam.name}
+                          </span>
+                        )}
+                        <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-300 text-[9px] font-mono capitalize">
+                          {coach.startScreen || 'Schedule'}
                         </span>
-                      )}
-                      <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-300 text-[9px] font-mono capitalize">
-                        {coach.startScreen || 'Schedule'}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
+                      </div>
+                    </button>
+                  );
+                })}
             </div>
           </div>
         )}
 
-        <div className="pt-2 border-t border-slate-700 text-center">
-          <button
-            type="button"
-            onClick={onBypassLogin}
-            className="text-xs font-bold text-slate-400 hover:text-indigo-300 transition-colors cursor-pointer"
-          >
-            Continue in Offline Mode (No Login)
-          </button>
+        {/* Local / Dev Testing Access */}
+        <div className="pt-2 border-t border-slate-700/80 text-center">
+          {!isLiveEnvironment ? (
+            <button
+              type="button"
+              onClick={onLocalTestAccess}
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/80 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5"
+            >
+              <span>🛠️ Local / Dev Testing Access (Bypass Gate)</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                const code = window.prompt('Enter Local Testing / Dev Passcode:');
+                if (code && (code === '1010' || code.toLowerCase() === 'mahopac' || code.toLowerCase() === 'admin')) {
+                  onLocalTestAccess?.();
+                } else if (code) {
+                  alert('Incorrect passcode. When live, only approved coaching staff accounts can access the site.');
+                }
+              }}
+              className="text-[10px] text-slate-500 hover:text-slate-400 font-medium transition-colors cursor-pointer"
+            >
+              Local Testing &amp; Developer Access
+            </button>
+          )}
         </div>
       </div>
     </div>

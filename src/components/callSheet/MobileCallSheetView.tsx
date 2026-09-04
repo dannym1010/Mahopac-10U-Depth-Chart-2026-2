@@ -298,62 +298,87 @@ export const MobileCallSheetView: React.FC<MobileCallSheetViewProps> = ({
                     </span>
                   </div>
 
-                  {/* Section quick mobile drawer for rows & delete */}
+                  {/* Section quick mobile drawer for rows, columns, highlight & delete */}
                   {isEditing && (
-                    <div className="p-2.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between text-xs text-slate-300">
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-400">Rows: {sec.slotsCount}</span>
-                        {onUpdateSection && (
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onUpdateSection({
-                                  ...sec,
-                                  slotsCount: sec.slotsCount + 1,
-                                  plays: [...sec.plays, null],
-                                });
-                              }}
-                              className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded font-bold"
-                            >
-                              + Row
-                            </button>
-                            {sec.slotsCount > 1 && (
+                    <div className="p-2.5 bg-slate-950 border-b border-slate-800 space-y-2 text-xs text-slate-300">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        {/* Rows */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-slate-400 font-bold">Rows: {sec.slotsCount}</span>
+                          {onUpdateSection && (
+                            <div className="flex items-center gap-1">
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   onUpdateSection({
                                     ...sec,
-                                    slotsCount: sec.slotsCount - 1,
-                                    plays: sec.plays.slice(0, sec.slotsCount - 1),
+                                    slotsCount: sec.slotsCount + 1,
+                                    plays: [...sec.plays, null],
                                   });
                                 }}
-                                className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-rose-400 rounded font-bold"
+                                className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded font-bold"
                               >
-                                - Row
+                                + Row
                               </button>
-                            )}
-                          </div>
+                              {sec.slotsCount > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onUpdateSection({
+                                      ...sec,
+                                      slotsCount: sec.slotsCount - 1,
+                                      plays: sec.plays.slice(0, sec.slotsCount - 1),
+                                    });
+                                  }}
+                                  className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-rose-400 rounded font-bold"
+                                >
+                                  - Row
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Highlight toggle */}
+                        {onUpdateSection && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateSection({
+                                ...sec,
+                                highlightEnabled: !isHighlighted,
+                              });
+                            }}
+                            className={`px-2 py-0.5 rounded font-bold border transition-colors ${
+                              isHighlighted
+                                ? 'bg-amber-400/20 text-amber-300 border-amber-400/40'
+                                : 'bg-slate-800 text-slate-400 border-slate-700'
+                            }`}
+                          >
+                            Highlight {isHighlighted ? 'ON' : 'OFF'}
+                          </button>
+                        )}
+
+                        {/* Delete */}
+                        {onDeleteSection && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Delete "${sec.title}"?`)) {
+                                onDeleteSection(sec.id);
+                              }
+                            }}
+                            className="px-2 py-0.5 bg-rose-950 text-rose-300 border border-rose-800 rounded font-bold flex items-center gap-1 ml-auto"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Delete</span>
+                          </button>
                         )}
                       </div>
-
-                      {onDeleteSection && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (window.confirm(`Delete "${sec.title}"?`)) {
-                              onDeleteSection(sec.id);
-                            }
-                          }}
-                          className="px-2 py-0.5 bg-rose-950 text-rose-300 border border-rose-800 rounded font-bold flex items-center gap-1"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          <span>Delete</span>
-                        </button>
-                      )}
                     </div>
                   )}
 
@@ -406,6 +431,16 @@ export const MobileCallSheetView: React.FC<MobileCallSheetViewProps> = ({
                 </div>
               );
             })}
+            {onAddSection && (
+              <button
+                type="button"
+                onClick={() => onAddSection('top_situations')}
+                className="w-full py-3 px-4 rounded-2xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Add Situation Table</span>
+              </button>
+            )}
           </div>
         )}
     </div>

@@ -26,6 +26,7 @@ interface PlayPickerModalProps {
   onSelectPlay: (play: CallSheetPlay) => void;
   onClearSlot: () => void;
   onAddCustomToDatabase?: (entry: PlayDatabaseEntry) => void;
+  onDeleteFromDatabase?: (playId: string) => void;
   onOpenExcelImport?: () => void;
 }
 
@@ -53,6 +54,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
   onSelectPlay,
   onClearSlot,
   onAddCustomToDatabase,
+  onDeleteFromDatabase,
   onOpenExcelImport,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -391,12 +393,27 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                       )}
                     </div>
 
-                    <button
-                      type="button"
-                      className="shrink-0 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black shadow-md transition-all group-hover:scale-105"
-                    >
-                      Assign
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {onDeleteFromDatabase && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteFromDatabase(play.id);
+                          }}
+                          className="p-1.5 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition-colors cursor-pointer"
+                          title={`Delete "${play.name}" from play bank`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black shadow-md transition-all group-hover:scale-105"
+                      >
+                        Assign
+                      </button>
+                    </div>
                   </div>
                 );
               })}

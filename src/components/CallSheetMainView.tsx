@@ -34,6 +34,7 @@ import { MobileCallSheetView } from './callSheet/MobileCallSheetView';
 import { PlayPickerModal } from './callSheet/PlayPickerModal';
 import { PlayBankSidebar } from './callSheet/PlayBankSidebar';
 import { ExcelPlayImportModal } from './callSheet/ExcelPlayImportModal';
+import { AddTableModal } from './callSheet/AddTableModal';
 
 interface CallSheetMainViewProps {
   activeTeamName?: string;
@@ -79,6 +80,13 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
     return callSheetData.desktopGridColumns || 4;
   });
   const [isExcelImportOpen, setIsExcelImportOpen] = useState(false);
+  const [addTableModalState, setAddTableModalState] = useState<{
+    isOpen: boolean;
+    group: 'top_situations' | 'red_zone' | 'tempo_game_mgmt' | 'custom';
+  }>({
+    isOpen: false,
+    group: 'top_situations',
+  });
 
   // Play Picker Modal state
   const [pickerState, setPickerState] = useState<{
@@ -227,44 +235,17 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
     });
   };
 
-  // Handle adding a new section table
+  // Handle adding a new section table via modal
   const handleAddSection = (
     group: 'top_situations' | 'red_zone' | 'tempo_game_mgmt' | 'custom' = 'top_situations'
   ) => {
-    const promptTitle = window.prompt(
-      'Enter new table title (e.g. "Overtime", "3rd & Short (Heavy)", "Hash Plays", "Trick Plays"):',
-      group === 'red_zone'
-        ? 'Red Zone Special'
-        : group === 'tempo_game_mgmt'
-        ? 'Clock Kill'
-        : 'New Situation'
-    );
-    if (!promptTitle || !promptTitle.trim()) return;
-
-    const newId = `${activeUnit.slice(0, 3)}_${Date.now()}`;
-    const defaultColor =
-      group === 'red_zone'
-        ? '#dc2626'
-        : group === 'tempo_game_mgmt'
-        ? '#09090b'
-        : activeUnit === 'offense'
-        ? '#2563eb'
-        : '#16a34a';
-
-    const newSection: CallSheetSection = {
-      id: newId,
-      title: promptTitle.trim(),
-      headerBgColor: defaultColor,
-      headerTextColor: '#ffffff',
-      targetUnit: activeUnit,
+    setAddTableModalState({
+      isOpen: true,
       group,
-      slotsCount: 4,
-      columnsCount: 1,
-      highlightEnabled: group === 'red_zone',
-      highlightColor: group === 'red_zone' ? 'rose' : 'yellow',
-      plays: [null, null, null, null],
-    };
+    });
+  };
 
+  const handleConfirmAddSection = (newSection: CallSheetSection) => {
     setCallSheetData((prev) => {
       const next = { ...prev };
       const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
@@ -345,6 +326,38 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   // Add custom play to database
   const handleAddCustomToDatabase = (newPlay: PlayDatabaseEntry) => {
     setPlayDatabase((prev) => [newPlay, ...prev]);
+  };
+
+  // Delete play from database (offensive or defensive play bank)
+  const handleDeletePlayFromDatabase = (playId: string) => {
+    const play = playDatabase.find((p) => p.id === playId);
+    if (!play) return;
+    const confirmMsg = `Delete "${play.name}" from your ${play.unit} play bank?`;
+    if (window.confirm(confirmMsg)) {
+      setPlayDatabase((prev) => {
+        const next = prev.filter((p) => p.id !== playId);
+        safeJSONSet('footballPlayDatabase', next);
+        return next;
+      });
+    }
+  };
+
+  // Reset active unit play bank to defaults
+  const handleResetPlayDatabase = () => {
+    const unitName = activeUnit === 'offense' ? 'Offense' : 'Defense';
+    if (
+      window.confirm(
+        `Reset the ${unitName} play bank back to default plays? Any custom plays you added to ${unitName} will be cleared.`
+      )
+    ) {
+      setPlayDatabase((prev) => {
+        const otherPlays = prev.filter((p) => p.unit !== activeUnit);
+        const defaultUnitPlays = MASTER_PLAY_DATABASE.filter((p) => p.unit === activeUnit);
+        const next = [...defaultUnitPlays, ...otherPlays];
+        safeJSONSet('footballPlayDatabase', next);
+        return next;
+      });
+    }
   };
 
   // Import plays from Excel into database and master play library
@@ -582,22 +595,20 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
               <span className="hidden sm:inline">Red Zone Tint {highlightRedZone ? 'ON' : 'OFF'}</span>
             </button>
 
-            {/* Play Bank Sidebar Toggle (Desktop) */}
-            {viewDevice === 'computer' && (
-              <button
-                type="button"
-                onClick={() => setIsPlayBankOpen(!isPlayBankOpen)}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
-                  isPlayBankOpen
-                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-md'
-                    : 'bg-slate-900 text-slate-300 border-slate-750 hover:text-white'
-                }`}
-                title="Toggle Play Bank sidebar"
-              >
-                <BookOpen className="w-3.5 h-3.5 text-indigo-300" />
-                <span>Play Bank ({playDatabase.filter((p) => p.unit === activeUnit).length})</span>
-              </button>
-            )}
+            {/* Play Bank Sidebar Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsPlayBankOpen(!isPlayBankOpen)}
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                isPlayBankOpen
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-md'
+                  : 'bg-slate-900 text-slate-300 border-slate-750 hover:text-white'
+              }`}
+              title="Toggle Play Bank sidebar"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-indigo-300" />
+              <span>Play Bank ({playDatabase.filter((p) => p.unit === activeUnit).length})</span>
+            </button>
 
             {/* Import Plays from Excel Button */}
             <button
@@ -721,29 +732,29 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
           )}
         </main>
 
-        {/* Play Bank Sidebar (Desktop) */}
-        {viewDevice === 'computer' && (
-          <PlayBankSidebar
-            unit={activeUnit}
-            plays={playDatabase}
-            onAddCustomPlay={() => {
-              const firstSec =
-                activeUnit === 'offense'
-                  ? callSheetData.offenseSections[0]?.id || 'script'
-                  : callSheetData.defenseSections[0]?.id || 'script';
-              setPickerState({
-                isOpen: true,
-                sectionId: firstSec,
-                sectionTitle: 'New Play Entry',
-                slotIndex: 0,
-                currentPlay: null,
-              });
-            }}
-            onOpenExcelImport={() => setIsExcelImportOpen(true)}
-            isOpen={isPlayBankOpen}
-            onToggleOpen={() => setIsPlayBankOpen(!isPlayBankOpen)}
-          />
-        )}
+        {/* Play Bank Sidebar (Drawer on mobile, docked on desktop) */}
+        <PlayBankSidebar
+          unit={activeUnit}
+          plays={playDatabase}
+          onAddCustomPlay={() => {
+            const firstSec =
+              activeUnit === 'offense'
+                ? callSheetData.offenseSections[0]?.id || 'script'
+                : callSheetData.defenseSections[0]?.id || 'script';
+            setPickerState({
+              isOpen: true,
+              sectionId: firstSec,
+              sectionTitle: 'New Play Entry',
+              slotIndex: 0,
+              currentPlay: null,
+            });
+          }}
+          onOpenExcelImport={() => setIsExcelImportOpen(true)}
+          onDeletePlay={handleDeletePlayFromDatabase}
+          onResetDefaults={handleResetPlayDatabase}
+          isOpen={isPlayBankOpen}
+          onToggleOpen={() => setIsPlayBankOpen(!isPlayBankOpen)}
+        />
       </div>
 
       {/* 3. Play Picker Modal */}
@@ -764,6 +775,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
           setPickerState((prev) => ({ ...prev, isOpen: false }));
         }}
         onAddCustomToDatabase={handleAddCustomToDatabase}
+        onDeleteFromDatabase={handleDeletePlayFromDatabase}
         onOpenExcelImport={() => setIsExcelImportOpen(true)}
       />
 
@@ -774,6 +786,15 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
         defaultUnit={activeUnit}
         existingPlaysCount={playDatabase.length}
         onImportPlays={handleImportPlays}
+      />
+
+      {/* 5. Add Table / Section Modal */}
+      <AddTableModal
+        isOpen={addTableModalState.isOpen}
+        activeUnit={activeUnit}
+        initialGroup={addTableModalState.group}
+        onClose={() => setAddTableModalState((prev) => ({ ...prev, isOpen: false }))}
+        onAddSection={handleConfirmAddSection}
       />
     </div>
   );

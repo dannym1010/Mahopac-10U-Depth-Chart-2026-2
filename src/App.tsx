@@ -995,6 +995,28 @@ function mergeRemoteWeeklyData(
       setStaffList(data.staffList);
       latestStateRef.current.staffList = data.staffList;
       safeJSONSet('footballTeamCoaches', data.staffList);
+
+      // Real-time access check for current user
+      if (currentUser?.email && !currentUser?.isLocalDevBypass) {
+        const cleanUserEmail = currentUser.email.toLowerCase().trim();
+        const isMaster =
+          cleanUserEmail.includes('dannym1010') ||
+          cleanUserEmail === 'dannym1010@gmail.com';
+        if (!isMaster) {
+          const myCoach = data.staffList.find(
+            (c: StaffCoach) => c.email.toLowerCase().trim() === cleanUserEmail
+          );
+          if (myCoach && myCoach.status === 'Active') {
+            setIsPendingApproval(false);
+            const isHead =
+              myCoach.role?.toLowerCase().includes('head coach') ||
+              myCoach.role?.toLowerCase().includes('admin');
+            setUserRole(isHead ? 'admin' : 'assistant');
+          } else if (!myCoach || myCoach.status === 'Pending') {
+            setIsPendingApproval(true);
+          }
+        }
+      }
     }
     if (data.masterPlayLibrary) {
       setMasterPlayLibrary(data.masterPlayLibrary);
@@ -1452,10 +1474,10 @@ function mergeRemoteWeeklyData(
       const unsubscribeAuth = auth.onAuthStateChanged(async (user: any) => {
         if (user) {
           setCurrentUser(user);
-          setIsAuthModalOpen(false);
           applyUserPreferencesOnLogin(user.email);
 
           // On user login, immediately pull all live team data from Firestore
+          let latestStaff: StaffCoach[] = staffList;
           if (db) {
             try {
               const doc = await db.collection('teamData').doc('depthChartData').get();
@@ -1463,6 +1485,9 @@ function mergeRemoteWeeklyData(
                 const cloudData = doc.data();
                 if (cloudData) {
                   applyRemoteState(cloudData, 'auth_login_pull');
+                  if (cloudData.staffList && Array.isArray(cloudData.staffList)) {
+                    latestStaff = cloudData.staffList;
+                  }
                 }
               }
             } catch (loginPullErr) {
@@ -1476,73 +1501,87 @@ function mergeRemoteWeeklyData(
             cleanEmail.includes('dannym1010') ||
             cleanEmail === 'dannym1010@gmail.com';
 
-          setStaffList((prevStaff) => {
-            const isFirstUser = prevStaff.length === 0;
-            const existingIdx = prevStaff.findIndex(
-              (c) => c.email.toLowerCase().trim() === cleanEmail
-            );
-            if (isDannySuperAdmin) {
-              if (existingIdx !== -1) {
-                const copy = [...prevStaff];
-                copy[existingIdx] = {
-                  ...copy[existingIdx],
+          const existingIdx = latestStaff.findIndex(
+            (c) => c.email.toLowerCase().trim() === cleanEmail
+          );
+
+          if (isDannySuperAdmin) {
+            setIsPendingApproval(false);
+            setUserRole('admin');
+            setIsAuthModalOpen(false);
+            if (existingIdx === -1) {
+              const updatedStaff: StaffCoach[] = [
+                {
+                  email: cleanEmail,
                   role: 'Master Super Admin',
                   status: 'Active',
                   assignedTeamIds: ['all'],
-                };
-                return copy;
-              } else {
-                return [
-                  {
-                    email: cleanEmail,
-                    role: 'Master Super Admin',
-                    status: 'Active',
-                    assignedTeamIds: ['all'],
-                  },
-                  ...prevStaff,
-                ];
-              }
-            } else if (existingIdx === -1 && cleanEmail) {
-              const isMaster = isFirstUser || cleanEmail.includes('admin');
-              const newEntry: StaffCoach = {
-                email: cleanEmail,
-                role: isMaster ? 'Head Coach (Admin)' : 'Assistant Coach',
-                status: 'Active',
-                assignedTeamIds: ['all'],
-              };
-              const updatedStaff = [...prevStaff, newEntry];
+                },
+                ...latestStaff,
+              ];
+              setStaffList(updatedStaff);
+              safeJSONSet('footballTeamCoaches', updatedStaff);
               if (db) {
                 db.collection('teamData')
                   .doc('depthChartData')
                   .set({ staffList: updatedStaff }, { merge: true })
                   .catch((err: any) => console.warn('Staff update error:', err));
               }
-              return updatedStaff;
             }
-            return prevStaff;
-          });
+          } else if (existingIdx !== -1) {
+            const coachEntry = latestStaff[existingIdx];
+            if (coachEntry.status === 'Active') {
+              setIsPendingApproval(false);
+              const isHead =
+                coachEntry.role?.toLowerCase().includes('head coach') ||
+                coachEntry.role?.toLowerCase().includes('admin');
+              setUserRole(isHead ? 'admin' : 'assistant');
+              setIsAuthModalOpen(false);
+            } else {
+              setIsPendingApproval(true);
+              setIsAuthModalOpen(true);
+            }
+          } else if (cleanEmail) {
+            // New user registration - always Pending approval until Danny approves
+            const newEntry: StaffCoach = {
+              email: cleanEmail,
+              role: 'Assistant Coach',
+              status: 'Pending',
+              assignedTeamIds: ['all'],
+            };
+            const updatedStaff = [...latestStaff, newEntry];
+            setStaffList(updatedStaff);
+            safeJSONSet('footballTeamCoaches', updatedStaff);
+            if (db) {
+              db.collection('teamData')
+                .doc('depthChartData')
+                .set({ staffList: updatedStaff }, { merge: true })
+                .catch((err: any) => console.warn('Staff update error:', err));
+            }
+            setIsPendingApproval(true);
+            setIsAuthModalOpen(true);
+          }
 
-          const coachEntry = staffList.find(
-            (c) => c.email.toLowerCase().trim() === cleanEmail
-          );
-          const isMaster =
-            isDannySuperAdmin ||
-            cleanEmail.includes('admin') ||
-            coachEntry?.role?.toLowerCase().includes('head coach');
-
-          setIsPendingApproval(false);
-          const isHead =
-            isDannySuperAdmin ||
-            isMaster ||
-            coachEntry?.role?.includes('Admin');
-          setUserRole(isHead ? 'admin' : 'assistant');
           setSyncStatus({
             text: '✅ Live Multi-Coach Connected',
             color: '#22c55e',
           });
         } else {
-          // If no auth yet, open login modal (user can also choose offline mode)
-          setIsAuthModalOpen(true);
+          // Check if session dev test mode is active
+          if (sessionStorage.getItem('football_dev_test_mode') === 'true') {
+            setCurrentUser({
+              email: 'dannym1010@gmail.com',
+              displayName: 'Danny (Dev Test Mode)',
+              isLocalDevBypass: true,
+            });
+            setIsPendingApproval(false);
+            setIsAuthModalOpen(false);
+            setUserRole('admin');
+          } else {
+            setCurrentUser(null);
+            setIsPendingApproval(false);
+            setIsAuthModalOpen(true);
+          }
         }
       });
 
@@ -1748,6 +1787,28 @@ function mergeRemoteWeeklyData(
     if (!email) return false;
     const clean = email.toLowerCase().trim();
     return clean.includes('dannym1010') || clean === 'dannym1010@gmail.com';
+  };
+
+  const checkIsLiveEnvironment = () => {
+    if (typeof window === 'undefined') return false;
+    const host = window.location.hostname.toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1' || host.includes('local')) {
+      return false;
+    }
+    if (sessionStorage.getItem('football_dev_test_mode') === 'true') {
+      return false;
+    }
+    return true;
+  };
+
+  const isUserApproved = (email?: string, userObj?: any): boolean => {
+    if (userObj?.isLocalDevBypass) return true;
+    if (sessionStorage.getItem('football_dev_test_mode') === 'true') return true;
+    if (!email) return false;
+    const clean = email.toLowerCase().trim();
+    if (isMasterSuperAdminUser(clean)) return true;
+    const coach = staffList.find((c) => c.email.toLowerCase().trim() === clean);
+    return Boolean(coach && coach.status === 'Active');
   };
 
   const accessibleTeams = React.useMemo(() => {
@@ -5219,6 +5280,133 @@ function mergeRemoteWeeklyData(
     }
   };
 
+  const isLive = checkIsLiveEnvironment();
+  const isApproved = isUserApproved(currentUser?.email, currentUser);
+  const shouldBlockAccess = !currentUser || isPendingApproval || (!isApproved && isLive);
+
+  if (shouldBlockAccess) {
+    return (
+      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4 font-sans text-slate-100">
+        <AuthModal
+          isOpen={true}
+          isPendingApproval={Boolean(currentUser && !isApproved)}
+          pendingEmail={currentUser?.email || ''}
+          isLiveEnvironment={isLive}
+          onEmailAuth={async (email, pass, isSignUp) => {
+            const { auth } = getFirebaseServices();
+            if (!auth) {
+              const clean = email.toLowerCase().trim();
+              const isMaster = isMasterSuperAdminUser(clean);
+              const approved = isMaster || !isLive;
+              const userObj = { email: clean, displayName: isMaster ? 'Administrator' : 'Coach' };
+              setCurrentUser(userObj);
+              if (!approved) {
+                setIsPendingApproval(true);
+              } else {
+                setIsPendingApproval(false);
+                setIsAuthModalOpen(false);
+                setUserRole(isMaster ? 'admin' : 'assistant');
+                applyUserPreferencesOnLogin(clean);
+              }
+              return;
+            }
+            if (isSignUp) {
+              await auth.createUserWithEmailAndPassword(email, pass);
+            } else {
+              await auth.signInWithEmailAndPassword(email, pass);
+            }
+          }}
+          onGoogleSignIn={async () => {
+            const { auth } = getFirebaseServices();
+            if (!auth) {
+              setCurrentUser({ email: 'dannym1010@gmail.com', displayName: 'Administrator' });
+              setIsPendingApproval(false);
+              setIsAuthModalOpen(false);
+              setUserRole('admin');
+              applyUserPreferencesOnLogin('dannym1010@gmail.com');
+              return;
+            }
+            const provider = new window.firebase.auth.GoogleAuthProvider();
+            provider.setCustomParameters({ prompt: 'select_account' });
+            await auth.signInWithPopup(provider);
+          }}
+          onRefreshApprovalStatus={async () => {
+            const { db } = getFirebaseServices();
+            if (!db || !currentUser?.email) return;
+            try {
+              const doc = await db.collection('teamData').doc('depthChartData').get();
+              if (doc && doc.exists) {
+                const data = doc.data();
+                if (data && Array.isArray(data.staffList)) {
+                  setStaffList(data.staffList);
+                  safeJSONSet('footballTeamCoaches', data.staffList);
+                  const clean = currentUser.email.toLowerCase().trim();
+                  const found = data.staffList.find((c: StaffCoach) => c.email.toLowerCase().trim() === clean);
+                  if (found && found.status === 'Active') {
+                    setIsPendingApproval(false);
+                    const isHead =
+                      found.role?.toLowerCase().includes('head coach') ||
+                      found.role?.toLowerCase().includes('admin');
+                    setUserRole(isHead ? 'admin' : 'assistant');
+                  } else {
+                    alert('Your account is still pending approval. The Head Coach or Admin will approve you in the Staff Portal.');
+                  }
+                }
+              }
+            } catch (err: any) {
+              console.warn('Error checking approval status:', err);
+            }
+          }}
+          onLocalTestAccess={() => {
+            sessionStorage.setItem('football_dev_test_mode', 'true');
+            const devUser = {
+              email: 'dannym1010@gmail.com',
+              displayName: 'Danny (Dev Test Mode)',
+              isLocalDevBypass: true,
+            };
+            setCurrentUser(devUser);
+            setIsPendingApproval(false);
+            setIsAuthModalOpen(false);
+            setUserRole('admin');
+            applyUserPreferencesOnLogin('dannym1010@gmail.com');
+          }}
+          onSignOut={() => {
+            sessionStorage.removeItem('football_dev_test_mode');
+            const { auth } = getFirebaseServices();
+            if (auth) auth.signOut().then(() => window.location.reload());
+            else {
+              setCurrentUser(null);
+              setIsPendingApproval(false);
+              window.location.reload();
+            }
+          }}
+          staffList={staffList}
+          teams={teams}
+          onSelectQuickCoach={(coachEmail) => {
+            const cleanEmail = coachEmail.toLowerCase().trim();
+            const coach = staffList.find((c) => c.email.toLowerCase().trim() === cleanEmail);
+            if (coach?.status !== 'Active') {
+              alert('This coach account is pending approval.');
+              return;
+            }
+            setCurrentUser({
+              email: cleanEmail,
+              displayName: coach?.role || 'Coach',
+            });
+            setIsAuthModalOpen(false);
+            setIsPendingApproval(false);
+            const isHead =
+              cleanEmail.includes('dannym1010') ||
+              coach?.role?.toLowerCase().includes('head coach') ||
+              coach?.role?.toLowerCase().includes('admin');
+            setUserRole(isHead ? 'admin' : 'assistant');
+            applyUserPreferencesOnLogin(cleanEmail);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0f172a] print:bg-white print:text-black flex flex-col font-sans text-slate-100 selection:bg-indigo-600 selection:text-white">
       {/* Hidden File Inputs for Import */}
@@ -6014,14 +6202,22 @@ function mergeRemoteWeeklyData(
                 onToggleStaffApproval={(idx) => {
                   setStaffList((prev) => {
                     const updated = [...prev];
+                    const target = updated[idx];
+                    if (!target) return prev;
+                    const newStatus = target.status === 'Active' ? 'Pending' : 'Active';
                     updated[idx] = {
-                      ...updated[idx],
-                      status:
-                        updated[idx].status === 'Active'
-                          ? 'Pending'
-                          : 'Active',
+                      ...target,
+                      status: newStatus,
                     };
                     safeJSONSet('footballTeamCoaches', updated);
+                    latestStateRef.current.staffList = updated;
+                    const { db } = getFirebaseServices();
+                    if (db) {
+                      db.collection('teamData')
+                        .doc('depthChartData')
+                        .set({ staffList: updated, updatedAt: Date.now() }, { merge: true })
+                        .catch((err: any) => console.warn('Firestore toggle staff sync error:', err));
+                    }
                     return updated;
                   });
                 }}
@@ -6034,10 +6230,18 @@ function mergeRemoteWeeklyData(
                     alert('Cannot remove the primary Head Coach / Master Admin.');
                     return;
                   }
-                  if (confirm(`Remove ${targetCoach.email}?`)) {
+                  if (confirm(`Remove ${targetCoach.email}? This will revoke their access to the site.`)) {
                     setStaffList((prev) => {
                       const updated = prev.filter((_, i) => i !== idx);
                       safeJSONSet('footballTeamCoaches', updated);
+                      latestStateRef.current.staffList = updated;
+                      const { db } = getFirebaseServices();
+                      if (db) {
+                        db.collection('teamData')
+                          .doc('depthChartData')
+                          .set({ staffList: updated, updatedAt: Date.now() }, { merge: true })
+                          .catch((err: any) => console.warn('Firestore remove staff sync error:', err));
+                      }
                       return updated;
                     });
                   }
@@ -6222,85 +6426,6 @@ function mergeRemoteWeeklyData(
       </nav>
 
       {/* Global Dialog Modals */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        isPendingApproval={isPendingApproval}
-        pendingEmail={currentUser?.email || ''}
-        onEmailAuth={async (email, pass, isSignUp) => {
-          const { auth } = getFirebaseServices();
-          if (!auth) {
-            setCurrentUser({ email });
-            setIsAuthModalOpen(false);
-            return;
-          }
-          if (isSignUp) {
-            await auth.createUserWithEmailAndPassword(email, pass);
-          } else {
-            await auth.signInWithEmailAndPassword(email, pass);
-          }
-        }}
-        onGoogleSignIn={async () => {
-          const { auth } = getFirebaseServices();
-          if (!auth) {
-            setCurrentUser({ email: 'coach@google.com' });
-            setIsAuthModalOpen(false);
-            return;
-          }
-          const provider = new window.firebase.auth.GoogleAuthProvider();
-          provider.setCustomParameters({ prompt: 'select_account' });
-          const result = await auth.signInWithPopup(provider);
-          if (result?.user) {
-            setCurrentUser(result.user);
-            setIsAuthModalOpen(false);
-          }
-        }}
-        onGoogleSignInRedirect={async () => {
-          const { auth } = getFirebaseServices();
-          if (!auth) {
-            setCurrentUser({ email: 'dannym1010@gmail.com', displayName: 'Administrator' });
-            setIsAuthModalOpen(false);
-            applyUserPreferencesOnLogin('dannym1010@gmail.com');
-            return;
-          }
-          const provider = new window.firebase.auth.GoogleAuthProvider();
-          provider.setCustomParameters({ prompt: 'select_account' });
-          await auth.signInWithRedirect(provider);
-        }}
-        staffList={staffList}
-        teams={teams}
-        onSelectQuickCoach={(coachEmail) => {
-          const cleanEmail = coachEmail.toLowerCase().trim();
-          const coach = staffList.find((c) => c.email.toLowerCase().trim() === cleanEmail);
-          setCurrentUser({
-            email: cleanEmail,
-            displayName: coach?.role || 'Coach',
-          });
-          setIsAuthModalOpen(false);
-          setIsPendingApproval(false);
-          const isHead =
-            cleanEmail.includes('dannym1010') ||
-            coach?.role?.toLowerCase().includes('head coach') ||
-            coach?.role?.toLowerCase().includes('admin');
-          setUserRole(isHead ? 'admin' : 'assistant');
-          applyUserPreferencesOnLogin(cleanEmail);
-        }}
-        onBypassLogin={() => {
-          setCurrentUser({
-            email: 'dannym1010@gmail.com',
-            displayName: 'Program Admin (Offline)',
-          });
-          setIsAuthModalOpen(false);
-          setIsPendingApproval(false);
-          setUserRole('admin');
-          applyUserPreferencesOnLogin('dannym1010@gmail.com');
-        }}
-        onSignOut={() => {
-          const { auth } = getFirebaseServices();
-          if (auth) auth.signOut().then(() => window.location.reload());
-          else window.location.reload();
-        }}
-      />
-
       <CopyWeekModal
         isOpen={isCopyWeekModalOpen}
         currentWeek={currentWeek}
