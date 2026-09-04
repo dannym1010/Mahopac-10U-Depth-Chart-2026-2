@@ -44,6 +44,7 @@ import {
 import { getSeasonWeekList } from '../utils/seasonWeekUtils';
 import { triggerPrint } from '../utils/printUtils';
 import { calculatePlayerHours, syncEntireRosterWithLogs } from '../utils/hoursCalculation';
+import { PlayerHoursBreakdownModal } from './PlayerHoursBreakdownModal';
 import { DEFAULT_SEASON_CONFIG } from '../data/initialData';
 import { SeasonConfigModal } from './SeasonConfigModal';
 import { WeeklyAttendanceTracker } from './WeeklyAttendanceTracker';
@@ -92,6 +93,8 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
   const [selectedWeekForLog, setSelectedWeekForLog] = useState<string>(initialLogWeek);
   const [showLogAttendanceModal, setShowLogAttendanceModal] = useState(false);
   const [showSeasonConfigModal, setShowSeasonConfigModal] = useState(false);
+  const [breakdownPlayer, setBreakdownPlayer] = useState<RosterPlayer | null>(null);
+  const [breakdownScope, setBreakdownScope] = useState<'season' | 'preseason' | 'this_week'>('season');
 
   // Form state for Quick Attendance Logger
   const [logSessionType, setLogSessionType] = useState<'conditioning' | 'padded'>('conditioning');
@@ -692,13 +695,20 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
                     </div>
 
                     {/* Progress Bar 1: Conditioning Hours (Target 10h) */}
-                    <div className="space-y-1 mb-2.5 bg-slate-950/60 border border-slate-800/80 p-2.5 rounded-2xl">
+                    <div
+                      onClick={() => {
+                        setBreakdownPlayer(player);
+                        setBreakdownScope('preseason');
+                      }}
+                      className="space-y-1 mb-2.5 bg-slate-950/60 hover:bg-slate-950 border border-slate-800/80 hover:border-amber-500/40 p-2.5 rounded-2xl cursor-pointer transition-all group"
+                      title="Click to see conditioning practice days"
+                    >
                       <div className="flex items-center justify-between text-[11px] font-bold">
-                        <span className="flex items-center gap-1 text-amber-300">
+                        <span className="flex items-center gap-1 text-amber-300 group-hover:text-amber-200">
                           <Zap className="w-3 h-3 text-amber-400" />
                           <span>Conditioning (Tee &amp; Shorts)</span>
                         </span>
-                        <span className="text-slate-200 font-mono">
+                        <span className="text-slate-200 font-mono group-hover:text-amber-300 underline decoration-dotted">
                           {comp.conditioningHours.toFixed(1)} / {CONDITIONING_HOURS_REQUIRED} hrs
                         </span>
                       </div>
@@ -711,13 +721,20 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
                     </div>
 
                     {/* Progress Bar 2: Padded Hours (Target 10h) */}
-                    <div className="space-y-1 bg-slate-950/60 border border-slate-800/80 p-2.5 rounded-2xl">
+                    <div
+                      onClick={() => {
+                        setBreakdownPlayer(player);
+                        setBreakdownScope('preseason');
+                      }}
+                      className="space-y-1 bg-slate-950/60 hover:bg-slate-950 border border-slate-800/80 hover:border-sky-500/40 p-2.5 rounded-2xl cursor-pointer transition-all group"
+                      title="Click to see padded practice days"
+                    >
                       <div className="flex items-center justify-between text-[11px] font-bold">
-                        <span className="flex items-center gap-1 text-sky-300">
+                        <span className="flex items-center gap-1 text-sky-300 group-hover:text-sky-200">
                           <Shield className="w-3 h-3 text-sky-400" />
                           <span>Padded Contact Practice</span>
                         </span>
-                        <span className="text-slate-200 font-mono">
+                        <span className="text-slate-200 font-mono group-hover:text-sky-300 underline decoration-dotted">
                           {comp.paddedHours.toFixed(1)} / {PADDED_HOURS_REQUIRED} hrs
                         </span>
                       </div>
@@ -728,6 +745,28 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
                         />
                       </div>
                     </div>
+
+                    {/* Interactive Days Breakdown Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBreakdownPlayer(player);
+                        setBreakdownScope('season');
+                      }}
+                      className="w-full mt-2.5 py-1.5 px-3 rounded-xl bg-slate-950/70 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white transition-all flex items-center justify-between text-[11px] font-bold cursor-pointer group"
+                      title="Click to see what days added together for this total"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-indigo-400 group-hover:text-indigo-300" />
+                        <span>Days Breakdown:</span>
+                        <span className="font-mono text-emerald-400 font-black">
+                          {calc.totalSeasonHours.toFixed(1)} hrs total
+                        </span>
+                      </span>
+                      <span className="text-[10px] text-slate-400 group-hover:text-slate-200 underline decoration-dotted">
+                        View days &rarr;
+                      </span>
+                    </button>
                   </div>
 
                   {/* Quick Admin Adjustments */}
@@ -1151,6 +1190,17 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
           if (onUpdateSeasonConfig) onUpdateSeasonConfig(newCfg);
         }}
         scheduleEvents={scheduleEvents}
+      />
+
+      {/* MODAL 3: Detailed Player Hours Breakdown */}
+      <PlayerHoursBreakdownModal
+        player={breakdownPlayer}
+        isOpen={Boolean(breakdownPlayer)}
+        onClose={() => setBreakdownPlayer(null)}
+        attendanceLogs={attendanceLogs}
+        seasonConfig={seasonConfig}
+        initialScope={breakdownScope}
+        selectedWeek={selectedWeekForLog}
       />
     </div>
   );

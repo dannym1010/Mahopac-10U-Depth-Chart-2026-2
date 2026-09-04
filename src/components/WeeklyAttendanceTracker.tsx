@@ -37,6 +37,7 @@ import {
 import { getSeasonWeekList, isDateInWeek, getWeekDateRange } from '../utils/seasonWeekUtils';
 import { triggerPrint } from '../utils/printUtils';
 import { calculatePlayerHours, syncEntireRosterWithLogs } from '../utils/hoursCalculation';
+import { PlayerHoursBreakdownModal } from './PlayerHoursBreakdownModal';
 
 export interface WeeklyPracticeSession {
   id: string;
@@ -141,6 +142,16 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
   const [saveIndicator, setSaveIndicator] = useState<string | null>(null);
   const [showAddPracticeModal, setShowAddPracticeModal] = useState<boolean>(false);
   const [showSeasonSummaryModal, setShowSeasonSummaryModal] = useState<boolean>(false);
+  const [breakdownPlayer, setBreakdownPlayer] = useState<RosterPlayer | null>(null);
+  const [breakdownScope, setBreakdownScope] = useState<'season' | 'preseason' | 'this_week'>('season');
+
+  const handleOpenHoursBreakdown = (
+    player: RosterPlayer,
+    scope: 'season' | 'preseason' | 'this_week' = 'season'
+  ) => {
+    setBreakdownPlayer(player);
+    setBreakdownScope(scope);
+  };
 
   // Sync if currentWeek changes from parent
   React.useEffect(() => {
@@ -1382,23 +1393,29 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                         <div className="text-[10px] uppercase font-bold text-sky-400/80">Padded Contact</div>
                         <div className="text-xs font-mono font-black">/ 10.0 hrs</div>
                       </th>
-                      <th className="p-3 font-black text-slate-300 text-center w-24 bg-slate-950 border-r border-slate-800">
+                      <th className="p-3 font-black text-slate-300 text-center w-24 bg-slate-950 border-r border-slate-800" title="Click any total to view day-by-day practice breakdown">
                         <div className="text-[10px] uppercase font-bold text-slate-400">Pre-Season</div>
-                        <div className="text-xs font-mono font-black text-slate-200">Total Hours</div>
+                        <div className="text-xs font-mono font-black text-slate-200 flex items-center justify-center gap-1">
+                          <span>Total Hours</span>
+                          <Info className="w-3 h-3 text-slate-500" />
+                        </div>
                       </th>
-                      <th className="p-3 font-black text-indigo-300 text-center w-24 bg-slate-950 border-r border-slate-800">
+                      <th className="p-3 font-black text-indigo-300 text-center w-24 bg-slate-950 border-r border-slate-800" title="Click any total to view day-by-day practice breakdown">
                         <div className="text-[10px] uppercase font-bold text-indigo-400/80">This Week</div>
                         <div className="text-xs font-mono font-black">Practice</div>
                       </th>
                     </>
                   ) : (
                     <>
-                      <th className="p-3 font-black text-indigo-300 text-center w-24 bg-slate-950 border-r border-slate-800/80">
+                      <th className="p-3 font-black text-indigo-300 text-center w-24 bg-slate-950 border-r border-slate-800/80" title="Click any total to view day-by-day practice breakdown">
                         <div className="text-[10px] uppercase font-bold text-indigo-400/80">This Week</div>
                         <div className="text-xs font-mono font-black">Hours</div>
                       </th>
-                      <th className="p-3 font-black text-emerald-300 text-center w-24 bg-slate-950 border-r border-slate-800">
-                        <div className="text-[10px] uppercase font-bold text-emerald-400/80">Season Total</div>
+                      <th className="p-3 font-black text-emerald-300 text-center w-24 bg-slate-950 border-r border-slate-800" title="Click any total to view day-by-day practice breakdown">
+                        <div className="text-[10px] uppercase font-bold text-emerald-400/80 flex items-center justify-center gap-1">
+                          <span>Season Total</span>
+                          <Info className="w-3 h-3 text-emerald-400/70" />
+                        </div>
                         <div className="text-xs font-mono font-black">Hours</div>
                       </th>
                     </>
@@ -1710,17 +1727,25 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                           </td>
 
                           {/* Pre-Season Total */}
-                          <td className="p-2.5 text-center font-mono border-r border-slate-800 bg-slate-950/40">
-                            <span className="text-xs font-black text-slate-200">
+                          <td
+                            onClick={() => handleOpenHoursBreakdown(player, 'preseason')}
+                            className="p-2.5 text-center font-mono border-r border-slate-800 bg-slate-950/40 cursor-pointer hover:bg-slate-800/90 transition-all group"
+                            title="Click to view what days added together for this total"
+                          >
+                            <span className="text-xs font-black text-slate-200 group-hover:text-amber-300 underline decoration-dotted decoration-slate-600 group-hover:decoration-amber-400 underline-offset-4 cursor-pointer">
                               {preSeasonTotal} hrs
                             </span>
                           </td>
 
                           {/* Pre-Season: This Week Hours */}
-                          <td className="p-2.5 text-center font-mono border-r border-slate-800 bg-slate-950/20">
+                          <td
+                            onClick={() => handleOpenHoursBreakdown(player, 'this_week')}
+                            className="p-2.5 text-center font-mono border-r border-slate-800 bg-slate-950/20 cursor-pointer hover:bg-slate-800/90 transition-all group"
+                            title="Click to view what days added together for this week"
+                          >
                             <span
-                              className={`text-xs font-black ${
-                                thisWeekHours > 0 ? 'text-indigo-300' : 'text-slate-500'
+                              className={`text-xs font-black underline decoration-dotted decoration-indigo-600/60 group-hover:decoration-indigo-300 underline-offset-4 cursor-pointer ${
+                                thisWeekHours > 0 ? 'text-indigo-300 group-hover:text-indigo-200' : 'text-slate-500'
                               }`}
                             >
                               {thisWeekHours.toFixed(1)} hrs
@@ -1730,15 +1755,23 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                       ) : (
                         <>
                           {/* Regular Season: This Week Hours */}
-                          <td className="p-2.5 text-center font-mono border-r border-slate-800/80 bg-slate-950/30">
-                            <span className="text-xs font-black text-indigo-300">
+                          <td
+                            onClick={() => handleOpenHoursBreakdown(player, 'this_week')}
+                            className="p-2.5 text-center font-mono border-r border-slate-800/80 bg-slate-950/30 cursor-pointer hover:bg-slate-800/90 transition-all group"
+                            title="Click to view what days added together for this week"
+                          >
+                            <span className="text-xs font-black text-indigo-300 group-hover:text-indigo-200 underline decoration-dotted decoration-indigo-600/60 group-hover:decoration-indigo-300 underline-offset-4 cursor-pointer">
                               {thisWeekHours.toFixed(1)} hrs
                             </span>
                           </td>
 
                           {/* Regular Season: Cumulative Total */}
-                          <td className="p-2.5 text-center font-mono border-r border-slate-800 bg-slate-950/40">
-                            <span className="text-xs font-black text-emerald-400">
+                          <td
+                            onClick={() => handleOpenHoursBreakdown(player, 'season')}
+                            className="p-2.5 text-center font-mono border-r border-slate-800 bg-slate-950/40 cursor-pointer hover:bg-emerald-950/60 transition-all group"
+                            title="Click to view what days added together for this total"
+                          >
+                            <span className="text-xs font-black text-emerald-400 group-hover:text-emerald-300 underline decoration-dotted decoration-emerald-600/60 group-hover:decoration-emerald-400 underline-offset-4 cursor-pointer">
                               {totalSeasonHours.toFixed(1)} hrs
                             </span>
                           </td>
@@ -2043,12 +2076,35 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                         {weekList.map((w) => {
                           const h = calc.weeklyHours?.[w.key] || 0;
                           return (
-                            <td key={w.key} className="p-2 text-center text-slate-300">
+                            <td
+                              key={w.key}
+                              onClick={() => {
+                                if (h > 0) {
+                                  handleOpenHoursBreakdown(
+                                    player,
+                                    w.key.startsWith('pre-') || w.key === '0'
+                                      ? 'preseason'
+                                      : 'this_week'
+                                  );
+                                  setSelectedWeek(w.key);
+                                }
+                              }}
+                              className={`p-2 text-center text-slate-300 ${
+                                h > 0
+                                  ? 'cursor-pointer hover:bg-slate-800 hover:text-white underline decoration-dotted decoration-slate-600 underline-offset-2'
+                                  : ''
+                              }`}
+                              title={h > 0 ? `Click to view days for ${w.label}` : undefined}
+                            >
                               {h > 0 ? `${Number(h).toFixed(1)}h` : '—'}
                             </td>
                           );
                         })}
-                        <td className="p-2 text-center font-black text-emerald-400">
+                        <td
+                          onClick={() => handleOpenHoursBreakdown(player, 'season')}
+                          className="p-2 text-center font-black text-emerald-400 cursor-pointer hover:bg-emerald-950/60 underline decoration-dotted decoration-emerald-600/60 underline-offset-2"
+                          title="Click to view what days added together for this total"
+                        >
                           {calc.totalSeasonHours.toFixed(1)} hrs
                         </td>
                       </tr>
@@ -2065,7 +2121,7 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
               <button
                 type="button"
                 onClick={() => setShowSeasonSummaryModal(false)}
-                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl"
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl cursor-pointer"
               >
                 Close
               </button>
@@ -2073,6 +2129,17 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
           </div>
         </div>
       )}
+
+      {/* DETAILED PLAYER HOURS BREAKDOWN MODAL */}
+      <PlayerHoursBreakdownModal
+        player={breakdownPlayer}
+        isOpen={Boolean(breakdownPlayer)}
+        onClose={() => setBreakdownPlayer(null)}
+        attendanceLogs={attendanceLogs}
+        seasonConfig={seasonConfig}
+        initialScope={breakdownScope}
+        selectedWeek={selectedWeek}
+      />
     </div>
   );
 };
