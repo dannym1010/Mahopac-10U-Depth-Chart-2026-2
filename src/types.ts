@@ -7,6 +7,7 @@ export type UnitType =
   | 'groups' 
   | 'scrimmage' 
   | 'wristband' 
+  | 'call_sheet'
   | 'schedule'
   | 'scouting' 
   | 'practice'

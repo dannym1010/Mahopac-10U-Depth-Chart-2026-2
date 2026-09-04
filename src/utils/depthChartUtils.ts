@@ -85,6 +85,7 @@ export function normalizeRoster(
 
 export interface PlayerDepthChartAssignment {
   positionName: string; // e.g. "QB", "MLB", "LT", "CB"
+  cleanPosition: string; // Pure position code without numbers or formations, e.g. "QB", "RB"
   unit: 'offense' | 'defense' | 'st' | 'groups';
   formationName: string;
   depthString: number; // 1 = Starter/1st string, 2 = 2nd string, etc.
@@ -100,7 +101,106 @@ export interface PlayerDerivedPositions {
   primarySpecialTeams?: string;
   suggestedPrimary: string;
   suggestedSecondary: string;
-  summaryBadge: string; // e.g. "QB1 • FS2"
+  summaryBadge: string; // Clean positions joined, e.g. "QB • CB"
+  truncatedPositions: string[]; // Pure unique positions without numbers or formations, e.g. ["QB", "CB"]
+  cleanPrimary: string;
+  cleanSecondary: string;
+}
+
+/**
+ * Checks for known standard football positions inside a string.
+ */
+function extractKnownPosition(str: string): string | null {
+  const clean = str.trim().toUpperCase();
+
+  // Multi-character football positions
+  const multiLetter = [
+    'MLB', 'OLB', 'ILB', 'LCB', 'RCB', 'RET',
+    'ATH', 'QB', 'RB', 'FB', 'TB', 'WR', 'TE',
+    'LT', 'LG', 'RG', 'RT', 'OL', 'OT', 'OG',
+    'DE', 'DT', 'NT', 'DL', 'CB', 'FS', 'SS',
+    'DB', 'LB', 'LS'
+  ];
+
+  for (const pos of multiLetter) {
+    const regex = new RegExp(`(^|[^A-Z])${pos}(\\d|[^A-Z]|$)`, 'i');
+    if (regex.test(clean)) {
+      return pos;
+    }
+  }
+
+  // Exact or single letter matches
+  if (/\bK\b/i.test(clean) || clean === 'K1') return 'K';
+  if (/\bP\b/i.test(clean) || clean === 'P1') return 'P';
+  if (/\bC\b/i.test(clean) || clean === 'C1') return 'C';
+  if (/\bX\b/i.test(clean) || clean === 'X1') return 'X';
+  if (/\bZ\b/i.test(clean) || clean === 'Z1') return 'Z';
+  if (/\bW\b/i.test(clean) || clean === 'W1') return 'W';
+  if (/\bY\b/i.test(clean) || clean === 'Y1') return 'TE';
+  if (/\bM\b/i.test(clean) || clean === 'M1') return 'MLB';
+  if (/\bR\b/i.test(clean) || clean === 'R1') return 'OLB';
+  if (/\bS\b/i.test(clean) || clean === 'S1') return 'S';
+  if (/^E\d?$/i.test(clean)) return 'DE';
+  if (/^T\d?$/i.test(clean)) return 'DT';
+
+  return null;
+}
+
+/**
+ * Truncates and cleans a position string from a depth chart or formation slot.
+ * Strips out any numbers (depth strings, slot numbers, jersey numbers)
+ * and any formation names or parenthetical notes, leaving ONLY the pure football position code.
+ *
+ * Examples:
+ * - "1 (QB)" -> "QB"
+ * - "4 (RB)" -> "RB"
+ * - "WR1" -> "WR"
+ * - "WR (Slot)" -> "WR"
+ * - "QB1 (Shotgun Trips)" -> "QB"
+ * - "CB 2" -> "CB"
+ * - "Y1" -> "TE"
+ * - "E9" -> "DE"
+ * - "T3" -> "DT"
+ */
+export function cleanTruncatedPosition(rawName: string): string {
+  if (!rawName || typeof rawName !== 'string') return '';
+  let str = rawName.trim();
+  if (!str) return '';
+
+  // 1. If position is in parentheses, e.g. "1 (QB)", "4 (RB)", "Backfield (RB)"
+  const parenMatch = str.match(/\(([^)]+)\)/);
+  if (parenMatch) {
+    const inside = parenMatch[1].trim();
+    const knownInside = extractKnownPosition(inside);
+    if (knownInside) {
+      return knownInside;
+    }
+    // If inside parenthesis is a formation or note (e.g. "WR (Slot)", "QB (Shotgun)"), remove it
+    str = str.replace(/\([^)]*\)/g, '').trim();
+  }
+
+  // 2. Remove common ID prefixes like "11-", "def-", "st-", "form-"
+  str = str.replace(/^(?:11-|def-|st-|form-|off-)/i, '');
+
+  // 3. Check for known position code in remaining text
+  const known = extractKnownPosition(str);
+  if (known) {
+    return known;
+  }
+
+  // 4. Strip punctuation, hyphens, hashes, and all digits
+  str = str.replace(/[#\-:_]/g, ' ');
+  str = str.replace(/\d+/g, '').trim();
+  str = str.replace(/\s+/g, ' ').trim().toUpperCase();
+
+  // Normalize single-letter alignments
+  if (str === 'E') return 'DE';
+  if (str === 'T') return 'DT';
+  if (str === 'Y') return 'TE';
+  if (str === 'M') return 'MLB';
+  if (str === 'R') return 'OLB';
+
+  return str || 'ATH';
 }
 
 /**
@@ -146,6 +246,7 @@ export function getPlayerPositionsFromDepthChart(
       if (!player || !player.num) return;
       const numKey = player.num.trim();
       const depthString = idx + 1; // 1st string, 2nd string, etc.
+      const cleanPos = cleanTruncatedPosition(slotInfo.positionName);
 
       let record = playerMap.get(numKey);
       if (!record) {
@@ -156,12 +257,16 @@ export function getPlayerPositionsFromDepthChart(
           suggestedPrimary: '',
           suggestedSecondary: '',
           summaryBadge: '',
+          truncatedPositions: [],
+          cleanPrimary: '',
+          cleanSecondary: '',
         };
         playerMap.set(numKey, record);
       }
 
       record.assignments.push({
         positionName: slotInfo.positionName,
+        cleanPosition: cleanPos,
         unit: slotInfo.unit,
         formationName: slotInfo.formationName,
         depthString,
@@ -171,15 +276,15 @@ export function getPlayerPositionsFromDepthChart(
       // Update unit-specific primary positions (prefer 1st string)
       if (slotInfo.unit === 'offense') {
         if (!record.primaryOffense || depthString === 1) {
-          record.primaryOffense = slotInfo.positionName;
+          record.primaryOffense = cleanPos;
         }
       } else if (slotInfo.unit === 'defense') {
         if (!record.primaryDefense || depthString === 1) {
-          record.primaryDefense = slotInfo.positionName;
+          record.primaryDefense = cleanPos;
         }
       } else if (slotInfo.unit === 'st') {
         if (!record.primarySpecialTeams || depthString === 1) {
-          record.primarySpecialTeams = slotInfo.positionName;
+          record.primarySpecialTeams = cleanPos;
         }
       }
     });
@@ -199,29 +304,54 @@ export function getPlayerPositionsFromDepthChart(
     const offAny = rec.assignments.find((a) => a.unit === 'offense');
     const defAny = rec.assignments.find((a) => a.unit === 'defense');
 
-    rec.suggestedPrimary =
-      off1st?.positionName ||
-      def1st?.positionName ||
-      rec.primaryOffense ||
-      rec.primaryDefense ||
-      rec.assignments[0]?.positionName ||
+    const cleanPrimary =
+      cleanTruncatedPosition(off1st?.cleanPosition || off1st?.positionName || '') ||
+      cleanTruncatedPosition(def1st?.cleanPosition || def1st?.positionName || '') ||
+      cleanTruncatedPosition(rec.primaryOffense || '') ||
+      cleanTruncatedPosition(rec.primaryDefense || '') ||
+      cleanTruncatedPosition(rec.assignments[0]?.cleanPosition || rec.assignments[0]?.positionName || '') ||
       'ATH';
 
-    // Secondary is the other side of the ball or next assignment
+    rec.suggestedPrimary = cleanPrimary;
+    rec.cleanPrimary = cleanPrimary;
+
+    // Secondary is the other side of the ball or next unique assignment
+    let cleanSec = '';
     if (off1st && def1st) {
-      rec.suggestedSecondary = def1st.positionName;
+      cleanSec = cleanTruncatedPosition(def1st.cleanPosition || def1st.positionName);
     } else if (off1st && defAny) {
-      rec.suggestedSecondary = defAny.positionName;
+      cleanSec = cleanTruncatedPosition(defAny.cleanPosition || defAny.positionName);
     } else if (def1st && offAny) {
-      rec.suggestedSecondary = offAny.positionName;
+      cleanSec = cleanTruncatedPosition(offAny.cleanPosition || offAny.positionName);
     } else {
-      const remaining = rec.assignments.find((a) => a.positionName !== rec.suggestedPrimary);
-      rec.suggestedSecondary = remaining?.positionName || rec.primaryDefense || rec.primarySpecialTeams || 'ATH';
+      const remaining = rec.assignments.find(
+        (a) => cleanTruncatedPosition(a.cleanPosition || a.positionName) !== cleanPrimary
+      );
+      cleanSec =
+        cleanTruncatedPosition(remaining?.cleanPosition || remaining?.positionName || '') ||
+        cleanTruncatedPosition(rec.primaryDefense || '') ||
+        cleanTruncatedPosition(rec.primarySpecialTeams || '') ||
+        'ATH';
     }
 
-    // Build concise summary badge (e.g. "QB1 • FS2" or "LT1")
-    const topBadges = rec.assignments.slice(0, 2).map((a) => `${a.positionName}${a.depthString}`);
-    rec.summaryBadge = topBadges.join(' • ');
+    rec.suggestedSecondary = cleanSec;
+    rec.cleanSecondary = cleanSec;
+
+    // Build unique truncated positions list without any numbers or formations
+    const uniqueTruncated: string[] = [];
+    rec.assignments.forEach((a) => {
+      const clean = cleanTruncatedPosition(a.cleanPosition || a.positionName);
+      if (clean && clean !== 'ATH' && !uniqueTruncated.includes(clean)) {
+        uniqueTruncated.push(clean);
+      }
+    });
+    if (uniqueTruncated.length === 0 && cleanPrimary) {
+      uniqueTruncated.push(cleanPrimary);
+    }
+    rec.truncatedPositions = uniqueTruncated;
+
+    // Summary badge showing pure positions (no numbers, no formations)
+    rec.summaryBadge = uniqueTruncated.slice(0, 3).join(' • ');
   });
 
   return playerMap;
@@ -229,6 +359,7 @@ export function getPlayerPositionsFromDepthChart(
 
 /**
  * Bulk updates a list of roster players by applying positions directly from the active depth chart.
+ * Truncates and adds only the position codes (no numbers, no formations).
  */
 export function syncRosterPositionsFromDepthChart(
   roster: RosterPlayer[],
@@ -249,10 +380,11 @@ export function syncRosterPositionsFromDepthChart(
       return player;
     }
 
-    const newOffPos = derived.primaryOffense || player.offensivePosition || player.primaryPosition;
-    const newDefPos = derived.primaryDefense || player.defensivePosition || player.secondaryPosition;
-    const newPrimary = derived.suggestedPrimary || player.primaryPosition || 'ATH';
-    const newSecondary = derived.suggestedSecondary || player.secondaryPosition || 'ATH';
+    const newOffPos = cleanTruncatedPosition(derived.primaryOffense || '') || player.offensivePosition || player.primaryPosition;
+    const newDefPos = cleanTruncatedPosition(derived.primaryDefense || '') || player.defensivePosition || player.secondaryPosition;
+    const newPrimary = derived.cleanPrimary || cleanTruncatedPosition(derived.suggestedPrimary || '') || player.primaryPosition || 'ATH';
+    const newSecondary = derived.cleanSecondary || cleanTruncatedPosition(derived.suggestedSecondary || '') || player.secondaryPosition || 'ATH';
+    const newST = cleanTruncatedPosition(derived.primarySpecialTeams || '') || player.specialTeamsPosition;
 
     const hasChanged =
       player.primaryPosition !== newPrimary ||
@@ -268,7 +400,7 @@ export function syncRosterPositionsFromDepthChart(
         secondaryPosition: newSecondary,
         offensivePosition: newOffPos,
         defensivePosition: newDefPos,
-        specialTeamsPosition: derived.primarySpecialTeams || player.specialTeamsPosition,
+        specialTeamsPosition: newST,
       };
     }
 

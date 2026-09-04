@@ -1,6 +1,7 @@
 import React from 'react';
 import { Search, UserCheck, GripVertical, BookOpen, Layers, UserPlus, Zap, Shield, CheckCircle2 } from 'lucide-react';
 import { RosterPlayer, UserRole, UnitType, WeekState, calculatePlayerCompliance } from '../types';
+import { cleanTruncatedPosition } from '../utils/depthChartUtils';
 
 interface RosterSidebarProps {
   roster: RosterPlayer[];
@@ -279,12 +280,12 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
                   {/* Position Sub-Tag */}
                   <div className="flex items-center gap-1 text-[9px]">
                     {player.primaryPosition && (
-                      <span className="text-indigo-400 font-semibold">{player.primaryPosition}</span>
+                      <span className="text-indigo-400 font-semibold">{cleanTruncatedPosition(player.primaryPosition)}</span>
                     )}
                     {player.secondaryPosition && (
                       <>
                         <span className="text-slate-600">/</span>
-                        <span className="text-amber-400 font-semibold">{player.secondaryPosition}</span>
+                        <span className="text-amber-400 font-semibold">{cleanTruncatedPosition(player.secondaryPosition)}</span>
                       </>
                     )}
                   </div>
@@ -299,7 +300,7 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
                       key={pIdx}
                       className={`text-[9px] px-1.5 py-0.5 rounded-md uppercase tracking-wider ${pl.badgeClass}`}
                     >
-                      {pl.posName}
+                      {cleanTruncatedPosition(pl.posName)}
                     </span>
                   ))}
                 </div>

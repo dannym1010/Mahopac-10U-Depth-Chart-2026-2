@@ -1063,7 +1063,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
       )}
 
       {/* =========================================================================
-          2. CORE LAUNCH PAD TILES (Depth Chart, Practice Plan, Playbook Guides, Wristband)
+          2. CORE LAUNCH PAD TILES (Depth Chart, Practice Plan, Call Sheet, Playbook Guides, Wristband)
           ========================================================================= */}
       <div className="grid grid-cols-2 gap-2.5">
         {/* 1. Depth Chart (Mobile View) */}
@@ -1110,25 +1110,25 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
           </div>
         </button>
 
-        {/* 3. Playbook Guides (Replaces Drills on main HUD) */}
+        {/* 3. Call Sheet (NEW: Offense & Defense Sideline Call Sheet) */}
         <button
           type="button"
-          onClick={() => onNavigateToUnit('guide')}
-          className="bg-gradient-to-br from-cyan-950/90 via-slate-900 to-slate-900 border border-cyan-500/40 hover:border-cyan-400 p-3.5 rounded-2xl text-left shadow-lg active:scale-98 transition-all group cursor-pointer relative overflow-hidden"
+          onClick={() => onNavigateToUnit('call_sheet')}
+          className="bg-gradient-to-br from-rose-950/90 via-slate-900 to-slate-900 border border-rose-500/40 hover:border-rose-400 p-3.5 rounded-2xl text-left shadow-lg active:scale-98 transition-all group cursor-pointer relative overflow-hidden"
         >
           <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center justify-center">
-              <BookOpen className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center justify-center">
+              <FileSpreadsheet className="w-4 h-4" />
             </div>
-            <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-              {totalGuidesCount} Docs
+            <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30">
+              Interactive
             </span>
           </div>
-          <div className="text-sm font-black text-white group-hover:text-cyan-200">
-            Playbook Guides
+          <div className="text-sm font-black text-white group-hover:text-rose-200">
+            Call Sheet
           </div>
           <div className="text-[11px] text-slate-400 font-medium truncate">
-            Schemes, Plays &amp; Installs
+            Situations, 2-Pt &amp; Timeouts
           </div>
         </button>
 
@@ -1143,7 +1143,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
               <Watch className="w-4 h-4" />
             </div>
             <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
-              Call Sheet
+              Wristband
             </span>
           </div>
           <div className="text-sm font-black text-white group-hover:text-amber-200">
@@ -1151,6 +1151,28 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
           </div>
           <div className="text-[11px] text-slate-400 font-medium truncate">
             Color Grid &amp; Callout
+          </div>
+        </button>
+
+        {/* 5. Playbook Guides (Replaces Drills on main HUD) */}
+        <button
+          type="button"
+          onClick={() => onNavigateToUnit('guide')}
+          className="bg-gradient-to-br from-cyan-950/90 via-slate-900 to-slate-900 border border-cyan-500/40 hover:border-cyan-400 p-3.5 rounded-2xl text-left shadow-lg active:scale-98 transition-all group cursor-pointer relative overflow-hidden col-span-2 sm:col-span-1"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center justify-center">
+              <BookOpen className="w-4 h-4" />
+            </div>
+            <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+              {totalGuidesCount} Docs
+            </span>
+          </div>
+          <div className="text-sm font-black text-white group-hover:text-cyan-200">
+            Playbook Guides
+          </div>
+          <div className="text-[11px] text-slate-400 font-medium truncate">
+            Schemes, Plays &amp; Installs
           </div>
         </button>
       </div>

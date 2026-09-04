@@ -92,6 +92,7 @@ import { RosterSidebar } from './components/RosterSidebar';
 import { FormationsView } from './components/FormationsView';
 import { ScrimmageView } from './components/ScrimmageView';
 import { WristbandView } from './components/WristbandView';
+import { CallSheetMainView } from './components/CallSheetMainView';
 import { ScoutingView } from './components/ScoutingView';
 import { PlaybookGuidesView } from './components/PlaybookGuidesView';
 import { DrillLibraryView } from './components/DrillLibraryView';
@@ -5649,6 +5650,13 @@ function mergeRemoteWeeklyData(
               />
             )}
 
+            {/* Call Sheet (Interactive Offense & Defense Sideline Call Sheet) */}
+            {activeUnit === 'call_sheet' && (
+              <CallSheetMainView
+                activeTeamName={currentActiveTeam?.name || 'Mahopac 10U'}
+              />
+            )}
+
             {/* 4. Scouting Report */}
             {activeUnit === 'scouting' && (
               <ScoutingView
@@ -6067,7 +6075,7 @@ function mergeRemoteWeeklyData(
           </div>
 
           {/* Master Roster Sidebar (Shown on Depth Charts, Scrimmage, Wristband) */}
-          {!['mobile_hub', 'drills', 'scouting', 'guide', 'practice', 'users', 'schedule', 'compliance'].includes(
+          {!['mobile_hub', 'drills', 'scouting', 'guide', 'practice', 'users', 'schedule', 'compliance', 'call_sheet'].includes(
             activeUnit
           ) && (
             <RosterSidebar

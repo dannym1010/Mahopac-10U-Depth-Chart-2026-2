@@ -49,6 +49,7 @@ export const DEFAULT_NAV_TABS: NavTabItem[] = [
   { id: 'compliance', label: '⚡ Compliance & Hours', icon: Zap },
   { id: 'depth_chart', label: '📋 Depth Chart', icon: ClipboardList },
   { id: 'wristband', label: '⌚ Wristband', icon: Watch },
+  { id: 'call_sheet', label: '🏈 Call Sheet', icon: FileSpreadsheet },
   { id: 'practice', label: '📋 Practice Plan', icon: ClipboardList },
   { id: 'drills', label: '🏋️ Drill Library', icon: Dumbbell },
   { id: 'scouting', label: '📊 Scouting', icon: FileSpreadsheet },

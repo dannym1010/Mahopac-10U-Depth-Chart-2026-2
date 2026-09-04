@@ -25,6 +25,7 @@ import { MASTER_ROSTER } from '../data/initialData';
 import {
   getPlayerPositionsFromDepthChart,
   syncRosterPositionsFromDepthChart,
+  cleanTruncatedPosition,
 } from '../utils/depthChartUtils';
 
 interface RosterManagerModalProps {
@@ -42,9 +43,9 @@ interface RosterManagerModalProps {
 }
 
 const COMMON_POSITIONS = [
-  'QB', 'RB', 'FB', 'TB', 'WR', 'TE', 'X', 'Z', 'W', 'Y1',
+  'QB', 'RB', 'FB', 'TB', 'WR', 'TE', 'X', 'Z', 'W', 'Y',
   'LT', 'LG', 'C', 'RG', 'RT', 'OL',
-  'DE', 'DT', 'NT', 'MLB', 'OLB', 'ILB', 'M', 'W', 'S', 'R', 'E9', 'E5', 'T3', 'T1',
+  'DE', 'DT', 'NT', 'MLB', 'OLB', 'ILB', 'M', 'S', 'R',
   'CB', 'FS', 'SS', 'LCB', 'RCB', 'DB',
   'K', 'P', 'LS', 'H', 'RET', 'ATH'
 ];
@@ -165,18 +166,48 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
     setActiveTab('add');
   };
 
-  // Helper to apply detected depth chart positions into Add/Edit form
+  // Helper to apply detected depth chart positions into Add/Edit form (truncated, pure position codes)
   const applyDepthChartToForm = (playerNumToLookup: string) => {
     const derived = depthChartPositionsMap.get(playerNumToLookup.trim());
     if (derived) {
-      if (derived.suggestedPrimary) setPrimaryPos(derived.suggestedPrimary);
-      if (derived.suggestedSecondary) setSecondaryPos(derived.suggestedSecondary);
-      if (derived.primaryOffense) setOffensivePos(derived.primaryOffense);
-      if (derived.primaryDefense) setDefensivePos(derived.primaryDefense);
+      if (derived.cleanPrimary) setPrimaryPos(derived.cleanPrimary);
+      else if (derived.suggestedPrimary) setPrimaryPos(cleanTruncatedPosition(derived.suggestedPrimary));
+
+      if (derived.cleanSecondary) setSecondaryPos(derived.cleanSecondary);
+      else if (derived.suggestedSecondary) setSecondaryPos(cleanTruncatedPosition(derived.suggestedSecondary));
+
+      if (derived.primaryOffense) setOffensivePos(cleanTruncatedPosition(derived.primaryOffense));
+      if (derived.primaryDefense) setDefensivePos(cleanTruncatedPosition(derived.primaryDefense));
     }
   };
 
-  // Bulk sync positions from Depth Charts for the whole team
+  // Quick apply clean truncated depth chart positions to a single player on the roster
+  const handleApplySinglePlayerPositions = (player: RosterPlayer) => {
+    const derived = depthChartPositionsMap.get(player.num.trim());
+    if (!derived || !derived.truncatedPositions || derived.truncatedPositions.length === 0) return;
+
+    const newOff = cleanTruncatedPosition(derived.primaryOffense || '') || derived.cleanPrimary || player.offensivePosition || player.primaryPosition;
+    const newDef = cleanTruncatedPosition(derived.primaryDefense || '') || derived.cleanSecondary || player.defensivePosition || player.secondaryPosition;
+    const newPrimary = derived.cleanPrimary || cleanTruncatedPosition(player.primaryPosition);
+    const newSecondary = derived.cleanSecondary || cleanTruncatedPosition(player.secondaryPosition);
+
+    const updated = roster.map((p) => {
+      if (p.num === player.num && (!player.teamId || p.teamId === player.teamId)) {
+        return {
+          ...p,
+          primaryPosition: newPrimary,
+          secondaryPosition: newSecondary,
+          offensivePosition: newOff,
+          defensivePosition: newDef,
+        };
+      }
+      return p;
+    });
+
+    onUpdateRoster(updated);
+  };
+
+  // Bulk add positions from Depth Charts for the team (pure position codes, no numbers or formations)
   const handleBulkSyncFromDepthCharts = () => {
     const targetTeam = selectedTeamFilter !== 'all' ? selectedTeamFilter : activeTeamId || teams[0]?.id;
     const targetTeamName = teams.find((t) => t.id === targetTeam)?.name || 'active team';
@@ -195,11 +226,11 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
 
     if (
       confirm(
-        `Automatically update primary, secondary, offensive, and defensive positions for ${countUpdated} players based on their starter/sub slots in the active Depth Charts for ${targetTeamName}?`
+        `Add positions from active Depth Charts for ${countUpdated} players on ${targetTeamName}? Positions will be truncated to pure position codes (e.g. QB, RB, CB, DE) with no numbers or formations.`
       )
     ) {
       onUpdateRoster(updatedRoster);
-      alert(`Successfully synchronized ${countUpdated} player positions from the active Depth Charts!`);
+      alert(`Successfully added depth chart positions to ${countUpdated} players!`);
     }
   };
 
@@ -740,10 +771,10 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                     <button
                       onClick={handleBulkSyncFromDepthCharts}
                       className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md shadow-indigo-600/30 border border-indigo-400/40 transition-all cursor-pointer active:scale-95"
-                      title="Automatically scan active depth charts and update player primary & secondary positions based on their starter/sub slots"
+                      title="Add clean truncated positions from active depth charts onto roster (omits numbers and formations)"
                     >
                       <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                      <span>⚡ Auto-Assign Positions from Depth Charts</span>
+                      <span>⚡ Add Positions from Depth Chart</span>
                     </button>
                   )}
 
@@ -768,7 +799,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                       <th className="py-2.5 px-3">Team</th>
                       <th className="py-2.5 px-3">Offense Pos</th>
                       <th className="py-2.5 px-3">Defense Pos</th>
-                      <th className="py-2.5 px-3">Depth Chart Slot</th>
+                      <th className="py-2.5 px-3">Depth Chart Positions</th>
                       <th className="py-2.5 px-3">Notes</th>
                       <th className="py-2.5 px-3 text-right">Actions</th>
                     </tr>
@@ -820,25 +851,31 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                             </span>
                           </td>
                           <td className="py-2.5 px-3">
-                            {depthInfo && depthInfo.assignments.length > 0 ? (
-                              <div className="flex items-center gap-1 flex-wrap">
-                                {depthInfo.assignments.slice(0, 2).map((a, aIdx) => (
+                            {depthInfo && depthInfo.truncatedPositions && depthInfo.truncatedPositions.length > 0 ? (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {depthInfo.truncatedPositions.map((pos, pIdx) => (
                                   <span
-                                    key={aIdx}
-                                    title={`${a.formationName} (${a.unit}) - String ${a.depthString}`}
-                                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-black uppercase tracking-tight border ${
-                                      a.depthString === 1
-                                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                                        : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
-                                    }`}
+                                    key={pIdx}
+                                    title={`Position: ${pos}`}
+                                    className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-200 border border-indigo-500/40 font-mono shadow-2xs"
                                   >
-                                    {a.positionName}
-                                    <span className="text-[8px] opacity-75 font-mono ml-0.5">{a.depthString}</span>
+                                    {pos}
                                   </span>
                                 ))}
+                                {userRole === 'admin' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApplySinglePlayerPositions(player)}
+                                    title={`Add depth chart position (${depthInfo.truncatedPositions.join(', ')}) onto ${player.firstName}'s roster positions`}
+                                    className="px-1.5 py-0.5 rounded text-[9px] font-bold text-emerald-300 hover:text-emerald-200 bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-500/30 transition-all cursor-pointer flex items-center gap-0.5"
+                                  >
+                                    <Sparkles className="w-2.5 h-2.5 text-amber-300" />
+                                    <span>Add</span>
+                                  </button>
+                                )}
                               </div>
                             ) : (
-                              <span className="text-[10px] text-slate-400 italic">Unplaced</span>
+                              <span className="text-[10px] text-slate-500 italic">Unassigned</span>
                             )}
                           </td>
                           <td className="py-2.5 px-3 text-slate-400 max-w-[160px] truncate">
@@ -1063,25 +1100,31 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
                 </div>
 
                 {/* Depth Chart Position Detection Banner */}
-                {activeEditingPlayerDepthInfo && activeEditingPlayerDepthInfo.assignments.length > 0 && (
+                {activeEditingPlayerDepthInfo && activeEditingPlayerDepthInfo.truncatedPositions && activeEditingPlayerDepthInfo.truncatedPositions.length > 0 && (
                   <div className="p-3 bg-indigo-950/40 rounded-xl border border-indigo-500/30 flex items-center justify-between gap-3">
-                    <div className="space-y-0.5">
+                    <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs font-black text-indigo-300">
                         <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                        <span>Depth Chart Placement Detected:</span>
+                        <span>Depth Chart Positions:</span>
                       </div>
-                      <p className="text-[11px] text-slate-300">
-                        {activeEditingPlayerDepthInfo.assignments
-                          .map((a) => `${a.positionName}${a.depthString} (${a.formationName})`)
-                          .join(', ')}
-                      </p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {activeEditingPlayerDepthInfo.truncatedPositions.map((pos, pIdx) => (
+                          <span
+                            key={pIdx}
+                            className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 font-mono"
+                          >
+                            {pos}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => applyDepthChartToForm(num)}
-                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] rounded-lg shadow-sm shrink-0 cursor-pointer"
+                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] rounded-lg shadow-sm shrink-0 cursor-pointer flex items-center gap-1"
                     >
-                      ⚡ Apply to Form
+                      <Sparkles className="w-3 h-3 text-amber-300" />
+                      <span>Add to Form</span>
                     </button>
                   </div>
                 )}
