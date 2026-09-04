@@ -12,6 +12,7 @@ import {
   Zap,
   LayoutGrid,
   Columns,
+  FileSpreadsheet,
 } from 'lucide-react';
 import {
   CallSheetFullData,
@@ -32,13 +33,18 @@ import { ComputerCallSheetView } from './callSheet/ComputerCallSheetView';
 import { MobileCallSheetView } from './callSheet/MobileCallSheetView';
 import { PlayPickerModal } from './callSheet/PlayPickerModal';
 import { PlayBankSidebar } from './callSheet/PlayBankSidebar';
+import { ExcelPlayImportModal } from './callSheet/ExcelPlayImportModal';
 
 interface CallSheetMainViewProps {
   activeTeamName?: string;
+  masterPlayLibrary?: string[];
+  onUpdateMasterPlayLibrary?: (plays: string[]) => void;
 }
 
 export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   activeTeamName = 'Mahopac 10U',
+  masterPlayLibrary = [],
+  onUpdateMasterPlayLibrary,
 }) => {
   // Call sheet state with localStorage persistence
   const [callSheetData, setCallSheetData] = useState<CallSheetFullData>(() => {
@@ -72,6 +78,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   const [gridColumns, setGridColumns] = useState<number>(() => {
     return callSheetData.desktopGridColumns || 4;
   });
+  const [isExcelImportOpen, setIsExcelImportOpen] = useState(false);
 
   // Play Picker Modal state
   const [pickerState, setPickerState] = useState<{
@@ -340,6 +347,37 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
     setPlayDatabase((prev) => [newPlay, ...prev]);
   };
 
+  // Import plays from Excel into database and master play library
+  const handleImportPlays = (importedPlays: PlayDatabaseEntry[], mode: 'append' | 'replace') => {
+    let nextDb: PlayDatabaseEntry[] = [];
+    if (mode === 'replace') {
+      nextDb = importedPlays;
+    } else {
+      // Append: new plays take precedence, keeping non-duplicates
+      const existingFiltered = playDatabase.filter(
+        (ep) => !importedPlays.some((ip) => ip.name.toLowerCase() === ep.name.toLowerCase() && ip.unit === ep.unit)
+      );
+      nextDb = [...importedPlays, ...existingFiltered];
+    }
+
+    setPlayDatabase(nextDb);
+    safeJSONSet('footballPlayDatabase', nextDb);
+
+    // Sync play names to Master Play Library for Wristband view and Sidebar
+    const newPlayNames = importedPlays.map((p) => p.name);
+    const currentMaster = safeJSONParse<string[]>('footballMasterPlays', []) || [];
+    let nextMaster: string[] = [];
+    if (mode === 'replace') {
+      nextMaster = Array.from(new Set(newPlayNames));
+    } else {
+      nextMaster = Array.from(new Set([...currentMaster, ...newPlayNames]));
+    }
+    safeJSONSet('footballMasterPlays', nextMaster);
+    if (onUpdateMasterPlayLibrary) {
+      onUpdateMasterPlayLibrary(nextMaster);
+    }
+  };
+
   // Smart auto-fill empty slots
   const handleAutoFill = () => {
     const confirm = window.confirm(
@@ -561,11 +599,22 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
               </button>
             )}
 
+            {/* Import Plays from Excel Button */}
+            <button
+              type="button"
+              onClick={() => setIsExcelImportOpen(true)}
+              className="px-2.5 py-1.5 rounded-xl bg-emerald-700/90 hover:bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer border border-emerald-600/50"
+              title="Import plays from Excel (.xlsx, .xls, .csv) or paste tabular data"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
+              <span className="hidden sm:inline">Import Excel</span>
+            </button>
+
             {/* Add Section Button */}
             <button
               type="button"
               onClick={() => handleAddSection('top_situations')}
-              className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+              className="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
               title="Add a new situation table to the sheet"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -690,6 +739,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
                 currentPlay: null,
               });
             }}
+            onOpenExcelImport={() => setIsExcelImportOpen(true)}
             isOpen={isPlayBankOpen}
             onToggleOpen={() => setIsPlayBankOpen(!isPlayBankOpen)}
           />
@@ -714,6 +764,16 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
           setPickerState((prev) => ({ ...prev, isOpen: false }));
         }}
         onAddCustomToDatabase={handleAddCustomToDatabase}
+        onOpenExcelImport={() => setIsExcelImportOpen(true)}
+      />
+
+      {/* 4. Excel Play Import Modal */}
+      <ExcelPlayImportModal
+        isOpen={isExcelImportOpen}
+        onClose={() => setIsExcelImportOpen(false)}
+        defaultUnit={activeUnit}
+        existingPlaysCount={playDatabase.length}
+        onImportPlays={handleImportPlays}
       />
     </div>
   );

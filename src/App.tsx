@@ -93,6 +93,8 @@ import { FormationsView } from './components/FormationsView';
 import { ScrimmageView } from './components/ScrimmageView';
 import { WristbandView } from './components/WristbandView';
 import { CallSheetMainView } from './components/CallSheetMainView';
+import { ExcelPlayImportModal } from './components/callSheet/ExcelPlayImportModal';
+import { PlayDatabaseEntry } from './types/callSheet';
 import { ScoutingView } from './components/ScoutingView';
 import { PlaybookGuidesView } from './components/PlaybookGuidesView';
 import { DrillLibraryView } from './components/DrillLibraryView';
@@ -300,6 +302,35 @@ export default function App() {
   const [isScrimmageFilterOpen, setIsScrimmageFilterOpen] = useState(false);
   const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isExcelPlayImportModalOpen, setIsExcelPlayImportModalOpen] = useState(false);
+
+  // Global Excel Play Import handler
+  const handleGlobalImportPlays = (importedPlays: PlayDatabaseEntry[], mode: 'append' | 'replace') => {
+    // 1. Update masterPlayLibrary (strings)
+    const newPlayNames = importedPlays.map((p) => p.name);
+    let nextMaster: string[] = [];
+    if (mode === 'replace') {
+      nextMaster = Array.from(new Set(newPlayNames));
+    } else {
+      nextMaster = Array.from(new Set([...masterPlayLibrary, ...newPlayNames]));
+    }
+    setMasterPlayLibrary(nextMaster);
+    latestStateRef.current.masterPlayLibrary = nextMaster;
+    safeJSONSet('footballMasterPlays', nextMaster);
+
+    // 2. Also update footballPlayDatabase
+    const currentDb = safeJSONParse<PlayDatabaseEntry[]>('footballPlayDatabase', []) || [];
+    let nextDb: PlayDatabaseEntry[] = [];
+    if (mode === 'replace') {
+      nextDb = importedPlays;
+    } else {
+      const existingFiltered = currentDb.filter(
+        (ep) => !importedPlays.some((ip) => ip.name.toLowerCase() === ep.name.toLowerCase() && ip.unit === ep.unit)
+      );
+      nextDb = [...importedPlays, ...existingFiltered];
+    }
+    safeJSONSet('footballPlayDatabase', nextDb);
+  };
 
   // Drag-and-Drop Transferred Data Ref
   const draggedPlayerRef = useRef<{
@@ -5654,6 +5685,12 @@ function mergeRemoteWeeklyData(
             {activeUnit === 'call_sheet' && (
               <CallSheetMainView
                 activeTeamName={currentActiveTeam?.name || 'Mahopac 10U'}
+                masterPlayLibrary={masterPlayLibrary}
+                onUpdateMasterPlayLibrary={(newPlays) => {
+                  setMasterPlayLibrary(newPlays);
+                  latestStateRef.current.masterPlayLibrary = newPlays;
+                  safeJSONSet('footballMasterPlays', newPlays);
+                }}
               />
             )}
 
@@ -6116,6 +6153,7 @@ function mergeRemoteWeeklyData(
                 e.dataTransfer.setData('text/plain', play);
               }}
               onOpenRosterManager={() => setIsRosterModalOpen(true)}
+              onOpenExcelPlayImport={() => setIsExcelPlayImportModalOpen(true)}
               onSelectPlayerForEdit={(p) => {
                 setEditingPlayerForModal(p);
                 setIsRosterModalOpen(true);
@@ -6435,6 +6473,15 @@ function mergeRemoteWeeklyData(
         scheduleEvents={scheduleEvents}
         activeTeamId={activeTeamId}
         teams={teams}
+      />
+
+      {/* Global Excel Play Library Import Modal */}
+      <ExcelPlayImportModal
+        isOpen={isExcelPlayImportModalOpen}
+        onClose={() => setIsExcelPlayImportModalOpen(false)}
+        defaultUnit="offense"
+        existingPlaysCount={masterPlayLibrary.length}
+        onImportPlays={handleGlobalImportPlays}
       />
     </div>
   );

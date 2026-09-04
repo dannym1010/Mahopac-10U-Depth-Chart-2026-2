@@ -10,6 +10,7 @@ import {
   Tag,
   ChevronRight,
   ChevronLeft,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { PlayDatabaseEntry, PlayType, CallSheetPlay } from '../../types/callSheet';
 
@@ -17,6 +18,7 @@ interface PlayBankSidebarProps {
   unit: 'offense' | 'defense';
   plays: PlayDatabaseEntry[];
   onAddCustomPlay: () => void;
+  onOpenExcelImport?: () => void;
   isOpen: boolean;
   onToggleOpen: () => void;
 }
@@ -25,6 +27,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
   unit,
   plays,
   onAddCustomPlay,
+  onOpenExcelImport,
   isOpen,
   onToggleOpen,
 }) => {
@@ -98,6 +101,16 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
           </div>
         </div>
         <div className="flex items-center gap-1">
+          {onOpenExcelImport && (
+            <button
+              type="button"
+              onClick={onOpenExcelImport}
+              className="p-1.5 rounded-lg bg-emerald-600/90 hover:bg-emerald-500 text-white transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
+              title="Import plays from Excel (.xlsx, .xls, .csv)"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+            </button>
+          )}
           <button
             type="button"
             onClick={onAddCustomPlay}
@@ -204,9 +217,24 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
         ))}
 
         {filteredPlays.length === 0 && (
-          <div className="text-center py-10 space-y-2 text-slate-400 text-xs">
-            <p className="font-bold">No plays found</p>
-            <p className="text-[11px] text-slate-500">Try changing your filters or add a new play.</p>
+          <div className="text-center py-10 space-y-3 text-slate-400 text-xs px-2">
+            <div className="w-10 h-10 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-200">No matching plays</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Try changing filters or import plays from your spreadsheet.</p>
+            </div>
+            {onOpenExcelImport && (
+              <button
+                type="button"
+                onClick={onOpenExcelImport}
+                className="w-full py-2 px-3 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition-colors cursor-pointer"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                <span>Import Plays from Excel</span>
+              </button>
+            )}
           </div>
         )}
       </div>

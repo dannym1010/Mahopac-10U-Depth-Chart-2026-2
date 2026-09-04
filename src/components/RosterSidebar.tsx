@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, UserCheck, GripVertical, BookOpen, Layers, UserPlus, Zap, Shield, CheckCircle2 } from 'lucide-react';
+import { Search, UserCheck, GripVertical, BookOpen, Layers, UserPlus, Zap, Shield, CheckCircle2, FileSpreadsheet } from 'lucide-react';
 import { RosterPlayer, UserRole, UnitType, WeekState, calculatePlayerCompliance } from '../types';
 import { cleanTruncatedPosition } from '../utils/depthChartUtils';
 
@@ -23,6 +23,7 @@ interface RosterSidebarProps {
   totalProgramPlayers?: number;
   onCopyFromMainTeam?: () => void;
   onRestoreDefaultRoster?: () => void;
+  onOpenExcelPlayImport?: () => void;
 }
 
 export const RosterSidebar: React.FC<RosterSidebarProps> = ({
@@ -45,6 +46,7 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
   totalProgramPlayers = 0,
   onCopyFromMainTeam,
   onRestoreDefaultRoster,
+  onOpenExcelPlayImport,
 }) => {
   // If Wristband tab is active, show Play Library
   if (activeUnit === 'wristband') {
@@ -63,9 +65,21 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
               Play Library
             </h2>
           </div>
-          <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-            {filteredPlays.length} Plays
-          </span>
+          <div className="flex items-center gap-1.5">
+            {onOpenExcelPlayImport && (
+              <button
+                type="button"
+                onClick={onOpenExcelPlayImport}
+                className="p-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer shadow-xs"
+                title="Import plays from Excel (.xlsx, .csv)"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              {filteredPlays.length} Plays
+            </span>
+          </div>
         </div>
 
         <div className="relative mb-3">
@@ -110,8 +124,18 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
             );
           })}
           {filteredPlays.length === 0 && (
-            <div className="text-center py-6 text-xs text-slate-400 font-medium">
-              No plays found
+            <div className="text-center py-6 text-xs text-slate-400 font-medium space-y-2">
+              <p>No plays found</p>
+              {onOpenExcelPlayImport && (
+                <button
+                  type="button"
+                  onClick={onOpenExcelPlayImport}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-md transition-colors cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Import from Excel</span>
+                </button>
+              )}
             </div>
           )}
         </ul>
