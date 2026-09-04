@@ -130,18 +130,20 @@ export interface RosterPlayer {
   isCaptain?: boolean;
 }
 
-// Youth Football Acclimatization Compliance Rules
+// Youth Football Acclimatization Compliance Rules (Max 10 hours conditioning, Max 10 hours padded contact)
 export const CONDITIONING_HOURS_REQUIRED = 10;
 export const PADDED_HOURS_REQUIRED = 10;
+export const MAX_CONDITIONING_HOURS = 10;
+export const MAX_PADDED_HOURS = 10;
 
 export interface PlayerComplianceStatus {
   conditioningHours: number;
   paddedHours: number;
   totalHours: number;
-  isConditioningCleared: boolean; // >= 10 hrs
+  isConditioningCleared: boolean; // >= 10 hrs (good)
   conditioningRemaining: number;
   isPadsCleared: boolean; // Can wear pads
-  isScrimmageCleared: boolean; // >= 10 hrs in pads
+  isScrimmageCleared: boolean; // >= 10 hrs in pads (good)
   paddedRemaining: number;
   complianceStage: 'conditioning_only' | 'pads_cleared' | 'scrimmage_cleared';
   statusText: string;
@@ -149,8 +151,11 @@ export interface PlayerComplianceStatus {
 }
 
 export function calculatePlayerCompliance(player: Partial<RosterPlayer>): PlayerComplianceStatus {
-  const conditioning = Number(player.conditioningHours || 0);
-  const padded = Number(player.paddedHours || 0);
+  // Enforce 10.0 hours max for conditioning and pads
+  const rawCond = Number(player.conditioningHours || 0);
+  const rawPadded = Number(player.paddedHours || 0);
+  const conditioning = Math.min(MAX_CONDITIONING_HOURS, Math.max(0, rawCond));
+  const padded = Math.min(MAX_PADDED_HOURS, Math.max(0, rawPadded));
   const total = conditioning + padded;
 
   const isConditioningCleared = conditioning >= CONDITIONING_HOURS_REQUIRED;
@@ -161,17 +166,19 @@ export function calculatePlayerCompliance(player: Partial<RosterPlayer>): Player
   const paddedRemaining = Math.max(0, PADDED_HOURS_REQUIRED - padded);
 
   let complianceStage: 'conditioning_only' | 'pads_cleared' | 'scrimmage_cleared' = 'conditioning_only';
-  let statusText = `Conditioning Only (${conditioning.toFixed(1)}/10 hrs • ${conditioningRemaining.toFixed(1)}h to Pads)`;
-  let badgeColor = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+  let statusText = `Needs Conditioning (${conditioning.toFixed(1)}/10.0 hrs • ${conditioningRemaining.toFixed(1)}h needed)`;
+  // Red when not enough hours (< 10), green when good (>= 10)
+  let badgeColor = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
 
   if (isScrimmageCleared) {
     complianceStage = 'scrimmage_cleared';
-    statusText = `Fully Cleared for Scrimmages & Games (${conditioning.toFixed(1)}h Cond + ${padded.toFixed(1)}h Pads)`;
+    statusText = `Fully Cleared (Good ✓) • 10.0h Cond + 10.0h Pads`;
     badgeColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
   } else if (isPadsCleared) {
     complianceStage = 'pads_cleared';
-    statusText = `Pads Cleared (${padded.toFixed(1)}/10 hrs Pads • ${paddedRemaining.toFixed(1)}h to Scrimmage)`;
-    badgeColor = 'bg-sky-500/20 text-sky-300 border-sky-500/30';
+    statusText = `Needs Padded Hours (${padded.toFixed(1)}/10.0 hrs • ${paddedRemaining.toFixed(1)}h needed)`;
+    // Lacks required padded hours (< 10) -> Red
+    badgeColor = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
   }
 
   return {

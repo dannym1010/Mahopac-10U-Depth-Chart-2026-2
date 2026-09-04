@@ -42,7 +42,7 @@ import {
   PADDED_HOURS_REQUIRED,
 } from '../types';
 import { getSeasonWeekList } from '../utils/seasonWeekUtils';
-import { triggerPrint } from '../utils/printUtils';
+import { triggerPrint, printPracticeHourReport } from '../utils/printUtils';
 import { calculatePlayerHours, syncEntireRosterWithLogs } from '../utils/hoursCalculation';
 import { PlayerHoursBreakdownModal } from './PlayerHoursBreakdownModal';
 import { DEFAULT_SEASON_CONFIG } from '../data/initialData';
@@ -88,7 +88,7 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'weekly_matrix' | 'roster_hours' | 'attendance_log'>('weekly_matrix');
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'needs_conditioning' | 'needs_pads' | 'fully_cleared'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'needs_scrimmage' | 'needs_conditioning' | 'needs_pads' | 'fully_cleared'>('all');
   const initialLogWeek = (currentWeek && currentWeek !== '0') ? currentWeek : 'pre-1';
   const [selectedWeekForLog, setSelectedWeekForLog] = useState<string>(initialLogWeek);
   const [showLogAttendanceModal, setShowLogAttendanceModal] = useState(false);
@@ -174,10 +174,12 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
 
     const totalPlayers = roster.length || 1;
     const fullyClearedPct = Math.round((fullyClearedCount / totalPlayers) * 100);
+    const needsScrimmageCount = roster.length - fullyClearedCount;
 
     return {
       totalPlayers: roster.length,
       fullyClearedCount,
+      needsScrimmageCount,
       padsClearedCount,
       conditioningOnlyCount,
       fullyClearedPct,
@@ -200,6 +202,7 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
       }
 
       const status = calculatePlayerCompliance(player);
+      if (statusFilter === 'needs_scrimmage' && status.isScrimmageCleared) return false;
       if (statusFilter === 'needs_conditioning' && status.isConditioningCleared) return false;
       if (statusFilter === 'needs_pads' && (!status.isConditioningCleared || status.isScrimmageCleared)) return false;
       if (statusFilter === 'fully_cleared' && !status.isScrimmageCleared) return false;
@@ -218,9 +221,9 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
     let updatedPadded = currentPadded;
 
     if (type === 'conditioning') {
-      updatedCond = Math.max(0, parseFloat((currentCond + delta).toFixed(1)));
+      updatedCond = Math.min(10, Math.max(0, parseFloat((currentCond + delta).toFixed(1))));
     } else {
-      updatedPadded = Math.max(0, parseFloat((currentPadded + delta).toFixed(1)));
+      updatedPadded = Math.min(10, Math.max(0, parseFloat((currentPadded + delta).toFixed(1))));
     }
 
     const currentWeekly = { ...(player.weeklyHours || {}) };
@@ -329,9 +332,16 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
     setShowSeasonConfigModal(false);
   };
 
-  // Print compliance summary
-  const handlePrintCompliance = () => {
-    triggerPrint();
+  // Print official practice hour report
+  const handlePrintPracticeReport = (filter: 'all' | 'needs_scrimmage' = 'all') => {
+    printPracticeHourReport({
+      teamName: 'Mahopac 10U Youth Football',
+      seasonName: '2026 Fall Youth Season',
+      seasonConfig,
+      roster,
+      attendanceLogs,
+      filterType: filter,
+    });
   };
 
   return (
@@ -395,18 +405,46 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
               </>
             )}
             <button
-              onClick={handlePrintCompliance}
-              className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-2xl flex items-center gap-2 border border-slate-700 active:scale-95 transition-all"
+              onClick={() => handlePrintPracticeReport('all')}
+              className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-2xl flex items-center gap-2 border border-slate-700 active:scale-95 transition-all shadow-sm"
+              title="Print Official Practice Hour Report (Full Roster)"
             >
-              <Printer className="w-4 h-4 text-slate-300" />
-              <span>Print Sheet</span>
+              <Printer className="w-4 h-4 text-amber-400" />
+              <span>Print Practice Report</span>
             </button>
+
+            {complianceStats.needsScrimmageCount > 0 && (
+              <button
+                onClick={() => handlePrintPracticeReport('needs_scrimmage')}
+                className="px-3.5 py-2.5 bg-rose-950/60 hover:bg-rose-900/80 text-rose-200 font-bold text-xs rounded-2xl flex items-center gap-2 border border-rose-800/80 active:scale-95 transition-all shadow-sm"
+                title="Print Report of Athletes Needing Scrimmage Hours"
+              >
+                <FileCheck className="w-4 h-4 text-rose-400" />
+                <span className="hidden sm:inline">Print Scrimmage Deficiency</span>
+                <span className="sm:hidden">Print Deficiency</span>
+                <span className="px-1.5 py-0.2 bg-rose-500 text-white text-[10px] rounded-full font-black">
+                  {complianceStats.needsScrimmageCount}
+                </span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* 4-Column Metric Bento Grid */}
+        {/* 4-Column Metric Bento Grid - Clickable to View & Filter Athletes */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6 pt-5 border-t border-slate-700/60">
-          <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-3.5 shadow-inner">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('roster_hours');
+              setStatusFilter(statusFilter === 'fully_cleared' ? 'all' : 'fully_cleared');
+            }}
+            className={`text-left rounded-2xl p-3.5 transition-all cursor-pointer border ${
+              statusFilter === 'fully_cleared'
+                ? 'bg-emerald-950/60 border-emerald-500 ring-2 ring-emerald-500/40'
+                : 'bg-slate-900/90 border-slate-700/80 hover:border-emerald-500/60 hover:bg-slate-850'
+            } shadow-inner`}
+            title="Click to view all athletes cleared for scrimmage"
+          >
             <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold uppercase tracking-wider">
               <span>Full Scrimmage Cleared</span>
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -415,34 +453,63 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
               <span className="text-2xl font-black text-emerald-400">{complianceStats.fullyClearedCount}</span>
               <span className="text-xs text-slate-400 font-semibold">/ {complianceStats.totalPlayers} ({complianceStats.fullyClearedPct}%)</span>
             </div>
-            <p className="text-[10px] text-slate-400 mt-1">10h Cond + 10h Pads Complete</p>
-          </div>
+            <p className="text-[10px] text-slate-400 mt-1">10h Cond + 10h Pads Met &bull; Click to filter</p>
+          </button>
 
-          <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-3.5 shadow-inner">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('roster_hours');
+              setStatusFilter(statusFilter === 'needs_pads' ? 'all' : 'needs_pads');
+            }}
+            className={`text-left rounded-2xl p-3.5 transition-all cursor-pointer border ${
+              statusFilter === 'needs_pads'
+                ? 'bg-rose-950/60 border-rose-500 ring-2 ring-rose-500/40'
+                : 'bg-slate-900/90 border-slate-700/80 hover:border-rose-500/60 hover:bg-slate-850'
+            } shadow-inner`}
+            title="Click to view athletes wearing pads who need hours for scrimmage"
+          >
             <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold uppercase tracking-wider">
-              <span>Pads Cleared</span>
-              <Shield className="w-4 h-4 text-sky-400" />
+              <span>Needs Padded Hours</span>
+              <Shield className="w-4 h-4 text-rose-400" />
             </div>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-sky-400">{complianceStats.padsClearedCount}</span>
+              <span className="text-2xl font-black text-rose-400">{complianceStats.padsClearedCount}</span>
               <span className="text-xs text-slate-400 font-semibold">athletes</span>
             </div>
-            <p className="text-[10px] text-slate-400 mt-1">Wearing pads; working to 10h padded</p>
-          </div>
+            <p className="text-[10px] text-slate-400 mt-1">Wearing pads; needs 10.0h padded &bull; Click to filter</p>
+          </button>
 
-          <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-3.5 shadow-inner">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('roster_hours');
+              setStatusFilter(statusFilter === 'needs_conditioning' ? 'all' : 'needs_conditioning');
+            }}
+            className={`text-left rounded-2xl p-3.5 transition-all cursor-pointer border ${
+              statusFilter === 'needs_conditioning'
+                ? 'bg-rose-950/60 border-rose-500 ring-2 ring-rose-500/40'
+                : 'bg-slate-900/90 border-slate-700/80 hover:border-rose-500/60 hover:bg-slate-850'
+            } shadow-inner`}
+            title="Click to view athletes needing conditioning hours"
+          >
             <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold uppercase tracking-wider">
-              <span>Conditioning Stage</span>
-              <Zap className="w-4 h-4 text-amber-400" />
+              <span>Needs Conditioning</span>
+              <Zap className="w-4 h-4 text-rose-400" />
             </div>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-amber-400">{complianceStats.conditioningOnlyCount}</span>
+              <span className="text-2xl font-black text-rose-400">{complianceStats.conditioningOnlyCount}</span>
               <span className="text-xs text-slate-400 font-semibold">athletes</span>
             </div>
-            <p className="text-[10px] text-slate-400 mt-1">Helmets only; needs 10h conditioning</p>
-          </div>
+            <p className="text-[10px] text-slate-400 mt-1">Tee &amp; shorts; needs 10.0h cond &bull; Click to filter</p>
+          </button>
 
-          <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-3.5 shadow-inner">
+          <button
+            type="button"
+            onClick={() => setActiveTab('attendance_log')}
+            className="text-left bg-slate-900/90 hover:bg-slate-850 border border-slate-700/80 hover:border-indigo-500/60 rounded-2xl p-3.5 shadow-inner transition-all cursor-pointer"
+            title="Click to view attendance log history"
+          >
             <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold uppercase tracking-wider">
               <span>Practice Logs</span>
               <History className="w-4 h-4 text-indigo-400" />
@@ -452,9 +519,92 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
               <span className="text-xs text-slate-400 font-semibold">sessions logged</span>
             </div>
             <p className="text-[10px] text-slate-400 mt-1">{complianceStats.totalConditioningHoursLogged}h cond + {complianceStats.totalPaddedHoursLogged}h pads</p>
-          </div>
+          </button>
         </div>
       </div>
+
+      {/* Interactive Clickable Banner: Who Needs Hours for Padded Scrimmage */}
+      <button
+        type="button"
+        onClick={() => {
+          setActiveTab('roster_hours');
+          setStatusFilter(statusFilter === 'needs_scrimmage' ? 'all' : 'needs_scrimmage');
+        }}
+        className={`w-full text-left rounded-2xl p-3.5 sm:p-4 border transition-all flex items-center justify-between gap-3 shadow-md active:scale-[0.99] ${
+          statusFilter === 'needs_scrimmage'
+            ? 'bg-rose-950/80 border-rose-500 ring-2 ring-rose-500/50 shadow-rose-950/50'
+            : complianceStats.needsScrimmageCount > 0
+            ? 'bg-gradient-to-r from-rose-950/40 via-slate-900 to-slate-900 border-rose-800/60 hover:border-rose-500/80 hover:bg-rose-950/50'
+            : 'bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 border-emerald-800/60 hover:border-emerald-500/80'
+        }`}
+      >
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div
+            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+              statusFilter === 'needs_scrimmage'
+                ? 'bg-rose-500 text-white shadow-md'
+                : complianceStats.needsScrimmageCount > 0
+                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
+                : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+            }`}
+          >
+            {complianceStats.needsScrimmageCount > 0 ? (
+              <AlertTriangle className="w-5 h-5" />
+            ) : (
+              <CheckCircle2 className="w-5 h-5" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span
+                className={`text-xs font-black uppercase tracking-wider ${
+                  complianceStats.needsScrimmageCount > 0 ? 'text-rose-300' : 'text-emerald-300'
+                }`}
+              >
+                Padded Scrimmage Clearance
+              </span>
+              {complianceStats.needsScrimmageCount > 0 ? (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white shadow-xs">
+                  {complianceStats.needsScrimmageCount} Athletes Need Hours
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500 text-white shadow-xs">
+                  All Athletes Cleared ✓
+                </span>
+              )}
+              {statusFilter === 'needs_scrimmage' && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950">
+                  FILTER ACTIVE
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-300 mt-0.5 truncate">
+              {statusFilter === 'needs_scrimmage'
+                ? `Showing ${complianceStats.needsScrimmageCount} athletes needing conditioning or padded hours for scrimmage. Click to clear filter.`
+                : complianceStats.needsScrimmageCount > 0
+                ? `Click to view who needs hours for padded scrimmage (${complianceStats.needsScrimmageCount} athletes ineligible).`
+                : 'Every athlete has logged 10.0h conditioning and 10.0h padded contact and is cleared for full contact scrimmages!'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <span
+            className={`hidden sm:inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-xl border ${
+              statusFilter === 'needs_scrimmage'
+                ? 'bg-rose-500 text-white border-rose-400'
+                : 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+            }`}
+          >
+            {statusFilter === 'needs_scrimmage' ? 'Clear Filter' : 'Click to View Ineligible'}
+            <ChevronRight
+              className={`w-3.5 h-3.5 transition-transform ${
+                statusFilter === 'needs_scrimmage' ? 'rotate-90' : ''
+              }`}
+            />
+          </span>
+        </div>
+      </button>
 
       {/* Main View Mode Selector (Weekly Matrix vs Roster Compliance vs Attendance Roll Call History) */}
       <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-2 flex-wrap">
@@ -566,25 +716,36 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
                 All ({roster.length})
               </button>
               <button
+                onClick={() => setStatusFilter('needs_scrimmage')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  statusFilter === 'needs_scrimmage'
+                    ? 'bg-rose-500/30 text-rose-200 border border-rose-500 shadow-xs'
+                    : 'bg-slate-900/80 text-slate-400 hover:text-rose-400 border border-slate-800'
+                }`}
+              >
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                <span>Needs Scrimmage ({complianceStats.needsScrimmageCount})</span>
+              </button>
+              <button
                 onClick={() => setStatusFilter('needs_conditioning')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
                   statusFilter === 'needs_conditioning'
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-xs'
-                    : 'bg-slate-900/80 text-slate-400 hover:text-amber-400 border border-slate-800'
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-xs'
+                    : 'bg-slate-900/80 text-slate-400 hover:text-rose-400 border border-slate-800'
                 }`}
               >
-                <Zap className="w-3 h-3 text-amber-400" />
+                <Zap className="w-3 h-3 text-rose-400" />
                 <span>Needs Conditioning ({complianceStats.conditioningOnlyCount})</span>
               </button>
               <button
                 onClick={() => setStatusFilter('needs_pads')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
                   statusFilter === 'needs_pads'
-                    ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 shadow-xs'
-                    : 'bg-slate-900/80 text-slate-400 hover:text-sky-400 border border-slate-800'
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-xs'
+                    : 'bg-slate-900/80 text-slate-400 hover:text-rose-400 border border-slate-800'
                 }`}
               >
-                <Shield className="w-3 h-3 text-sky-400" />
+                <Shield className="w-3 h-3 text-rose-400" />
                 <span>Needs Padded Hours ({complianceStats.padsClearedCount})</span>
               </button>
               <button
@@ -619,9 +780,7 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
                   className={`bg-slate-900/90 border rounded-3xl p-4.5 shadow-lg flex flex-col justify-between gap-3 transition-all hover:border-slate-600 ${
                     comp.isScrimmageCleared
                       ? 'border-emerald-500/30 ring-1 ring-emerald-500/10'
-                      : comp.isPadsCleared
-                      ? 'border-sky-500/30'
-                      : 'border-amber-500/40'
+                      : 'border-rose-500/30 ring-1 ring-rose-500/10'
                   }`}
                 >
                   {/* Card Header */}
@@ -674,17 +833,17 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
                         {comp.isScrimmageCleared ? (
                           <>
                             <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                            <span>Scrimmage Cleared</span>
+                            <span>Fully Cleared (Good ✓)</span>
                           </>
                         ) : comp.isPadsCleared ? (
                           <>
-                            <Shield className="w-3 h-3 text-sky-400" />
-                            <span>Pads Cleared ({comp.paddedRemaining.toFixed(1)}h left)</span>
+                            <Shield className="w-3 h-3 text-rose-400" />
+                            <span>Needs Padded Hours ({(10 - Math.min(10, comp.paddedHours)).toFixed(1)}h left)</span>
                           </>
                         ) : (
                           <>
-                            <Zap className="w-3 h-3 text-amber-400" />
-                            <span>Conditioning ({comp.conditioningRemaining.toFixed(1)}h left)</span>
+                            <Zap className="w-3 h-3 text-rose-400" />
+                            <span>Needs Conditioning ({(10 - Math.min(10, comp.conditioningHours)).toFixed(1)}h left)</span>
                           </>
                         )}
                       </span>
@@ -694,57 +853,99 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
                       </span>
                     </div>
 
-                    {/* Progress Bar 1: Conditioning Hours (Target 10h) */}
-                    <div
-                      onClick={() => {
-                        setBreakdownPlayer(player);
-                        setBreakdownScope('preseason');
-                      }}
-                      className="space-y-1 mb-2.5 bg-slate-950/60 hover:bg-slate-950 border border-slate-800/80 hover:border-amber-500/40 p-2.5 rounded-2xl cursor-pointer transition-all group"
-                      title="Click to see conditioning practice days"
-                    >
-                      <div className="flex items-center justify-between text-[11px] font-bold">
-                        <span className="flex items-center gap-1 text-amber-300 group-hover:text-amber-200">
-                          <Zap className="w-3 h-3 text-amber-400" />
-                          <span>Conditioning (Tee &amp; Shorts)</span>
-                        </span>
-                        <span className="text-slate-200 font-mono group-hover:text-amber-300 underline decoration-dotted">
-                          {comp.conditioningHours.toFixed(1)} / {CONDITIONING_HOURS_REQUIRED} hrs
-                        </span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                    {/* Progress Bar 1: Conditioning Hours (Max 10.0h, Red if < 10, Green if >= 10) */}
+                    {(() => {
+                      const condHours = Math.min(10, comp.conditioningHours);
+                      const isCondGood = comp.conditioningHours >= 10;
+                      return (
                         <div
-                          className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-300 rounded-full"
-                          style={{ width: `${condProgress}%` }}
-                        />
-                      </div>
-                    </div>
+                          onClick={() => {
+                            setBreakdownPlayer(player);
+                            setBreakdownScope('preseason');
+                          }}
+                          className={`space-y-1 mb-2.5 bg-slate-950/60 hover:bg-slate-950 border border-slate-800/80 p-2.5 rounded-2xl cursor-pointer transition-all group ${
+                            isCondGood ? 'hover:border-emerald-500/50' : 'hover:border-rose-500/50'
+                          }`}
+                          title="Click to see conditioning practice days"
+                        >
+                          <div className="flex items-center justify-between text-[11px] font-bold">
+                            <span className={`flex items-center gap-1 ${
+                              isCondGood ? 'text-emerald-400 group-hover:text-emerald-300' : 'text-rose-400 group-hover:text-rose-300'
+                            }`}>
+                              <Zap className={`w-3 h-3 ${isCondGood ? 'text-emerald-400' : 'text-rose-400'}`} />
+                              <span>Conditioning (Max 10h)</span>
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-black uppercase ${
+                                isCondGood ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                              }`}>
+                                {isCondGood ? 'Good ✓' : `Needs ${(10 - condHours).toFixed(1)}h`}
+                              </span>
+                              <span className={`font-mono underline decoration-dotted font-bold ${
+                                isCondGood ? 'text-emerald-300' : 'text-rose-300'
+                              }`}>
+                                {condHours.toFixed(1)} / 10.0 hrs
+                              </span>
+                            </div>
+                          </div>
+                          <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                            <div
+                              className={`h-full transition-all duration-300 rounded-full ${
+                                isCondGood ? 'bg-emerald-400' : 'bg-rose-500'
+                              }`}
+                              style={{ width: `${condProgress}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
 
-                    {/* Progress Bar 2: Padded Hours (Target 10h) */}
-                    <div
-                      onClick={() => {
-                        setBreakdownPlayer(player);
-                        setBreakdownScope('preseason');
-                      }}
-                      className="space-y-1 bg-slate-950/60 hover:bg-slate-950 border border-slate-800/80 hover:border-sky-500/40 p-2.5 rounded-2xl cursor-pointer transition-all group"
-                      title="Click to see padded practice days"
-                    >
-                      <div className="flex items-center justify-between text-[11px] font-bold">
-                        <span className="flex items-center gap-1 text-sky-300 group-hover:text-sky-200">
-                          <Shield className="w-3 h-3 text-sky-400" />
-                          <span>Padded Contact Practice</span>
-                        </span>
-                        <span className="text-slate-200 font-mono group-hover:text-sky-300 underline decoration-dotted">
-                          {comp.paddedHours.toFixed(1)} / {PADDED_HOURS_REQUIRED} hrs
-                        </span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                    {/* Progress Bar 2: Padded Hours (Max 10.0h, Red if < 10, Green if >= 10) */}
+                    {(() => {
+                      const padHours = Math.min(10, comp.paddedHours);
+                      const isPadGood = comp.paddedHours >= 10;
+                      return (
                         <div
-                          className="h-full bg-gradient-to-r from-sky-500 to-indigo-500 transition-all duration-300 rounded-full"
-                          style={{ width: `${padProgress}%` }}
-                        />
-                      </div>
-                    </div>
+                          onClick={() => {
+                            setBreakdownPlayer(player);
+                            setBreakdownScope('preseason');
+                          }}
+                          className={`space-y-1 bg-slate-950/60 hover:bg-slate-950 border border-slate-800/80 p-2.5 rounded-2xl cursor-pointer transition-all group ${
+                            isPadGood ? 'hover:border-emerald-500/50' : 'hover:border-rose-500/50'
+                          }`}
+                          title="Click to see padded practice days"
+                        >
+                          <div className="flex items-center justify-between text-[11px] font-bold">
+                            <span className={`flex items-center gap-1 ${
+                              isPadGood ? 'text-emerald-400 group-hover:text-emerald-300' : 'text-rose-400 group-hover:text-rose-300'
+                            }`}>
+                              <Shield className={`w-3 h-3 ${isPadGood ? 'text-emerald-400' : 'text-rose-400'}`} />
+                              <span>Padded Contact (Max 10h)</span>
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-black uppercase ${
+                                isPadGood ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                              }`}>
+                                {isPadGood ? 'Good ✓' : `Needs ${(10 - padHours).toFixed(1)}h`}
+                              </span>
+                              <span className={`font-mono underline decoration-dotted font-bold ${
+                                isPadGood ? 'text-emerald-300' : 'text-rose-300'
+                              }`}>
+                                {padHours.toFixed(1)} / 10.0 hrs
+                              </span>
+                            </div>
+                          </div>
+                          <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                            <div
+                              className={`h-full transition-all duration-300 rounded-full ${
+                                isPadGood ? 'bg-emerald-400' : 'bg-rose-500'
+                              }`}
+                              style={{ width: `${padProgress}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Interactive Days Breakdown Button */}
                     <button

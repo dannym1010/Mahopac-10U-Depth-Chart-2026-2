@@ -106,9 +106,9 @@ export function calculatePlayerHours(
     }
   }
 
-  // Round values cleanly to 1 decimal place
-  const finalCond = Math.round(condSum * 10) / 10;
-  const finalPadded = Math.round(padSum * 10) / 10;
+  // Round values cleanly to 1 decimal place with max of 10.0 hours
+  const finalCond = Math.min(10, Math.round(condSum * 10) / 10);
+  const finalPadded = Math.min(10, Math.round(padSum * 10) / 10);
 
   // Total season hours is strictly the sum of all valid weekly hours
   const totalSeasonHours = Math.round(
@@ -326,8 +326,8 @@ export function getPlayerHoursBreakdown(
   });
 
   let totalHours = Math.round(runningTotal * 10) / 10;
-  let conditioningHours = Math.round(condSum * 10) / 10;
-  let paddedHours = Math.round(padSum * 10) / 10;
+  let conditioningHours = Math.min(10, Math.round(condSum * 10) / 10);
+  let paddedHours = Math.min(10, Math.round(padSum * 10) / 10);
 
   // Reconcile with calculatePlayerHours in case player has baseline pre-logged hours
   const calc = calculatePlayerHours(player, allLogs, cleanSelectedWeek, seasonConfig);

@@ -14,6 +14,7 @@ import {
   Check,
   Layers,
   Info,
+  Printer,
 } from 'lucide-react';
 import { RosterPlayer, AttendanceRecord, SeasonConfig } from '../types';
 import {
@@ -21,6 +22,7 @@ import {
   AttendedDayItem,
   calculatePlayerHours,
 } from '../utils/hoursCalculation';
+import { printSinglePlayerHourReport } from '../utils/printUtils';
 
 export interface PlayerHoursBreakdownModalProps {
   player: RosterPlayer | null;
@@ -173,13 +175,31 @@ export const PlayerHoursBreakdownModal: React.FC<PlayerHoursBreakdownModalProps>
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
-            aria-label="Close modal"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                printSinglePlayerHourReport({
+                  player,
+                  attendanceLogs,
+                  seasonConfig,
+                  scope: currentScope === 'this_week' ? 'season' : currentScope,
+                });
+              }}
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs active:scale-95"
+              title="Print Official Player Practice Attendance Certificate"
+            >
+              <Printer className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Print Report</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
+              aria-label="Close modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* SCOPE TABS */}
@@ -265,41 +285,69 @@ export const PlayerHoursBreakdownModal: React.FC<PlayerHoursBreakdownModalProps>
               </div>
             </div>
 
-            {/* Conditioning Hours */}
-            <div className="bg-amber-950/30 border border-amber-500/30 rounded-2xl p-3.5 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] uppercase font-black text-amber-400/90 tracking-wider">
-                  Conditioning
-                </span>
-                <Zap className="w-4 h-4 text-amber-400" />
-              </div>
-              <div className="mt-2">
-                <div className="text-2xl font-black font-mono text-amber-300">
-                  {breakdown.conditioningHours.toFixed(1)} hrs
+            {/* Conditioning Hours (Max 10.0h) */}
+            {(() => {
+              const isCondGood = breakdown.conditioningHours >= 10;
+              const condHours = Math.min(10, breakdown.conditioningHours);
+              return (
+                <div className={`rounded-2xl p-3.5 flex flex-col justify-between border ${
+                  isCondGood ? 'bg-emerald-950/30 border-emerald-500/30' : 'bg-rose-950/30 border-rose-500/30'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-[11px] uppercase font-black tracking-wider ${
+                      isCondGood ? 'text-emerald-400/90' : 'text-rose-400/90'
+                    }`}>
+                      Conditioning (Max 10h)
+                    </span>
+                    <Zap className={`w-4 h-4 ${isCondGood ? 'text-emerald-400' : 'text-rose-400'}`} />
+                  </div>
+                  <div className="mt-2">
+                    <div className={`text-2xl font-black font-mono ${
+                      isCondGood ? 'text-emerald-300' : 'text-rose-300'
+                    }`}>
+                      {condHours.toFixed(1)} / 10.0 hrs
+                    </div>
+                    <div className={`text-[10px] font-bold mt-0.5 ${
+                      isCondGood ? 'text-emerald-400' : 'text-rose-400'
+                    }`}>
+                      {isCondGood ? '✓ 10.0h Met (Good)' : `Needs ${(10 - condHours).toFixed(1)}h more`}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                  {breakdown.conditioningHours >= 10 ? '✓ 10h Met' : `${(10 - breakdown.conditioningHours).toFixed(1)}h remaining`}
-                </div>
-              </div>
-            </div>
+              );
+            })()}
 
-            {/* Padded Contact Hours */}
-            <div className="bg-sky-950/30 border border-sky-500/30 rounded-2xl p-3.5 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] uppercase font-black text-sky-400/90 tracking-wider">
-                  Padded Contact
-                </span>
-                <Shield className="w-4 h-4 text-sky-400" />
-              </div>
-              <div className="mt-2">
-                <div className="text-2xl font-black font-mono text-sky-300">
-                  {breakdown.paddedHours.toFixed(1)} hrs
+            {/* Padded Contact Hours (Max 10.0h) */}
+            {(() => {
+              const isPadGood = breakdown.paddedHours >= 10;
+              const padHours = Math.min(10, breakdown.paddedHours);
+              return (
+                <div className={`rounded-2xl p-3.5 flex flex-col justify-between border ${
+                  isPadGood ? 'bg-emerald-950/30 border-emerald-500/30' : 'bg-rose-950/30 border-rose-500/30'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-[11px] uppercase font-black tracking-wider ${
+                      isPadGood ? 'text-emerald-400/90' : 'text-rose-400/90'
+                    }`}>
+                      Padded Contact (Max 10h)
+                    </span>
+                    <Shield className={`w-4 h-4 ${isPadGood ? 'text-emerald-400' : 'text-rose-400'}`} />
+                  </div>
+                  <div className="mt-2">
+                    <div className={`text-2xl font-black font-mono ${
+                      isPadGood ? 'text-emerald-300' : 'text-rose-300'
+                    }`}>
+                      {padHours.toFixed(1)} / 10.0 hrs
+                    </div>
+                    <div className={`text-[10px] font-bold mt-0.5 ${
+                      isPadGood ? 'text-emerald-400' : 'text-rose-400'
+                    }`}>
+                      {isPadGood ? '✓ 10.0h Met (Good)' : `Needs ${(10 - padHours).toFixed(1)}h more`}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                  {breakdown.paddedHours >= 10 ? '✓ 10h Met' : `${(10 - breakdown.paddedHours).toFixed(1)}h remaining`}
-                </div>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Attendance Rate */}
             <div className="bg-indigo-950/30 border border-indigo-500/30 rounded-2xl p-3.5 flex flex-col justify-between">

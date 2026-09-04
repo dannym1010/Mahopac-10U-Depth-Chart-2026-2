@@ -4,7 +4,9 @@
  * Supports direct window printing, clean standalone iframe printing, and new tab printable view.
  */
 
-import { PracticePlan, PracticePeriod } from '../types';
+import { PracticePlan, PracticePeriod, RosterPlayer, AttendanceRecord, SeasonConfig, calculatePlayerCompliance } from '../types';
+import { calculatePlayerHours, getPlayerHoursBreakdown } from './hoursCalculation';
+import { formatWeekLabel } from './seasonWeekUtils';
 
 export interface PrintOptions {
   beforePrint?: () => void;
@@ -1436,3 +1438,650 @@ export function generatePlaybookBinderPrintHTML(options: PlaybookBinderPrintOpti
 </body>
 </html>`;
 }
+
+// -----------------------------------------------------------------------------
+// PRACTICE HOUR & ACCLIMATIZATION COMPLIANCE REPORT PRINT ENGINE
+// -----------------------------------------------------------------------------
+
+export interface PracticeHourReportOptions {
+  teamName?: string;
+  seasonName?: string;
+  seasonConfig?: SeasonConfig;
+  roster: RosterPlayer[];
+  attendanceLogs: AttendanceRecord[];
+  filterType?: 'all' | 'needs_scrimmage' | 'needs_conditioning' | 'needs_pads' | 'cleared';
+  notes?: string;
+  certifiedCoachName?: string;
+}
+
+export function generatePracticeHourReportHTML(options: PracticeHourReportOptions): string {
+  const {
+    teamName = 'Mahopac 10U Youth Football',
+    seasonName = '2026 Fall Youth Season',
+    seasonConfig,
+    roster,
+    attendanceLogs,
+    filterType = 'all',
+    notes = '',
+    certifiedCoachName = 'Head Coach',
+  } = options;
+
+  const generatedDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  const generatedTime = new Date().toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  // Calculate compliance and hours for each player
+  const playerStats = roster.map((player) => {
+    const comp = calculatePlayerCompliance(player);
+    const hours = calculatePlayerHours(player, attendanceLogs, 'pre-1', seasonConfig);
+    return {
+      player,
+      comp,
+      hours,
+    };
+  });
+
+  // Filter based on filterType
+  const filteredStats = playerStats.filter(({ comp }) => {
+    if (filterType === 'needs_scrimmage') return !comp.isScrimmageCleared;
+    if (filterType === 'needs_conditioning') return !comp.isConditioningCleared;
+    if (filterType === 'needs_pads') return comp.isConditioningCleared && !comp.isScrimmageCleared;
+    if (filterType === 'cleared') return comp.isScrimmageCleared;
+    return true;
+  });
+
+  // Aggregate stats
+  const totalRoster = roster.length;
+  const scrimmageClearedCount = playerStats.filter((p) => p.comp.isScrimmageCleared).length;
+  const needsScrimmageCount = totalRoster - scrimmageClearedCount;
+  const needsCondCount = playerStats.filter((p) => !p.comp.isConditioningCleared).length;
+  const needsPadsCount = playerStats.filter(
+    (p) => p.comp.isConditioningCleared && !p.comp.isScrimmageCleared
+  ).length;
+
+  const isFiltered = filterType !== 'all';
+  const reportTitle =
+    filterType === 'needs_scrimmage'
+      ? 'OFFICIAL SCRIMMAGE ELIGIBILITY DEFICIENCY REPORT'
+      : isFiltered
+      ? `OFFICIAL PRACTICE HOURS REPORT (${filterType.toUpperCase().replace('_', ' ')})`
+      : 'OFFICIAL PRACTICE HOUR & ACCLIMATIZATION COMPLIANCE REPORT';
+
+  const reportSubtitle =
+    filterType === 'needs_scrimmage'
+      ? 'Roster of athletes currently needing conditioning or padded contact hours before participating in live scrimmages'
+      : 'Mandatory 10-Hour Conditioning & 10-Hour Padded Contact Acclimatization Verification Log';
+
+  // Build preseason week columns (Pre-1 to Pre-4)
+  const preseasonCount = seasonConfig?.preseasonWeeksCount || 4;
+  const preWeekKeys = seasonConfig?.preseasonWeekKeys || ['pre-1', 'pre-2', 'pre-3', 'pre-4'].slice(0, preseasonCount);
+
+  let rowsHtml = '';
+  filteredStats.forEach(({ player, comp, hours }, index) => {
+    const isCleared = comp.isScrimmageCleared;
+    const condCapped = Math.min(10, comp.conditioningHours);
+    const padCapped = Math.min(10, comp.paddedHours);
+    const isCondMet = comp.conditioningHours >= 10;
+    const isPadMet = comp.paddedHours >= 10;
+
+    let scrimmageStatusBadge = '';
+    if (isCleared) {
+      scrimmageStatusBadge = `
+        <span style="display: inline-block; padding: 3px 8px; font-size: 8.5pt; font-weight: 900; color: #065f46; background: #d1fae5; border: 1px solid #10b981; border-radius: 6px; text-transform: uppercase;">
+          CLEARED ✓ (Good)
+        </span>
+      `;
+    } else if (!comp.isConditioningCleared) {
+      scrimmageStatusBadge = `
+        <span style="display: inline-block; padding: 3px 8px; font-size: 8.5pt; font-weight: 900; color: #991b1b; background: #fee2e2; border: 1px solid #f87171; border-radius: 6px; text-transform: uppercase;">
+          NEEDS COND (${(10 - condCapped).toFixed(1)}h left)
+        </span>
+      `;
+    } else {
+      scrimmageStatusBadge = `
+        <span style="display: inline-block; padding: 3px 8px; font-size: 8.5pt; font-weight: 900; color: #991b1b; background: #fee2e2; border: 1px solid #f87171; border-radius: 6px; text-transform: uppercase;">
+          NEEDS PADS (${(10 - padCapped).toFixed(1)}h left)
+        </span>
+      `;
+    }
+
+    const condCell = isCondMet
+      ? `<span style="font-weight: 800; color: #065f46;">${condCapped.toFixed(1)} / 10.0h</span> <span style="font-size: 7.5pt; background: #d1fae5; color: #065f46; padding: 1px 4px; border-radius: 4px; font-weight: 900;">MET ✓</span>`
+      : `<span style="font-weight: 800; color: #991b1b;">${condCapped.toFixed(1)} / 10.0h</span> <span style="font-size: 7.5pt; background: #fee2e2; color: #991b1b; padding: 1px 4px; border-radius: 4px; font-weight: 900;">-${(10 - condCapped).toFixed(1)}h</span>`;
+
+    const padCell = isPadMet
+      ? `<span style="font-weight: 800; color: #065f46;">${padCapped.toFixed(1)} / 10.0h</span> <span style="font-size: 7.5pt; background: #d1fae5; color: #065f46; padding: 1px 4px; border-radius: 4px; font-weight: 900;">MET ✓</span>`
+      : `<span style="font-weight: 800; color: #991b1b;">${padCapped.toFixed(1)} / 10.0h</span> <span style="font-size: 7.5pt; background: #fee2e2; color: #991b1b; padding: 1px 4px; border-radius: 4px; font-weight: 900;">-${(10 - padCapped).toFixed(1)}h</span>`;
+
+    const preSeasonTotal = (condCapped + padCapped).toFixed(1);
+
+    // Preseason week hours
+    const preWeekCells = preWeekKeys
+      .map((key) => {
+        const h = hours.weeklyHours[key] || 0;
+        return `<td style="text-align: center; font-family: monospace; font-size: 8.5pt; color: ${h > 0 ? '#0f172a' : '#94a3b8'};">${h > 0 ? h.toFixed(1) + 'h' : '-'}</td>`;
+      })
+      .join('');
+
+    const positions = [player.offensivePosition || player.primaryPosition, player.defensivePosition || player.secondaryPosition]
+      .filter(Boolean)
+      .join(' / ') || player.primaryPosition || '-';
+
+    const rowBg = index % 2 === 0 ? '#ffffff' : '#f8fafc';
+
+    rowsHtml += `
+      <tr style="background: ${rowBg}; border-bottom: 1px solid #cbd5e1;">
+        <td style="padding: 5px 6px; font-family: monospace; font-weight: 900; text-align: center; color: #0f172a; font-size: 9pt;">
+          #${player.num}
+        </td>
+        <td style="padding: 5px 8px; font-weight: 800; color: #0f172a; font-size: 9pt;">
+          ${player.firstName} ${player.lastName}
+          ${player.isCaptain ? '<span style="font-size: 7.5pt; color: #d97706; font-weight: 900; margin-left: 4px;">[C]</span>' : ''}
+        </td>
+        <td style="padding: 5px 6px; font-size: 8pt; color: #475569; font-weight: 700;">
+          ${positions}
+        </td>
+        <td style="padding: 5px 6px; text-align: center; font-size: 8.5pt;">
+          ${condCell}
+        </td>
+        <td style="padding: 5px 6px; text-align: center; font-size: 8.5pt;">
+          ${padCell}
+        </td>
+        <td style="padding: 5px 6px; text-align: center; font-family: monospace; font-size: 9pt; font-weight: 800; color: #0f172a; background: #f1f5f9;">
+          ${preSeasonTotal}h
+        </td>
+        ${preWeekCells}
+        <td style="padding: 5px 6px; text-align: center; font-family: monospace; font-size: 9pt; font-weight: 900; color: #0f172a;">
+          ${hours.totalSeasonHours.toFixed(1)}h
+        </td>
+        <td style="padding: 5px 6px; text-align: center;">
+          ${scrimmageStatusBadge}
+        </td>
+      </tr>
+    `;
+  });
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${reportTitle} - ${teamName}</title>
+  <style>
+    @page {
+      size: landscape;
+      margin: 0.35in;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #0f172a;
+      background: #ffffff;
+      font-size: 9pt;
+      line-height: 1.3;
+    }
+    .report-container {
+      width: 100%;
+      max-width: 100%;
+    }
+    .header-bar {
+      border-bottom: 2.5px solid #0f172a;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .header-title {
+      font-size: 16pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
+      color: #0f172a;
+      margin: 0;
+    }
+    .header-sub {
+      font-size: 8.5pt;
+      color: #475569;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .header-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 8pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      background: #0f172a;
+      color: #ffffff;
+    }
+    .meta-box {
+      text-align: right;
+      font-size: 8pt;
+      color: #475569;
+      line-height: 1.4;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .summary-card {
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 6px 10px;
+      background: #f8fafc;
+    }
+    .summary-card.alert {
+      border-color: #f87171;
+      background: #fef2f2;
+    }
+    .summary-card.success {
+      border-color: #34d399;
+      background: #ecfdf5;
+    }
+    .summary-title {
+      font-size: 7.5pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #64748b;
+    }
+    .summary-value {
+      font-size: 14pt;
+      font-weight: 900;
+      color: #0f172a;
+      margin-top: 1px;
+    }
+    .summary-desc {
+      font-size: 7pt;
+      color: #64748b;
+      margin-top: 1px;
+      font-weight: 600;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin-bottom: 10px;
+    }
+    thead {
+      display: table-header-group;
+    }
+    th {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 5px 6px;
+      font-size: 8pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      text-align: center;
+      border: 1px solid #0f172a;
+    }
+    th.left-align {
+      text-align: left;
+    }
+    tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .mandate-callout {
+      border: 1.5px dashed #94a3b8;
+      background: #f8fafc;
+      padding: 6px 10px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      font-size: 7.5pt;
+      color: #334155;
+      line-height: 1.35;
+    }
+    .mandate-callout strong {
+      color: #0f172a;
+    }
+    .signoff-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1.5px solid #cbd5e1;
+      font-size: 8pt;
+    }
+    .sign-line {
+      border-bottom: 1px solid #0f172a;
+      height: 24px;
+      margin-top: 20px;
+    }
+    .sign-label {
+      font-size: 7.5pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #475569;
+      margin-top: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="report-container">
+    <!-- Header -->
+    <div class="header-bar">
+      <div>
+        <div class="header-badge">${teamName} &bull; ${seasonName}</div>
+        <h1 class="header-title">${reportTitle}</h1>
+        <div class="header-sub">${reportSubtitle}</div>
+      </div>
+      <div class="meta-box">
+        <div><strong>Date:</strong> ${generatedDate} at ${generatedTime}</div>
+        <div><strong>Scope:</strong> ${isFiltered ? `${filteredStats.length} Athlete(s) Filtered` : `Full Roster (${totalRoster} Athletes)`}</div>
+        <div><strong>Acclimatization Rule:</strong> 10.0h Cond + 10.0h Pads Required</div>
+      </div>
+    </div>
+
+    <!-- Executive Summary Grid -->
+    <div class="summary-grid">
+      <div class="summary-card success">
+        <div class="summary-title" style="color: #065f46;">Full Scrimmage Cleared</div>
+        <div class="summary-value" style="color: #065f46;">${scrimmageClearedCount} <span style="font-size: 9pt; font-weight: 700;">/ ${totalRoster}</span></div>
+        <div class="summary-desc" style="color: #047857;">${Math.round((scrimmageClearedCount / (totalRoster || 1)) * 100)}% roster met 10h Cond + 10h Pads</div>
+      </div>
+
+      <div class="summary-card ${needsScrimmageCount > 0 ? 'alert' : ''}">
+        <div class="summary-title" style="color: ${needsScrimmageCount > 0 ? '#991b1b' : '#64748b'};">Needs Scrimmage Hours</div>
+        <div class="summary-value" style="color: ${needsScrimmageCount > 0 ? '#991b1b' : '#0f172a'};">${needsScrimmageCount}</div>
+        <div class="summary-desc" style="color: ${needsScrimmageCount > 0 ? '#b91c1c' : '#64748b'};">Athletes ineligible for live contact scrimmages</div>
+      </div>
+
+      <div class="summary-card ${needsPadsCount > 0 ? 'alert' : ''}">
+        <div class="summary-title" style="color: ${needsPadsCount > 0 ? '#991b1b' : '#64748b'};">Needs Padded Hours</div>
+        <div class="summary-value" style="color: ${needsPadsCount > 0 ? '#991b1b' : '#0f172a'};">${needsPadsCount}</div>
+        <div class="summary-desc" style="color: ${needsPadsCount > 0 ? '#b91c1c' : '#64748b'};">Wearing pads; working toward 10.0h padded</div>
+      </div>
+
+      <div class="summary-card ${needsCondCount > 0 ? 'alert' : ''}">
+        <div class="summary-title" style="color: ${needsCondCount > 0 ? '#991b1b' : '#64748b'};">Needs Conditioning</div>
+        <div class="summary-value" style="color: ${needsCondCount > 0 ? '#991b1b' : '#0f172a'};">${needsCondCount}</div>
+        <div class="summary-desc" style="color: ${needsCondCount > 0 ? '#b91c1c' : '#64748b'};">Tee &amp; shorts; needs 10.0h conditioning</div>
+      </div>
+    </div>
+
+    <!-- Mandatory Acclimatization Notice Callout -->
+    <div class="mandate-callout">
+      <strong>MANDATORY YOUTH ACCLIMATIZATION PROTOCOL (NYSPHSAA / USA FOOTBALL):</strong>
+      Athletes must strictly complete <strong>10.0 hours of conditioning</strong> (helmets and shorts only) before being permitted to wear full contact pads. Subsequently, athletes must log a minimum of <strong>10.0 hours in full contact pads</strong> before participating in any inter-squad scrimmage, live scrimmage, or league competition (20.0 total pre-scrimmage hours). All acclimatization phase hours are capped at 10.0h maximum.
+    </div>
+
+    <!-- Player Hours Roster Table -->
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 4%;">#</th>
+          <th class="left-align" style="width: 18%;">Athlete Name</th>
+          <th class="left-align" style="width: 11%;">Position(s)</th>
+          <th style="width: 14%;">Conditioning (Max 10h)</th>
+          <th style="width: 14%;">Padded Contact (Max 10h)</th>
+          <th style="width: 7%;">Pre-Season</th>
+          ${preWeekKeys.map((k) => `<th style="width: 4.5%; font-size: 7.5pt;">${formatWeekLabel(k, seasonConfig)}</th>`).join('')}
+          <th style="width: 6.5%;">Season</th>
+          <th style="width: 14%;">Scrimmage Clearance</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+      </tbody>
+    </table>
+
+    ${notes ? `<div style="margin-bottom: 8px; font-size: 8pt; color: #475569; font-style: italic;"><strong>Coach Notes:</strong> ${notes}</div>` : ''}
+
+    <!-- Official Sign-off & Certification Lines -->
+    <div class="signoff-section">
+      <div>
+        <div class="sign-line"></div>
+        <div class="sign-label">Head Coach Signature &bull; Date</div>
+      </div>
+      <div>
+        <div class="sign-line"></div>
+        <div class="sign-label">League Compliance Officer / Athletic Director &bull; Date</div>
+      </div>
+      <div>
+        <div class="sign-line"></div>
+        <div class="sign-label">Safety &amp; Equipment Coordinator &bull; Date</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+export function printPracticeHourReport(options: PracticeHourReportOptions) {
+  const html = generatePracticeHourReportHTML(options);
+  const title = options.filterType === 'needs_scrimmage'
+    ? 'Scrimmage_Eligibility_Deficiency_Report'
+    : 'Practice_Hour_Compliance_Report';
+  printCleanHTML(html, title);
+}
+
+// -----------------------------------------------------------------------------
+// SINGLE PLAYER OFFICIAL PRACTICE ATTENDANCE CERTIFICATE
+// -----------------------------------------------------------------------------
+
+export interface SinglePlayerHourReportOptions {
+  teamName?: string;
+  seasonName?: string;
+  seasonConfig?: SeasonConfig;
+  player: RosterPlayer;
+  attendanceLogs: AttendanceRecord[];
+  scope?: 'season' | 'preseason';
+  notes?: string;
+}
+
+export function generateSinglePlayerHourReportHTML(options: SinglePlayerHourReportOptions): string {
+  const {
+    teamName = 'Mahopac 10U Youth Football',
+    seasonName = '2026 Fall Youth Season',
+    seasonConfig,
+    player,
+    attendanceLogs,
+    scope = 'preseason',
+  } = options;
+
+  const breakdown = getPlayerHoursBreakdown(player, attendanceLogs, scope, 'pre-1', seasonConfig);
+  const comp = calculatePlayerCompliance(player);
+
+  const generatedDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  const condCapped = Math.min(10, breakdown.conditioningHours);
+  const padCapped = Math.min(10, breakdown.paddedHours);
+  const isCondMet = breakdown.conditioningHours >= 10;
+  const isPadMet = breakdown.paddedHours >= 10;
+  const isCleared = comp.isScrimmageCleared;
+
+  let practiceRowsHtml = '';
+  breakdown.days.forEach((d, idx) => {
+    practiceRowsHtml += `
+      <tr style="border-bottom: 1px solid #e2e8f0; background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+        <td style="padding: 6px 8px; text-align: center; font-family: monospace; font-weight: 700;">#${idx + 1}</td>
+        <td style="padding: 6px 8px; font-weight: 700;">${d.formattedDate}</td>
+        <td style="padding: 6px 8px; color: #475569; font-size: 8.5pt;">${d.weekLabel}</td>
+        <td style="padding: 6px 8px; font-weight: 700;">${d.title}</td>
+        <td style="padding: 6px 8px; text-align: center;">
+          <span style="display: inline-block; padding: 2px 6px; font-size: 7.5pt; font-weight: 800; border-radius: 4px; text-transform: uppercase; ${
+            d.playerAttire === 'conditioning'
+              ? 'background: #fef3c7; color: #92400e; border: 1px solid #f59e0b;'
+              : 'background: #e0f2fe; color: #0369a1; border: 1px solid #38bdf8;'
+          }">
+            ${d.playerAttire === 'conditioning' ? '⚡ Conditioning' : '🛡️ Full Pads'}
+          </span>
+        </td>
+        <td style="padding: 6px 8px; text-align: center; font-family: monospace; font-weight: 700;">${d.hours.toFixed(1)} hrs</td>
+        <td style="padding: 6px 8px; text-align: center;">
+          ${
+            d.wasPresent
+              ? '<span style="color: #065f46; font-weight: 900;">✓ Present</span>'
+              : '<span style="color: #991b1b; font-weight: 900;">✗ Absent</span>'
+          }
+        </td>
+        <td style="padding: 6px 8px; text-align: center; font-family: monospace; font-weight: 900; background: #f1f5f9;">
+          ${d.runningTotal.toFixed(1)} hrs
+        </td>
+      </tr>
+    `;
+  });
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Practice Attendance Certificate - #${player.num} ${player.firstName} ${player.lastName}</title>
+  <style>
+    @page { size: portrait; margin: 0.4in; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: #0f172a; font-size: 9.5pt; line-height: 1.35; }
+    .header { border-bottom: 2.5px solid #0f172a; padding-bottom: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .title { font-size: 16pt; font-weight: 900; text-transform: uppercase; margin: 0; }
+    .sub { font-size: 9pt; color: #475569; margin-top: 2px; }
+    .status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+    .status-card { border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; background: #f8fafc; }
+    .status-card.good { border-color: #34d399; background: #ecfdf5; }
+    .status-card.need { border-color: #f87171; background: #fef2f2; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 9pt; }
+    th { background: #0f172a; color: #fff; padding: 6px 8px; text-align: left; font-size: 8pt; font-weight: 900; text-transform: uppercase; }
+    .sign-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 20px; border-top: 1.5px solid #cbd5e1; padding-top: 14px; }
+    .line { border-bottom: 1px solid #0f172a; height: 26px; }
+    .lbl { font-size: 7.5pt; font-weight: 800; text-transform: uppercase; color: #64748b; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div style="font-size: 8.5pt; font-weight: 900; text-transform: uppercase; color: #475569;">${teamName} &bull; ${seasonName}</div>
+      <h1 class="title">Official Practice Attendance &amp; Acclimatization Record</h1>
+      <div class="sub">Individual Player Compliance Verification Certificate</div>
+    </div>
+    <div style="text-align: right; font-size: 8.5pt; color: #475569;">
+      <div><strong>Date:</strong> ${generatedDate}</div>
+      <div><strong>Roster Status:</strong> Active 10U Athlete</div>
+    </div>
+  </div>
+
+  <div style="background: #f1f5f9; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-size: 18pt; font-weight: 900; font-family: monospace; background: #0f172a; color: #fff; padding: 4px 12px; border-radius: 6px;">#${player.num}</span>
+      <div>
+        <div style="font-size: 14pt; font-weight: 900; color: #0f172a;">${player.firstName} ${player.lastName}</div>
+        <div style="font-size: 8.5pt; color: #475569; font-weight: 700;">
+          Position: ${player.primaryPosition || '-'} ${player.secondaryPosition ? `&bull; ${player.secondaryPosition}` : ''}
+        </div>
+      </div>
+    </div>
+    <div style="text-align: right;">
+      <div style="font-size: 8pt; font-weight: 900; text-transform: uppercase; color: #64748b;">Scrimmage Clearance</div>
+      <div style="margin-top: 2px;">
+        ${
+          isCleared
+            ? '<span style="background: #d1fae5; color: #065f46; border: 1px solid #10b981; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 9pt;">CLEARED FOR LIVE SCRIMMAGE ✓</span>'
+            : '<span style="background: #fee2e2; color: #991b1b; border: 1px solid #f87171; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 9pt;">NOT CLEARED - NEEDS PRACTICE HOURS</span>'
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="status-grid">
+    <div class="status-card ${isCondMet ? 'good' : 'need'}">
+      <div style="font-size: 8pt; font-weight: 900; text-transform: uppercase; color: ${isCondMet ? '#065f46' : '#991b1b'};">Conditioning (Max 10.0h)</div>
+      <div style="font-size: 16pt; font-weight: 900; color: ${isCondMet ? '#065f46' : '#991b1b'}; margin-top: 2px;">
+        ${condCapped.toFixed(1)} / 10.0 hrs
+      </div>
+      <div style="font-size: 7.5pt; font-weight: 800; color: ${isCondMet ? '#047857' : '#b91c1c'}; margin-top: 2px;">
+        ${isCondMet ? '✓ 10.0h Required Standard Met (Good)' : `Needs ${(10 - condCapped).toFixed(1)}h conditioning`}
+      </div>
+    </div>
+
+    <div class="status-card ${isPadMet ? 'good' : 'need'}">
+      <div style="font-size: 8pt; font-weight: 900; text-transform: uppercase; color: ${isPadMet ? '#065f46' : '#991b1b'};">Padded Contact (Max 10.0h)</div>
+      <div style="font-size: 16pt; font-weight: 900; color: ${isPadMet ? '#065f46' : '#991b1b'}; margin-top: 2px;">
+        ${padCapped.toFixed(1)} / 10.0 hrs
+      </div>
+      <div style="font-size: 7.5pt; font-weight: 800; color: ${isPadMet ? '#047857' : '#b91c1c'}; margin-top: 2px;">
+        ${isPadMet ? '✓ 10.0h Required Standard Met (Good)' : `Needs ${(10 - padCapped).toFixed(1)}h contact pads`}
+      </div>
+    </div>
+
+    <div class="status-card good">
+      <div style="font-size: 8pt; font-weight: 900; text-transform: uppercase; color: #065f46;">Attended Practices</div>
+      <div style="font-size: 16pt; font-weight: 900; color: #065f46; margin-top: 2px;">
+        ${breakdown.attendedSessionsCount} <span style="font-size: 10pt; font-weight: 700;">/ ${breakdown.totalSessionsCount}</span>
+      </div>
+      <div style="font-size: 7.5pt; font-weight: 800; color: #047857; margin-top: 2px;">
+        ${breakdown.attendanceRate}% Attendance Rate
+      </div>
+    </div>
+  </div>
+
+  <div style="font-size: 9pt; font-weight: 900; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.04em;">
+    Itemized Practice Attendance Log (${breakdown.scopeLabel}):
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 5%; text-align: center;">#</th>
+        <th style="width: 15%;">Date</th>
+        <th style="width: 14%;">Week</th>
+        <th style="width: 26%;">Practice Title</th>
+        <th style="width: 16%; text-align: center;">Attire</th>
+        <th style="width: 8%; text-align: center;">Hours</th>
+        <th style="width: 8%; text-align: center;">Status</th>
+        <th style="width: 8%; text-align: center;">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${practiceRowsHtml}
+    </tbody>
+  </table>
+
+  <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 8pt; font-family: monospace; color: #334155; margin-bottom: 12px;">
+    <strong>Calculation Formula:</strong> ${breakdown.formulaEquation}
+  </div>
+
+  <div class="sign-row">
+    <div>
+      <div class="line"></div>
+      <div class="lbl">Certified Head Coach Signature &bull; Date</div>
+    </div>
+    <div>
+      <div class="line"></div>
+      <div class="lbl">League Compliance Director &bull; Date</div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+export function printSinglePlayerHourReport(options: SinglePlayerHourReportOptions) {
+  const html = generateSinglePlayerHourReportHTML(options);
+  const title = `Practice_Certificate_${options.player.firstName}_${options.player.lastName}_#${options.player.num}`;
+  printCleanHTML(html, title);
+}
+

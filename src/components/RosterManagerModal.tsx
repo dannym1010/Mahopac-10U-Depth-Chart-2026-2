@@ -245,8 +245,8 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
       secondaryPosition: secondaryPos,
       offensivePosition: offensivePos.trim() || primaryPos,
       defensivePosition: defensivePos.trim() || secondaryPos,
-      conditioningHours: Number(conditioningHours) || 10,
-      paddedHours: Number(paddedHours) || 10,
+      conditioningHours: Math.min(10, Math.max(0, Number(conditioningHours) || 0)),
+      paddedHours: Math.min(10, Math.max(0, Number(paddedHours) || 0)),
       isCaptain,
       notes: notes.trim(),
     };

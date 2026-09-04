@@ -35,7 +35,7 @@ import {
   PADDED_HOURS_REQUIRED,
 } from '../types';
 import { getSeasonWeekList, isDateInWeek, getWeekDateRange } from '../utils/seasonWeekUtils';
-import { triggerPrint } from '../utils/printUtils';
+import { triggerPrint, printPracticeHourReport } from '../utils/printUtils';
 import { calculatePlayerHours, syncEntireRosterWithLogs } from '../utils/hoursCalculation';
 import { PlayerHoursBreakdownModal } from './PlayerHoursBreakdownModal';
 
@@ -138,7 +138,7 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
   const initialWeek = (currentWeek && currentWeek !== '0') ? currentWeek : 'pre-1';
   const [selectedWeek, setSelectedWeek] = useState<string>(initialWeek);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'needs_conditioning' | 'needs_pads' | 'cleared'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'needs_scrimmage' | 'needs_conditioning' | 'needs_pads' | 'cleared'>('all');
   const [saveIndicator, setSaveIndicator] = useState<string | null>(null);
   const [showAddPracticeModal, setShowAddPracticeModal] = useState<boolean>(false);
   const [showSeasonSummaryModal, setShowSeasonSummaryModal] = useState<boolean>(false);
@@ -1036,6 +1036,7 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
       }
 
       const comp = calculatePlayerCompliance(player);
+      if (statusFilter === 'needs_scrimmage' && comp.isScrimmageCleared) return false;
       if (statusFilter === 'needs_conditioning' && comp.isConditioningCleared) return false;
       if (statusFilter === 'needs_pads' && (!comp.isConditioningCleared || comp.isScrimmageCleared))
         return false;
@@ -1044,6 +1045,11 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
       return true;
     });
   }, [roster, searchTerm, statusFilter]);
+
+  // Count athletes who need scrimmage hours
+  const needsScrimmageCount = useMemo(() => {
+    return roster.filter((p) => !calculatePlayerCompliance(p).isScrimmageCleared).length;
+  }, [roster]);
 
   // Compute stats for current week
   const weekStats = useMemo(() => {
@@ -1195,6 +1201,25 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
 
                 <button
                   type="button"
+                  onClick={() => {
+                    printPracticeHourReport({
+                      teamName: 'Mahopac 10U Youth Football',
+                      seasonName: '2026 Fall Youth Season',
+                      seasonConfig,
+                      roster,
+                      attendanceLogs,
+                      filterType: statusFilter === 'needs_scrimmage' ? 'needs_scrimmage' : 'all',
+                    });
+                  }}
+                  className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-colors shadow-xs"
+                  title="Print Official Practice Hour Report"
+                >
+                  <Printer className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline">Print Hours Report</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => triggerPrint()}
                   className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors"
                   title="Print Weekly Attendance Sheet"
@@ -1285,6 +1310,17 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
               }`}
             >
               All ({roster.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('needs_scrimmage')}
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1 ${
+                statusFilter === 'needs_scrimmage'
+                  ? 'bg-rose-500/30 text-rose-300 border border-rose-500 shadow-xs'
+                  : 'bg-slate-950 text-slate-400 hover:text-rose-400 border border-slate-800'
+              }`}
+            >
+              🏈 Needs Scrimmage ({needsScrimmageCount})
             </button>
             <button
               type="button"
@@ -1385,13 +1421,13 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                   {/* Pre-Season or Season Hours Progress Summary Columns */}
                   {isPreSeason ? (
                     <>
-                      <th className="p-3 font-black text-amber-300 text-center w-28 bg-slate-950 border-r border-slate-800/80">
-                        <div className="text-[10px] uppercase font-bold text-amber-400/80">Conditioning</div>
-                        <div className="text-xs font-mono font-black">/ 10.0 hrs</div>
+                      <th className="p-3 font-black text-slate-300 text-center w-28 bg-slate-950 border-r border-slate-800/80">
+                        <div className="text-[10px] uppercase font-bold text-slate-400">Conditioning</div>
+                        <div className="text-xs font-mono font-black text-slate-300">Max 10.0 hrs</div>
                       </th>
-                      <th className="p-3 font-black text-sky-300 text-center w-28 bg-slate-950 border-r border-slate-800/80">
-                        <div className="text-[10px] uppercase font-bold text-sky-400/80">Padded Contact</div>
-                        <div className="text-xs font-mono font-black">/ 10.0 hrs</div>
+                      <th className="p-3 font-black text-slate-300 text-center w-28 bg-slate-950 border-r border-slate-800/80">
+                        <div className="text-[10px] uppercase font-bold text-slate-400">Padded Contact</div>
+                        <div className="text-xs font-mono font-black text-slate-300">Max 10.0 hrs</div>
                       </th>
                       <th className="p-3 font-black text-slate-300 text-center w-24 bg-slate-950 border-r border-slate-800" title="Click any total to view day-by-day practice breakdown">
                         <div className="text-[10px] uppercase font-bold text-slate-400">Pre-Season</div>
@@ -1641,24 +1677,29 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                             </div>
                           </div>
 
-                          {/* Mini Compliance Indicator Badge */}
+                          {/* Mini Compliance Indicator Badge - Clickable to filter who needs scrimmage hours */}
                           {isPreSeason && (
-                            <span
-                              className={`w-2 h-2 rounded-full shrink-0 ${
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setStatusFilter(statusFilter === 'needs_scrimmage' ? 'all' : 'needs_scrimmage');
+                              }}
+                              className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider shrink-0 transition-all cursor-pointer ${
                                 comp.isScrimmageCleared
-                                  ? 'bg-emerald-400 ring-2 ring-emerald-400/30'
-                                  : comp.isPadsCleared
-                                  ? 'bg-sky-400 ring-2 ring-sky-400/30'
-                                  : 'bg-amber-400 ring-2 ring-amber-400/30'
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
+                                  : 'bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30'
                               }`}
                               title={
                                 comp.isScrimmageCleared
-                                  ? 'Scrimmage Cleared (10h cond + 10h pads)'
+                                  ? 'Scrimmage Cleared (10h cond + 10h pads) • Click to filter'
                                   : comp.isPadsCleared
-                                  ? `Pads Cleared (${comp.paddedRemaining.toFixed(1)}h left for scrimmage)`
-                                  : `Conditioning (${comp.conditioningRemaining.toFixed(1)}h left for pads)`
+                                  ? `Needs Padded Hours (${comp.paddedRemaining.toFixed(1)}h left for scrimmage) • Click to filter who needs hours`
+                                  : `Needs Conditioning (${comp.conditioningRemaining.toFixed(1)}h left for pads) • Click to filter who needs hours`
                               }
-                            />
+                            >
+                              {comp.isScrimmageCleared ? '✓ Cleared' : 'Needs Scrimmage'}
+                            </button>
                           )}
                         </div>
                       </td>
@@ -1666,64 +1707,78 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                       {/* Summary Columns based on Season Phase */}
                       {isPreSeason ? (
                         <>
-                          {/* Conditioning Hours (Target 10h) */}
+                          {/* Conditioning Hours (Max 10.0h) */}
                           <td className="p-2.5 text-center font-mono border-r border-slate-800/80 bg-slate-950/30">
-                            <div className="flex flex-col items-center justify-center">
-                              <span
-                                className={`text-xs font-black ${
-                                  comp.conditioningHours >= CONDITIONING_HOURS_REQUIRED
-                                    ? 'text-emerald-400'
-                                    : 'text-amber-300'
-                                }`}
-                              >
-                                {comp.conditioningHours.toFixed(1)}
-                              </span>
-                              <div className="w-16 h-1.5 rounded-full bg-slate-800 overflow-hidden mt-1">
-                                <div
-                                  className={`h-full rounded-full ${
-                                    comp.conditioningHours >= CONDITIONING_HOURS_REQUIRED
-                                      ? 'bg-emerald-400'
-                                      : 'bg-amber-400'
-                                  }`}
-                                  style={{
-                                    width: `${Math.min(
-                                      100,
-                                      (comp.conditioningHours / CONDITIONING_HOURS_REQUIRED) * 100
-                                    )}%`,
-                                  }}
-                                />
-                              </div>
-                            </div>
+                            {(() => {
+                              const condHours = Math.min(CONDITIONING_HOURS_REQUIRED, comp.conditioningHours);
+                              const isGood = comp.conditioningHours >= CONDITIONING_HOURS_REQUIRED;
+                              return (
+                                <div className="flex flex-col items-center justify-center">
+                                  <div className="flex items-center gap-1">
+                                    <span
+                                      className={`text-xs font-black ${
+                                        isGood ? 'text-emerald-400' : 'text-rose-400'
+                                      }`}
+                                    >
+                                      {condHours.toFixed(1)}
+                                    </span>
+                                    <span className={`text-[10px] font-bold ${isGood ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                      {isGood ? '✓' : `(${(CONDITIONING_HOURS_REQUIRED - condHours).toFixed(1)}h)`}
+                                    </span>
+                                  </div>
+                                  <div className="w-16 h-1.5 rounded-full bg-slate-800 overflow-hidden mt-1">
+                                    <div
+                                      className={`h-full rounded-full transition-all ${
+                                        isGood ? 'bg-emerald-400' : 'bg-rose-500'
+                                      }`}
+                                      style={{
+                                        width: `${Math.min(
+                                          100,
+                                          (comp.conditioningHours / CONDITIONING_HOURS_REQUIRED) * 100
+                                        )}%`,
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </td>
 
-                          {/* Padded Hours (Target 10h) */}
+                          {/* Padded Hours (Max 10.0h) */}
                           <td className="p-2.5 text-center font-mono border-r border-slate-800/80 bg-slate-950/30">
-                            <div className="flex flex-col items-center justify-center">
-                              <span
-                                className={`text-xs font-black ${
-                                  comp.paddedHours >= PADDED_HOURS_REQUIRED
-                                    ? 'text-emerald-400'
-                                    : 'text-sky-300'
-                                }`}
-                              >
-                                {comp.paddedHours.toFixed(1)}
-                              </span>
-                              <div className="w-16 h-1.5 rounded-full bg-slate-800 overflow-hidden mt-1">
-                                <div
-                                  className={`h-full rounded-full ${
-                                    comp.paddedHours >= PADDED_HOURS_REQUIRED
-                                      ? 'bg-emerald-400'
-                                      : 'bg-sky-400'
-                                  }`}
-                                  style={{
-                                    width: `${Math.min(
-                                      100,
-                                      (comp.paddedHours / PADDED_HOURS_REQUIRED) * 100
-                                    )}%`,
-                                  }}
-                                />
-                              </div>
-                            </div>
+                            {(() => {
+                              const paddedHours = Math.min(PADDED_HOURS_REQUIRED, comp.paddedHours);
+                              const isGood = comp.paddedHours >= PADDED_HOURS_REQUIRED;
+                              return (
+                                <div className="flex flex-col items-center justify-center">
+                                  <div className="flex items-center gap-1">
+                                    <span
+                                      className={`text-xs font-black ${
+                                        isGood ? 'text-emerald-400' : 'text-rose-400'
+                                      }`}
+                                    >
+                                      {paddedHours.toFixed(1)}
+                                    </span>
+                                    <span className={`text-[10px] font-bold ${isGood ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                      {isGood ? '✓' : `(${(PADDED_HOURS_REQUIRED - paddedHours).toFixed(1)}h)`}
+                                    </span>
+                                  </div>
+                                  <div className="w-16 h-1.5 rounded-full bg-slate-800 overflow-hidden mt-1">
+                                    <div
+                                      className={`h-full rounded-full transition-all ${
+                                        isGood ? 'bg-emerald-400' : 'bg-rose-500'
+                                      }`}
+                                      style={{
+                                        width: `${Math.min(
+                                          100,
+                                          (comp.paddedHours / PADDED_HOURS_REQUIRED) * 100
+                                        )}%`,
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </td>
 
                           {/* Pre-Season Total */}
@@ -2047,8 +2102,8 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                 <thead>
                   <tr className="bg-slate-950 border-b border-slate-800">
                     <th className="p-2.5 font-black text-slate-200 sticky left-0 z-10 bg-slate-950">Player</th>
-                    <th className="p-2 text-center text-amber-300 font-bold">Cond (10h)</th>
-                    <th className="p-2 text-center text-sky-300 font-bold">Pads (10h)</th>
+                    <th className="p-2 text-center text-slate-300 font-bold">Cond (Max 10h)</th>
+                    <th className="p-2 text-center text-slate-300 font-bold">Pads (Max 10h)</th>
                     {weekList.map((w) => (
                       <th key={w.key} className="p-2 text-center text-slate-300 font-mono font-bold">
                         {w.label.replace('Pre-Season ', 'Pre-').replace('Regular Season • ', '')}
@@ -2060,6 +2115,10 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                 <tbody className="divide-y divide-slate-800/60 font-mono">
                   {roster.map((player) => {
                     const calc = calculatePlayerHours(player, attendanceLogs, selectedWeek, seasonConfig);
+                    const condHours = Math.min(10, calc.conditioningHours);
+                    const padHours = Math.min(10, calc.paddedHours);
+                    const isCondGood = calc.conditioningHours >= 10;
+                    const isPadGood = calc.paddedHours >= 10;
 
                     return (
                       <tr key={player.num} className="hover:bg-slate-850 transition-colors">
@@ -2067,11 +2126,11 @@ export const WeeklyAttendanceTracker: React.FC<WeeklyAttendanceTrackerProps> = (
                           <span className="font-mono text-indigo-400 font-black mr-1.5">#{player.num}</span>
                           {player.firstName} {player.lastName}
                         </td>
-                        <td className="p-2 text-center text-amber-300 font-bold">
-                          {calc.conditioningHours.toFixed(1)}h
+                        <td className={`p-2 text-center font-bold ${isCondGood ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {condHours.toFixed(1)}h
                         </td>
-                        <td className="p-2 text-center text-sky-300 font-bold">
-                          {calc.paddedHours.toFixed(1)}h
+                        <td className={`p-2 text-center font-bold ${isPadGood ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {padHours.toFixed(1)}h
                         </td>
                         {weekList.map((w) => {
                           const h = calc.weeklyHours?.[w.key] || 0;
