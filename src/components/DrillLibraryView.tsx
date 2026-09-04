@@ -257,61 +257,103 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
   const cleanCategoryStr = (str: string) =>
     (str || '')
       .toLowerCase()
-      .replace(/[\p{Emoji}\u200B-\u200D\uFE0F]/gu, '')
       .replace(/[^a-z0-9]/g, '')
       .trim();
 
   // Helper: check if a drill belongs to a target category
   const isDrillCategoryMatch = (
-    item: { topCategory: string; folderName: string; parentCategories: string[] },
+    item: { topCategory: string; folderName: string; parentCategories: string[]; drill?: DrillItem },
     targetCat: string
   ) => {
     if (!targetCat || targetCat === 'all') return true;
     if (item.topCategory === targetCat || item.folderName === targetCat) return true;
-    if (item.parentCategories.includes(targetCat)) return true;
+    if (item.parentCategories && item.parentCategories.includes(targetCat)) return true;
 
     const targetClean = cleanCategoryStr(targetCat);
     const topClean = cleanCategoryStr(item.topCategory);
     const folderClean = cleanCategoryStr(item.folderName);
 
     if (topClean === targetClean || folderClean === targetClean) return true;
-    if (item.parentCategories.some((p) => cleanCategoryStr(p) === targetClean)) return true;
+    if (item.parentCategories && item.parentCategories.some((p) => cleanCategoryStr(p) === targetClean)) return true;
 
-    if (
-      targetClean.includes('offense') &&
-      (topClean.includes('offense') ||
-        item.parentCategories.some((p) => cleanCategoryStr(p).includes('offense')))
-    ) {
-      return true;
+    // Robust stem matching: "offens" matches offense, offensive, etc.
+    const isTargetOffense =
+      targetClean.includes('offens') || targetClean === 'off' || targetClean.startsWith('off');
+    if (isTargetOffense) {
+      if (topClean.includes('offens') || folderClean.includes('offens')) return true;
+      if (item.parentCategories && item.parentCategories.some((p) => cleanCategoryStr(p).includes('offens'))) {
+        return true;
+      }
+      if (item.drill && cleanCategoryStr(item.drill.name).includes('offens')) return true;
     }
-    if (
-      targetClean.includes('defense') &&
-      (topClean.includes('defense') ||
-        item.parentCategories.some((p) => cleanCategoryStr(p).includes('defense')))
-    ) {
-      return true;
+
+    // Robust stem matching: "defens" matches defense, defensive, etc.
+    const isTargetDefense =
+      targetClean.includes('defens') || targetClean === 'def' || targetClean.startsWith('def');
+    if (isTargetDefense) {
+      if (topClean.includes('defens') || folderClean.includes('defens')) return true;
+      if (item.parentCategories && item.parentCategories.some((p) => cleanCategoryStr(p).includes('defens'))) {
+        return true;
+      }
+      if (item.drill && cleanCategoryStr(item.drill.name).includes('defens')) return true;
     }
-    if (
-      targetClean.includes('special') &&
-      (topClean.includes('special') ||
-        item.parentCategories.some((p) => cleanCategoryStr(p).includes('special')))
-    ) {
-      return true;
+
+    // Special teams matching
+    const isTargetSpecial =
+      targetClean.includes('special') || targetClean.includes('st') || targetClean === 'specials';
+    if (isTargetSpecial) {
+      if (topClean.includes('special') || folderClean.includes('special')) return true;
+      if (item.parentCategories && item.parentCategories.some((p) => cleanCategoryStr(p).includes('special'))) {
+        return true;
+      }
+      if (item.drill && cleanCategoryStr(item.drill.name).includes('special')) return true;
     }
-    if (
-      targetClean.includes('warm') &&
-      (topClean.includes('warm') ||
-        item.parentCategories.some((p) => cleanCategoryStr(p).includes('warm')))
-    ) {
-      return true;
+
+    // Warm-up & agility matching
+    const isTargetWarmup =
+      targetClean.includes('warm') || targetClean.includes('agility') || targetClean.includes('condition');
+    if (isTargetWarmup) {
+      if (
+        topClean.includes('warm') ||
+        topClean.includes('agility') ||
+        folderClean.includes('warm') ||
+        folderClean.includes('agility')
+      ) {
+        return true;
+      }
+      if (
+        item.parentCategories &&
+        item.parentCategories.some((p) => {
+          const cp = cleanCategoryStr(p);
+          return cp.includes('warm') || cp.includes('agility') || cp.includes('condition');
+        })
+      ) {
+        return true;
+      }
     }
-    if (
-      targetClean.includes('general') &&
-      (topClean.includes('general') ||
-        item.parentCategories.some((p) => cleanCategoryStr(p).includes('general')))
-    ) {
-      return true;
+
+    // General / Tackling / Fundamental matching
+    if (targetClean.includes('tackl')) {
+      if (topClean.includes('tackl') || folderClean.includes('tackl')) return true;
+      if (item.parentCategories && item.parentCategories.some((p) => cleanCategoryStr(p).includes('tackl'))) {
+        return true;
+      }
     }
+
+    if (targetClean.length >= 3) {
+      if (topClean.includes(targetClean) || targetClean.includes(topClean)) return true;
+      if (folderClean.includes(targetClean) || targetClean.includes(folderClean)) return true;
+      if (
+        item.parentCategories &&
+        item.parentCategories.some((p) => {
+          const cp = cleanCategoryStr(p);
+          return cp.includes(targetClean) || targetClean.includes(cp);
+        })
+      ) {
+        return true;
+      }
+    }
+
     return false;
   };
 
@@ -405,7 +447,7 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
       ({ drill, folderName, topCategory, parentCategories }) => {
         // Top Category filter
         if (selectedCategory !== 'all') {
-          if (!isDrillCategoryMatch({ topCategory, folderName, parentCategories }, selectedCategory)) {
+          if (!isDrillCategoryMatch({ topCategory, folderName, parentCategories, drill }, selectedCategory)) {
             return false;
           }
         }
@@ -1029,18 +1071,16 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
           {cascadingDrills
             .filter((folder) => {
               if (selectedCategory === 'all') return true;
-              return (
-                folder.name === selectedCategory ||
-                cleanCategoryStr(folder.name) === cleanCategoryStr(selectedCategory) ||
-                (cleanCategoryStr(selectedCategory).includes('offense') &&
-                  cleanCategoryStr(folder.name).includes('offense')) ||
-                (cleanCategoryStr(selectedCategory).includes('defense') &&
-                  cleanCategoryStr(folder.name).includes('defense')) ||
-                (cleanCategoryStr(selectedCategory).includes('special') &&
-                  cleanCategoryStr(folder.name).includes('special')) ||
-                (cleanCategoryStr(selectedCategory).includes('warm') &&
-                  cleanCategoryStr(folder.name).includes('warm'))
-              );
+              if (folder.name === selectedCategory) return true;
+              const fClean = cleanCategoryStr(folder.name);
+              const sClean = cleanCategoryStr(selectedCategory);
+              if (fClean === sClean) return true;
+              if (sClean.includes('offens') && fClean.includes('offens')) return true;
+              if (sClean.includes('defens') && fClean.includes('defens')) return true;
+              if (sClean.includes('special') && fClean.includes('special')) return true;
+              if (sClean.includes('warm') && (fClean.includes('warm') || fClean.includes('agility'))) return true;
+              if (sClean.length >= 3 && (fClean.includes(sClean) || sClean.includes(fClean))) return true;
+              return false;
             })
             .map((folder) => {
               const origIdx = cascadingDrills.indexOf(folder);

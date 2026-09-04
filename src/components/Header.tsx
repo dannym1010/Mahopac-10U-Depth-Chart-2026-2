@@ -119,12 +119,9 @@ export const Header: React.FC<HeaderProps> = ({
     });
   }, [scheduleEvents, currentWeek]);
 
-  // Filter accessible teams: dannym1010 has full access
+  // Filter accessible teams: admin has full access to all teams
   const accessibleTeams = useMemo(() => {
-    const isMaster =
-      (userEmail || '').toLowerCase().includes('dannym1010') ||
-      (userEmail || '').toLowerCase().trim() === 'dannym1010@gmail.com';
-    if (isMaster) {
+    if (userRole === 'admin') {
       return teams;
     }
     if (userAssignedTeamIds && userAssignedTeamIds.length > 0) {
@@ -133,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({
       return permitted.length > 0 ? permitted : teams.slice(0, 1);
     }
     return teams.slice(0, 1);
-  }, [teams, userEmail, userAssignedTeamIds]);
+  }, [teams, userRole, userAssignedTeamIds]);
 
   const activeTeam = teams.find((t) => t.id === activeTeamId) || teams[0];
   const isCurrentTeamDefault = activeTeam && (defaultTeamId || (teams[0] && teams[0].id)) === activeTeam.id;

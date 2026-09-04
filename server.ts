@@ -606,18 +606,26 @@ async function startServer() {
       }
 
       // Candidate URLs to try (in order of preference)
-      const urlsToTry: string[] = [];
+      const baseUrls: string[] = [];
       if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
-        urlsToTry.push(targetUrl);
+        baseUrls.push(targetUrl);
         if (targetUrl.startsWith('https://')) {
-          urlsToTry.push('http://' + targetUrl.substring(8));
+          baseUrls.push('http://' + targetUrl.substring(8));
         } else if (targetUrl.startsWith('http://')) {
-          urlsToTry.push('https://' + targetUrl.substring(7));
+          baseUrls.push('https://' + targetUrl.substring(7));
         }
       } else {
-        urlsToTry.push('https://' + targetUrl);
-        urlsToTry.push('http://' + targetUrl);
+        baseUrls.push('https://' + targetUrl);
+        baseUrls.push('http://' + targetUrl);
       }
+
+      // Add cache-busting timestamp query parameter to bypass Cloudflare CDN 4-hour edge cache
+      const appendCacheBuster = (u: string) => {
+        const sep = u.includes('?') ? '&' : '?';
+        return `${u}${sep}_t=${Date.now()}`;
+      };
+
+      const urlsToTry = baseUrls.map(appendCacheBuster);
 
       let icsContent = '';
       let lastError: any = null;
@@ -628,6 +636,8 @@ async function startServer() {
             headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
               Accept: 'text/calendar, text/plain, */*',
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              Pragma: 'no-cache',
             },
             redirect: 'follow',
           });
@@ -652,7 +662,7 @@ async function startServer() {
         });
       }
 
-      return res.json({ success: true, icsContent });
+      return res.json({ success: true, icsContent, fetchedAt: Date.now() });
     } catch (err: any) {
       console.error('Error fetching TeamSnap calendar:', err);
       return res.status(500).json({ error: err?.message || 'Server failed to retrieve calendar feed.' });

@@ -615,10 +615,10 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
                       </div>
                       <div>
                         <h4 className="text-xs font-black text-zinc-100 group-hover:text-indigo-300 transition-colors">
-                          Manage Staff &amp; Team Rosters
+                          Staff, Teams &amp; Admin Passcode
                         </h4>
                         <p className="text-[11px] text-zinc-400">
-                          Add assistant coaches, assign team privileges, and edit age groups
+                          Add coaches, assign team permissions, and set/update your master Admin Passcode
                         </p>
                       </div>
                     </div>

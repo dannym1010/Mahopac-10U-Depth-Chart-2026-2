@@ -32,6 +32,7 @@ import {
   ChevronRight,
   Database,
   ArrowLeft,
+  KeyRound,
 } from 'lucide-react';
 import { FormationBoard, PracticePeriod, StaffCoach, Team, DrillFolder, SeasonConfig, ScheduleEvent, WeekState } from '../types';
 import { getSeasonWeekList, getWeekDisplayLabelWithOpponent, formatWeekLabel } from '../utils/seasonWeekUtils';
@@ -46,12 +47,13 @@ interface AuthModalProps {
   isLiveEnvironment?: boolean;
   onEmailAuth: (email: string, pass: string, isSignUp: boolean) => Promise<void>;
   onGoogleSignIn: () => Promise<void>;
-  onLocalTestAccess?: () => void;
   onRefreshApprovalStatus?: () => void | Promise<void>;
   onSignOut: () => void;
   staffList?: StaffCoach[];
   teams?: Team[];
-  onSelectQuickCoach?: (coachEmail: string) => void;
+  adminPasscode?: string;
+  onAdminPasscodeSignIn?: (passcode: string) => boolean | Promise<boolean>;
+  onSetAdminPasscode?: (newPasscode: string) => void | Promise<void>;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -61,16 +63,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   isLiveEnvironment = false,
   onEmailAuth,
   onGoogleSignIn,
-  onLocalTestAccess,
   onRefreshApprovalStatus,
   onSignOut,
   staffList = [],
   teams = [],
-  onSelectQuickCoach,
+  adminPasscode = '',
+  onAdminPasscodeSignIn,
+  onSetAdminPasscode,
 }) => {
-  const [isSignUp, setIsSignUp] = useState(false);
+  type AuthTab = 'signin' | 'signup' | 'admin';
+  const [activeTab, setActiveTab] = useState<AuthTab>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [inputAdminPasscode, setInputAdminPasscode] = useState('');
+  const [newAdminPasscode, setNewAdminPasscode] = useState('');
+  const [confirmAdminPasscode, setConfirmAdminPasscode] = useState('');
+  const [isEditingAdminPasscode, setIsEditingAdminPasscode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -126,35 +134,74 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <span>Sign Out / Switch Account</span>
             </button>
           </div>
-
-          {!isLiveEnvironment && onLocalTestAccess && (
-            <div className="pt-2 border-t border-slate-700/60 text-center">
-              <button
-                type="button"
-                onClick={onLocalTestAccess}
-                className="text-[11px] font-semibold text-slate-400 hover:text-indigo-300 transition-colors cursor-pointer inline-flex items-center gap-1"
-              >
-                <span>🛠️ Bypass to Local / Dev Test Mode</span>
-              </button>
-            </div>
-          )}
         </div>
       </div>
     );
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      await onEmailAuth(email, password, isSignUp);
+      await onEmailAuth(email, password, activeTab === 'signup');
     } catch (err: any) {
       setError(err.message || 'Authentication error');
     } finally {
       setLoading(false);
     }
   };
+
+  const handleAdminPasscodeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!inputAdminPasscode.trim()) {
+      setError('Please enter your Admin Passcode.');
+      return;
+    }
+    setLoading(true);
+    try {
+      if (onAdminPasscodeSignIn) {
+        const success = await onAdminPasscodeSignIn(inputAdminPasscode.trim());
+        if (!success) {
+          setError('Incorrect admin passcode. Please verify your passcode or sign in with your coach account.');
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || 'Admin authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSetInitialAdminPasscode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!newAdminPasscode.trim()) {
+      setError('Please enter a new Admin Passcode.');
+      return;
+    }
+    if (newAdminPasscode.trim().length < 4) {
+      setError('Admin passcode must be at least 4 characters.');
+      return;
+    }
+    if (newAdminPasscode.trim() !== confirmAdminPasscode.trim()) {
+      setError('Passcodes do not match. Please re-enter.');
+      return;
+    }
+    setLoading(true);
+    try {
+      if (onSetAdminPasscode) {
+        await onSetAdminPasscode(newAdminPasscode.trim());
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to save admin passcode');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const hasConfiguredAdminPasscode = Boolean(adminPasscode && adminPasscode.trim().length > 0);
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
@@ -173,15 +220,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-700">
+        <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-700 text-xs">
           <button
             type="button"
             onClick={() => {
-              setIsSignUp(false);
+              setActiveTab('signin');
               setError(null);
             }}
-            className={`flex-1 py-1.5 rounded-xl text-xs font-black transition-all ${
-              !isSignUp
+            className={`flex-1 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+              activeTab === 'signin'
                 ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
@@ -191,212 +238,269 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             type="button"
             onClick={() => {
-              setIsSignUp(true);
+              setActiveTab('signup');
               setError(null);
             }}
-            className={`flex-1 py-1.5 rounded-xl text-xs font-black transition-all ${
-              isSignUp
+            className={`flex-1 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+              activeTab === 'signup'
                 ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             Create Account
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('admin');
+              setError(null);
+            }}
+            className={`flex-1 py-1.5 rounded-xl font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+              activeTab === 'admin'
+                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
+                : 'text-slate-400 hover:text-amber-300'
+            }`}
+          >
+            <Lock className="w-3 h-3" />
+            <span>Admin Passcode</span>
+          </button>
         </div>
 
         {error && (
           <div className="p-3 bg-rose-950/80 border border-rose-700/80 rounded-xl text-xs text-rose-200 font-semibold space-y-1">
             <div className="flex items-center gap-1.5 font-black text-rose-300">
-              <span>⚠️ Authentication Notice</span>
+              <span>⚠️ Notice</span>
             </div>
             <p className="leading-snug">{error}</p>
           </div>
         )}
 
-        {/* Google Sign In Button */}
-        <div>
-          <button
-            type="button"
-            disabled={loading}
-            onClick={async () => {
-              setError(null);
-              setLoading(true);
-              try {
-                await onGoogleSignIn();
-              } catch (err: any) {
-                console.error('Firebase Google Sign-In Error:', err);
-                const code = err?.code || '';
-                const message = err?.message || '';
-                
-                if (code === 'auth/unauthorized-domain') {
-                  setError(
-                    `Unauthorized Domain (${window.location.hostname}). Please add "${window.location.hostname}" to Firebase Console -> Authentication -> Settings -> Authorized Domains.`
-                  );
-                } else if (code === 'auth/operation-not-allowed') {
-                  setError(
-                    'Google Sign-in is not enabled in your Firebase Project. Enable Google in Firebase Console -> Authentication -> Sign-in Method.'
-                  );
-                } else if (code === 'auth/popup-blocked') {
-                  setError('Popup blocked by browser. Please allow popups for this site or use email/password below.');
-                } else if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-                  setError(
-                    'Google sign-in popup was closed before completing. You can try again or use email/password.'
-                  );
-                } else {
-                  setError(message ? `${code ? `[${code}] ` : ''}${message}` : 'Google Sign-In failed. Please try again or use email/password.');
-                }
-              } finally {
-                setLoading(false);
-              }
-            }}
-            className="w-full py-2.5 bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-200 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95 cursor-pointer"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-              />
-            </svg>
-            <span>{loading ? 'Signing in...' : 'Continue with Google'}</span>
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2 text-slate-400 text-[10.5px] font-black uppercase tracking-wider">
-          <div className="flex-1 border-b border-slate-700" />
-          <span>OR WITH EMAIL</span>
-          <div className="flex-1 border-b border-slate-700" />
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Coach Email Address"
-              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-          </div>
-
-          <div>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md shadow-indigo-600/30 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer"
-          >
-            {isSignUp ? <UserPlus className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
-            <span>{isSignUp ? 'Create Coach Account' : 'Sign In'}</span>
-          </button>
-        </form>
-
-        {/* Quick Coach Profiles (One-click Login for Active Approved Coaches) */}
-        {staffList && staffList.filter((c) => c.status === 'Active').length > 0 && (
-          <div className="pt-2 border-t border-slate-700/80 space-y-2">
-            <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400">
-              <span>Fast Coach Sign-In</span>
-              <span className="text-amber-400">Approved Staff</span>
+        {/* TAB 1 & 2: COACH GOOGLE & EMAIL SIGN IN */}
+        {(activeTab === 'signin' || activeTab === 'signup') && (
+          <div className="space-y-4">
+            {/* Google Sign In Button */}
+            <div>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={async () => {
+                  setError(null);
+                  setLoading(true);
+                  try {
+                    await onGoogleSignIn();
+                  } catch (err: any) {
+                    console.error('Firebase Google Sign-In Error:', err);
+                    const code = err?.code || '';
+                    const message = err?.message || '';
+                    
+                    if (code === 'auth/unauthorized-domain') {
+                      setError(
+                        `Unauthorized Domain (${window.location.hostname}). Please add "${window.location.hostname}" to Firebase Console -> Authentication -> Settings -> Authorized Domains.`
+                      );
+                    } else if (code === 'auth/operation-not-allowed') {
+                      setError(
+                        'Google Sign-in is not enabled in your Firebase Project. Enable Google in Firebase Console -> Authentication -> Sign-in Method.'
+                      );
+                    } else if (code === 'auth/popup-blocked') {
+                      setError('Popup blocked by browser. Please allow popups for this site or use email/password below.');
+                    } else if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+                      setError(
+                        'Google sign-in popup was closed before completing. You can try again or use email/password.'
+                      );
+                    } else {
+                      setError(message ? `${code ? `[${code}] ` : ''}${message}` : 'Google Sign-In failed. Please try again or use email/password.');
+                    }
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="w-full py-2.5 bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-200 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95 cursor-pointer"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  />
+                </svg>
+                <span>{loading ? 'Signing in...' : 'Continue with Google'}</span>
+              </button>
             </div>
-            <div className="grid grid-cols-1 gap-1.5 max-h-36 overflow-y-auto pr-1">
-              {staffList
-                .filter((c) => c.status === 'Active')
-                .map((coach, cIdx) => {
-                  const favTeam = teams.find((t) => t.id === coach.favoriteTeamId);
-                  return (
-                    <button
-                      key={cIdx}
-                      type="button"
-                      onClick={() => {
-                        if (onSelectQuickCoach) {
-                          onSelectQuickCoach(coach.email);
-                        } else {
-                          setEmail(coach.email);
-                          setPassword('password123');
-                        }
-                      }}
-                      className="w-full px-2.5 py-1.5 bg-slate-900/90 hover:bg-slate-750 border border-slate-700/80 hover:border-indigo-500 rounded-xl text-left flex items-center justify-between transition-all group cursor-pointer"
-                    >
-                      <div className="min-w-0 flex items-center gap-1.5">
-                        <div className="w-5 h-5 rounded-md bg-indigo-500/20 text-indigo-300 font-black text-[10px] flex items-center justify-center shrink-0">
-                          {coach.role.charAt(0) || 'C'}
-                        </div>
-                        <div className="truncate">
-                          <div className="font-bold text-[11px] text-slate-100 group-hover:text-indigo-300 transition-colors truncate">
-                            {coach.role}
-                          </div>
-                          <div className="text-[9.5px] text-slate-400 font-mono truncate">
-                            {coach.email}
-                          </div>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-1 shrink-0">
-                        {favTeam && (
-                          <span className="px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-300 text-[9px] font-bold border border-amber-400/25">
-                            🏈 {favTeam.ageGroup || favTeam.name}
-                          </span>
-                        )}
-                        <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-300 text-[9px] font-mono capitalize">
-                          {coach.startScreen || 'Schedule'}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
+            <div className="flex items-center gap-2 text-slate-400 text-[10.5px] font-black uppercase tracking-wider">
+              <div className="flex-1 border-b border-slate-700" />
+              <span>OR WITH EMAIL</span>
+              <div className="flex-1 border-b border-slate-700" />
             </div>
+
+            {/* Form */}
+            <form onSubmit={handleEmailSubmit} className="space-y-3">
+              <div>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Coach Email Address"
+                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md shadow-indigo-600/30 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer"
+              >
+                {activeTab === 'signup' ? <UserPlus className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+                <span>{activeTab === 'signup' ? 'Create Coach Account' : 'Sign In'}</span>
+              </button>
+            </form>
           </div>
         )}
 
-        {/* Local / Dev Testing Access */}
-        <div className="pt-2 border-t border-slate-700/80 text-center">
-          {!isLiveEnvironment ? (
-            <button
-              type="button"
-              onClick={onLocalTestAccess}
-              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/80 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5"
-            >
-              <span>🛠️ Local / Dev Testing Access (Bypass Gate)</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                const code = window.prompt('Enter Local Testing / Dev Passcode:');
-                if (code && (code === '1010' || code.toLowerCase() === 'mahopac' || code.toLowerCase() === 'admin')) {
-                  onLocalTestAccess?.();
-                } else if (code) {
-                  alert('Incorrect passcode. When live, only approved coaching staff accounts can access the site.');
-                }
-              }}
-              className="text-[10px] text-slate-500 hover:text-slate-400 font-medium transition-colors cursor-pointer"
-            >
-              Local Testing &amp; Developer Access
-            </button>
-          )}
-        </div>
+        {/* TAB 3: DEDICATED ADMIN PASSCODE AUTH */}
+        {activeTab === 'admin' && (
+          <div className="space-y-4">
+            {hasConfiguredAdminPasscode && !isEditingAdminPasscode ? (
+              <form onSubmit={handleAdminPasscodeSubmit} className="space-y-3">
+                <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-left space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-amber-300">
+                    <Shield className="w-4 h-4 text-amber-400" />
+                    <span>Head Coach &amp; Master Admin Access</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Enter your custom Admin Passcode to unlock the management console with full administrative privileges.
+                  </p>
+                </div>
+
+                <div>
+                  <input
+                    type="password"
+                    required
+                    autoFocus
+                    value={inputAdminPasscode}
+                    onChange={(e) => setInputAdminPasscode(e.target.value)}
+                    placeholder="Enter Admin Passcode"
+                    className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || !inputAdminPasscode}
+                  className="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-black text-xs rounded-xl shadow-md shadow-amber-600/30 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer"
+                >
+                  <Lock className="w-4 h-4" />
+                  <span>Unlock Admin Access</span>
+                </button>
+
+                <div className="pt-2 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditingAdminPasscode(true);
+                      setError(null);
+                      setNewAdminPasscode('');
+                      setConfirmAdminPasscode('');
+                    }}
+                    className="text-[11px] text-amber-400/90 hover:text-amber-300 font-semibold underline cursor-pointer"
+                  >
+                    Change or reset admin passcode
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleSetInitialAdminPasscode} className="space-y-3">
+                <div className="p-3.5 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl text-left space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-indigo-300">
+                    <KeyRound className="w-4 h-4 text-indigo-400" />
+                    <span>{hasConfiguredAdminPasscode ? 'Update Admin Passcode' : 'Set Up Your Admin Passcode'}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    {hasConfiguredAdminPasscode
+                      ? 'Choose a new custom passcode below. This will update the admin password on this app.'
+                      : 'No custom admin passcode has been created yet. Set a secure master passcode below for Head Coach & Admin access.'}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-[10.5px] font-bold text-slate-300 mb-1">
+                    {hasConfiguredAdminPasscode ? 'New Admin Passcode' : 'Admin Passcode'}
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    autoFocus
+                    value={newAdminPasscode}
+                    onChange={(e) => setNewAdminPasscode(e.target.value)}
+                    placeholder="Choose your custom admin passcode"
+                    className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10.5px] font-bold text-slate-300 mb-1">
+                    Confirm Admin Passcode
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={confirmAdminPasscode}
+                    onChange={(e) => setConfirmAdminPasscode(e.target.value)}
+                    placeholder="Re-enter your admin passcode"
+                    className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || !newAdminPasscode || !confirmAdminPasscode}
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md shadow-indigo-600/30 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{hasConfiguredAdminPasscode ? 'Save New Passcode & Sign In' : 'Save Passcode & Sign In as Admin'}</span>
+                </button>
+
+                {hasConfiguredAdminPasscode && (
+                  <div className="pt-1 text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditingAdminPasscode(false);
+                        setError(null);
+                      }}
+                      className="text-[11px] text-slate-400 hover:text-slate-200 font-medium underline cursor-pointer"
+                    >
+                      Cancel &amp; return to Unlock
+                    </button>
+                  </div>
+                )}
+              </form>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

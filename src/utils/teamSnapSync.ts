@@ -15,6 +15,14 @@ export interface ParsedTeamSnapEvent {
   focusOrNotes?: string;
   week: string;
   raw?: any;
+  isAlreadyInDatabase?: boolean;
+  matchReason?: string;
+}
+
+export interface EventDuplicateCheckResult {
+  isDuplicate: boolean;
+  matchedEvent?: ScheduleEvent;
+  matchReason?: string;
 }
 
 export interface TeamSnapSyncResult {
@@ -682,4 +690,143 @@ function normalizeTime(raw: string): string {
   }
 
   return '10:00';
+}
+
+/**
+ * Checks if a parsed TeamSnap event already exists in the local schedule/database.
+ */
+export function isEventAlreadyInSchedule(
+  parsed: { id?: string; date: string; startTime: string; title: string; type?: string; opponent?: string; raw?: any },
+  existingEvents: ScheduleEvent[],
+  activeTeamId: string
+): EventDuplicateCheckResult {
+  if (!existingEvents || existingEvents.length === 0) {
+    return { isDuplicate: false };
+  }
+
+  const isMatchingTeam = (evTeamId?: string, targetTeamId?: string) => {
+    if (!evTeamId || !targetTeamId) return true;
+    if (evTeamId === targetTeamId) return true;
+    if (
+      (evTeamId === 'team_10u' || evTeamId === 'team-10u') &&
+      (targetTeamId === 'team_10u' || targetTeamId === 'team-10u')
+    ) {
+      return true;
+    }
+    return false;
+  };
+
+  // Filter events belonging to the active team
+  const teamEvents = existingEvents.filter((ev) => isMatchingTeam(ev.teamId, activeTeamId));
+
+  // Helper to normalize strings for comparison (remove team names, punctuation, whitespace)
+  const cleanStr = (s?: string) =>
+    (s || '')
+      .toLowerCase()
+      .replace(/msa\s*10u\s*tackle\s*football\s*2026\s*[-–—:]*\s*/gi, '')
+      .replace(/[^a-z0-9]/g, '');
+
+  const cleanParsedTitle = cleanStr(parsed.title);
+  const cleanParsedOpponent = cleanStr(parsed.opponent);
+
+  for (const existing of teamEvents) {
+    // 1. UID match (if stored in id or raw)
+    if (parsed.id && (existing.id === parsed.id || existing.id.includes(parsed.id))) {
+      return { isDuplicate: true, matchedEvent: existing, matchReason: 'TeamSnap ID Match' };
+    }
+    if (parsed.raw?.UID && existing.id.includes(parsed.raw.UID)) {
+      return { isDuplicate: true, matchedEvent: existing, matchReason: 'TeamSnap UID Match' };
+    }
+
+    // Must match the same date
+    if (existing.date !== parsed.date) {
+      continue;
+    }
+
+    // Same date:
+    // 2. Exact same start time (e.g. 17:30 == 17:30)
+    if (existing.startTime === parsed.startTime) {
+      return {
+        isDuplicate: true,
+        matchedEvent: existing,
+        matchReason: `Same Date & Time (${existing.date} @ ${existing.startTime})`,
+      };
+    }
+
+    // 3. For games: same date and matching opponent or game title
+    if (
+      (parsed.type === 'game' || parsed.type === 'scrimmage') &&
+      (existing.type === 'game' || existing.type === 'scrimmage')
+    ) {
+      const cleanExistingTitle = cleanStr(existing.title);
+      const cleanExistingOpponent = cleanStr(existing.opponent);
+      if (
+        (cleanParsedOpponent && cleanExistingOpponent && cleanParsedOpponent === cleanExistingOpponent) ||
+        (cleanParsedOpponent && cleanExistingTitle.includes(cleanParsedOpponent)) ||
+        (cleanExistingOpponent && cleanParsedTitle.includes(cleanExistingOpponent)) ||
+        (cleanParsedTitle && cleanExistingTitle && cleanParsedTitle === cleanExistingTitle)
+      ) {
+        return {
+          isDuplicate: true,
+          matchedEvent: existing,
+          matchReason: `Matching Game on ${existing.date}`,
+        };
+      }
+    }
+
+    // 4. For practices: same date and start time within 45 minutes
+    if (
+      (parsed.type === 'practice' || parsed.type === 'walkthrough') &&
+      (existing.type === 'practice' || existing.type === 'walkthrough')
+    ) {
+      const parseMinutes = (t: string) => {
+        const [h, m] = (t || '0:0').split(':').map(Number);
+        return (h || 0) * 60 + (m || 0);
+      };
+      const diff = Math.abs(parseMinutes(existing.startTime) - parseMinutes(parsed.startTime));
+      if (diff <= 45) {
+        return {
+          isDuplicate: true,
+          matchedEvent: existing,
+          matchReason: `Practice on ${existing.date} (~${existing.startTime})`,
+        };
+      }
+    }
+
+    // 5. Title match on same date
+    const cleanExistingTitle = cleanStr(existing.title);
+    if (
+      cleanParsedTitle &&
+      cleanExistingTitle &&
+      (cleanParsedTitle === cleanExistingTitle ||
+        cleanExistingTitle.includes(cleanParsedTitle) ||
+        cleanParsedTitle.includes(cleanExistingTitle))
+    ) {
+      return {
+        isDuplicate: true,
+        matchedEvent: existing,
+        matchReason: `Matching Event Title on ${existing.date}`,
+      };
+    }
+  }
+
+  return { isDuplicate: false };
+}
+
+/**
+ * Decorates a list of parsed TeamSnap events with duplicate / database status
+ */
+export function markEventsDatabaseStatus(
+  events: ParsedTeamSnapEvent[],
+  existingEvents: ScheduleEvent[],
+  activeTeamId: string
+): ParsedTeamSnapEvent[] {
+  return events.map((evt) => {
+    const check = isEventAlreadyInSchedule(evt, existingEvents, activeTeamId);
+    return {
+      ...evt,
+      isAlreadyInDatabase: check.isDuplicate,
+      matchReason: check.matchReason,
+    };
+  });
 }

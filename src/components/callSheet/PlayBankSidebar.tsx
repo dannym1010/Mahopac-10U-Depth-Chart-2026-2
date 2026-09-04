@@ -13,6 +13,11 @@ import {
   FileSpreadsheet,
   Trash2,
   RotateCcw,
+  CheckSquare,
+  Square,
+  AlertTriangle,
+  X,
+  Check,
 } from 'lucide-react';
 import { PlayDatabaseEntry, PlayType, CallSheetPlay } from '../../types/callSheet';
 
@@ -22,6 +27,7 @@ interface PlayBankSidebarProps {
   onAddCustomPlay: () => void;
   onOpenExcelImport?: () => void;
   onDeletePlay?: (playId: string) => void;
+  onDeleteMultiplePlays?: (playIds: string[]) => void;
   onResetDefaults?: () => void;
   isOpen: boolean;
   onToggleOpen: () => void;
@@ -33,12 +39,17 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
   onAddCustomPlay,
   onOpenExcelImport,
   onDeletePlay,
+  onDeleteMultiplePlays,
   onResetDefaults,
   isOpen,
   onToggleOpen,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [isManageMode, setIsManageMode] = useState(false);
+  const [selectedPlayIds, setSelectedPlayIds] = useState<Record<string, boolean>>({});
+  const [playToDelete, setPlayToDelete] = useState<PlayDatabaseEntry | null>(null);
+  const [isConfirmResetOpen, setIsConfirmResetOpen] = useState(false);
 
   const filteredPlays = useMemo(() => {
     return plays.filter((p) => {
@@ -59,6 +70,45 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
       return true;
     });
   }, [plays, unit, selectedType, searchTerm]);
+
+  const selectedCount = useMemo(() => {
+    return Object.values(selectedPlayIds).filter(Boolean).length;
+  }, [selectedPlayIds]);
+
+  const handleToggleSelectPlay = (id: string) => {
+    setSelectedPlayIds((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
+  const handleSelectAllFiltered = () => {
+    const allSelected = filteredPlays.every((p) => selectedPlayIds[p.id]);
+    const next: Record<string, boolean> = { ...selectedPlayIds };
+    filteredPlays.forEach((p) => {
+      next[p.id] = !allSelected;
+    });
+    setSelectedPlayIds(next);
+  };
+
+  const handleConfirmBatchDelete = () => {
+    const idsToDelete = Object.keys(selectedPlayIds).filter((id) => selectedPlayIds[id]);
+    if (idsToDelete.length === 0) return;
+    if (onDeleteMultiplePlays) {
+      onDeleteMultiplePlays(idsToDelete);
+    } else if (onDeletePlay) {
+      idsToDelete.forEach((id) => onDeletePlay(id));
+    }
+    setSelectedPlayIds({});
+    setIsManageMode(false);
+  };
+
+  const handleExecuteSingleDelete = (play: PlayDatabaseEntry) => {
+    if (onDeletePlay) {
+      onDeletePlay(play.id);
+    }
+    setPlayToDelete(null);
+  };
 
   const handleDragStart = (e: React.DragEvent, play: PlayDatabaseEntry) => {
     const playData: CallSheetPlay = {
@@ -97,7 +147,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
         onClick={onToggleOpen}
       />
 
-      <div className="fixed inset-y-0 right-0 z-40 w-80 max-w-[85vw] sm:relative sm:inset-auto sm:w-80 bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col h-full print:hidden shrink-0">
+      <div className="fixed inset-y-0 right-0 z-40 w-84 max-w-[88vw] sm:relative sm:inset-auto sm:w-84 bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col h-full print:hidden shrink-0">
         {/* Header */}
         <div className="p-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-850">
           <div className="flex items-center gap-2">
@@ -109,12 +159,30 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                 {unit === 'offense' ? 'Offense' : 'Defense'} Play Bank
               </h3>
               <span className="text-[10px] text-slate-400">
-                Drag plays onto any sheet cell
+                {isManageMode ? 'Select plays to delete' : 'Drag plays onto any sheet cell'}
               </span>
             </div>
           </div>
           <div className="flex items-center gap-1">
-            {onOpenExcelImport && (
+            {/* Manage / Delete mode button */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsManageMode(!isManageMode);
+                setSelectedPlayIds({});
+              }}
+              className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                isManageMode
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
+              title={isManageMode ? 'Done managing plays' : 'Manage & delete plays'}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="text-[10px]">{isManageMode ? 'Done' : 'Manage'}</span>
+            </button>
+
+            {onOpenExcelImport && !isManageMode && (
               <button
                 type="button"
                 onClick={onOpenExcelImport}
@@ -124,14 +192,16 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                 <FileSpreadsheet className="w-3.5 h-3.5" />
               </button>
             )}
-            <button
-              type="button"
-              onClick={onAddCustomPlay}
-              className="p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors cursor-pointer"
-              title="Create new play"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
+            {!isManageMode && (
+              <button
+                type="button"
+                onClick={onAddCustomPlay}
+                className="p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors cursor-pointer"
+                title="Create new play"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button
               type="button"
               onClick={onToggleOpen}
@@ -142,6 +212,34 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Manage Mode Toolbar */}
+        {isManageMode && (
+          <div className="p-2.5 bg-rose-950/40 border-b border-rose-900/40 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={handleSelectAllFiltered}
+              className="text-[11px] text-rose-300 hover:text-white font-bold flex items-center gap-1.5 cursor-pointer"
+            >
+              {filteredPlays.length > 0 && filteredPlays.every((p) => selectedPlayIds[p.id]) ? (
+                <CheckSquare className="w-4 h-4 text-rose-400" />
+              ) : (
+                <Square className="w-4 h-4 text-slate-400" />
+              )}
+              <span>Select All ({filteredPlays.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleConfirmBatchDelete}
+              disabled={selectedCount === 0}
+              className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:pointer-events-none text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete ({selectedCount})</span>
+            </button>
+          </div>
+        )}
 
         {/* Search & Filter */}
         <div className="p-3 space-y-2 border-b border-slate-800 bg-slate-900">
@@ -189,18 +287,99 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
           </div>
         </div>
 
+        {/* Single Play Delete Confirmation Dialog */}
+        {playToDelete && (
+          <div className="p-3 bg-rose-950/80 border-b border-rose-800 text-xs space-y-2 animate-in fade-in">
+            <div className="flex items-center gap-2 text-rose-300 font-bold">
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>Delete "{playToDelete.name}"?</span>
+            </div>
+            <p className="text-[11px] text-rose-200/80">
+              This will remove this play from your {unit} play bank.
+            </p>
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => handleExecuteSingleDelete(playToDelete)}
+                className="flex-1 py-1.5 px-2 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer text-center"
+              >
+                Delete Play
+              </button>
+              <button
+                type="button"
+                onClick={() => setPlayToDelete(null)}
+                className="py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Reset Confirmation Dialog */}
+        {isConfirmResetOpen && (
+          <div className="p-3 bg-amber-950/80 border-b border-amber-800 text-xs space-y-2 animate-in fade-in">
+            <div className="flex items-center gap-2 text-amber-300 font-bold">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Reset {unit === 'offense' ? 'Offense' : 'Defense'} to Defaults?</span>
+            </div>
+            <p className="text-[11px] text-amber-200/80">
+              Any custom plays you added to this bank will be cleared and replaced with default playbook plays.
+            </p>
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onResetDefaults) onResetDefaults();
+                  setIsConfirmResetOpen(false);
+                }}
+                className="flex-1 py-1.5 px-2 bg-amber-600 hover:bg-amber-500 text-black font-black text-xs rounded-lg transition-colors cursor-pointer text-center"
+              >
+                Confirm Reset
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsConfirmResetOpen(false)}
+                className="py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Plays List */}
         <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5 no-scrollbar">
           {filteredPlays.map((play) => (
             <div
               key={play.id}
-              draggable
+              draggable={!isManageMode}
               onDragStart={(e) => handleDragStart(e, play)}
-              className="p-2.5 bg-slate-850 hover:bg-slate-800 border border-slate-750 hover:border-indigo-500/60 rounded-xl cursor-grab active:cursor-grabbing transition-all select-none group shadow-xs"
-              title="Drag onto any slot in the call sheet"
+              onClick={() => {
+                if (isManageMode) {
+                  handleToggleSelectPlay(play.id);
+                }
+              }}
+              className={`p-2.5 border rounded-xl transition-all select-none group shadow-xs ${
+                isManageMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
+              } ${
+                selectedPlayIds[play.id]
+                  ? 'bg-rose-950/30 border-rose-500/60 ring-1 ring-rose-500/40'
+                  : 'bg-slate-850 hover:bg-slate-800 border-slate-750 hover:border-indigo-500/60'
+              }`}
+              title={isManageMode ? 'Click to select for deletion' : 'Drag onto any slot in the call sheet'}
             >
               <div className="flex items-center justify-between gap-1.5 mb-1">
                 <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                  {isManageMode && (
+                    <div className="shrink-0 mr-0.5">
+                      {selectedPlayIds[play.id] ? (
+                        <CheckSquare className="w-4 h-4 text-rose-400" />
+                      ) : (
+                        <Square className="w-4 h-4 text-slate-500" />
+                      )}
+                    </div>
+                  )}
                   {play.wristbandNum && (
                     <span className="px-1 py-0.2 rounded bg-amber-400 text-black font-black text-[9px] font-mono shrink-0">
                       #{play.wristbandNum}
@@ -211,21 +390,23 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  {onDeletePlay && (
+                  {onDeletePlay && !isManageMode && (
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
-                        onDeletePlay(play.id);
+                        setPlayToDelete(play);
                       }}
-                      className="p-1 rounded-md text-slate-500 hover:text-rose-400 hover:bg-rose-950/50 transition-all cursor-pointer opacity-80 sm:opacity-0 sm:group-hover:opacity-100"
+                      className="p-1 rounded-md text-slate-400 hover:text-rose-400 hover:bg-rose-950/60 transition-all cursor-pointer"
                       title={`Delete "${play.name}" from play bank`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
-                  <GripVertical className="w-3.5 h-3.5 text-slate-500 group-hover:text-indigo-400 shrink-0" />
+                  {!isManageMode && (
+                    <GripVertical className="w-3.5 h-3.5 text-slate-500 group-hover:text-indigo-400 shrink-0" />
+                  )}
                 </div>
               </div>
 
@@ -271,11 +452,11 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
         {/* Footer Summary & Reset */}
         <div className="p-2.5 border-t border-slate-800/80 bg-slate-950/70 flex items-center justify-between text-[10px] text-slate-400">
           <span>{filteredPlays.length} {unit} plays</span>
-          {onResetDefaults && (
+          {onResetDefaults && !isManageMode && (
             <button
               type="button"
-              onClick={onResetDefaults}
-              className="flex items-center gap-1 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+              onClick={() => setIsConfirmResetOpen(true)}
+              className="flex items-center gap-1 text-slate-400 hover:text-amber-400 transition-colors cursor-pointer"
               title="Reset to factory default plays"
             >
               <RotateCcw className="w-3 h-3" />

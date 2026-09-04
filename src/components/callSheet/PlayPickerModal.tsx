@@ -61,6 +61,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
   const [selectedType, setSelectedType] = useState<string>('all');
   const [filterSituationOnly, setFilterSituationOnly] = useState(true);
   const [isCreatingCustom, setIsCreatingCustom] = useState(false);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
   // Custom play form state
   const [customName, setCustomName] = useState('');
@@ -395,17 +396,45 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
 
                     <div className="flex items-center gap-1.5 shrink-0">
                       {onDeleteFromDatabase && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteFromDatabase(play.id);
-                          }}
-                          className="p-1.5 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition-colors cursor-pointer"
-                          title={`Delete "${play.name}" from play bank`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        confirmingDeleteId === play.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteFromDatabase(play.id);
+                                setConfirmingDeleteId(null);
+                              }}
+                              className="px-2 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-black transition-colors cursor-pointer"
+                              title="Confirm delete"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setConfirmingDeleteId(null);
+                              }}
+                              className="px-1.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold transition-colors cursor-pointer"
+                              title="Cancel"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirmingDeleteId(play.id);
+                            }}
+                            className="p-1.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition-colors cursor-pointer"
+                            title={`Delete "${play.name}" from play bank`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )
                       )}
                       <button
                         type="button"

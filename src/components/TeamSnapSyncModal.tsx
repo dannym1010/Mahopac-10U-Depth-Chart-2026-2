@@ -29,6 +29,7 @@ import {
   parseTeamSnapText,
   ParsedTeamSnapEvent,
   TeamSnapSyncResult,
+  markEventsDatabaseStatus,
 } from '../utils/teamSnapSync';
 import { DEFAULT_10U_TEAMSNAP_ICS } from '../data/teamSnap10uFeed';
 
@@ -112,11 +113,60 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
 
   const [syncResult, setSyncResult] = useState<TeamSnapSyncResult | null>(null);
   const [selectedEventIds, setSelectedEventIds] = useState<Record<string, boolean>>({});
-  const [importMode, setImportMode] = useState<'append' | 'replace'>('replace');
+  const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
+  const [filterTab, setFilterTab] = useState<'all' | 'new' | 'existing'>('all');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
+
+  // Process parsed TeamSnap result: detect existing database events and select only new items
+  const applySyncResult = (parsed: TeamSnapSyncResult, customSuccessMessage?: string) => {
+    const decoratedEvents = markEventsDatabaseStatus(parsed.events, existingEvents, activeTeam.id);
+    const newEvents = decoratedEvents.filter((e) => !e.isAlreadyInDatabase);
+    const existingCount = decoratedEvents.filter((e) => e.isAlreadyInDatabase).length;
+
+    const decoratedResult: TeamSnapSyncResult = {
+      ...parsed,
+      events: decoratedEvents,
+    };
+
+    setSyncResult(decoratedResult);
+
+    // KEY USER INTENT: Default selection to ONLY events not already in the database!
+    const initialSelected: Record<string, boolean> = {};
+    decoratedEvents.forEach((e, idx) => {
+      const key = e.id || String(idx);
+      if (!e.isAlreadyInDatabase) {
+        initialSelected[key] = true;
+      }
+    });
+    setSelectedEventIds(initialSelected);
+
+    // Default to 'append' mode so existing schedule is preserved
+    setImportMode('append');
+
+    // Auto-focus on 'new' filter if new events are found
+    if (newEvents.length > 0 && existingCount > 0) {
+      setFilterTab('new');
+    } else {
+      setFilterTab('all');
+    }
+
+    if (newEvents.length > 0) {
+      setStatusMessage({
+        type: 'success',
+        text:
+          customSuccessMessage ||
+          `Found ${newEvents.length} new event${newEvents.length === 1 ? '' : 's'} not in your database! (${existingCount} existing events already on calendar have been deselected to prevent duplicates).`,
+      });
+    } else {
+      setStatusMessage({
+        type: 'info',
+        text: `All ${parsed.totalParsed} events from TeamSnap already exist in your database! Schedule is fully up to date.`,
+      });
+    }
+  };
 
   // Handle URL Fetch
   const handleFetchFromUrl = async () => {
@@ -134,8 +184,12 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
       if (cleanUrl.startsWith('webcal://')) {
         cleanUrl = 'https://' + cleanUrl.substring(9);
       } else if (cleanUrl.startsWith('http://')) {
-        cleanUrl = 'https://' + cleanUrl.substring(7);
+        // Keep or normalize
       }
+
+      // Add cache buster to URL to prevent stale Cloudflare cache
+      const cacheBustParam = `_t=${Date.now()}`;
+      const cacheBustedUrl = cleanUrl.includes('?') ? `${cleanUrl}&${cacheBustParam}` : `${cleanUrl}?${cacheBustParam}`;
 
       // Save to localStorage and team object for this team
       try {
@@ -162,13 +216,17 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
         }
       };
 
-      // 1. Try server backend API first (POST with timeout)
+      // 1. Try server backend API first (with cache-busting timestamp)
       try {
         const res = await timedFetch('/api/teamsnap/fetch-ical', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+          },
           body: JSON.stringify({ url: cleanUrl }),
-        }, 6000);
+        }, 8000);
         if (res.ok) {
           const data = await res.json();
           if (data.icsContent && data.icsContent.includes('BEGIN:VCALENDAR')) {
@@ -181,11 +239,13 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
         fetchErrors.push(err?.message || 'Backend API unavailable');
       }
 
-      // 2. Try AllOrigins JSON Proxy with decoding (handles CORS & base64)
+      // 2. Try AllOrigins JSON Proxy with decoding (handles CORS & base64) with cache-buster
       if (!icsContent) {
         try {
-          const allOriginsUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(cleanUrl)}`;
-          const proxyRes = await timedFetch(allOriginsUrl, {}, 8000);
+          const allOriginsUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(cacheBustedUrl)}`;
+          const proxyRes = await timedFetch(allOriginsUrl, {
+            headers: { 'Cache-Control': 'no-cache' },
+          }, 8000);
           if (proxyRes.ok) {
             const data = await proxyRes.json();
             const decoded = decodeAllOriginsResponse(data.contents || '');
@@ -198,10 +258,13 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
         }
       }
 
-      // 3. Try direct fetch
+      // 3. Try direct fetch with cache buster
       if (!icsContent) {
         try {
-          const directRes = await timedFetch(cleanUrl, { mode: 'cors' }, 4000);
+          const directRes = await timedFetch(cacheBustedUrl, {
+            mode: 'cors',
+            headers: { 'Cache-Control': 'no-cache' },
+          }, 4000);
           if (directRes.ok) {
             const text = await directRes.text();
             if (text.includes('BEGIN:VCALENDAR')) {
@@ -239,18 +302,7 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
         throw new Error(parsed.error || 'No events found in this calendar feed.');
       }
 
-      setSyncResult(parsed);
-      // Select all by default
-      const initialSelected: Record<string, boolean> = {};
-      parsed.events.forEach((e, idx) => {
-        initialSelected[e.id || String(idx)] = true;
-      });
-      setSelectedEventIds(initialSelected);
-
-      setStatusMessage({
-        type: 'success',
-        text: `Successfully loaded ${parsed.totalParsed} events (${parsed.gamesCount} Games, ${parsed.practicesCount} Practices) for ${parsed.teamName || activeTeam.name}!`,
-      });
+      applySyncResult(parsed);
     } catch (err: any) {
       setStatusMessage({
         type: 'error',
@@ -271,16 +323,7 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
       if (!parsed.success || parsed.events.length === 0) {
         throw new Error('Failed to parse 10U schedule.');
       }
-      setSyncResult(parsed);
-      const initialSelected: Record<string, boolean> = {};
-      parsed.events.forEach((e, idx) => {
-        initialSelected[e.id || String(idx)] = true;
-      });
-      setSelectedEventIds(initialSelected);
-      setStatusMessage({
-        type: 'success',
-        text: `Loaded official 2026 schedule: ${parsed.totalParsed} events (${parsed.gamesCount} Games, ${parsed.practicesCount} Practices, ${parsed.scrimmagesCount} Scrimmages)!`,
-      });
+      applySyncResult(parsed, `Loaded official 2026 schedule: ${parsed.totalParsed} events!`);
     } catch (err: any) {
       setStatusMessage({ type: 'error', text: err?.message || 'Failed to load official schedule.' });
     } finally {
@@ -314,17 +357,7 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
           throw new Error(parsed.error || 'No schedule events could be parsed from this file.');
         }
 
-        setSyncResult(parsed);
-        const initialSelected: Record<string, boolean> = {};
-        parsed.events.forEach((evt, idx) => {
-          initialSelected[evt.id || String(idx)] = true;
-        });
-        setSelectedEventIds(initialSelected);
-
-        setStatusMessage({
-          type: 'success',
-          text: `Parsed ${parsed.totalParsed} events from ${file.name}!`,
-        });
+        applySyncResult(parsed, `Parsed ${parsed.totalParsed} events from ${file.name}!`);
       } catch (err: any) {
         setStatusMessage({
           type: 'error',
@@ -353,17 +386,7 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
         throw new Error(parsed.error || 'Could not parse any schedule events from the provided text.');
       }
 
-      setSyncResult(parsed);
-      const initialSelected: Record<string, boolean> = {};
-      parsed.events.forEach((evt, idx) => {
-        initialSelected[evt.id || String(idx)] = true;
-      });
-      setSelectedEventIds(initialSelected);
-
-      setStatusMessage({
-        type: 'success',
-        text: `Identified ${parsed.totalParsed} events from pasted text!`,
-      });
+      applySyncResult(parsed, `Identified ${parsed.totalParsed} events from pasted text!`);
     } catch (err: any) {
       setStatusMessage({
         type: 'error',
@@ -375,12 +398,27 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
     }
   };
 
-  // Toggle selection
-  const toggleSelectAll = (select: boolean) => {
+  // Quick selection helpers
+  const selectOnlyNewEvents = () => {
     if (!syncResult) return;
     const updated: Record<string, boolean> = {};
     syncResult.events.forEach((e, idx) => {
-      updated[e.id || String(idx)] = select;
+      const key = e.id || String(idx);
+      if (!e.isAlreadyInDatabase) {
+        updated[key] = true;
+      }
+    });
+    setSelectedEventIds(updated);
+  };
+
+  // Toggle selection for all currently displayed events
+  const toggleSelectAll = (select: boolean) => {
+    if (!syncResult) return;
+    const updated: Record<string, boolean> = { ...selectedEventIds };
+    displayedEvents.forEach((e) => {
+      const originalIdx = syncResult.events.indexOf(e);
+      const key = e.id || String(originalIdx);
+      updated[key] = select;
     });
     setSelectedEventIds(updated);
   };
@@ -460,9 +498,31 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
     onClose();
   };
 
+  const totalCount = syncResult?.totalParsed || 0;
+  const newEventsCount = syncResult
+    ? syncResult.events.filter((e) => !e.isAlreadyInDatabase).length
+    : 0;
+  const existingEventsCount = syncResult
+    ? syncResult.events.filter((e) => e.isAlreadyInDatabase).length
+    : 0;
+
   const selectedCount = syncResult
     ? syncResult.events.filter((e, idx) => selectedEventIds[e.id || String(idx)]).length
     : 0;
+  const selectedNewCount = syncResult
+    ? syncResult.events.filter((e, idx) => !e.isAlreadyInDatabase && selectedEventIds[e.id || String(idx)]).length
+    : 0;
+  const selectedExistingCount = syncResult
+    ? syncResult.events.filter((e, idx) => e.isAlreadyInDatabase && selectedEventIds[e.id || String(idx)]).length
+    : 0;
+
+  const displayedEvents = syncResult
+    ? syncResult.events.filter((e) => {
+        if (filterTab === 'new') return !e.isAlreadyInDatabase;
+        if (filterTab === 'existing') return e.isAlreadyInDatabase;
+        return true;
+      })
+    : [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
@@ -734,27 +794,96 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
           {/* Parsed Events Preview Table */}
           {syncResult && syncResult.events.length > 0 && (
             <div className="space-y-4 pt-2 border-t border-slate-800">
+              {/* Deduplication Status Alert */}
+              {newEventsCount > 0 ? (
+                <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 text-xs flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <p className="font-bold text-emerald-300">
+                        Found {newEventsCount} new event{newEventsCount === 1 ? '' : 's'} not yet in your calendar database!
+                      </p>
+                      <p className="text-emerald-200/80 text-[11px]">
+                        {existingEventsCount > 0
+                          ? `${existingEventsCount} events were identified as already in your database and are unselected by default to prevent duplicates.`
+                          : 'All fetched events are new and ready to import.'}
+                      </p>
+                    </div>
+                  </div>
+                  {existingEventsCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={selectOnlyNewEvents}
+                      className="px-2.5 py-1 text-[11px] font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg shrink-0 transition-colors shadow-sm cursor-pointer"
+                    >
+                      Select {newEventsCount} New Only
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/80 text-slate-300 text-xs flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <p className="font-bold text-white">
+                      Your schedule is completely up to date!
+                    </p>
+                    <p className="text-slate-400 text-[11px]">
+                      All {totalCount} events from TeamSnap already exist in your {activeTeam.name} calendar database.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Filter Tabs & Select All Controls */}
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-black text-white flex items-center gap-2">
-                    <span>Parsed Events Preview</span>
-                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
-                      {syncResult.totalParsed} total ({selectedCount} selected)
-                    </span>
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Uncheck any events you don't want to import.
-                  </p>
+                <div className="flex items-center gap-1.5 p-1 bg-slate-950/60 border border-slate-800 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setFilterTab('all')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                      filterTab === 'all'
+                        ? 'bg-slate-800 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    All Events ({totalCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilterTab('new')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      filterTab === 'new'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                        : 'text-emerald-400/80 hover:text-emerald-300'
+                    }`}
+                  >
+                    <Sparkles className="w-3 h-3 text-emerald-400" />
+                    <span>New Only ({newEventsCount})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilterTab('existing')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      filterTab === 'existing'
+                        ? 'bg-slate-800 text-slate-200 border border-slate-700 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-400'
+                    }`}
+                  >
+                    <Check className="w-3 h-3 text-emerald-500" />
+                    <span>Already in DB ({existingEventsCount})</span>
+                  </button>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <button
+                    type="button"
                     onClick={() => toggleSelectAll(true)}
                     className="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-300 hover:text-white bg-slate-800 border border-slate-700 hover:border-slate-600 transition-colors"
                   >
-                    Select All
+                    Select All Shown
                   </button>
                   <button
+                    type="button"
                     onClick={() => toggleSelectAll(false)}
                     className="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 bg-slate-800/60 border border-slate-700 transition-colors"
                   >
@@ -765,159 +894,199 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
 
               {/* Event list */}
               <div className="max-h-80 overflow-y-auto border border-slate-800 rounded-2xl bg-slate-950/40 divide-y divide-slate-800/80">
-                {syncResult.events.map((evt, idx) => {
-                  const eventKey = evt.id || String(idx);
-                  const isSelected = !!selectedEventIds[eventKey];
+                {displayedEvents.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 text-xs space-y-1">
+                    <p className="font-semibold text-slate-300">No events matching this filter.</p>
+                    <p className="text-slate-500">
+                      {filterTab === 'new'
+                        ? 'All events from this feed already exist in your database!'
+                        : 'No events found in this view.'}
+                    </p>
+                  </div>
+                ) : (
+                  displayedEvents.map((evt) => {
+                    const originalIdx = syncResult.events.indexOf(evt);
+                    const eventKey = evt.id || String(originalIdx);
+                    const isSelected = !!selectedEventIds[eventKey];
+                    const isNew = !evt.isAlreadyInDatabase;
 
-                  return (
-                    <div
-                      key={eventKey}
-                      className={`p-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs transition-colors ${
-                        isSelected ? 'bg-slate-800/40 hover:bg-slate-800/60' : 'opacity-40 hover:opacity-70'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3 min-w-0 flex-1">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleEventSelected(eventKey)}
-                          className="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer mt-1"
-                        />
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {/* Type Selector Dropdown */}
-                            <select
-                              value={evt.type}
-                              onChange={(e) =>
-                                handleUpdateParsedEvent(idx, {
-                                  type: e.target.value as ScheduleEventType,
-                                })
-                              }
-                              onClick={(e) => e.stopPropagation()}
-                              className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-400 ${
-                                evt.type === 'game'
-                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-black'
-                                  : evt.type === 'scrimmage'
-                                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-bold'
-                                  : evt.type === 'meeting'
-                                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
-                                  : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40 font-bold'
-                              }`}
-                            >
-                              <option value="game" className="bg-slate-900 text-amber-300 font-black">
-                                🎮 Game
-                              </option>
-                              <option value="practice" className="bg-slate-900 text-indigo-300 font-bold">
-                                🏈 Practice
-                              </option>
-                              <option value="scrimmage" className="bg-slate-900 text-rose-300 font-bold">
-                                ⚔️ Scrimmage
-                              </option>
-                              <option value="meeting" className="bg-slate-900 text-purple-300">
-                                📋 Meeting
-                              </option>
-                              <option value="walkthrough" className="bg-slate-900 text-cyan-300">
-                                🚶 Walkthrough
-                              </option>
-                            </select>
+                    return (
+                      <div
+                        key={eventKey}
+                        className={`p-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs transition-colors ${
+                          isSelected
+                            ? isNew
+                              ? 'bg-emerald-950/20 hover:bg-emerald-950/30'
+                              : 'bg-slate-800/40 hover:bg-slate-800/60'
+                            : 'opacity-40 hover:opacity-70'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleEventSelected(eventKey)}
+                            className="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer mt-1"
+                          />
+                          <div className="min-w-0 flex-1 space-y-1.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {/* New vs Existing Badge */}
+                              {isNew ? (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 shrink-0">
+                                  <Sparkles className="w-3 h-3 text-emerald-400" />
+                                  <span>NEW EVENT</span>
+                                </span>
+                              ) : (
+                                <span
+                                  className="px-2 py-0.5 rounded-full text-[10px] font-semibold text-slate-400 bg-slate-800/80 border border-slate-700/80 flex items-center gap-1 shrink-0"
+                                  title={evt.matchReason}
+                                >
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                  <span>Already in DB</span>
+                                  {evt.matchReason && (
+                                    <span className="text-[9px] text-slate-500 hidden sm:inline">
+                                      ({evt.matchReason})
+                                    </span>
+                                  )}
+                                </span>
+                              )}
 
-                            {/* Week Selector Dropdown */}
-                            <select
-                              value={evt.week}
-                              onChange={(e) =>
-                                handleUpdateParsedEvent(idx, { week: e.target.value })
-                              }
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-[10px] text-slate-300 bg-slate-900 border border-slate-700 px-1.5 py-0.5 rounded cursor-pointer focus:outline-none focus:border-indigo-500"
-                            >
-                              {getSeasonWeekList(seasonConfig).map((w) => (
-                                <option key={w.key} value={w.key}>
-                                  {w.label}
+                              {/* Type Selector Dropdown */}
+                              <select
+                                value={evt.type}
+                                onChange={(e) =>
+                                  handleUpdateParsedEvent(originalIdx, {
+                                    type: e.target.value as ScheduleEventType,
+                                  })
+                                }
+                                onClick={(e) => e.stopPropagation()}
+                                className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-400 ${
+                                  evt.type === 'game'
+                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-black'
+                                    : evt.type === 'scrimmage'
+                                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-bold'
+                                    : evt.type === 'meeting'
+                                    ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                                    : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40 font-bold'
+                                }`}
+                              >
+                                <option value="game" className="bg-slate-900 text-amber-300 font-black">
+                                  🎮 Game
                                 </option>
-                              ))}
-                            </select>
+                                <option value="practice" className="bg-slate-900 text-indigo-300 font-bold">
+                                  🏈 Practice
+                                </option>
+                                <option value="scrimmage" className="bg-slate-900 text-rose-300 font-bold">
+                                  ⚔️ Scrimmage
+                                </option>
+                                <option value="meeting" className="bg-slate-900 text-purple-300">
+                                  📋 Meeting
+                                </option>
+                                <option value="walkthrough" className="bg-slate-900 text-cyan-300">
+                                  🚶 Walkthrough
+                                </option>
+                              </select>
 
-                            {/* Editable Title */}
-                            <input
-                              type="text"
-                              value={evt.title}
-                              onChange={(e) =>
-                                handleUpdateParsedEvent(idx, { title: e.target.value })
-                              }
-                              onClick={(e) => e.stopPropagation()}
-                              className="font-bold text-white bg-slate-900/90 border border-slate-700/80 rounded px-2 py-0.5 text-xs flex-1 min-w-[180px] focus:outline-none focus:border-indigo-500"
-                            />
-                          </div>
+                              {/* Week Selector Dropdown */}
+                              <select
+                                value={evt.week}
+                                onChange={(e) =>
+                                  handleUpdateParsedEvent(originalIdx, { week: e.target.value })
+                                }
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-[10px] text-slate-300 bg-slate-900 border border-slate-700 px-1.5 py-0.5 rounded cursor-pointer focus:outline-none focus:border-indigo-500"
+                              >
+                                {getSeasonWeekList(seasonConfig).map((w) => (
+                                  <option key={w.key} value={w.key}>
+                                    {w.label}
+                                  </option>
+                                ))}
+                              </select>
 
-                          <div className="flex items-center gap-3 text-[11px] text-slate-400 flex-wrap">
-                            <span className="flex items-center gap-1 text-slate-300 font-medium">
-                              <Calendar className="w-3 h-3 text-indigo-400" />
-                              {evt.date} @ {evt.startTime}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3 text-slate-500" />
-                              {evt.location}
-                            </span>
-                            {evt.opponent && evt.type === 'game' && (
-                              <span className="text-amber-300 font-bold">
-                                🆚 Opponent: {evt.opponent} ({evt.locationType})
+                              {/* Editable Title */}
+                              <input
+                                type="text"
+                                value={evt.title}
+                                onChange={(e) =>
+                                  handleUpdateParsedEvent(originalIdx, { title: e.target.value })
+                                }
+                                onClick={(e) => e.stopPropagation()}
+                                className="font-bold text-white bg-slate-900/90 border border-slate-700/80 rounded px-2 py-0.5 text-xs flex-1 min-w-[180px] focus:outline-none focus:border-indigo-500"
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-3 text-[11px] text-slate-400 flex-wrap">
+                              <span className="flex items-center gap-1 text-slate-300 font-medium">
+                                <Calendar className="w-3 h-3 text-indigo-400" />
+                                {evt.date} @ {evt.startTime}
                               </span>
-                            )}
-                            {evt.uniform && (
-                              <span className="text-amber-300/90 font-medium">
-                                🎽 {evt.uniform}
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3 text-slate-500" />
+                                {evt.location}
                               </span>
-                            )}
+                              {evt.opponent && evt.type === 'game' && (
+                                <span className="text-amber-300 font-bold">
+                                  🆚 Opponent: {evt.opponent} ({evt.locationType})
+                                </span>
+                              )}
+                              {evt.uniform && (
+                                <span className="text-amber-300/90 font-medium">
+                                  🎽 {evt.uniform}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Quick Type Switch Button */}
-                      <div className="flex items-center gap-1 shrink-0 self-end md:self-center">
-                        {evt.type !== 'game' ? (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleUpdateParsedEvent(idx, { type: 'game' });
-                            }}
-                            className="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg text-[10px] font-bold transition-all"
-                            title="Switch this event to Game"
-                          >
-                            Set as Game 🎮
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleUpdateParsedEvent(idx, { type: 'practice' });
-                            }}
-                            className="px-2 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 rounded-lg text-[10px] font-bold transition-all"
-                            title="Switch this event to Practice"
-                          >
-                            Set as Practice 🏈
-                          </button>
-                        )}
+                        {/* Quick Type Switch Button */}
+                        <div className="flex items-center gap-1 shrink-0 self-end md:self-center">
+                          {evt.type !== 'game' ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUpdateParsedEvent(originalIdx, { type: 'game' });
+                              }}
+                              className="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg text-[10px] font-bold transition-all"
+                              title="Switch this event to Game"
+                            >
+                              Set as Game 🎮
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUpdateParsedEvent(originalIdx, { type: 'practice' });
+                              }}
+                              className="px-2 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 rounded-lg text-[10px] font-bold transition-all"
+                              title="Switch this event to Practice"
+                            >
+                              Set as Practice 🏈
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
 
               {/* Import Options */}
-              <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
-                <div className="space-y-1">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-300">
-                    Import Destination:
+              <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-300">
+                    Import Mode for {activeTeam.name}:
                   </span>
-                  <p className="text-xs text-indigo-300 font-bold">
-                    Target Team: {activeTeam.name} ({activeTeam.ageGroup})
+                  <p className="text-xs text-slate-400">
+                    Selected: <strong className="text-white">{selectedCount}</strong> total events (
+                    <strong className="text-emerald-400">{selectedNewCount} new</strong>,{' '}
+                    <strong className="text-slate-400">{selectedExistingCount} already in calendar</strong>)
                   </p>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs text-slate-200 cursor-pointer">
                     <input
                       type="radio"
                       name="importMode"
@@ -925,7 +1094,7 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
                       onChange={() => setImportMode('append')}
                       className="text-indigo-600 focus:ring-indigo-500"
                     />
-                    <span>Add to existing schedule ({existingEvents.length} events)</span>
+                    <span>Add to existing calendar (Safe - preserves current events)</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
                     <input
@@ -935,7 +1104,7 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
                       onChange={() => setImportMode('replace')}
                       className="text-indigo-600 focus:ring-indigo-500"
                     />
-                    <span className="text-rose-300">Replace current schedule for {activeTeam.name}</span>
+                    <span className="text-rose-300/90">Replace current schedule</span>
                   </label>
                 </div>
               </div>
@@ -958,7 +1127,13 @@ export const TeamSnapSyncModal: React.FC<TeamSnapSyncModalProps> = ({
             className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-black rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer"
           >
             <CheckCircle2 className="w-4 h-4" />
-            <span>Import {selectedCount} Events to {activeTeam.name}</span>
+            <span>
+              {selectedCount === 0
+                ? 'Select Events to Import'
+                : selectedExistingCount === 0
+                ? `Import ${selectedNewCount} New Event${selectedNewCount === 1 ? '' : 's'} to ${activeTeam.name}`
+                : `Import ${selectedCount} Event${selectedCount === 1 ? '' : 's'} (${selectedNewCount} new) to ${activeTeam.name}`}
+            </span>
           </button>
         </div>
       </div>

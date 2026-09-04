@@ -272,12 +272,39 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
       };
     }
 
+    const isMatch = (folderClean: string, targetClean: string) => {
+      if (folderClean === targetClean) return true;
+      if (
+        (targetClean.includes('offens') || targetClean === 'off') &&
+        (folderClean.includes('offens') || folderClean === 'off')
+      ) {
+        return true;
+      }
+      if (
+        (targetClean.includes('defens') || targetClean === 'def') &&
+        (folderClean.includes('defens') || folderClean === 'def')
+      ) {
+        return true;
+      }
+      if (targetClean.includes('special') && folderClean.includes('special')) return true;
+      if (
+        (targetClean.includes('warm') || targetClean.includes('agility')) &&
+        (folderClean.includes('warm') || folderClean.includes('agility'))
+      ) {
+        return true;
+      }
+      if (targetClean.length >= 3 && (folderClean.includes(targetClean) || targetClean.includes(folderClean))) {
+        return true;
+      }
+      return false;
+    };
+
     let matchedFolder: DrillFolder | null = null;
 
     const findFolder = (list: DrillFolder[]): DrillFolder | null => {
       for (const f of list) {
         const fClean = clean(f.name);
-        if (fClean === target || fClean.includes(target) || target.includes(fClean)) {
+        if (isMatch(fClean, target)) {
           return f;
         }
         if (f.subfolders && f.subfolders.length > 0) {
@@ -294,8 +321,11 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
       const flatDrills: DrillItem[] = [];
       const collectMatching = (list: DrillFolder[]) => {
         list.forEach((f) => {
+          const fClean = clean(f.name);
+          const fMatches = isMatch(fClean, target);
           (f.drills || []).forEach((d) => {
-            if (clean(d.name).includes(target) || clean(f.name).includes(target)) {
+            const dClean = clean(d.name);
+            if (fMatches || isMatch(dClean, target)) {
               flatDrills.push(d);
             }
           });
@@ -357,12 +387,19 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
     const traverse = (nodeList: DrillFolder[]) => {
       nodeList.forEach((n) => {
         const cleanNode = (n.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (
-          cleanCat &&
-          (cleanNode === cleanCat ||
-            cleanNode.includes(cleanCat) ||
-            cleanCat.includes(cleanNode))
-        ) {
+        const isMatch =
+          cleanNode === cleanCat ||
+          cleanNode.includes(cleanCat) ||
+          cleanCat.includes(cleanNode) ||
+          ((cleanCat.includes('offens') || cleanCat === 'off') &&
+            (cleanNode.includes('offens') || cleanNode === 'off')) ||
+          ((cleanCat.includes('defens') || cleanCat === 'def') &&
+            (cleanNode.includes('defens') || cleanNode === 'def')) ||
+          (cleanCat.includes('special') && cleanNode.includes('special')) ||
+          ((cleanCat.includes('warm') || cleanCat.includes('agility')) &&
+            (cleanNode.includes('warm') || cleanNode.includes('agility')));
+
+        if (cleanCat && isMatch) {
           if (n.drills) flat.push(...n.drills);
         }
         if (n.subfolders) traverse(n.subfolders);

@@ -22,6 +22,7 @@ import {
   CheckCheck,
   Link2,
   Clock,
+  KeyRound,
 } from 'lucide-react';
 import { StaffCoach, UserRole, Team, UnitType } from '../types';
 
@@ -34,6 +35,8 @@ interface StaffManagerViewProps {
   activeTeamId: string;
   defaultTeamId?: string;
   currentUserEmail?: string;
+  adminPasscode?: string;
+  onUpdateAdminPasscode?: (newPasscode: string) => void;
   onSelectTeam: (teamId: string) => void;
   onSetDefaultTeam?: (teamId: string) => void;
   onAddTeam: (team: Omit<Team, 'id'>) => void;
@@ -59,6 +62,8 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
   activeTeamId,
   defaultTeamId,
   currentUserEmail,
+  adminPasscode = '',
+  onUpdateAdminPasscode,
   onSelectTeam,
   onSetDefaultTeam,
   onAddTeam,
@@ -99,6 +104,14 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
   } | null>(null);
   const [copiedInvite, setCopiedInvite] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Admin Passcode Management State
+  const [showChangePasscodeModal, setShowChangePasscodeModal] = useState(false);
+  const [inputNewPasscode, setInputNewPasscode] = useState('');
+  const [inputConfirmPasscode, setInputConfirmPasscode] = useState('');
+  const [passcodeError, setPasscodeError] = useState<string | null>(null);
+  const [passcodeSuccess, setPasscodeSuccess] = useState<string | null>(null);
+  const [showCurrentPasscode, setShowCurrentPasscode] = useState(false);
 
   // Saved Practice Coaches per Team State
   const [practiceCoachTeamFilter, setPracticeCoachTeamFilter] = useState<string>(activeTeamId);
@@ -252,8 +265,7 @@ Looking forward to a great season!`;
   };
 
   const isMasterSuperAdminUser = (email: string) => {
-    const clean = email.toLowerCase().trim();
-    return clean.includes('dannym1010') || clean === 'dannym1010@gmail.com';
+    return false;
   };
 
   return (
@@ -268,8 +280,8 @@ Looking forward to a great season!`;
             <div>
               <h2 className="font-black text-base md:text-lg text-slate-100 tracking-tight flex items-center gap-2">
                 <span>Program Teams, Staff &amp; Access Permissions</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  dannym1010 Super Admin
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Admin Console
                 </span>
               </h2>
               <p className="text-xs text-slate-300 font-medium">
@@ -407,6 +419,88 @@ Looking forward to a great season!`;
         </div>
       </div>
 
+      {/* SECTION: HEAD COACH & MASTER ADMIN PASSCODE */}
+      {userRole === 'admin' && (
+        <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-amber-500/30 shadow-xl p-5 space-y-3">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-700/80 flex-wrap gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center justify-center font-bold">
+                <Lock className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-black text-sm text-slate-100">
+                    Head Coach &amp; Master Admin Passcode
+                  </h3>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                      adminPasscode
+                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                        : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                    }`}
+                  >
+                    {adminPasscode ? 'Active & Protected' : 'Not Set'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Set a custom master passcode for direct Head Coach sign-in from any device without requiring third-party authentication.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowChangePasscodeModal(true);
+                setPasscodeError(null);
+                setInputNewPasscode('');
+                setInputConfirmPasscode('');
+              }}
+              className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl shadow-md shadow-amber-600/30 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>{adminPasscode ? 'Change Admin Passcode' : 'Set Admin Passcode'}</span>
+            </button>
+          </div>
+
+          {passcodeSuccess && (
+            <div className="p-3 bg-emerald-950/80 border border-emerald-700/80 rounded-xl text-xs text-emerald-200 font-semibold flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{passcodeSuccess}</span>
+            </div>
+          )}
+
+          {!adminPasscode ? (
+            <div className="p-3.5 bg-slate-900/90 border border-slate-700/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+              <p className="text-slate-400">
+                No custom admin passcode has been created yet. Click <strong className="text-amber-300">Set Admin Passcode</strong> above to configure your master passcode.
+              </p>
+            </div>
+          ) : (
+            <div className="p-3.5 bg-slate-900/90 border border-slate-700/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400 font-bold">Passcode Status:</span>
+                  <span className="text-emerald-400 font-mono font-bold tracking-wider">
+                    {showCurrentPasscode ? adminPasscode : '••••••••••••'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPasscode(!showCurrentPasscode)}
+                    className="text-[10.5px] text-indigo-400 hover:text-indigo-300 font-semibold underline ml-1 cursor-pointer"
+                  >
+                    {showCurrentPasscode ? 'Hide' : 'Reveal'}
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Coaches can sign in using this passcode under the <strong className="text-amber-300">Admin Passcode</strong> tab on the login screen.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* SECTION 2: STAFF & COACH ACCESS PERMISSIONS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Registered Accounts & Team Assignments */}
@@ -420,7 +514,7 @@ Looking forward to a great season!`;
                 </h3>
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                <strong className="text-amber-300">dannym1010</strong> has permanent full access to all teams. Head Coaches only access teams allowed below.
+                Head Coaches and Administrators with the Admin Passcode have full access to all teams. Coaches only access teams allowed below.
               </p>
             </div>
             {userRole === 'admin' && (
@@ -1448,6 +1542,125 @@ Looking forward to a great season!`;
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Admin Passcode Modal */}
+      {showChangePasscodeModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-amber-500/30 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-700">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center justify-center font-bold">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <h3 className="font-black text-sm text-slate-100">
+                  {adminPasscode ? 'Update Admin Passcode' : 'Set Admin Passcode'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowChangePasscodeModal(false);
+                  setPasscodeError(null);
+                  setInputNewPasscode('');
+                  setInputConfirmPasscode('');
+                }}
+                className="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300">
+              This master passcode enables direct Head Coach / Administrator login from any browser under the Admin Passcode tab.
+            </p>
+
+            {passcodeError && (
+              <div className="p-3 bg-rose-950/80 border border-rose-700/80 rounded-xl text-xs text-rose-200 font-semibold">
+                ⚠️ {passcodeError}
+              </div>
+            )}
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setPasscodeError(null);
+                if (!inputNewPasscode.trim()) {
+                  setPasscodeError('Please enter a passcode.');
+                  return;
+                }
+                if (inputNewPasscode.trim().length < 4) {
+                  setPasscodeError('Passcode must be at least 4 characters.');
+                  return;
+                }
+                if (inputNewPasscode.trim() !== inputConfirmPasscode.trim()) {
+                  setPasscodeError('Passcodes do not match.');
+                  return;
+                }
+                if (onUpdateAdminPasscode) {
+                  onUpdateAdminPasscode(inputNewPasscode.trim());
+                }
+                setPasscodeSuccess('Admin passcode updated successfully!');
+                setShowChangePasscodeModal(false);
+                setInputNewPasscode('');
+                setInputConfirmPasscode('');
+                setTimeout(() => setPasscodeSuccess(null), 4000);
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                  New Admin Passcode
+                </label>
+                <input
+                  type="password"
+                  required
+                  autoFocus
+                  value={inputNewPasscode}
+                  onChange={(e) => setInputNewPasscode(e.target.value)}
+                  placeholder="Enter new admin passcode"
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                  Confirm Passcode
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={inputConfirmPasscode}
+                  onChange={(e) => setInputConfirmPasscode(e.target.value)}
+                  placeholder="Re-enter new admin passcode"
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowChangePasscodeModal(false);
+                    setPasscodeError(null);
+                    setInputNewPasscode('');
+                    setInputConfirmPasscode('');
+                  }}
+                  className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 text-slate-300 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl shadow-md shadow-amber-600/30 flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Save Passcode</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

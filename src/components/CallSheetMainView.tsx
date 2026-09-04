@@ -330,34 +330,33 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
   // Delete play from database (offensive or defensive play bank)
   const handleDeletePlayFromDatabase = (playId: string) => {
-    const play = playDatabase.find((p) => p.id === playId);
-    if (!play) return;
-    const confirmMsg = `Delete "${play.name}" from your ${play.unit} play bank?`;
-    if (window.confirm(confirmMsg)) {
-      setPlayDatabase((prev) => {
-        const next = prev.filter((p) => p.id !== playId);
-        safeJSONSet('footballPlayDatabase', next);
-        return next;
-      });
-    }
+    setPlayDatabase((prev) => {
+      const next = prev.filter((p) => p.id !== playId);
+      safeJSONSet('footballPlayDatabase', next);
+      return next;
+    });
+  };
+
+  // Batch delete plays from database
+  const handleDeleteMultiplePlaysFromDatabase = (playIds: string[]) => {
+    if (!playIds || playIds.length === 0) return;
+    const idSet = new Set(playIds);
+    setPlayDatabase((prev) => {
+      const next = prev.filter((p) => !idSet.has(p.id));
+      safeJSONSet('footballPlayDatabase', next);
+      return next;
+    });
   };
 
   // Reset active unit play bank to defaults
   const handleResetPlayDatabase = () => {
-    const unitName = activeUnit === 'offense' ? 'Offense' : 'Defense';
-    if (
-      window.confirm(
-        `Reset the ${unitName} play bank back to default plays? Any custom plays you added to ${unitName} will be cleared.`
-      )
-    ) {
-      setPlayDatabase((prev) => {
-        const otherPlays = prev.filter((p) => p.unit !== activeUnit);
-        const defaultUnitPlays = MASTER_PLAY_DATABASE.filter((p) => p.unit === activeUnit);
-        const next = [...defaultUnitPlays, ...otherPlays];
-        safeJSONSet('footballPlayDatabase', next);
-        return next;
-      });
-    }
+    setPlayDatabase((prev) => {
+      const otherPlays = prev.filter((p) => p.unit !== activeUnit);
+      const defaultUnitPlays = MASTER_PLAY_DATABASE.filter((p) => p.unit === activeUnit);
+      const next = [...defaultUnitPlays, ...otherPlays];
+      safeJSONSet('footballPlayDatabase', next);
+      return next;
+    });
   };
 
   // Import plays from Excel into database and master play library
@@ -751,6 +750,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
           }}
           onOpenExcelImport={() => setIsExcelImportOpen(true)}
           onDeletePlay={handleDeletePlayFromDatabase}
+          onDeleteMultiplePlays={handleDeleteMultiplePlaysFromDatabase}
           onResetDefaults={handleResetPlayDatabase}
           isOpen={isPlayBankOpen}
           onToggleOpen={() => setIsPlayBankOpen(!isPlayBankOpen)}
