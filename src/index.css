@@ -201,17 +201,17 @@ body {
     color: inherit;
   }
 
-  /* Force play name text and standard labels to print crisp black */
-  .callsheet-cell-slot,
-  .callsheet-cell-slot p,
-  .callsheet-cell-slot > span:not(.wristband-number-badge),
-  .callsheet-cell-slot:hover > span:not(.wristband-number-badge),
-  .group:hover .callsheet-cell-slot > span:not(.wristband-number-badge) {
+  /* Force play name text and standard labels to print crisp black unless on a dark/blue highlighted row */
+  .callsheet-cell-slot:not(.has-dark-row-highlight):not([data-row-text-white="true"]),
+  .callsheet-cell-slot:not(.has-dark-row-highlight):not([data-row-text-white="true"]) p,
+  .callsheet-cell-slot:not(.has-dark-row-highlight):not([data-row-text-white="true"]) > div > span:not(.wristband-number-badge),
+  .callsheet-cell-slot:not(.has-dark-row-highlight):not([data-row-text-white="true"]) > span:not(.wristband-number-badge) {
     color: #000000 !important;
   }
 
   /* Wristband number badges MUST retain their exact background and text colors (e.g. white text on blue/dark background) */
   .callsheet-cell-slot .wristband-number-badge,
+  .callsheet-cell-slot [data-wristband-badge="true"],
   .wristband-number-badge,
   [data-wristband-badge="true"],
   .wrist-badge {
@@ -220,17 +220,38 @@ body {
   }
 
   .callsheet-cell-slot .wristband-number-badge.badge-text-white,
+  .callsheet-cell-slot [data-wristband-badge="true"].badge-text-white,
+  .callsheet-cell-slot [data-wristband-badge="true"][data-text-color="white"],
   .wristband-number-badge.badge-text-white,
   [data-wristband-badge="true"].badge-text-white,
-  [data-wristband-badge="true"][data-text-color="white"] {
+  [data-wristband-badge="true"][data-text-color="white"],
+  .badge-text-white {
     color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
   }
 
   .callsheet-cell-slot .wristband-number-badge.badge-text-black,
+  .callsheet-cell-slot [data-wristband-badge="true"].badge-text-black,
+  .callsheet-cell-slot [data-wristband-badge="true"][data-text-color="black"],
   .wristband-number-badge.badge-text-black,
   [data-wristband-badge="true"].badge-text-black,
-  [data-wristband-badge="true"][data-text-color="black"] {
+  [data-wristband-badge="true"][data-text-color="black"],
+  .badge-text-black {
     color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+  }
+
+  /* Dark highlighted rows (blue/dark backgrounds) MUST retain white text in print just like on the wristband */
+  .callsheet-cell-slot.has-dark-row-highlight,
+  .callsheet-cell-slot.has-dark-row-highlight span:not(.badge-text-black),
+  .callsheet-cell-slot.has-dark-row-highlight p,
+  .callsheet-cell-slot[data-row-text-white="true"],
+  .callsheet-cell-slot[data-row-text-white="true"] span:not(.badge-text-black),
+  .callsheet-cell-slot[data-row-text-white="true"] p {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .callsheet-section-header,

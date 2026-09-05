@@ -96,11 +96,13 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
       return;
     }
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
     if (!isDragOver) setIsDragOver(true);
   };
 
-  const handleDragLeave = () => {
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.stopPropagation();
     setIsDragOver(false);
   };
 
@@ -113,7 +115,10 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
       return;
     }
     e.preventDefault();
+    e.stopPropagation();
     setIsDragOver(false);
+    (window as any).__activeCallSheetPlayDrag = null;
+
     try {
       const dataStr =
         e.dataTransfer.getData('application/json') ||
@@ -123,8 +128,10 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
         if (parsed && (parsed.name || parsed.text) && onDropPlay) {
           onDropPlay({
             ...parsed,
-            id: `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            id: parsed.id || `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
             name: parsed.name || parsed.text,
+            sourceSectionId: parsed.sourceSectionId,
+            sourceSlotIndex: parsed.sourceSlotIndex,
           });
           return;
         }
@@ -136,8 +143,10 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
           if (parsed && (parsed.name || parsed.text)) {
             onDropPlay({
               ...parsed,
-              id: `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+              id: parsed.id || `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
               name: parsed.name || parsed.text,
+              sourceSectionId: parsed.sourceSectionId,
+              sourceSlotIndex: parsed.sourceSlotIndex,
             });
             return;
           }
@@ -346,6 +355,8 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
     (play.isHighlighted && play.highlightColor ? play.highlightColor : undefined) ||
     match?.rowHighlightColor;
 
+  const isDarkRowHighlight = rowHighlightColor ? isDarkColor(rowHighlightColor) : false;
+
   const isStarred = Boolean(play.isStarred);
   const isLongName = play.name.length > 20;
 
@@ -363,6 +374,9 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
     ? {
         backgroundColor: rowHighlightColor,
         borderLeft: `3.5px solid ${numberBgColor || '#4f46e5'}`,
+        color: isDarkRowHighlight ? '#ffffff' : undefined,
+        WebkitPrintColorAdjust: 'exact',
+        printColorAdjust: 'exact',
       }
     : undefined;
 
@@ -393,10 +407,13 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
       draggable={Boolean(hasRealName && !isInlineEditing)}
       onDragStart={(e) => {
         if (!play || !hasRealName) return;
-        const playData: CallSheetPlay = {
+        const playData = {
           ...play,
-          id: `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          id: play.id || `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          sourceSectionId: sectionId,
+          sourceSlotIndex: slotIndex,
         };
+        (window as any).__activeCallSheetPlayDrag = playData;
         let jsonStr = '';
         try {
           jsonStr = JSON.stringify(playData);
@@ -404,7 +421,10 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
           e.dataTransfer.setData('callSheetPlayTransfer', jsonStr);
           e.dataTransfer.setData('text/plain', play.name);
         } catch {}
-        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.effectAllowed = 'copyMove';
+      }}
+      onDragEnd={() => {
+        (window as any).__activeCallSheetPlayDrag = null;
       }}
       onClick={onSlotClick}
       onDoubleClick={() => setIsInlineEditing(true)}
@@ -413,12 +433,17 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
       onDrop={handleDrop}
       onKeyDown={handleKeyDown}
       style={effectiveBgStyle}
+      data-row-text-white={isDarkRowHighlight ? 'true' : 'false'}
       className={`min-h-[28px] sm:min-h-[30px] py-1 px-1.5 sm:px-2 border-b flex items-center justify-between gap-1 text-xs select-none transition-all cursor-pointer group print:py-0.5 print:min-h-0 outline-none callsheet-cell-slot ${
         !hasRealName ? 'callsheet-slot-empty' : ''
       } ${
-        rowHighlightColor ? 'text-slate-900 border-slate-300' : baseBgClass
+        isDarkRowHighlight
+          ? 'has-dark-row-highlight text-white border-slate-300'
+          : rowHighlightColor
+          ? 'text-slate-900 border-slate-300'
+          : baseBgClass
       } ${isDragOver ? 'ring-2 ring-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/50' : ''}`}
-      title="Click to change play, drag to copy to another cell, or press Ctrl+C / Ctrl+V"
+      title="Click to change play, drag to move/copy to another cell, or press Ctrl+C / Ctrl+V"
     >
       <div className="flex items-center gap-1.5 min-w-0 flex-1 print:overflow-visible">
         {/* Exact Wristband Number Badge - cleanly displays slot number without hash sign */}
@@ -440,6 +465,9 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
                 ? {
                     backgroundColor: numberBgColor,
                     color: finalBadgeTextColor,
+                    WebkitTextFillColor: finalBadgeTextColor,
+                    WebkitPrintColorAdjust: 'exact',
+                    printColorAdjust: 'exact',
                   }
                 : undefined
             }
@@ -464,8 +492,11 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
           } ${
             !hasRealName
               ? 'text-slate-400 dark:text-slate-500 italic font-normal print:hidden'
+              : isDarkRowHighlight
+              ? 'text-white font-bold print:!text-white'
               : 'text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 print:!text-black print:group-hover:!text-black'
           }`}
+          style={isDarkRowHighlight ? { color: '#ffffff', WebkitTextFillColor: '#ffffff' } : undefined}
         >
           {hasRealName ? (
             cleanPlayName
@@ -476,7 +507,13 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
 
         {/* Formation or Type tag (non-21 formations only) */}
         {displayFormation && (
-          <span className="text-[9px] text-slate-500 dark:text-slate-400 font-mono shrink-0 hidden sm:inline-block print:text-[8px] print:inline-block print:!text-slate-800 print:group-hover:!text-slate-800">
+          <span
+            className={`text-[9px] font-mono shrink-0 hidden sm:inline-block print:text-[8px] print:inline-block ${
+              isDarkRowHighlight
+                ? 'text-white/90 print:!text-white'
+                : 'text-slate-500 dark:text-slate-400 print:!text-slate-800 print:group-hover:!text-slate-800'
+            }`}
+          >
             ({displayFormation})
           </span>
         )}

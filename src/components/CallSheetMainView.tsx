@@ -146,20 +146,27 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
   // Centralized safe updater that immediately updates local state, localStorage, and parent App state
   const applyCallSheetUpdate = useCallback((updater: CallSheetFullData | ((prev: CallSheetFullData) => CallSheetFullData)) => {
-    setCallSheetData((prev) => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      const stampedNext: CallSheetFullData = { ...next, lastEdited: Date.now() };
-      const nextJson = safeJSONStringify(stampedNext);
-      lastEmittedCallSheetJson.current = nextJson;
-      isLocalEditRef.current = Date.now();
-      safeJSONSet('footballCallSheetData', stampedNext);
-      safeJSONSet('footballCallSheetData_backup', stampedNext);
-      if (onUpdateCallSheetData) {
-        onUpdateCallSheetData(stampedNext);
-      }
-      return stampedNext;
-    });
-  }, [onUpdateCallSheetData]);
+    try {
+      setCallSheetData((prev) => {
+        try {
+          const next = typeof updater === 'function' ? updater(prev) : updater;
+          if (!next) return prev;
+          const stampedNext: CallSheetFullData = { ...next, lastEdited: Date.now() };
+          const nextJson = safeJSONStringify(stampedNext);
+          lastEmittedCallSheetJson.current = nextJson;
+          isLocalEditRef.current = Date.now();
+          safeJSONSet('footballCallSheetData', stampedNext);
+          safeJSONSet('footballCallSheetData_backup', stampedNext);
+          return stampedNext;
+        } catch (innerErr) {
+          console.error('Error applying call sheet updater:', innerErr);
+          return prev;
+        }
+      });
+    } catch (err) {
+      console.error('applyCallSheetUpdate error:', err);
+    }
+  }, []);
 
   // Sync state if parent props update from server or Firestore
   useEffect(() => {
@@ -209,21 +216,22 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
       lastSyncedWbJsonRef.current = wbJson;
 
       setCallSheetData((prev) => {
-        const synced = syncWristbandToCallSheet(propWristbandData, prev, playDatabase);
-        const syncedJson = safeJSONStringify(synced);
-        const prevJson = safeJSONStringify(prev);
-        if (syncedJson !== prevJson) {
-          lastEmittedCallSheetJson.current = syncedJson;
-          safeJSONSet('footballCallSheetData', synced);
-          if (onUpdateCallSheetData) {
-            onUpdateCallSheetData(synced);
+        try {
+          const synced = syncWristbandToCallSheet(propWristbandData, prev, playDatabase);
+          const syncedJson = safeJSONStringify(synced);
+          const prevJson = safeJSONStringify(prev);
+          if (syncedJson !== prevJson) {
+            lastEmittedCallSheetJson.current = syncedJson;
+            safeJSONSet('footballCallSheetData', synced);
+            return synced;
           }
-          return synced;
+        } catch (err) {
+          console.error('Failed to sync wristband to call sheet:', err);
         }
         return prev;
       });
     }
-  }, [propWristbandData, playDatabase, onUpdateCallSheetData]);
+  }, [propWristbandData, playDatabase]);
 
   useEffect(() => {
     if (propDeletedPlayIds && Array.isArray(propDeletedPlayIds)) {
@@ -344,7 +352,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   const handleAssignPlayToSlot = (
     sectionId: string,
     slotIndex: number,
-    play: CallSheetPlay
+    play: CallSheetPlay & { sourceSectionId?: string; sourceSlotIndex?: number }
   ) => {
     applyCallSheetUpdate((prev) => {
       const next = { ...prev };
@@ -353,13 +361,53 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
       if (playToAssign.name && (playToAssign.name.startsWith('21') || playToAssign.name.includes('21 R') || playToAssign.name.includes('21 L') || /\b21\b/.test(playToAssign.name))) {
         playToAssign.formation = inferFormation(playToAssign.name, activeUnit, playToAssign.formation);
       }
+
+      const sourceSecId = play.sourceSectionId;
+      const sourceSlotIdx = play.sourceSlotIndex;
+      const isMovingFromSlot = sourceSecId !== undefined && sourceSlotIdx !== undefined;
+
+      // Clean drag metadata before persisting
+      delete (playToAssign as any).sourceSectionId;
+      delete (playToAssign as any).sourceSlotIndex;
+
+      // If moving from a slot to a different slot, clear or swap source slot
+      if (isMovingFromSlot && (sourceSecId !== sectionId || sourceSlotIdx !== slotIndex)) {
+        if (sourceSecId === 'script') {
+          if (activeUnit === 'offense') {
+            const arr = [...(next.offenseScript || [])];
+            if (arr[sourceSlotIdx] !== undefined) arr[sourceSlotIdx] = null;
+            next.offenseScript = arr;
+          } else {
+            const arr = [...(next.defenseScript || [])];
+            if (arr[sourceSlotIdx] !== undefined) arr[sourceSlotIdx] = null;
+            next.defenseScript = arr;
+          }
+        } else {
+          const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
+          const sections = [...(next[sectionsKey] || [])];
+          const srcIdx = sections.findIndex((s) => s.id === sourceSecId);
+          if (srcIdx >= 0) {
+            const srcSec = { ...sections[srcIdx] };
+            const srcPlays = [...(srcSec.plays || [])];
+            if (srcPlays[sourceSlotIdx] !== undefined) {
+              srcPlays[sourceSlotIdx] = null;
+              srcSec.plays = srcPlays;
+              sections[srcIdx] = srcSec;
+              next[sectionsKey] = sections;
+            }
+          }
+        }
+      }
+
       if (sectionId === 'script') {
         if (activeUnit === 'offense') {
           const arr = [...(next.offenseScript || [])];
+          while (arr.length <= slotIndex) arr.push(null);
           arr[slotIndex] = playToAssign;
           next.offenseScript = arr;
         } else {
           const arr = [...(next.defenseScript || [])];
+          while (arr.length <= slotIndex) arr.push(null);
           arr[slotIndex] = playToAssign;
           next.defenseScript = arr;
         }
@@ -369,7 +417,8 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
         const secIndex = sections.findIndex((s) => s.id === sectionId);
         if (secIndex >= 0) {
           const sec = { ...sections[secIndex] };
-          const plays = [...sec.plays];
+          const plays = [...(sec.plays || [])];
+          while (plays.length <= slotIndex) plays.push(null);
           plays[slotIndex] = playToAssign;
           sec.plays = plays;
           sections[secIndex] = sec;
@@ -386,25 +435,27 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
       const next = { ...prev };
       if (sectionId === 'script') {
         if (activeUnit === 'offense') {
-          const arr = [...next.offenseScript];
-          arr[slotIndex] = null;
+          const arr = [...(next.offenseScript || [])];
+          if (arr[slotIndex] !== undefined) arr[slotIndex] = null;
           next.offenseScript = arr;
         } else {
-          const arr = [...next.defenseScript];
-          arr[slotIndex] = null;
+          const arr = [...(next.defenseScript || [])];
+          if (arr[slotIndex] !== undefined) arr[slotIndex] = null;
           next.defenseScript = arr;
         }
       } else {
         const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
-        const sections = [...next[sectionsKey]];
+        const sections = [...(next[sectionsKey] || [])];
         const secIndex = sections.findIndex((s) => s.id === sectionId);
         if (secIndex >= 0) {
           const sec = { ...sections[secIndex] };
-          const plays = [...sec.plays];
-          plays[slotIndex] = null;
-          sec.plays = plays;
-          sections[secIndex] = sec;
-          next[sectionsKey] = sections;
+          const plays = [...(sec.plays || [])];
+          if (plays[slotIndex] !== undefined) {
+            plays[slotIndex] = null;
+            sec.plays = plays;
+            sections[secIndex] = sec;
+            next[sectionsKey] = sections;
+          }
         }
       }
       return next;

@@ -898,8 +898,10 @@ export function syncWristbandToCallSheet(
           interleaved.push(play2);
         }
 
+        const wbFullTitle = (wb.title && wb.title.trim()) ? wb.title.trim() : sec.title;
         return {
           ...sec,
+          title: wbFullTitle,
           wristbandId: wb.id,
           wristbandPresetMode: 'full_two_col',
           columnsCount: 2,
@@ -955,8 +957,12 @@ export function syncWristbandToCallSheet(
           };
         });
 
+        const wbBaseTitle = (wb.title && wb.title.trim()) ? wb.title.trim() : 'Wristband';
+        const colTitle = `${wbBaseTitle} • ${targetCol.name || (colIdx === 1 ? 'Column 2' : 'Column 1')}`;
+
         return {
           ...sec,
+          title: colTitle,
           wristbandId: wb.id,
           wristbandPresetMode: mode,
           wristbandColIdx: colIdx,
@@ -966,9 +972,16 @@ export function syncWristbandToCallSheet(
       }
     }
 
+    // If section explicitly links to a wristband or is named like a wristband table, keep title synced
+    const matchedWbForSec = sec.wristbandId ? wbMap.get(sec.wristbandId) : undefined;
+    const syncedTitle = (matchedWbForSec && matchedWbForSec.title && matchedWbForSec.title.trim())
+      ? matchedWbForSec.title.trim()
+      : sec.title;
+
     // Default for regular (situational/custom) sections: sync individual plays
     return {
       ...sec,
+      title: syncedTitle,
       plays: (sec.plays || []).map(syncPlay),
     };
   };

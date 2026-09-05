@@ -303,9 +303,6 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
               </span>
             </div>
             <div className="flex items-center gap-1 shrink-0 ml-1">
-              <span className="text-[10px] opacity-90 font-mono font-bold">
-                ({filledCount}/{section.slotsCount})
-              </span>
               {/* Quick Move Buttons on hover */}
               <div className="hidden group-hover:flex items-center gap-0.5 print:hidden">
                 {canMoveLeft && (
