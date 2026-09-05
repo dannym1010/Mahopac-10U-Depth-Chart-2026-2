@@ -336,13 +336,57 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
   if (incoming.masterPlayLibrary) merged.masterPlayLibrary = incoming.masterPlayLibrary;
   if (incoming.collapsedFolders) merged.collapsedFolders = incoming.collapsedFolders;
   if (Array.isArray(incoming.playDatabase)) merged.playDatabase = incoming.playDatabase;
-  if (incoming.callSheetData && typeof incoming.callSheetData === 'object') merged.callSheetData = incoming.callSheetData;
+  if (
+    incoming.callSheetData &&
+    typeof incoming.callSheetData === 'object' &&
+    (incoming.callSheetData.offenseSections || incoming.callSheetData.defenseSections)
+  ) {
+    const incLastEdited = Number(incoming.callSheetData.lastEdited) || 0;
+    const curLastEdited = Number(current.callSheetData?.lastEdited) || 0;
+    const isCallSheetScope =
+      metadata?.scope === 'call_sheet' ||
+      metadata?.scope === 'call_sheet_winner' ||
+      metadata?.scope === 'all' ||
+      metadata?.scope === 'force' ||
+      metadata?.scope === 'unit_transition';
+
+    if (!current.callSheetData || incLastEdited >= curLastEdited || isCallSheetScope) {
+      merged.callSheetData = {
+        ...incoming.callSheetData,
+        lastEdited: incLastEdited > 0 ? incLastEdited : Date.now(),
+      };
+    }
+  }
+
   if (Array.isArray(incoming.deletedPlayIds)) {
     const existingDeleted = new Set(merged.deletedPlayIds || []);
     incoming.deletedPlayIds.forEach((id: string) => existingDeleted.add(id));
     merged.deletedPlayIds = Array.from(existingDeleted);
     if (Array.isArray(merged.playDatabase)) {
       merged.playDatabase = merged.playDatabase.filter((p: any) => !existingDeleted.has(p.id));
+    }
+    // Also clean deleted plays out of call sheet if present
+    if (merged.callSheetData && (merged.callSheetData.offenseSections || merged.callSheetData.defenseSections)) {
+      const purgePlays = (arr: any[]) =>
+        (arr || []).map((p: any) => (p && existingDeleted.has(p.id) ? null : p));
+      if (Array.isArray(merged.callSheetData.offenseSections)) {
+        merged.callSheetData.offenseSections = merged.callSheetData.offenseSections.map((s: any) => ({
+          ...s,
+          plays: purgePlays(s.plays),
+        }));
+      }
+      if (Array.isArray(merged.callSheetData.defenseSections)) {
+        merged.callSheetData.defenseSections = merged.callSheetData.defenseSections.map((s: any) => ({
+          ...s,
+          plays: purgePlays(s.plays),
+        }));
+      }
+      if (Array.isArray(merged.callSheetData.offenseScript)) {
+        merged.callSheetData.offenseScript = purgePlays(merged.callSheetData.offenseScript);
+      }
+      if (Array.isArray(merged.callSheetData.defenseScript)) {
+        merged.callSheetData.defenseScript = purgePlays(merged.callSheetData.defenseScript);
+      }
     }
   }
 

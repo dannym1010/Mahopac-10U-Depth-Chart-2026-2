@@ -14,6 +14,8 @@ import {
   Columns,
   FileSpreadsheet,
   BookmarkCheck,
+  History,
+  X,
 } from 'lucide-react';
 import {
   CallSheetFullData,
@@ -33,6 +35,13 @@ import { WristbandData } from '../types';
 import { INITIAL_TWO_WRISTBANDS_DATA } from '../data/userGameDayPlays';
 import { safeJSONParse, safeJSONSet, safeJSONStringify } from '../services/storageService';
 import { syncWristbandToCallSheet, inferFormation } from '../utils/wristbandLinking';
+import {
+  CallSheetSnapshot,
+  getCallSheetSnapshots,
+  saveCallSheetSnapshot,
+  countCallSheetPlays,
+  countCallSheetSections,
+} from '../utils/callSheetStorage';
 import { ComputerCallSheetView } from './callSheet/ComputerCallSheetView';
 import { MobileCallSheetView } from './callSheet/MobileCallSheetView';
 import { PlayPickerModal } from './callSheet/PlayPickerModal';
@@ -40,6 +49,7 @@ import { PlayBankSidebar } from './callSheet/PlayBankSidebar';
 import { ExcelPlayImportModal } from './callSheet/ExcelPlayImportModal';
 import { AddTableModal } from './callSheet/AddTableModal';
 import { CallSheetPrintModal } from './callSheet/CallSheetPrintModal';
+import { CallSheetHistoryModal } from './CallSheetHistoryModal';
 
 interface CallSheetMainViewProps {
   activeTeamName?: string;
@@ -87,20 +97,24 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   const [callSheetData, setCallSheetData] = useState<CallSheetFullData>(() => {
     const saved = safeJSONParse<CallSheetFullData | null>('footballCallSheetData', null);
     const backup = safeJSONParse<CallSheetFullData | null>('footballCallSheetData_backup', null);
+    const historyList = safeJSONParse<CallSheetSnapshot[]>('footballCallSheet_history', []);
+    const historyLatest = historyList && historyList.length > 0 ? historyList[0]?.data : null;
 
-    const candidates = [saved, backup, propCallSheetData].filter(
-      (c): c is CallSheetFullData => Boolean(c && (c.offenseSections || c.defenseSections))
+    const candidates = [saved, backup, historyLatest, propCallSheetData].filter(
+      (c): c is CallSheetFullData => Boolean(c && typeof c === 'object' && (c.offenseSections || c.defenseSections))
     );
 
     let bestData = DEFAULT_CALL_SHEET_DATA;
-    let maxScore = -1;
+    let bestScore = -1;
 
     for (const c of candidates) {
       const playCount = countPopulatedPlays(c);
       const secCount = (c.offenseSections?.length || 0) + (c.defenseSections?.length || 0);
-      const score = playCount * 10 + secCount;
-      if (score > maxScore) {
-        maxScore = score;
+      const lastEdited = c.lastEdited || 0;
+      // Prioritize timestamp so recent user edits win over older versions
+      const score = lastEdited > 0 ? lastEdited : playCount * 10 + secCount;
+      if (score > bestScore) {
+        bestScore = score;
         bestData = c;
       }
     }
@@ -144,29 +158,74 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   const isLocalEditRef = useRef<number>(0);
   const lastSyncedWbJsonRef = useRef<string>('');
 
-  // Centralized safe updater that immediately updates local state, localStorage, and parent App state
-  const applyCallSheetUpdate = useCallback((updater: CallSheetFullData | ((prev: CallSheetFullData) => CallSheetFullData)) => {
+  // History and backup recovery state
+  const [availableBackupToRestore, setAvailableBackupToRestore] = useState<CallSheetSnapshot | null>(null);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+
+  // Detect if an alternate backup or recent revision exists in localStorage with plays
+  useEffect(() => {
     try {
-      setCallSheetData((prev) => {
-        try {
-          const next = typeof updater === 'function' ? updater(prev) : updater;
-          if (!next) return prev;
-          const stampedNext: CallSheetFullData = { ...next, lastEdited: Date.now() };
-          const nextJson = safeJSONStringify(stampedNext);
-          lastEmittedCallSheetJson.current = nextJson;
-          isLocalEditRef.current = Date.now();
-          safeJSONSet('footballCallSheetData', stampedNext);
-          safeJSONSet('footballCallSheetData_backup', stampedNext);
-          return stampedNext;
-        } catch (innerErr) {
-          console.error('Error applying call sheet updater:', innerErr);
-          return prev;
-        }
+      const snapshots = getCallSheetSnapshots();
+      const currentPlays = countPopulatedPlays(callSheetData);
+      const currentLastEdited = callSheetData.lastEdited || 0;
+
+      const candidate = snapshots.find((snap) => {
+        if (!snap.data || snap.playCount === 0) return false;
+        const timeDiff = Math.abs(snap.timestamp - currentLastEdited);
+        const hasMorePlays = snap.playCount > currentPlays;
+        const isDifferentRecent =
+          timeDiff > 10000 &&
+          Date.now() - snap.timestamp < 86400000 &&
+          (snap.playCount !== currentPlays || snap.timestamp > currentLastEdited);
+        return hasMorePlays || isDifferentRecent;
       });
-    } catch (err) {
-      console.error('applyCallSheetUpdate error:', err);
+
+      if (candidate) {
+        setAvailableBackupToRestore(candidate);
+      }
+    } catch (e) {
+      console.warn('Error checking call sheet backups:', e);
     }
   }, []);
+
+  // Centralized safe updater that immediately updates local state, localStorage, and parent App state
+  const applyCallSheetUpdate = useCallback(
+    (updater: CallSheetFullData | ((prev: CallSheetFullData) => CallSheetFullData)) => {
+      try {
+        setCallSheetData((prev) => {
+          try {
+            const next = typeof updater === 'function' ? updater(prev) : updater;
+            if (!next) return prev;
+            const now = Date.now();
+            const stampedNext: CallSheetFullData = { ...next, lastEdited: now };
+            const nextJson = safeJSONStringify(stampedNext);
+            lastEmittedCallSheetJson.current = nextJson;
+            isLocalEditRef.current = now;
+
+            // Save snapshot and update storage immediately
+            saveCallSheetSnapshot(stampedNext);
+
+            // CRITICAL: Notify parent App component immediately so App state and debouncedSave to server & Firestore fire!
+            if (onUpdateCallSheetData) {
+              try {
+                onUpdateCallSheetData(stampedNext);
+              } catch (notifyErr) {
+                console.warn('Error calling onUpdateCallSheetData:', notifyErr);
+              }
+            }
+
+            return stampedNext;
+          } catch (innerErr) {
+            console.error('Error applying call sheet updater:', innerErr);
+            return prev;
+          }
+        });
+      } catch (err) {
+        console.error('applyCallSheetUpdate error:', err);
+      }
+    },
+    [onUpdateCallSheetData]
+  );
 
   // Sync state if parent props update from server or Firestore
   useEffect(() => {
@@ -197,9 +256,9 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
           if (prevPlayCount > 0 && incomingPlayCount === 0) {
             return prev;
           }
-          const prevSecCount = (prev.offenseSections?.length || 0) + (prev.defenseSections?.length || 0);
-          const incomingSecCount = (propCallSheetData.offenseSections?.length || 0) + (propCallSheetData.defenseSections?.length || 0);
-          if (prevSecCount > incomingSecCount && (prev.lastEdited || 0) > (propCallSheetData.lastEdited || 0)) {
+          const prevLastEdited = prev.lastEdited || 0;
+          const incomingLastEdited = propCallSheetData.lastEdited || 0;
+          if (prevLastEdited >= incomingLastEdited && prevPlayCount > 0) {
             return prev;
           }
           return propCallSheetData;
@@ -298,7 +357,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
     const currentJson = safeJSONStringify(callSheetData);
     if (currentJson !== lastEmittedCallSheetJson.current) {
       lastEmittedCallSheetJson.current = currentJson;
-      safeJSONSet('footballCallSheetData', callSheetData);
+      saveCallSheetSnapshot(callSheetData);
       if (onUpdateCallSheetData) {
         onUpdateCallSheetData(callSheetData);
       }
@@ -712,7 +771,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
     );
     if (!confirm) return;
 
-    setCallSheetData((prev) => {
+    applyCallSheetUpdate((prev) => {
       const next = { ...prev };
       const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
       const sections = next[sectionsKey].map((sec) => {
@@ -758,7 +817,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
     );
     if (!confirm) return;
 
-    setCallSheetData((prev) => {
+    applyCallSheetUpdate((prev) => {
       const next = { ...prev };
       if (activeUnit === 'offense') {
         next.offenseSections = DEFAULT_OFFENSE_SECTIONS;
@@ -949,6 +1008,17 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
               <span className="hidden sm:inline">Wristband Preset</span>
             </button>
 
+            {/* Backups & Revision History Button */}
+            <button
+              type="button"
+              onClick={() => setIsHistoryModalOpen(true)}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-750 text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+              title="View revision history, restore previous backups, or export call sheet"
+            >
+              <History className="w-3.5 h-3.5 text-sky-400" />
+              <span className="hidden sm:inline">Backups & History</span>
+            </button>
+
             {/* Add Section Button */}
             <button
               type="button"
@@ -998,6 +1068,48 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
       <div className="flex-1 flex overflow-hidden min-h-0 callsheet-inner-container print:h-auto print:overflow-visible print:block">
         {/* Main sheet container */}
         <main className="flex-1 overflow-y-auto min-h-0 p-2 sm:p-4 print:p-0 print:overflow-visible callsheet-scroll-container overscroll-contain">
+          {/* Recovery Notification Banner if older or alternate backup is available */}
+          {availableBackupToRestore && (
+            <div className="mb-3 p-3 rounded-xl bg-indigo-950/90 border border-indigo-500/50 flex flex-wrap items-center justify-between gap-3 text-xs text-indigo-200 shadow-md animate-fade-in print:hidden">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <History className="w-4 h-4 text-indigo-400 shrink-0" />
+                <div>
+                  <span className="font-bold text-white">Call Sheet Revision Available: </span>
+                  <span className="text-slate-300">
+                    Saved {availableBackupToRestore.dateFormatted} with {availableBackupToRestore.playCount} plays ({availableBackupToRestore.sectionCount} sections).
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    applyCallSheetUpdate(availableBackupToRestore.data);
+                    setAvailableBackupToRestore(null);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold cursor-pointer transition-colors shadow-xs"
+                >
+                  Restore This Version
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsHistoryModalOpen(true)}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 text-slate-300 font-medium cursor-pointer border border-slate-700"
+                >
+                  View All Backups
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAvailableBackupToRestore(null)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white cursor-pointer"
+                  title="Dismiss notice"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Printable Call Sheet Header Bar */}
           <div className="hidden print:block mb-1 border-b border-slate-300 pb-0.5 bg-white text-slate-900">
             <div className="flex items-center justify-between">
@@ -1030,7 +1142,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
               onAddSection={handleAddSection}
               onReorderSections={handleReorderSections}
               onChangeTimeouts={(timeouts) =>
-                setCallSheetData((prev) => ({ ...prev, timeouts }))
+                applyCallSheetUpdate((prev) => ({ ...prev, timeouts }))
               }
               onUpdateTwoPointRules={handleUpdateTwoPointRules}
               onToggleTwoPointHighlight={handleToggleTwoPointHighlight}
@@ -1050,7 +1162,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
               onSlotClick={handleSlotClick}
               onClearSlot={handleClearSlot}
               onChangeTimeouts={(timeouts) =>
-                setCallSheetData((prev) => ({ ...prev, timeouts }))
+                applyCallSheetUpdate((prev) => ({ ...prev, timeouts }))
               }
               onUpdateSection={handleUpdateSection}
               onDeleteSection={handleDeleteSection}
@@ -1142,6 +1254,14 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
         activeTeamName={activeTeamName}
         wristbandData={normalizedWristbandData}
         gridColumns={gridColumns}
+      />
+
+      {/* 7. Call Sheet History, Backups & Recovery Modal */}
+      <CallSheetHistoryModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        currentCallSheet={callSheetData}
+        onRestoreCallSheet={(restored) => applyCallSheetUpdate(restored)}
       />
     </div>
   );

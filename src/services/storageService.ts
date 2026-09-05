@@ -289,6 +289,7 @@ export async function saveServerState(
       headers: {
         'Content-Type': 'application/json',
       },
+      keepalive: true,
       body: safeJSONStringify({
         state,
         author,

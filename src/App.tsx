@@ -101,6 +101,7 @@ import { ExcelPlayImportModal } from './components/callSheet/ExcelPlayImportModa
 import { PlayDatabaseEntry, CallSheetData, CallSheetFullData } from './types/callSheet';
 import { MASTER_PLAY_DATABASE, DEFAULT_CALL_SHEET_DATA } from './data/callSheetData';
 import { syncWristbandToCallSheet } from './utils/wristbandLinking';
+import { saveCallSheetSnapshot } from './utils/callSheetStorage';
 import { ScoutingView } from './components/ScoutingView';
 import { PlaybookGuidesView } from './components/PlaybookGuidesView';
 import { DrillLibraryView } from './components/DrillLibraryView';
@@ -203,9 +204,30 @@ export default function App() {
     return MASTER_PLAY_DATABASE.filter((p) => !deletedSet.has(p.id));
   });
   const [callSheetData, setCallSheetData] = useState<CallSheetData>(() => {
-    const saved = safeJSONParse('footballCallSheetData', null);
-    if (saved && typeof saved === 'object') return saved;
-    return DEFAULT_CALL_SHEET_DATA;
+    const saved = safeJSONParse<CallSheetData | null>('footballCallSheetData', null);
+    const backup = safeJSONParse<CallSheetData | null>('footballCallSheetData_backup', null);
+    const historyList = safeJSONParse<any[]>('footballCallSheet_history', []);
+    const historyLatest = historyList && historyList.length > 0 ? (historyList[0]?.data as CallSheetData) : null;
+
+    const candidates = [saved, backup, historyLatest].filter(
+      (c): c is CallSheetData => Boolean(c && typeof c === 'object' && (c.offenseSections || c.defenseSections))
+    );
+
+    let best: CallSheetData = DEFAULT_CALL_SHEET_DATA;
+    let bestScore = -1;
+
+    for (const c of candidates) {
+      const lastEdited = (c as any).lastEdited || 0;
+      let count = 0;
+      (c.offenseSections || []).forEach((s) => s.plays?.forEach((p) => { if (p?.name?.trim()) count++; }));
+      (c.defenseSections || []).forEach((s) => s.plays?.forEach((p) => { if (p?.name?.trim()) count++; }));
+      const score = lastEdited > 0 ? lastEdited : count * 10;
+      if (score > bestScore) {
+        bestScore = score;
+        best = c;
+      }
+    }
+    return best;
   });
   const [wristbandData, setWristbandData] = useState<WristbandData>(() => {
     const saved = safeJSONParse<WristbandData | null>('footballWristbandData', null);
@@ -1137,8 +1159,26 @@ function mergeRemoteWeeklyData(
     }
     if (data.callSheetData && typeof data.callSheetData === 'object' && (data.callSheetData.offenseSections || data.callSheetData.defenseSections)) {
       const localCs = latestStateRef.current.callSheetData || callSheetData;
-      const isLocalRecent = Date.now() - Math.max(lastLocalEditTimeRef.current, lastLocalCallSheetEditTimeRef.current) < 120000;
-      const localLastEdited = localCs?.lastEdited || 0;
+      const backupCs = safeJSONParse<CallSheetFullData | null>('footballCallSheetData_backup', null);
+      const historyList = safeJSONParse<any[]>('footballCallSheet_history', []);
+      const historyLatest = historyList && historyList.length > 0 ? (historyList[0]?.data as CallSheetFullData) : null;
+
+      const candidates = [localCs, backupCs, historyLatest].filter(
+        (c): c is CallSheetFullData => Boolean(c && typeof c === 'object' && (c.offenseSections || c.defenseSections))
+      );
+
+      let bestLocalCs: CallSheetFullData = localCs;
+      let highestLocalTimestamp = 0;
+      for (const cand of candidates) {
+        const t = cand.lastEdited || 0;
+        if (t > highestLocalTimestamp) {
+          highestLocalTimestamp = t;
+          bestLocalCs = cand;
+        }
+      }
+
+      const isLocalRecent = Date.now() - Math.max(lastLocalEditTimeRef.current, lastLocalCallSheetEditTimeRef.current) < 180000;
+      const localLastEdited = Math.max(localCs?.lastEdited || 0, highestLocalTimestamp);
       const remoteLastEdited = (data.callSheetData as any)?.lastEdited || 0;
 
       const countPlays = (cs?: CallSheetFullData) => {
@@ -1149,24 +1189,30 @@ function mergeRemoteWeeklyData(
         return count;
       };
 
-      const localPlayCount = countPlays(localCs);
+      const localPlayCount = countPlays(bestLocalCs);
       const remotePlayCount = countPlays(data.callSheetData);
 
       // Do NOT overwrite if:
-      // 1. Local was edited recently (< 2 mins)
+      // 1. Local was edited recently (< 3 mins)
       // 2. Local timestamp is newer than remote
       // 3. Local has plays while remote is empty
       if (
         isLocalRecent ||
-        (localLastEdited > remoteLastEdited && localPlayCount > 0) ||
+        (localLastEdited >= remoteLastEdited && localPlayCount > 0) ||
         (localPlayCount > 0 && remotePlayCount === 0)
       ) {
         // Preserving local call sheet data
+        if (localLastEdited > remoteLastEdited) {
+          setCallSheetData(bestLocalCs);
+          latestStateRef.current.callSheetData = bestLocalCs;
+          safeJSONSet('footballCallSheetData', bestLocalCs);
+          debouncedSave('all');
+        }
       } else {
         setCallSheetData(data.callSheetData);
         latestStateRef.current.callSheetData = data.callSheetData;
         safeJSONSet('footballCallSheetData', data.callSheetData);
-        safeJSONSet('footballCallSheetData_backup', data.callSheetData);
+        // Note: Keep footballCallSheetData_backup intact as a local safety net
       }
     }
     if (
@@ -5603,8 +5649,7 @@ function mergeRemoteWeeklyData(
     const taggedCs: CallSheetFullData = { ...newCs, lastEdited: now };
     setCallSheetData(taggedCs);
     latestStateRef.current.callSheetData = taggedCs;
-    safeJSONSet('footballCallSheetData', taggedCs);
-    safeJSONSet('footballCallSheetData_backup', taggedCs);
+    saveCallSheetSnapshot(taggedCs);
     debouncedSave('all');
   };
 
