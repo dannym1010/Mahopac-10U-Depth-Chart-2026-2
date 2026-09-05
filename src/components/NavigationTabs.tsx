@@ -18,6 +18,7 @@ import {
   FolderPlus,
   Layers,
   ChevronRight,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { CustomTabGroup, UnitType, UserRole } from '../types';
 import { safeJSONParse, safeJSONSet } from '../services/storageService';
@@ -45,14 +46,12 @@ export interface NavTabItem {
 
 export const DEFAULT_NAV_TABS: NavTabItem[] = [
   { id: 'mobile_hub', label: '📱 Mobile HUD', icon: Smartphone },
+  { id: 'game_day', label: '🏆 Game Day Hub', icon: Swords },
   { id: 'schedule', label: '📅 Schedule', icon: Calendar },
   { id: 'compliance', label: '⚡ Compliance & Hours', icon: Zap },
   { id: 'depth_chart', label: '📋 Depth Chart', icon: ClipboardList },
-  { id: 'wristband', label: '⌚ Wristband', icon: Watch },
-  { id: 'call_sheet', label: '🏈 Call Sheet', icon: FileSpreadsheet },
   { id: 'practice', label: '📋 Practice Plan', icon: ClipboardList },
   { id: 'drills', label: '🏋️ Drill Library', icon: Dumbbell },
-  { id: 'scouting', label: '📊 Scouting', icon: FileSpreadsheet },
   { id: 'guide', label: '📖 Playbooks & Guides', icon: BookOpen },
   { id: 'users', label: '👥 Staff & Access', icon: Users, adminOnly: true },
 ];
@@ -75,18 +74,35 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
     return safeJSONParse<CustomTabGroup[]>('footballCustomTabGroups', []);
   });
 
+  // Controls whether "+ Custom Tabs" button is visible on the main tab bar (defaults to false to keep line clean)
+  const [showCustomTabsOnMainBar, setShowCustomTabsOnMainBar] = useState<boolean>(() => {
+    return safeJSONParse<boolean>('footballShowCustomTabsOnMainBar', false);
+  });
+
+  const handleToggleShowCustomTabsOnMainBar = () => {
+    setShowCustomTabsOnMainBar((prev) => {
+      const next = !prev;
+      safeJSONSet('footballShowCustomTabsOnMainBar', next);
+      return next;
+    });
+  };
+
   // Top Bar Tab Order (contains standalone tab IDs and custom group IDs)
   const [tabOrder, setTabOrder] = useState<string[]>(() => {
     const saved = safeJSONParse<string[]>('footballTopTabOrder', []);
+    const removedTabs = ['wristband', 'call_sheet', 'scouting'];
+    const validDefaultIds = DEFAULT_NAV_TABS.map((t) => t.id);
+
     if (saved && Array.isArray(saved) && saved.length > 0) {
-      const allDefaultIds = DEFAULT_NAV_TABS.map((t) => t.id);
-      const missing = allDefaultIds.filter((id) => !saved.includes(id));
+      // Clean up removed tabs from existing saved localStorage
+      const filtered = saved.filter((id) => !removedTabs.includes(id));
+      const missing = validDefaultIds.filter((id) => !filtered.includes(id));
       if (missing.length > 0) {
-        return [...missing, ...saved];
+        return [...missing, ...filtered];
       }
-      return saved;
+      return filtered;
     }
-    return DEFAULT_NAV_TABS.map((t) => t.id);
+    return validDefaultIds;
   });
 
   const [isManagerModalOpen, setIsManagerModalOpen] = useState(false);
@@ -201,6 +217,8 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
     .map((id) => {
       const customGroup = customGroups.find((g) => g.id === id);
       if (customGroup) {
+        // If this custom folder is marked as hidden, do NOT display it on the navigation bar
+        if (customGroup.hidden) return null;
         return {
           type: 'group' as const,
           id: customGroup.id,
@@ -306,18 +324,30 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
             })}
           </div>
 
-          {/* "+ New Tab Group / Manage Tabs" Button */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={() => setIsManagerModalOpen(true)}
-              title="Create new tab groups, nest tabs into sub-menus, and reorder navigation"
-              className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-indigo-300 hover:text-indigo-200 border border-slate-800 hover:border-indigo-500/40 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
-            >
-              <FolderPlus className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="hidden lg:inline">+ Custom Tabs</span>
-              <span className="lg:hidden">Tabs</span>
-            </button>
-          </div>
+          {/* "+ New Tab Group / Manage Tabs" Button - Hidden by default on main tab line */}
+          {showCustomTabsOnMainBar ? (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={() => setIsManagerModalOpen(true)}
+                title="Create new tab groups, nest tabs into sub-menus, and reorder navigation"
+                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-indigo-300 hover:text-indigo-200 border border-slate-800 hover:border-indigo-500/40 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+              >
+                <FolderPlus className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="hidden lg:inline">+ Custom Tabs</span>
+                <span className="lg:hidden">Tabs</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center shrink-0">
+              <button
+                onClick={() => setIsManagerModalOpen(true)}
+                title="Manage custom tab folders, tab order, and navigation preferences"
+                className="p-1.5 rounded-xl text-slate-500 hover:text-slate-300 hover:bg-slate-900 transition-colors cursor-pointer border border-transparent hover:border-slate-800"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -370,6 +400,8 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
         onSaveTabOrder={handleSaveTabOrder}
         defaultScreen={defaultScreen}
         userRole={userRole}
+        showCustomTabsOnMainBar={showCustomTabsOnMainBar}
+        onToggleShowCustomTabsOnMainBar={handleToggleShowCustomTabsOnMainBar}
       />
     </>
   );

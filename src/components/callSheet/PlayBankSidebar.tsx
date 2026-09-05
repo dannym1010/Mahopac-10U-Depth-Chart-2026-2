@@ -20,6 +20,8 @@ import {
   Check,
 } from 'lucide-react';
 import { PlayDatabaseEntry, PlayType, CallSheetPlay } from '../../types/callSheet';
+import { extractPersonnel, getPersonnelSubTabs } from '../../utils/wristbandLinking';
+import { safeJSONStringify } from '../../services/storageService';
 
 interface PlayBankSidebarProps {
   unit: 'offense' | 'defense';
@@ -50,11 +52,20 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
   const [selectedPlayIds, setSelectedPlayIds] = useState<Record<string, boolean>>({});
   const [playToDelete, setPlayToDelete] = useState<PlayDatabaseEntry | null>(null);
   const [isConfirmResetOpen, setIsConfirmResetOpen] = useState(false);
+  const [selectedPersonnel, setSelectedPersonnel] = useState<string>('all');
+
+  const personnelTabs = useMemo(() => {
+    return getPersonnelSubTabs(plays, unit);
+  }, [plays, unit]);
 
   const filteredPlays = useMemo(() => {
     return plays.filter((p) => {
       if (p.unit !== unit) return false;
       if (selectedType !== 'all' && p.type !== selectedType) return false;
+      if (selectedPersonnel !== 'all') {
+        const pkg = extractPersonnel(p);
+        if (pkg !== selectedPersonnel) return false;
+      }
 
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase();
@@ -69,7 +80,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
       }
       return true;
     });
-  }, [plays, unit, selectedType, searchTerm]);
+  }, [plays, unit, selectedType, selectedPersonnel, searchTerm]);
 
   const selectedCount = useMemo(() => {
     return Object.values(selectedPlayIds).filter(Boolean).length;
@@ -117,10 +128,17 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
       formation: play.formation,
       type: play.type,
       wristbandNum: play.wristbandNum,
-      personnel: play.personnel,
+      wristbandLabel: play.wristbandLabel,
+      wristbandColor: play.wristbandColor,
+      wristbandNumberColor: play.wristbandNumberColor,
+      wristbandHighlightTarget: play.wristbandHighlightTarget,
+      wristbandSlotMatch: play.wristbandSlotMatch,
+      personnel: play.personnel || extractPersonnel(play),
       notes: play.concept,
     };
-    e.dataTransfer.setData('application/json', JSON.stringify(playData));
+    try {
+      e.dataTransfer.setData('application/json', safeJSONStringify(playData));
+    } catch {}
     e.dataTransfer.effectAllowed = 'copy';
   };
 
@@ -285,6 +303,40 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
               </button>
             ))}
           </div>
+
+          {/* Personnel Sub-tabs */}
+          <div className="pt-1 border-t border-slate-800/80">
+            <div className="flex items-center justify-between pb-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Personnel Sub-Tabs:
+              </span>
+              {selectedPersonnel !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedPersonnel('all')}
+                  className="text-[9px] text-indigo-400 hover:underline cursor-pointer"
+                >
+                  Clear Filter
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-1 overflow-x-auto pb-1 no-scrollbar text-[10px]">
+              {personnelTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setSelectedPersonnel(tab.id)}
+                  className={`px-2 py-0.5 rounded-md font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                    selectedPersonnel === tab.id
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {tab.id === 'all' ? 'All' : tab.label.replace(' Personnel', ' Pers')} ({tab.count})
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Single Play Delete Confirmation Dialog */}
@@ -381,7 +433,14 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                     </div>
                   )}
                   {play.wristbandNum && (
-                    <span className="px-1 py-0.2 rounded bg-amber-400 text-black font-black text-[9px] font-mono shrink-0">
+                    <span
+                      style={{
+                        backgroundColor: play.wristbandNumberColor || play.wristbandColor || '#facc15',
+                        color: '#000000',
+                      }}
+                      className="px-1 py-0.2 rounded font-black text-[9px] font-mono shrink-0 shadow-2xs"
+                      title={play.wristbandLabel ? `Wristband: ${play.wristbandLabel}` : `Wristband #${play.wristbandNum}`}
+                    >
                       #{play.wristbandNum}
                     </span>
                   )}

@@ -1,6 +1,7 @@
 import { ScheduleEvent, FormationBoard, PlacedPlayer, WeekState, SeasonConfig, WeekOption, formatWeekLabel } from '../types';
 export { formatWeekLabel } from '../types';
 import { INITIAL_DEFAULT_FORMATIONS } from '../data/initialData';
+import { deepClone } from '../services/storageService';
 
 export interface AutoWeekResult {
   activeWeek: string;
@@ -20,30 +21,6 @@ export function normalizeWeeklyData(
 ): Record<string, WeekState> {
   if (!wData || typeof wData !== 'object') return {};
   const result: Record<string, WeekState> = {};
-
-  const deepClone = <T>(obj: T): T => {
-    if (!obj) return obj;
-    try {
-      if (typeof structuredClone === 'function') {
-        return structuredClone(obj);
-      }
-      return JSON.parse(JSON.stringify(obj));
-    } catch {
-      try {
-        const seen = new WeakSet();
-        const clean = JSON.stringify(obj, (_key, value) => {
-          if (typeof value === 'object' && value !== null) {
-            if (seen.has(value)) return undefined;
-            seen.add(value);
-          }
-          return value;
-        });
-        return JSON.parse(clean);
-      } catch {
-        return obj;
-      }
-    }
-  };
 
   const fallbackFormations =
     defaultForms && defaultForms.length > 0

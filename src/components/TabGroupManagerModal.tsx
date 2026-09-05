@@ -22,6 +22,8 @@ import {
   Users,
   Star,
   CheckCircle2,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { CustomTabGroup, UnitType, UserRole } from '../types';
 import { DEFAULT_NAV_TABS, NavTabItem } from './NavigationTabs';
@@ -35,6 +37,8 @@ interface TabGroupManagerModalProps {
   onSaveTabOrder: (order: string[]) => void;
   defaultScreen?: UnitType;
   userRole: UserRole;
+  showCustomTabsOnMainBar?: boolean;
+  onToggleShowCustomTabsOnMainBar?: () => void;
 }
 
 const EMOJI_OPTIONS = [
@@ -52,6 +56,8 @@ export const TabGroupManagerModal: React.FC<TabGroupManagerModalProps> = ({
   onSaveTabOrder,
   defaultScreen,
   userRole,
+  showCustomTabsOnMainBar,
+  onToggleShowCustomTabsOnMainBar,
 }) => {
   const [activeView, setActiveView] = useState<'groups' | 'order'>('groups');
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
@@ -61,6 +67,7 @@ export const TabGroupManagerModal: React.FC<TabGroupManagerModalProps> = ({
   const [groupLabel, setGroupLabel] = useState('');
   const [groupIcon, setGroupIcon] = useState('📁');
   const [selectedTabs, setSelectedTabs] = useState<UnitType[]>([]);
+  const [groupHidden, setGroupHidden] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   if (!isOpen) return null;
@@ -73,6 +80,7 @@ export const TabGroupManagerModal: React.FC<TabGroupManagerModalProps> = ({
     setGroupLabel('');
     setGroupIcon('📁');
     setSelectedTabs([]);
+    setGroupHidden(false);
     setErrorMsg('');
     setIsCreatingGroup(true);
   };
@@ -83,8 +91,20 @@ export const TabGroupManagerModal: React.FC<TabGroupManagerModalProps> = ({
     setGroupLabel(group.label);
     setGroupIcon(group.icon || '📁');
     setSelectedTabs([...group.tabIds]);
+    setGroupHidden(Boolean(group.hidden));
     setErrorMsg('');
     setIsCreatingGroup(true);
+  };
+
+  // Toggle hiding a folder from top navigation
+  const handleToggleHideGroup = (groupId: string) => {
+    const updatedGroups = customGroups.map((g) => {
+      if (g.id === groupId) {
+        return { ...g, hidden: !g.hidden };
+      }
+      return g;
+    });
+    onSaveCustomGroups(updatedGroups);
   };
 
   const handleToggleTabSelect = (tabId: UnitType) => {
@@ -112,6 +132,7 @@ export const TabGroupManagerModal: React.FC<TabGroupManagerModalProps> = ({
             label: groupLabel.trim(),
             icon: groupIcon,
             tabIds: selectedTabs,
+            hidden: groupHidden,
           };
         }
         // Remove selected tabs from other groups to avoid duplication
@@ -130,6 +151,7 @@ export const TabGroupManagerModal: React.FC<TabGroupManagerModalProps> = ({
         label: groupLabel.trim(),
         icon: groupIcon,
         tabIds: selectedTabs,
+        hidden: groupHidden,
       };
 
       // Remove selected tabs from other groups
@@ -147,6 +169,7 @@ export const TabGroupManagerModal: React.FC<TabGroupManagerModalProps> = ({
 
     setIsCreatingGroup(false);
     setEditingGroupId(null);
+    setGroupHidden(false);
     setErrorMsg('');
   };
 
@@ -233,6 +256,34 @@ export const TabGroupManagerModal: React.FC<TabGroupManagerModalProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Top Preferences Banner: Hide/Show Custom Tabs button on main line */}
+        {onToggleShowCustomTabsOnMainBar && (
+          <div className="px-5 py-2.5 bg-slate-900/90 border-b border-slate-800/80 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <FolderPlus className="w-4 h-4 text-indigo-400 shrink-0" />
+              <div className="min-w-0">
+                <span className="font-bold text-slate-200 block truncate">
+                  Show &apos;+ Custom Tabs&apos; on Main Tab Bar
+                </span>
+                <span className="text-[11px] text-slate-400 block truncate">
+                  Default is hidden to keep the top navigation bar clean and compact
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onToggleShowCustomTabsOnMainBar}
+              className={`px-3 py-1 rounded-xl font-black text-xs border transition-all cursor-pointer shrink-0 ${
+                showCustomTabsOnMainBar
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/30'
+                  : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+              }`}
+            >
+              {showCustomTabsOnMainBar ? 'Visible on Main Bar' : 'Hidden (Default)'}
+            </button>
+          </div>
+        )}
 
         {/* Tab Selector: Groups vs Reorder */}
         <div className="px-5 pt-3 pb-0 border-b border-slate-800 bg-slate-950 flex items-center justify-between gap-2">
@@ -400,6 +451,24 @@ export const TabGroupManagerModal: React.FC<TabGroupManagerModalProps> = ({
                     </div>
                   </div>
 
+                  {/* Folder Visibility Preference */}
+                  <label className="flex items-center gap-2.5 cursor-pointer p-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={groupHidden}
+                      onChange={(e) => setGroupHidden(e.target.checked)}
+                      className="w-4 h-4 rounded text-indigo-600 bg-slate-900 border-slate-700 focus:ring-indigo-500 cursor-pointer"
+                    />
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
+                      {groupHidden ? (
+                        <EyeOff className="w-3.5 h-3.5 text-amber-400" />
+                      ) : (
+                        <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                      )}
+                      <span>Hide this folder from main navigation line</span>
+                    </div>
+                  </label>
+
                   {/* Form Footer */}
                   <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
                     <button
@@ -448,19 +517,49 @@ export const TabGroupManagerModal: React.FC<TabGroupManagerModalProps> = ({
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className="text-lg select-none">{group.icon || '📁'}</span>
                               <div>
-                                <h5 className="text-xs font-black text-slate-100 flex items-center gap-2">
+                                <h5 className="text-xs font-black text-slate-100 flex items-center gap-2 flex-wrap">
                                   <span>{group.label}</span>
                                   <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-mono border border-indigo-500/30 font-bold">
                                     {group.tabIds.length} sub-tabs
                                   </span>
+                                  {group.hidden && (
+                                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30 flex items-center gap-1">
+                                      <EyeOff className="w-2.5 h-2.5" />
+                                      <span>Hidden from Nav</span>
+                                    </span>
+                                  )}
                                 </h5>
                                 <p className="text-[11px] text-slate-400">
-                                  Clicking this tab creates a sub-menu with {group.tabIds.length} nested tools
+                                  {group.hidden
+                                    ? 'Folder is hidden from the main navigation line.'
+                                    : `Clicking this tab creates a sub-menu with ${group.tabIds.length} nested tools`}
                                 </p>
                               </div>
                             </div>
 
                             <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleHideGroup(group.id)}
+                                title={group.hidden ? 'Show folder in navigation bar' : 'Hide folder from navigation bar'}
+                                className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                                  group.hidden
+                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
+                                    : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white hover:bg-slate-750'
+                                }`}
+                              >
+                                {group.hidden ? (
+                                  <>
+                                    <EyeOff className="w-3.5 h-3.5 text-amber-400" />
+                                    <span>Hidden</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                                    <span>Visible</span>
+                                  </>
+                                )}
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleStartEdit(group)}

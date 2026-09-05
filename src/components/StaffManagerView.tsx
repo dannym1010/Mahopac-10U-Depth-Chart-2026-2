@@ -23,6 +23,7 @@ import {
   Link2,
   Clock,
   KeyRound,
+  CheckCircle2,
 } from 'lucide-react';
 import { StaffCoach, UserRole, Team, UnitType } from '../types';
 
@@ -112,6 +113,10 @@ export const StaffManagerView: React.FC<StaffManagerViewProps> = ({
   const [passcodeError, setPasscodeError] = useState<string | null>(null);
   const [passcodeSuccess, setPasscodeSuccess] = useState<string | null>(null);
   const [showCurrentPasscode, setShowCurrentPasscode] = useState(false);
+  const [showResetLinkModal, setShowResetLinkModal] = useState(false);
+  const [resetLinkEmail, setResetLinkEmail] = useState('');
+  const [resetLinkStatus, setResetLinkStatus] = useState<{ message: string; isError: boolean; code?: string; link?: string } | null>(null);
+  const [resetLinkLoading, setResetLinkLoading] = useState(false);
 
   // Saved Practice Coaches per Team State
   const [practiceCoachTeamFilter, setPracticeCoachTeamFilter] = useState<string>(activeTeamId);
@@ -448,19 +453,34 @@ Looking forward to a great season!`;
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setShowChangePasscodeModal(true);
-                setPasscodeError(null);
-                setInputNewPasscode('');
-                setInputConfirmPasscode('');
-              }}
-              className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl shadow-md shadow-amber-600/30 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              <span>{adminPasscode ? 'Change Admin Passcode' : 'Set Admin Passcode'}</span>
-            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowResetLinkModal(true);
+                  setResetLinkEmail(currentUserEmail || staffList[0]?.email || '');
+                  setResetLinkStatus(null);
+                }}
+                className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-750 text-amber-300 hover:text-amber-200 border border-amber-500/30 font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>Email Reset Link</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowChangePasscodeModal(true);
+                  setPasscodeError(null);
+                  setInputNewPasscode('');
+                  setInputConfirmPasscode('');
+                }}
+                className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl shadow-md shadow-amber-600/30 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>{adminPasscode ? 'Change Admin Passcode' : 'Set Admin Passcode'}</span>
+              </button>
+            </div>
           </div>
 
           {passcodeSuccess && (
@@ -1658,6 +1678,161 @@ Looking forward to a great season!`;
                 >
                   <Check className="w-4 h-4" />
                   <span>Save Passcode</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Dispatch Email Reset Link Modal */}
+      {showResetLinkModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-indigo-500/30 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-700">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center font-bold">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <h3 className="font-black text-sm text-slate-100">
+                  Email Admin Passcode Reset Link
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowResetLinkModal(false);
+                  setResetLinkStatus(null);
+                }}
+                className="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Send a secure one-time reset link and 6-digit verification code to the authorized coach or administrator email below.
+            </p>
+
+            {resetLinkStatus && (
+              <div
+                className={`p-3 rounded-xl text-xs font-semibold flex items-start gap-2 ${
+                  resetLinkStatus.isError
+                    ? 'bg-rose-950/80 border border-rose-700/80 text-rose-200'
+                    : 'bg-emerald-950/80 border border-emerald-700/80 text-emerald-200'
+                }`}
+              >
+                {resetLinkStatus.isError ? (
+                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                )}
+                <div className="space-y-1.5 flex-1">
+                  <span>{resetLinkStatus.message}</span>
+                  {resetLinkStatus.code && (
+                    <div className="p-2 bg-slate-900/80 rounded-lg font-mono text-xs text-amber-300 font-black">
+                      Verification Code: {resetLinkStatus.code}
+                    </div>
+                  )}
+                  {resetLinkStatus.link && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(resetLinkStatus.link || '');
+                        alert('Reset link copied to clipboard!');
+                      }}
+                      className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 rounded border border-emerald-500/30 text-[10.5px] font-bold cursor-pointer flex items-center gap-1"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>Copy Reset Link</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setResetLinkStatus(null);
+                const emailTarget = resetLinkEmail.toLowerCase().trim();
+                if (!emailTarget || !emailTarget.includes('@')) {
+                  setResetLinkStatus({ message: 'Please enter a valid email address.', isError: true });
+                  return;
+                }
+
+                setResetLinkLoading(true);
+                try {
+                  if (typeof window !== 'undefined' && (window as any).firebase?.auth) {
+                    try {
+                      const auth = (window as any).firebase.auth();
+                      await auth.sendPasswordResetEmail(emailTarget);
+                    } catch (fbErr: any) {
+                      console.log('[Auth] Firebase reset email info:', fbErr?.message);
+                    }
+                  }
+
+                  const res = await fetch('/api/admin/request-passcode-reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: emailTarget }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok || !data.success) {
+                    throw new Error(data.error || 'Failed to dispatch reset email.');
+                  }
+
+                  const resetUrl = `${window.location.origin}/?admin_reset_token=${data.token}`;
+                  setResetLinkStatus({
+                    message: `Security reset link and 6-digit code dispatched to ${data.maskedEmail || emailTarget}!`,
+                    isError: false,
+                    code: data.code,
+                    link: resetUrl,
+                  });
+                } catch (err: any) {
+                  setResetLinkStatus({
+                    message: err.message || 'Failed to send reset link.',
+                    isError: true,
+                  });
+                } finally {
+                  setResetLinkLoading(false);
+                }
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                  Recipient Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  autoFocus
+                  value={resetLinkEmail}
+                  onChange={(e) => setResetLinkEmail(e.target.value)}
+                  placeholder="coach@team.com"
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowResetLinkModal(false);
+                    setResetLinkStatus(null);
+                  }}
+                  className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 text-slate-300 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  disabled={resetLinkLoading || !resetLinkEmail}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>{resetLinkLoading ? 'Sending...' : 'Send Reset Link'}</span>
                 </button>
               </div>
             </form>

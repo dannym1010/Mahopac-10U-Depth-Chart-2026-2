@@ -6,6 +6,7 @@ import {
   TimeoutsState,
   PlayDatabaseEntry,
 } from '../types/callSheet';
+import { USER_IMPORTED_GAME_DAY_PLAYS } from './userGameDayPlays';
 
 export const TWO_POINT_CHART_RULES: TwoPointRule[] = [
   { pointDiff: 1, leadAction: 'Go for 2', leadHighlight: true, trailAction: 'Go for 2', trailHighlight: true },
@@ -889,6 +890,9 @@ export const DEFAULT_CALL_SHEET_DATA: CallSheetFullData = {
 
 // Comprehensive searchable Play Database
 export const MASTER_PLAY_DATABASE: PlayDatabaseEntry[] = [
+  // User Imported Game Day Plays (21 Series, 32 Series, 11 Series)
+  ...USER_IMPORTED_GAME_DAY_PLAYS,
+
   // Offense Runs
   {
     id: 'db_run_1',

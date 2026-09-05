@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 
 // Server-side State Persistence Directory
@@ -33,6 +34,16 @@ interface ServerSectionLock {
   acquiredAt: number;
   expiresAt: number;
 }
+
+// Pending Admin Passcode Resets Storage
+interface PendingAdminReset {
+  token: string;
+  code: string;
+  email: string;
+  expiresAt: number;
+  attempts: number;
+}
+const pendingAdminResets = new Map<string, PendingAdminReset>();
 
 const activeLocks = new Map<string, ServerSectionLock>();
 
@@ -324,6 +335,16 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
   if (incoming.guideOrder) merged.guideOrder = incoming.guideOrder;
   if (incoming.masterPlayLibrary) merged.masterPlayLibrary = incoming.masterPlayLibrary;
   if (incoming.collapsedFolders) merged.collapsedFolders = incoming.collapsedFolders;
+  if (Array.isArray(incoming.playDatabase)) merged.playDatabase = incoming.playDatabase;
+  if (incoming.callSheetData && typeof incoming.callSheetData === 'object') merged.callSheetData = incoming.callSheetData;
+  if (Array.isArray(incoming.deletedPlayIds)) {
+    const existingDeleted = new Set(merged.deletedPlayIds || []);
+    incoming.deletedPlayIds.forEach((id: string) => existingDeleted.add(id));
+    merged.deletedPlayIds = Array.from(existingDeleted);
+    if (Array.isArray(merged.playDatabase)) {
+      merged.playDatabase = merged.playDatabase.filter((p: any) => !existingDeleted.has(p.id));
+    }
+  }
 
   return merged;
 }
@@ -550,6 +571,135 @@ async function startServer() {
       });
     } catch (err: any) {
       return res.status(500).json({ error: err?.message || 'Lock heartbeat error' });
+    }
+  });
+
+  // Secure Admin Passcode Reset Endpoints
+  app.post('/api/admin/request-passcode-reset', (req, res) => {
+    try {
+      const email = (req.body.email || '').toString().toLowerCase().trim();
+      if (!email || !email.includes('@')) {
+        return res.status(400).json({ error: 'Please provide a valid email address.' });
+      }
+
+      // Check against staff coaches in cachedState
+      const staffList = (cachedState && Array.isArray(cachedState.staffList)) ? cachedState.staffList : [];
+      const adminCoaches = staffList.filter((c: any) => {
+        const role = (c.role || '').toLowerCase();
+        return role.includes('head') || role.includes('admin');
+      });
+
+      // If registered head/admin coaches exist, ensure email is authorized
+      if (adminCoaches.length > 0) {
+        const isAuthorized = adminCoaches.some((c: any) => (c.email || '').toLowerCase().trim() === email);
+        if (!isAuthorized) {
+          return res.status(403).json({
+            error: `The email "${email}" is not registered as an authorized Head Coach or Administrator. Please contact your Head Coach.`,
+          });
+        }
+      }
+
+      // Generate a 6-digit numeric verification code and a cryptographically secure token
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const token = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+      const expiresAt = Date.now() + 15 * 60 * 1000; // 15-minute validity window
+
+      const resetData: PendingAdminReset = {
+        token,
+        code,
+        email,
+        expiresAt,
+        attempts: 0,
+      };
+
+      // Clean up any stale expired entries
+      for (const [key, item] of pendingAdminResets.entries()) {
+        if (item.expiresAt < Date.now()) pendingAdminResets.delete(key);
+      }
+
+      pendingAdminResets.set(token, resetData);
+      pendingAdminResets.set(code, resetData);
+
+      const [userPart, domainPart] = email.split('@');
+      const maskedUser = userPart.length <= 2 ? userPart : `${userPart[0]}***${userPart[userPart.length - 1]}`;
+      const maskedEmail = `${maskedUser}@${domainPart}`;
+
+      console.log(`[Server] Admin Passcode Reset Requested for: ${email}. Code: [${code}], Token: [${token}]`);
+
+      return res.json({
+        success: true,
+        message: `A secure verification code has been generated for ${maskedEmail}.`,
+        maskedEmail,
+        token,
+        code,
+        expiresAt,
+      });
+    } catch (err: any) {
+      console.error('[Server] /api/admin/request-passcode-reset error:', err);
+      return res.status(500).json({ error: 'Failed to process admin reset request.' });
+    }
+  });
+
+  app.post('/api/admin/verify-passcode-reset', (req, res) => {
+    try {
+      const { token, code, newPasscode } = req.body;
+      const key = (token || code || '').toString().trim();
+      const trimmedPasscode = (newPasscode || '').toString().trim();
+
+      if (!key) {
+        return res.status(400).json({ error: 'Missing verification code or token.' });
+      }
+
+      if (!trimmedPasscode || trimmedPasscode.length < 4) {
+        return res.status(400).json({ error: 'New admin passcode must be at least 4 characters long.' });
+      }
+
+      const pending = pendingAdminResets.get(key);
+      if (!pending) {
+        return res.status(400).json({ error: 'Invalid or expired verification code. Please request a new code.' });
+      }
+
+      if (pending.expiresAt < Date.now()) {
+        pendingAdminResets.delete(pending.token);
+        pendingAdminResets.delete(pending.code);
+        return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
+      }
+
+      pending.attempts = (pending.attempts || 0) + 1;
+      if (pending.attempts > 6) {
+        pendingAdminResets.delete(pending.token);
+        pendingAdminResets.delete(pending.code);
+        return res.status(429).json({ error: 'Too many attempts. Please request a new reset code.' });
+      }
+
+      // Update adminPasscode in cachedState
+      if (!cachedState) {
+        cachedState = {};
+      }
+      cachedState.adminPasscode = trimmedPasscode;
+
+      // Save to disk & broadcast
+      saveStateToDisk(cachedState, `admin_reset:${pending.email}`, { resetEmail: pending.email });
+      pendingAdminResets.delete(pending.token);
+      pendingAdminResets.delete(pending.code);
+
+      broadcastStateUpdate({
+        version: stateVersion,
+        updatedAt: stateUpdatedAt,
+        lastAuthor: `admin_reset:${pending.email}`,
+        state: cachedState,
+      });
+
+      console.log(`[Server] Admin Passcode successfully reset and verified by ${pending.email}`);
+
+      return res.json({
+        success: true,
+        message: 'Admin passcode has been successfully updated and verified.',
+        adminPasscode: trimmedPasscode,
+      });
+    } catch (err: any) {
+      console.error('[Server] /api/admin/verify-passcode-reset error:', err);
+      return res.status(500).json({ error: 'Failed to verify admin reset.' });
     }
   });
 

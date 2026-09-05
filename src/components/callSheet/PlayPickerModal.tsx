@@ -14,6 +14,7 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import { CallSheetPlay, PlayDatabaseEntry, PlayType } from '../../types/callSheet';
+import { extractPersonnel, getPersonnelSubTabs } from '../../utils/wristbandLinking';
 
 interface PlayPickerModalProps {
   isOpen: boolean;
@@ -59,9 +60,14 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [selectedPersonnel, setSelectedPersonnel] = useState<string>('all');
   const [filterSituationOnly, setFilterSituationOnly] = useState(true);
   const [isCreatingCustom, setIsCreatingCustom] = useState(false);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+
+  const personnelTabs = useMemo(() => {
+    return getPersonnelSubTabs(databasePlays, unit);
+  }, [databasePlays, unit]);
 
   // Custom play form state
   const [customName, setCustomName] = useState('');
@@ -104,6 +110,12 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
       // Filter by type
       if (selectedType !== 'all' && p.type !== selectedType) return false;
 
+      // Filter by personnel grouping
+      if (selectedPersonnel !== 'all') {
+        const pkg = extractPersonnel(p);
+        if (pkg !== selectedPersonnel) return false;
+      }
+
       // Filter by situation tag if toggle is on and keywords exist
       if (filterSituationOnly && situationKeywords.length > 0) {
         const matchesSituation = p.situations.some((sit) =>
@@ -127,7 +139,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
 
       return true;
     });
-  }, [databasePlays, unit, selectedType, filterSituationOnly, situationKeywords, searchTerm]);
+  }, [databasePlays, unit, selectedType, selectedPersonnel, filterSituationOnly, situationKeywords, searchTerm]);
 
   if (!isOpen) return null;
 
@@ -138,7 +150,12 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
       formation: dbPlay.formation,
       type: dbPlay.type,
       wristbandNum: dbPlay.wristbandNum,
-      personnel: dbPlay.personnel,
+      wristbandLabel: dbPlay.wristbandLabel,
+      wristbandColor: dbPlay.wristbandColor,
+      wristbandNumberColor: dbPlay.wristbandNumberColor,
+      wristbandHighlightTarget: dbPlay.wristbandHighlightTarget,
+      wristbandSlotMatch: dbPlay.wristbandSlotMatch,
+      personnel: dbPlay.personnel || extractPersonnel(dbPlay),
       notes: dbPlay.concept,
     };
     onSelectPlay(playItem);
@@ -341,6 +358,27 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                   </button>
                 ))}
               </div>
+
+              {/* Personnel Sub-tabs Breakdown */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-[10.5px] pt-0.5 border-t border-slate-800/80">
+                <span className="text-[10px] font-bold uppercase text-slate-400 whitespace-nowrap">
+                  Personnel:
+                </span>
+                {personnelTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setSelectedPersonnel(tab.id)}
+                    className={`px-2 py-0.5 rounded-md font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                      selectedPersonnel === tab.id
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {tab.id === 'all' ? 'All' : tab.label.replace(' Personnel', ' Pers')} ({tab.count})
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* List of matching plays */}
@@ -356,7 +394,14 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                     <div className="space-y-1 min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         {play.wristbandNum && (
-                          <span className="px-1.5 py-0.5 rounded-md bg-amber-400 text-black font-black text-[10px] font-mono shadow-xs">
+                          <span
+                            style={{
+                              backgroundColor: play.wristbandNumberColor || play.wristbandColor || '#facc15',
+                              color: '#000000',
+                            }}
+                            className="px-1.5 py-0.5 rounded-md font-black text-[10px] font-mono shadow-xs"
+                            title={play.wristbandLabel ? `Wristband: ${play.wristbandLabel}` : `Wristband #${play.wristbandNum}`}
+                          >
                             #{play.wristbandNum}
                           </span>
                         )}

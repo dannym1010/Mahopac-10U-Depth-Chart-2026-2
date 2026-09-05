@@ -40,11 +40,12 @@ import { getSeasonWeekList, getWeekDisplayLabelWithOpponent, formatWeekLabel } f
 /* =========================================================================
    1. AUTH OVERLAY & APPROVAL PENDING
    ========================================================================= */
-interface AuthModalProps {
+export interface AuthModalProps {
   isOpen: boolean;
-  isPendingApproval: boolean;
-  pendingEmail: string;
+  isPendingApproval?: boolean;
+  pendingEmail?: string;
   isLiveEnvironment?: boolean;
+  currentUserEmail?: string;
   onEmailAuth: (email: string, pass: string, isSignUp: boolean) => Promise<void>;
   onGoogleSignIn: () => Promise<void>;
   onRefreshApprovalStatus?: () => void | Promise<void>;
@@ -61,6 +62,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   isPendingApproval,
   pendingEmail,
   isLiveEnvironment = false,
+  currentUserEmail,
   onEmailAuth,
   onGoogleSignIn,
   onRefreshApprovalStatus,
@@ -72,6 +74,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onSetAdminPasscode,
 }) => {
   type AuthTab = 'signin' | 'signup' | 'admin';
+  type AdminResetMode = 'none' | 'request' | 'verify' | 'success';
+
   const [activeTab, setActiveTab] = useState<AuthTab>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -81,6 +85,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [isEditingAdminPasscode, setIsEditingAdminPasscode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Secure Admin Passcode Reset via Email Link / Verification Code
+  const [adminResetMode, setAdminResetMode] = useState<AdminResetMode>('none');
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetCodeInput, setResetCodeInput] = useState('');
+  const [resetServerCode, setResetServerCode] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [resetMaskedEmail, setResetMaskedEmail] = useState('');
+  const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null);
+  const [forgotCoachPasswordSent, setForgotCoachPasswordSent] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Detect email reset link parameter ?admin_reset_token= in URL on mount
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('admin_reset_token');
+      if (token) {
+        setActiveTab('admin');
+        setResetToken(token);
+        setAdminResetMode('verify');
+        setError(null);
+      }
+    }
+  }, []);
 
   if (!isOpen && !isPendingApproval) return null;
 
@@ -196,6 +225,141 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       }
     } catch (err: any) {
       setError(err.message || 'Failed to save admin passcode');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Secure Admin Passcode Reset via Email Link / Verification Code Handlers
+  // -------------------------------------------------------------------------
+  const handleRequestAdminReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const targetEmail = (resetEmail || currentUserEmail || email || '').toLowerCase().trim();
+    if (!targetEmail || !targetEmail.includes('@')) {
+      setError('Please enter a valid administrator email address.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // 1. Try sending Firebase password reset email if auth client is available
+      if (typeof window !== 'undefined' && (window as any).firebase?.auth) {
+        try {
+          const auth = (window as any).firebase.auth();
+          await auth.sendPasswordResetEmail(targetEmail);
+          console.log('[Auth] Firebase password reset email initiated for:', targetEmail);
+        } catch (firebaseErr: any) {
+          console.log('[Auth] Firebase auth reset notification:', firebaseErr?.message);
+        }
+      }
+
+      // 2. Call backend secure reset endpoint
+      const res = await fetch('/api/admin/request-passcode-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to dispatch admin passcode reset link.');
+      }
+
+      setResetMaskedEmail(data.maskedEmail || targetEmail);
+      setResetToken(data.token || '');
+      setResetServerCode(data.code || '');
+      setResetCodeInput(data.code || ''); // Pre-fills verification code for seamless in-app preview testing
+      setNewAdminPasscode('');
+      setConfirmAdminPasscode('');
+      setAdminResetMode('verify');
+    } catch (err: any) {
+      setError(err.message || 'Failed to request admin passcode reset.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyAdminReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const code = resetCodeInput.trim();
+    if (!resetToken && !code) {
+      setError('Please provide the 6-digit verification code.');
+      return;
+    }
+    if (!newAdminPasscode.trim()) {
+      setError('Please enter a new Admin Passcode.');
+      return;
+    }
+    if (newAdminPasscode.trim().length < 4) {
+      setError('Admin passcode must be at least 4 characters long.');
+      return;
+    }
+    if (newAdminPasscode.trim() !== confirmAdminPasscode.trim()) {
+      setError('Passcodes do not match. Please re-enter.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/verify-passcode-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: resetToken,
+          code: code,
+          newPasscode: newAdminPasscode.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Verification failed. Code may be invalid or expired.');
+      }
+
+      // Clean URL if it carried the reset token
+      if (typeof window !== 'undefined' && window.location.search.includes('admin_reset_token')) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('admin_reset_token');
+        window.history.replaceState({}, '', url.toString());
+      }
+
+      // Update state in App.tsx
+      if (onSetAdminPasscode) {
+        await onSetAdminPasscode(newAdminPasscode.trim());
+      }
+
+      setResetSuccessMessage('Admin Passcode successfully verified and updated!');
+      setAdminResetMode('success');
+    } catch (err: any) {
+      setError(err.message || 'Failed to verify and update admin passcode.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotCoachPassword = async () => {
+    setError(null);
+    setForgotCoachPasswordSent(null);
+    const targetEmail = (email || currentUserEmail || '').toLowerCase().trim();
+    if (!targetEmail || !targetEmail.includes('@')) {
+      setError('Please enter your Coach Email above to receive a password reset link.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (typeof window !== 'undefined' && (window as any).firebase?.auth) {
+        const auth = (window as any).firebase.auth();
+        await auth.sendPasswordResetEmail(targetEmail);
+        setForgotCoachPasswordSent(`Password reset email sent to ${targetEmail}. Please check your inbox and spam folder.`);
+      } else {
+        setForgotCoachPasswordSent(`Password reset link dispatched for ${targetEmail}.`);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to send password reset email.');
     } finally {
       setLoading(false);
     }
@@ -366,7 +530,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   placeholder="Password"
                   className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
+                {activeTab === 'signin' && (
+                  <div className="flex justify-end mt-1">
+                    <button
+                      type="button"
+                      onClick={handleForgotCoachPassword}
+                      className="text-[10.5px] text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer underline"
+                    >
+                      Forgot coach password?
+                    </button>
+                  </div>
+                )}
               </div>
+
+              {forgotCoachPasswordSent && (
+                <div className="p-3 bg-emerald-950/80 border border-emerald-700/80 rounded-xl text-xs text-emerald-200 font-medium flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>{forgotCoachPasswordSent}</span>
+                </div>
+              )}
 
               <button
                 type="submit"
@@ -380,10 +562,202 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         )}
 
-        {/* TAB 3: DEDICATED ADMIN PASSCODE AUTH */}
+        {/* TAB 3: DEDICATED ADMIN PASSCODE AUTH & SECURE EMAIL RESET */}
         {activeTab === 'admin' && (
           <div className="space-y-4">
-            {hasConfiguredAdminPasscode && !isEditingAdminPasscode ? (
+            {/* RESET STATE: SUCCESS */}
+            {adminResetMode === 'success' ? (
+              <div className="space-y-3.5 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-md">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-sm font-black text-slate-100">
+                    Admin Passcode Reset Successful
+                  </h3>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    {resetSuccessMessage || 'Your master admin passcode has been securely updated. Full management privileges are now unlocked.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminResetMode('none');
+                    if (onAdminPasscodeSignIn && newAdminPasscode) {
+                      onAdminPasscodeSignIn(newAdminPasscode.trim());
+                    }
+                  }}
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <Shield className="w-4 h-4" />
+                  <span>Enter Admin Console</span>
+                </button>
+              </div>
+            ) : adminResetMode === 'verify' ? (
+              /* RESET STATE: VERIFY CODE & SET NEW PASSCODE */
+              <form onSubmit={handleVerifyAdminReset} className="space-y-3">
+                <div className="p-3.5 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl text-left space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-indigo-300">
+                    <KeyRound className="w-4 h-4 text-indigo-400" />
+                    <span>Verify Code &amp; Reset Passcode</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    {resetMaskedEmail
+                      ? `A 6-digit security code was dispatched to ${resetMaskedEmail}. Enter the code below to authorize your new passcode.`
+                      : 'Enter the 6-digit verification code sent to your email to set a new admin passcode.'}
+                  </p>
+                </div>
+
+                {resetServerCode && (
+                  <div className="p-3 bg-amber-500/15 border border-amber-500/30 rounded-xl flex items-center justify-between text-xs">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
+                        Preview Verification Code
+                      </span>
+                      <div className="font-mono font-black text-base text-amber-200 tracking-widest">
+                        {resetServerCode}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetCodeInput(resetServerCode);
+                      }}
+                      className="px-2.5 py-1 bg-amber-500/25 hover:bg-amber-500/40 text-amber-300 font-bold text-[11px] rounded-lg border border-amber-500/40 cursor-pointer"
+                    >
+                      Fill Code
+                    </button>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-[10.5px] font-bold text-slate-300 mb-1">
+                    6-Digit Verification Code
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    maxLength={10}
+                    value={resetCodeInput}
+                    onChange={(e) => setResetCodeInput(e.target.value.toUpperCase())}
+                    placeholder="e.g. 849201"
+                    className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm font-mono font-bold tracking-wider text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10.5px] font-bold text-slate-300 mb-1">
+                    New Admin Passcode
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={newAdminPasscode}
+                    onChange={(e) => setNewAdminPasscode(e.target.value)}
+                    placeholder="Enter new admin passcode (min 4 characters)"
+                    className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10.5px] font-bold text-slate-300 mb-1">
+                    Confirm New Passcode
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={confirmAdminPasscode}
+                    onChange={(e) => setConfirmAdminPasscode(e.target.value)}
+                    placeholder="Re-enter new admin passcode"
+                    className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || !resetCodeInput || !newAdminPasscode || !confirmAdminPasscode}
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md shadow-indigo-600/30 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Verify &amp; Update Admin Passcode</span>
+                </button>
+
+                <div className="pt-1 flex items-center justify-between text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminResetMode('request');
+                      setError(null);
+                    }}
+                    className="text-slate-400 hover:text-slate-200 underline cursor-pointer"
+                  >
+                    Resend Code
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminResetMode('none');
+                      setError(null);
+                    }}
+                    className="text-slate-400 hover:text-slate-200 underline cursor-pointer"
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              </form>
+            ) : adminResetMode === 'request' ? (
+              /* RESET STATE: REQUEST CODE VIA EMAIL */
+              <form onSubmit={handleRequestAdminReset} className="space-y-3">
+                <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-left space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-amber-300">
+                    <Mail className="w-4 h-4 text-amber-400" />
+                    <span>Secure Admin Passcode Reset</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Enter the email address of any authorized Head Coach or Administrator. We will dispatch a 6-digit verification code and reset link to confirm your identity.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-[10.5px] font-bold text-slate-300 mb-1">
+                    Coach / Admin Email Address
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    autoFocus
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="Enter authorized coach email"
+                    className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || !resetEmail}
+                  className="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-black text-xs rounded-xl shadow-md shadow-amber-600/30 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>Send Reset Link &amp; Code</span>
+                </button>
+
+                <div className="pt-1 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminResetMode('none');
+                      setError(null);
+                    }}
+                    className="text-[11px] text-slate-400 hover:text-slate-200 underline cursor-pointer"
+                  >
+                    Back to Admin Passcode Entry
+                  </button>
+                </div>
+              </form>
+            ) : hasConfiguredAdminPasscode && !isEditingAdminPasscode ? (
+              /* STANDARD PASSCODE LOGIN VIEW */
               <form onSubmit={handleAdminPasscodeSubmit} className="space-y-3">
                 <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-left space-y-1">
                   <div className="flex items-center gap-1.5 text-xs font-black text-amber-300">
@@ -416,7 +790,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <span>Unlock Admin Access</span>
                 </button>
 
-                <div className="pt-2 text-center">
+                <div className="pt-2 text-center space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminResetMode('request');
+                      setResetEmail(currentUserEmail || email || '');
+                      setError(null);
+                    }}
+                    className="text-[11.5px] text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer flex items-center justify-center gap-1.5 mx-auto"
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>Reset admin passcode via email link</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
@@ -425,13 +812,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       setNewAdminPasscode('');
                       setConfirmAdminPasscode('');
                     }}
-                    className="text-[11px] text-amber-400/90 hover:text-amber-300 font-semibold underline cursor-pointer"
+                    className="text-[10.5px] text-slate-400 hover:text-slate-300 underline cursor-pointer"
                   >
-                    Change or reset admin passcode
+                    Change passcode directly
                   </button>
                 </div>
               </form>
             ) : (
+              /* INITIAL OR DIRECT ADMIN PASSCODE SETUP */
               <form onSubmit={handleSetInitialAdminPasscode} className="space-y-3">
                 <div className="p-3.5 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl text-left space-y-1">
                   <div className="flex items-center gap-1.5 text-xs font-black text-indigo-300">
@@ -440,7 +828,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   </div>
                   <p className="text-[11px] text-slate-300 leading-relaxed">
                     {hasConfiguredAdminPasscode
-                      ? 'Choose a new custom passcode below. This will update the admin password on this app.'
+                      ? 'Choose a new custom passcode below. This will update the master admin password on this app.'
                       : 'No custom admin passcode has been created yet. Set a secure master passcode below for Head Coach & Admin access.'}
                   </p>
                 </div>

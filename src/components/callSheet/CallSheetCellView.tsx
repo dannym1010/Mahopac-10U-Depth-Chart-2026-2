@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Star, Trash2, Edit2, Check, X } from 'lucide-react';
 import { CallSheetPlay } from '../../types/callSheet';
+import { WristbandSlotMatch } from '../../utils/wristbandLinking';
 
 interface CallSheetCellViewProps {
   sectionId: string;
@@ -8,6 +9,7 @@ interface CallSheetCellViewProps {
   play: CallSheetPlay | null;
   isRedZone?: boolean;
   highlightClass?: string;
+  wristbandSlotMatch?: WristbandSlotMatch;
   onSlotClick: () => void;
   onClearSlot?: () => void;
   onDropPlay?: (droppedPlay: CallSheetPlay) => void;
@@ -189,13 +191,48 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
 
   const isStarred = !!play.isStarred;
 
+  // Exact wristband number and highlight colors from either play metadata or play.wristbandSlotMatch
+  const match = play.wristbandSlotMatch;
+  const displayNum =
+    play.wristbandLabel ||
+    (play.wristbandNum ? String(play.wristbandNum) : '') ||
+    (match ? String(match.slotNumber) : '');
+
+  const numberBgColor =
+    play.wristbandNumberColor ||
+    match?.numberBgColor ||
+    play.wristbandColor ||
+    '#facc15';
+
+  const isDarkNumberBadge = [
+    '#dc2626',
+    '#ef4444',
+    '#2563eb',
+    '#3b82f6',
+    '#7e22ce',
+    '#a855f7',
+    '#09090b',
+    '#334155',
+  ].includes(numberBgColor);
+
+  const numberTextColor = isDarkNumberBadge ? '#ffffff' : '#000000';
+
+  const rowHighlightColor =
+    (play.wristbandHighlightTarget === 'full_row' && play.wristbandRowColor) ||
+    (match?.highlightTarget === 'full_row' && match?.rowHighlightColor);
+
+  const effectiveBgStyle = rowHighlightColor ? { backgroundColor: rowHighlightColor } : undefined;
+
   return (
     <div
       onClick={onSlotClick}
       onDoubleClick={() => setIsInlineEditing(true)}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
-      className={`h-7 sm:h-7.5 px-2 border-b flex items-center justify-between gap-1.5 text-xs select-none transition-all cursor-pointer group ${baseBgClass}`}
+      style={effectiveBgStyle}
+      className={`h-7 sm:h-7.5 px-2 border-b flex items-center justify-between gap-1.5 text-xs select-none transition-all cursor-pointer group ${
+        rowHighlightColor ? 'text-slate-900 border-slate-300' : baseBgClass
+      }`}
       title="Click to pick from library, double-click to edit directly"
     >
       <div className="flex items-center gap-1.5 min-w-0 flex-1">
@@ -204,10 +241,22 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
           {slotIndex + 1}.
         </span>
 
-        {/* Wristband badge if available */}
-        {play.wristbandNum && (
-          <span className="px-1 py-0.2 rounded bg-amber-400/90 text-black font-black text-[9px] font-mono shrink-0 leading-tight">
-            #{play.wristbandNum}
+        {/* Exact Wristband Number Badge matching Wristband Insert & Highlight */}
+        {displayNum && (
+          <span
+            data-wristband-badge="true"
+            className="wristband-number-badge px-1.5 py-0.5 rounded font-black text-[9.5px] font-mono shrink-0 shadow-xs border border-black/20 flex items-center gap-0.5 leading-tight select-none"
+            style={{
+              backgroundColor: numberBgColor,
+              color: numberTextColor,
+            }}
+            title={
+              play.wristbandTitle || match?.wristbandTitle
+                ? `${play.wristbandTitle || match?.wristbandTitle} #${displayNum}`
+                : `Wristband #${displayNum}`
+            }
+          >
+            #{displayNum}
           </span>
         )}
 
@@ -220,6 +269,13 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
         {play.formation && (
           <span className="text-[9px] text-slate-500 dark:text-slate-400 font-mono shrink-0 hidden sm:inline-block">
             ({play.formation})
+          </span>
+        )}
+
+        {/* Personnel badge */}
+        {play.personnel && (
+          <span className="text-[8.5px] px-1 py-0.2 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono shrink-0 hidden md:inline-block">
+            {play.personnel}
           </span>
         )}
       </div>

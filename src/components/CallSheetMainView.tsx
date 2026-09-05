@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Printer,
   Sparkles,
@@ -28,7 +28,7 @@ import {
   DEFAULT_OFFENSE_SECTIONS,
   DEFAULT_DEFENSE_SECTIONS,
 } from '../data/callSheetData';
-import { safeJSONParse, safeJSONSet } from '../services/storageService';
+import { safeJSONParse, safeJSONSet, safeJSONStringify } from '../services/storageService';
 import { ComputerCallSheetView } from './callSheet/ComputerCallSheetView';
 import { MobileCallSheetView } from './callSheet/MobileCallSheetView';
 import { PlayPickerModal } from './callSheet/PlayPickerModal';
@@ -40,15 +40,38 @@ interface CallSheetMainViewProps {
   activeTeamName?: string;
   masterPlayLibrary?: string[];
   onUpdateMasterPlayLibrary?: (plays: string[]) => void;
+  playDatabase?: PlayDatabaseEntry[];
+  onUpdatePlayDatabase?: (plays: PlayDatabaseEntry[]) => void;
+  callSheetData?: CallSheetFullData;
+  onUpdateCallSheetData?: (data: CallSheetFullData) => void;
+  deletedPlayIds?: string[];
+  onUpdateDeletedPlayIds?: (ids: string[]) => void;
 }
 
 export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   activeTeamName = 'Mahopac 10U',
   masterPlayLibrary = [],
   onUpdateMasterPlayLibrary,
+  playDatabase: propPlayDatabase,
+  onUpdatePlayDatabase,
+  callSheetData: propCallSheetData,
+  onUpdateCallSheetData,
+  deletedPlayIds: propDeletedPlayIds,
+  onUpdateDeletedPlayIds,
 }) => {
-  // Call sheet state with localStorage persistence
+  // Permanently deleted play IDs tracking (guarantees deleted plays never reappear on refresh)
+  const [deletedPlayIds, setDeletedPlayIds] = useState<string[]>(() => {
+    if (propDeletedPlayIds && Array.isArray(propDeletedPlayIds)) {
+      return propDeletedPlayIds;
+    }
+    return safeJSONParse<string[]>('footballDeletedPlayIds', []);
+  });
+
+  // Call sheet state with localStorage & remote sync
   const [callSheetData, setCallSheetData] = useState<CallSheetFullData>(() => {
+    if (propCallSheetData && propCallSheetData.offenseSections && propCallSheetData.defenseSections) {
+      return propCallSheetData;
+    }
     const saved = safeJSONParse<CallSheetFullData | null>('footballCallSheetData', null);
     if (saved && saved.offenseSections && saved.defenseSections) {
       return saved;
@@ -56,14 +79,59 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
     return DEFAULT_CALL_SHEET_DATA;
   });
 
-  // Play database state with localStorage persistence
+  // Play database state with persistent deleted ID filtering
   const [playDatabase, setPlayDatabase] = useState<PlayDatabaseEntry[]>(() => {
-    const saved = safeJSONParse<PlayDatabaseEntry[] | null>('footballPlayDatabase', null);
-    if (saved && Array.isArray(saved) && saved.length > 0) {
-      return saved;
+    const savedDeleted = safeJSONParse<string[]>('footballDeletedPlayIds', []);
+    const deletedSet = new Set([...(propDeletedPlayIds || []), ...savedDeleted]);
+
+    if (propPlayDatabase && Array.isArray(propPlayDatabase)) {
+      return propPlayDatabase.filter((p) => !deletedSet.has(p.id));
     }
-    return MASTER_PLAY_DATABASE;
+    const hasBeenInitialized = localStorage.getItem('footballPlayDatabaseInitialized');
+    const saved = safeJSONParse<PlayDatabaseEntry[] | null>('footballPlayDatabase', null);
+    if (hasBeenInitialized && Array.isArray(saved)) {
+      return saved.filter((p) => !deletedSet.has(p.id));
+    }
+    if (saved && Array.isArray(saved)) {
+      localStorage.setItem('footballPlayDatabaseInitialized', 'true');
+      return saved.filter((p) => !deletedSet.has(p.id));
+    }
+    localStorage.setItem('footballPlayDatabaseInitialized', 'true');
+    return MASTER_PLAY_DATABASE.filter((p) => !deletedSet.has(p.id));
   });
+
+  // Safeguard refs to prevent infinite render loops between prop sync and state updates
+  const lastEmittedCallSheetJson = useRef<string>('');
+  const lastEmittedPlayDbJson = useRef<string>('');
+
+  // Sync state if parent props update from server or Firestore
+  useEffect(() => {
+    if (propPlayDatabase && Array.isArray(propPlayDatabase)) {
+      const deletedSet = new Set(deletedPlayIds);
+      const filtered = propPlayDatabase.filter((p) => !deletedSet.has(p.id));
+      const filteredJson = safeJSONStringify(filtered);
+      if (filteredJson !== lastEmittedPlayDbJson.current) {
+        lastEmittedPlayDbJson.current = filteredJson;
+        setPlayDatabase(filtered);
+      }
+    }
+  }, [propPlayDatabase, deletedPlayIds]);
+
+  useEffect(() => {
+    if (propCallSheetData && propCallSheetData.offenseSections) {
+      const incomingJson = safeJSONStringify(propCallSheetData);
+      if (incomingJson !== lastEmittedCallSheetJson.current) {
+        lastEmittedCallSheetJson.current = incomingJson;
+        setCallSheetData(propCallSheetData);
+      }
+    }
+  }, [propCallSheetData]);
+
+  useEffect(() => {
+    if (propDeletedPlayIds && Array.isArray(propDeletedPlayIds)) {
+      setDeletedPlayIds(propDeletedPlayIds);
+    }
+  }, [propDeletedPlayIds]);
 
   // UI state
   const [activeUnit, setActiveUnit] = useState<'offense' | 'defense'>('offense');
@@ -103,14 +171,28 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
     currentPlay: null,
   });
 
-  // Sync to localStorage
+  // Sync to localStorage and parent remote sync only when local state actually changes
   useEffect(() => {
-    safeJSONSet('footballCallSheetData', callSheetData);
-  }, [callSheetData]);
+    const currentJson = safeJSONStringify(callSheetData);
+    if (currentJson !== lastEmittedCallSheetJson.current) {
+      lastEmittedCallSheetJson.current = currentJson;
+      safeJSONSet('footballCallSheetData', callSheetData);
+      if (onUpdateCallSheetData) {
+        onUpdateCallSheetData(callSheetData);
+      }
+    }
+  }, [callSheetData, onUpdateCallSheetData]);
 
   useEffect(() => {
-    safeJSONSet('footballPlayDatabase', playDatabase);
-  }, [playDatabase]);
+    const currentJson = safeJSONStringify(playDatabase);
+    if (currentJson !== lastEmittedPlayDbJson.current) {
+      lastEmittedPlayDbJson.current = currentJson;
+      safeJSONSet('footballPlayDatabase', playDatabase);
+      if (onUpdatePlayDatabase) {
+        onUpdatePlayDatabase(playDatabase);
+      }
+    }
+  }, [playDatabase, onUpdatePlayDatabase]);
 
   // Handle slot click to directly edit/pick play
   const handleSlotClick = (sectionId: string, slotIndex: number) => {
@@ -325,38 +407,101 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
   // Add custom play to database
   const handleAddCustomToDatabase = (newPlay: PlayDatabaseEntry) => {
-    setPlayDatabase((prev) => [newPlay, ...prev]);
+    setPlayDatabase((prev) => {
+      const next = [newPlay, ...prev];
+      safeJSONSet('footballPlayDatabase', next);
+      if (onUpdatePlayDatabase) onUpdatePlayDatabase(next);
+      return next;
+    });
+
+    // If this play ID was previously marked deleted, un-delete it
+    if (deletedPlayIds.includes(newPlay.id)) {
+      const nextDeleted = deletedPlayIds.filter((id) => id !== newPlay.id);
+      setDeletedPlayIds(nextDeleted);
+      safeJSONSet('footballDeletedPlayIds', nextDeleted);
+      if (onUpdateDeletedPlayIds) onUpdateDeletedPlayIds(nextDeleted);
+    }
   };
 
   // Delete play from database (offensive or defensive play bank)
   const handleDeletePlayFromDatabase = (playId: string) => {
-    setPlayDatabase((prev) => {
-      const next = prev.filter((p) => p.id !== playId);
-      safeJSONSet('footballPlayDatabase', next);
-      return next;
-    });
+    const playToDelete = playDatabase.find((p) => p.id === playId);
+    const next = playDatabase.filter((p) => p.id !== playId);
+    setPlayDatabase(next);
+    safeJSONSet('footballPlayDatabase', next);
+    if (onUpdatePlayDatabase) onUpdatePlayDatabase(next);
+
+    // Track permanently in deletedPlayIds so it never returns on refresh
+    const nextDeleted = Array.from(new Set([...deletedPlayIds, playId]));
+    setDeletedPlayIds(nextDeleted);
+    safeJSONSet('footballDeletedPlayIds', nextDeleted);
+    if (onUpdateDeletedPlayIds) onUpdateDeletedPlayIds(nextDeleted);
+
+    // Remove play name from master library if present
+    if (playToDelete && playToDelete.name) {
+      const playNameLower = playToDelete.name.toLowerCase().trim();
+      const currentMaster = masterPlayLibrary.length > 0
+        ? masterPlayLibrary
+        : (safeJSONParse<string[]>('footballMasterPlays', []) || []);
+      const nextMaster = currentMaster.filter(
+        (name) => name.toLowerCase().trim() !== playNameLower
+      );
+      safeJSONSet('footballMasterPlays', nextMaster);
+      if (onUpdateMasterPlayLibrary) onUpdateMasterPlayLibrary(nextMaster);
+    }
   };
 
   // Batch delete plays from database
   const handleDeleteMultiplePlaysFromDatabase = (playIds: string[]) => {
     if (!playIds || playIds.length === 0) return;
     const idSet = new Set(playIds);
-    setPlayDatabase((prev) => {
-      const next = prev.filter((p) => !idSet.has(p.id));
-      safeJSONSet('footballPlayDatabase', next);
-      return next;
-    });
+    const playsToDelete = playDatabase.filter((p) => idSet.has(p.id));
+    const next = playDatabase.filter((p) => !idSet.has(p.id));
+    setPlayDatabase(next);
+    safeJSONSet('footballPlayDatabase', next);
+    if (onUpdatePlayDatabase) onUpdatePlayDatabase(next);
+
+    // Track permanently in deletedPlayIds so they never return on refresh
+    const nextDeleted = Array.from(new Set([...deletedPlayIds, ...playIds]));
+    setDeletedPlayIds(nextDeleted);
+    safeJSONSet('footballDeletedPlayIds', nextDeleted);
+    if (onUpdateDeletedPlayIds) onUpdateDeletedPlayIds(nextDeleted);
+
+    // Remove play names from master library if present
+    const namesToDelete = new Set(playsToDelete.map((p) => p.name.toLowerCase().trim()));
+    const currentMaster = masterPlayLibrary.length > 0
+      ? masterPlayLibrary
+      : (safeJSONParse<string[]>('footballMasterPlays', []) || []);
+    const nextMaster = currentMaster.filter(
+      (name) => !namesToDelete.has(name.toLowerCase().trim())
+    );
+    safeJSONSet('footballMasterPlays', nextMaster);
+    if (onUpdateMasterPlayLibrary) onUpdateMasterPlayLibrary(nextMaster);
   };
 
   // Reset active unit play bank to defaults
   const handleResetPlayDatabase = () => {
+    const confirm = window.confirm(
+      `Reset ${activeUnit.toUpperCase()} play bank to system defaults? Any custom deletions in this unit will be restored.`
+    );
+    if (!confirm) return;
+
     setPlayDatabase((prev) => {
       const otherPlays = prev.filter((p) => p.unit !== activeUnit);
       const defaultUnitPlays = MASTER_PLAY_DATABASE.filter((p) => p.unit === activeUnit);
       const next = [...defaultUnitPlays, ...otherPlays];
       safeJSONSet('footballPlayDatabase', next);
+      if (onUpdatePlayDatabase) onUpdatePlayDatabase(next);
       return next;
     });
+
+    const defaultUnitPlayIds = new Set(
+      MASTER_PLAY_DATABASE.filter((p) => p.unit === activeUnit).map((p) => p.id)
+    );
+    const nextDeleted = deletedPlayIds.filter((id) => !defaultUnitPlayIds.has(id));
+    setDeletedPlayIds(nextDeleted);
+    safeJSONSet('footballDeletedPlayIds', nextDeleted);
+    if (onUpdateDeletedPlayIds) onUpdateDeletedPlayIds(nextDeleted);
   };
 
   // Import plays from Excel into database and master play library
@@ -374,6 +519,14 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
     setPlayDatabase(nextDb);
     safeJSONSet('footballPlayDatabase', nextDb);
+    if (onUpdatePlayDatabase) onUpdatePlayDatabase(nextDb);
+
+    // Un-mark any imported play IDs from deletedPlayIds
+    const importedIds = new Set(importedPlays.map((p) => p.id));
+    const nextDeleted = deletedPlayIds.filter((id) => !importedIds.has(id));
+    setDeletedPlayIds(nextDeleted);
+    safeJSONSet('footballDeletedPlayIds', nextDeleted);
+    if (onUpdateDeletedPlayIds) onUpdateDeletedPlayIds(nextDeleted);
 
     // Sync play names to Master Play Library for Wristband view and Sidebar
     const newPlayNames = importedPlays.map((p) => p.name);

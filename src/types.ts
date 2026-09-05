@@ -1,5 +1,6 @@
 export type UnitType = 
   | 'mobile_hub'
+  | 'game_day'
   | 'depth_chart'
   | 'offense' 
   | 'defense' 
@@ -25,6 +26,8 @@ export interface CustomTabGroup {
   color?: string; // e.g. "indigo", "emerald", "amber", "cyan", "rose", "purple"
   tabIds: UnitType[];
   defaultTabId?: UnitType;
+  hidden?: boolean; // When true, folder is hidden from navigation
+  showOnMainBar?: boolean; // Whether folder displays on the main top tab line
 }
 
 export interface Team {
@@ -261,11 +264,34 @@ export interface FormationBoard {
 
 export interface WristbandPlay {
   text: string;
+  customLabel?: string;
+  highlightColor?: string; // e.g. 'yellow' | 'lime' | 'cyan' | 'rose' | 'amber' | 'purple' or hex
+  numberHighlightColor?: string; // highlight just the play number badge
+  numberTextColor?: string; // text/font color for the play number (e.g. black, white, red, etc.)
+  wristbandNum?: number | string;
 }
 
 export interface WristbandColumn {
+  name?: string;
   color: string;
+  numberBgColor?: string; // color for highlighting just the play number column
+  numberTextColor?: string; // text/font color of the play numbers in this column
+  headerTextColor?: string; // text color of the column header (or auto-contrast)
+  highlightNumberOnly?: boolean;
+  labelPrefix?: string;
   plays: WristbandPlay[];
+}
+
+export interface SingleWristband {
+  id: string;
+  title: string;
+  subtitle?: string;
+  labelingMode?: 'same_per_card' | 'continuous' | 'letter_num' | 'custom';
+  startNumber?: number;
+  rowsCount?: number;
+  highlightTheme?: string;
+  highlightTarget?: 'number_only' | 'full_row'; // Toggle whether highlight applies to just the play number column or the full row
+  columns: WristbandColumn[];
 }
 
 export interface WristbandData {
@@ -273,6 +299,8 @@ export interface WristbandData {
   rows?: number;
   columns?: WristbandColumn[];
   copiesPerPage?: number;
+  activeWristbandId?: string;
+  wristbands?: SingleWristband[];
 }
 
 export interface CoachScoutingNote {

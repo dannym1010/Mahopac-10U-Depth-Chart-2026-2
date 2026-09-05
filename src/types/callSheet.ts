@@ -15,7 +15,23 @@ export interface CallSheetPlay {
   name: string;
   formation?: string;
   type?: PlayType;
-  wristbandNum?: number;
+  wristbandNum?: number | string;
+  wristbandLabel?: string;
+  wristbandId?: string;
+  wristbandTitle?: string;
+  wristbandColor?: string;
+  wristbandNumberColor?: string;
+  wristbandRowColor?: string;
+  wristbandHighlightTarget?: 'number_only' | 'full_row';
+  wristbandSlotMatch?: {
+    wristbandId: string;
+    wristbandTitle: string;
+    cardLabel: string;
+    slotNumber: number | string;
+    numberBgColor?: string;
+    rowHighlightColor?: string;
+    highlightTarget?: 'number_only' | 'full_row';
+  };
   personnel?: string;
   notes?: string;
   isCalled?: boolean;
@@ -74,6 +90,8 @@ export interface CallSheetFullData {
   timeouts: TimeoutsState;
 }
 
+export type CallSheetData = CallSheetFullData;
+
 export interface PlayDatabaseEntry {
   id: string;
   name: string;
@@ -83,7 +101,20 @@ export interface PlayDatabaseEntry {
   situations: string[]; // e.g. ["1-10", "2nd long", "2nd med", "2nd & short (SHOT)", "3rd long", "3rd med", "3rd short", "3rd & 1", "4th & 1", "Backed Up (inside 5)", "TRICKS", "RED ZONE", "2 pt Special", "Goaline Pass", "2 MIN O", "4 Min O", "RUN CLOCK"]
   concept?: string;
   personnel?: string;
-  wristbandNum?: number;
+  wristbandNum?: number | string;
+  wristbandLabel?: string;
+  wristbandColor?: string;
+  wristbandNumberColor?: string;
+  wristbandHighlightTarget?: 'number_only' | 'full_row';
+  wristbandSlotMatch?: {
+    wristbandId: string;
+    wristbandTitle: string;
+    cardLabel: string;
+    slotNumber: number | string;
+    numberBgColor?: string;
+    rowHighlightColor?: string;
+    highlightTarget?: 'number_only' | 'full_row';
+  };
   tags?: string[];
   notes?: string;
   isFavorite?: boolean;

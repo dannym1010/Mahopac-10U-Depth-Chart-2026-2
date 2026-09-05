@@ -94,8 +94,11 @@ import { FormationsView } from './components/FormationsView';
 import { ScrimmageView } from './components/ScrimmageView';
 import { WristbandView } from './components/WristbandView';
 import { CallSheetMainView } from './components/CallSheetMainView';
+import { GameDayHubView } from './components/GameDayHubView';
+import { USER_IMPORTED_GAME_DAY_PLAYS, INITIAL_TWO_WRISTBANDS_DATA } from './data/userGameDayPlays';
 import { ExcelPlayImportModal } from './components/callSheet/ExcelPlayImportModal';
-import { PlayDatabaseEntry } from './types/callSheet';
+import { PlayDatabaseEntry, CallSheetData } from './types/callSheet';
+import { MASTER_PLAY_DATABASE, DEFAULT_CALL_SHEET_DATA } from './data/callSheetData';
 import { ScoutingView } from './components/ScoutingView';
 import { PlaybookGuidesView } from './components/PlaybookGuidesView';
 import { DrillLibraryView } from './components/DrillLibraryView';
@@ -174,6 +177,34 @@ export default function App() {
   const [masterPlayLibrary, setMasterPlayLibrary] = useState<string[]>(() =>
     safeJSONParse('footballMasterPlays', MASTER_PLAY_LIBRARY)
   );
+  const [deletedPlayIds, setDeletedPlayIds] = useState<string[]>(() => {
+    const saved = safeJSONParse('footballDeletedPlayIds', null);
+    if (saved && Array.isArray(saved)) return saved;
+    return [];
+  });
+  const [playDatabase, setPlayDatabase] = useState<PlayDatabaseEntry[]>(() => {
+    const saved = safeJSONParse('footballPlayDatabase', null);
+    const savedDeleted = safeJSONParse('footballDeletedPlayIds', []);
+    const deletedSet = new Set(Array.isArray(savedDeleted) ? savedDeleted : []);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      const existingFiltered = saved.filter((p: PlayDatabaseEntry) => !deletedSet.has(p.id));
+      const missingUserPlays = USER_IMPORTED_GAME_DAY_PLAYS.filter(
+        (up) => !deletedSet.has(up.id) && !existingFiltered.some((ep) => ep.name.toLowerCase() === up.name.toLowerCase())
+      );
+      if (missingUserPlays.length > 0) {
+        const combined = [...missingUserPlays, ...existingFiltered];
+        safeJSONSet('footballPlayDatabase', combined);
+        return combined;
+      }
+      return existingFiltered;
+    }
+    return MASTER_PLAY_DATABASE.filter((p) => !deletedSet.has(p.id));
+  });
+  const [callSheetData, setCallSheetData] = useState<CallSheetData>(() => {
+    const saved = safeJSONParse('footballCallSheetData', null);
+    if (saved && typeof saved === 'object') return saved;
+    return DEFAULT_CALL_SHEET_DATA;
+  });
   const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>(() => {
     const saved = safeJSONParse('footballScheduleEvents', null);
     if (saved && Array.isArray(saved) && saved.length > 0) {
@@ -323,7 +354,7 @@ export default function App() {
     safeJSONSet('footballMasterPlays', nextMaster);
 
     // 2. Also update footballPlayDatabase
-    const currentDb = safeJSONParse<PlayDatabaseEntry[]>('footballPlayDatabase', []) || [];
+    const currentDb = playDatabase && playDatabase.length > 0 ? playDatabase : (safeJSONParse<PlayDatabaseEntry[]>('footballPlayDatabase', []) || []);
     let nextDb: PlayDatabaseEntry[] = [];
     if (mode === 'replace') {
       nextDb = importedPlays;
@@ -333,7 +364,10 @@ export default function App() {
       );
       nextDb = [...importedPlays, ...existingFiltered];
     }
+    setPlayDatabase(nextDb);
+    latestStateRef.current.playDatabase = nextDb;
     safeJSONSet('footballPlayDatabase', nextDb);
+    debouncedSave('all');
   };
 
   // Drag-and-Drop Transferred Data Ref
@@ -388,6 +422,9 @@ export default function App() {
     staffList,
     adminPasscode,
     masterPlayLibrary,
+    playDatabase,
+    callSheetData,
+    deletedPlayIds,
     collapsedFolders,
     scheduleEvents,
     roster,
@@ -410,6 +447,9 @@ export default function App() {
       staffList,
       adminPasscode,
       masterPlayLibrary,
+      playDatabase,
+      callSheetData,
+      deletedPlayIds,
       collapsedFolders,
       scheduleEvents,
       roster,
@@ -1029,6 +1069,21 @@ function mergeRemoteWeeklyData(
       latestStateRef.current.masterPlayLibrary = data.masterPlayLibrary;
       safeJSONSet('footballMasterPlays', data.masterPlayLibrary);
     }
+    if (data.playDatabase && Array.isArray(data.playDatabase)) {
+      setPlayDatabase(data.playDatabase);
+      latestStateRef.current.playDatabase = data.playDatabase;
+      safeJSONSet('footballPlayDatabase', data.playDatabase);
+    }
+    if (data.callSheetData && typeof data.callSheetData === 'object') {
+      setCallSheetData(data.callSheetData);
+      latestStateRef.current.callSheetData = data.callSheetData;
+      safeJSONSet('footballCallSheetData', data.callSheetData);
+    }
+    if (data.deletedPlayIds && Array.isArray(data.deletedPlayIds)) {
+      setDeletedPlayIds(data.deletedPlayIds);
+      latestStateRef.current.deletedPlayIds = data.deletedPlayIds;
+      safeJSONSet('footballDeletedPlayIds', data.deletedPlayIds);
+    }
     if (data.collapsedFolders) {
       setCollapsedFolders(data.collapsedFolders);
       latestStateRef.current.collapsedFolders = data.collapsedFolders;
@@ -1090,6 +1145,9 @@ function mergeRemoteWeeklyData(
     safeJSONSet('footballTeamCoaches', currentState.staffList);
     safeJSONSet('footballAdminCustomPasscode', currentState.adminPasscode || '');
     safeJSONSet('footballMasterPlays', currentState.masterPlayLibrary);
+    safeJSONSet('footballPlayDatabase', currentState.playDatabase);
+    safeJSONSet('footballCallSheetData', currentState.callSheetData);
+    safeJSONSet('footballDeletedPlayIds', currentState.deletedPlayIds);
     safeJSONSet('footballCollapsedFolders', currentState.collapsedFolders);
     safeJSONSet('footballScheduleEvents', currentState.scheduleEvents);
     safeJSONSet('footballRoster', currentState.roster);
@@ -1110,6 +1168,9 @@ function mergeRemoteWeeklyData(
       staffList: currentState.staffList,
       adminPasscode: currentState.adminPasscode || '',
       masterPlayLibrary: currentState.masterPlayLibrary,
+      playDatabase: currentState.playDatabase,
+      callSheetData: currentState.callSheetData,
+      deletedPlayIds: currentState.deletedPlayIds,
       collapsedFolders: currentState.collapsedFolders,
       scheduleEvents: currentState.scheduleEvents,
       roster: currentState.roster,
@@ -5337,6 +5398,7 @@ function mergeRemoteWeeklyData(
           isOpen={true}
           isPendingApproval={Boolean(currentUser && !isApproved)}
           pendingEmail={currentUser?.email || ''}
+          currentUserEmail={currentUser?.email || ''}
           isLiveEnvironment={isLive}
           adminPasscode={adminPasscode}
           onAdminPasscodeSignIn={handleAdminPasscodeSignIn}
@@ -5780,29 +5842,143 @@ function mergeRemoteWeeklyData(
               />
             )}
 
+            {/* Game Day Hub (Call Sheet, Wristbands & Scouting) */}
+            {activeUnit === 'game_day' && (
+              <GameDayHubView
+                userRole={userRole}
+                activeTeamName={currentActiveTeam?.name || 'Mahopac 10U'}
+                opponent={currentWeekState.opponent || ''}
+                onUpdateOpponent={(newOpponent) => {
+                  setWeeklyData((prev) => {
+                    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+                    const existingWeek = prev[scopedKey] || prev[currentWeek] || {
+                      formations: defaultFormations,
+                      depthChart: {},
+                      scrimmageChart: {},
+                      opponent: '',
+                    };
+                    const updatedWeek = {
+                      ...existingWeek,
+                      opponent: newOpponent,
+                    };
+                    return {
+                      ...prev,
+                      [scopedKey]: updatedWeek,
+                      [currentWeek]: updatedWeek,
+                    };
+                  });
+                }}
+                currentWeek={currentWeek}
+                playDatabase={playDatabase}
+                onUpdatePlayDatabase={(newDb) => {
+                  setPlayDatabase(newDb);
+                  latestStateRef.current.playDatabase = newDb;
+                  safeJSONSet('footballPlayDatabase', newDb);
+                  debouncedSave('all');
+                }}
+                callSheetData={callSheetData}
+                onUpdateCallSheetData={(newCs) => {
+                  setCallSheetData(newCs);
+                  latestStateRef.current.callSheetData = newCs;
+                  safeJSONSet('footballCallSheetData', newCs);
+                  debouncedSave('all');
+                }}
+                deletedPlayIds={deletedPlayIds}
+                onUpdateDeletedPlayIds={(newIds) => {
+                  setDeletedPlayIds(newIds);
+                  safeJSONSet('footballDeletedPlayIds', newIds);
+                }}
+                wristbandData={currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA}
+                onUpdateWristbandData={(updatedWb) => {
+                  setWeeklyData((prev) => {
+                    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+                    const existingWeek = prev[scopedKey] || prev[currentWeek] || {
+                      formations: defaultFormations,
+                      depthChart: {},
+                      scrimmageChart: {},
+                      opponent: '',
+                    };
+                    const updatedWeek = {
+                      ...existingWeek,
+                      wristbandData: updatedWb,
+                    };
+                    return {
+                      ...prev,
+                      [scopedKey]: updatedWeek,
+                      [currentWeek]: updatedWeek,
+                    };
+                  });
+                }}
+                scouting={currentWeekState.scouting || {}}
+                onUpdateScouting={(field, val) => {
+                  setWeeklyData((prev) => {
+                    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+                    const existingWeek = prev[scopedKey] || prev[currentWeek] || {
+                      formations: defaultFormations,
+                      depthChart: {},
+                      scrimmageChart: {},
+                      opponent: '',
+                    };
+                    const updatedScouting = {
+                      ...(existingWeek.scouting || {}),
+                      [field]: val,
+                    };
+                    const updatedWeek = {
+                      ...existingWeek,
+                      opponent: field === 'opponent' ? val : (existingWeek.opponent || ''),
+                      scouting: updatedScouting,
+                    };
+                    return {
+                      ...prev,
+                      [scopedKey]: updatedWeek,
+                      [currentWeek]: updatedWeek,
+                    };
+                  });
+                }}
+                staffList={staffList}
+                savedCoaches={savedCoaches}
+                scheduleEvents={activeTeamScheduleEvents}
+                activeTeamRoster={activeTeamRoster}
+                currentUser={currentUser}
+                onNavigateToSchedule={() => setActiveUnit('schedule')}
+              />
+            )}
+
             {/* 3. Wristband Builder */}
             {activeUnit === 'wristband' && (
               <WristbandView
-                wristbandData={
-                  currentWeekState.wristbandData || {
-                    title: 'MAHOPAC 10U • PLAY CALLING INSERT',
-                    rows: 16,
-                    columns: [
-                      { color: 'yellow', plays: [] },
-                      { color: 'blue', plays: [] },
-                    ],
-                  }
-                }
+                wristbandData={currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA}
                 userRole={userRole}
                 masterPlayLibrary={masterPlayLibrary}
+                playDatabase={playDatabase}
+                onUpdatePlayDatabase={(newDb) => {
+                  setPlayDatabase(newDb);
+                  latestStateRef.current.playDatabase = newDb;
+                  safeJSONSet('footballPlayDatabase', newDb);
+                  debouncedSave('all');
+                }}
+                onUpdateWristbandData={(updatedWb) => {
+                  setWeeklyData((prev) => {
+                    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+                    const existingWeek = prev[scopedKey] || prev[currentWeek] || {
+                      formations: defaultFormations,
+                      depthChart: {},
+                      scrimmageChart: {},
+                      opponent: '',
+                    };
+                    const updatedWeek = {
+                      ...existingWeek,
+                      wristbandData: updatedWb,
+                    };
+                    return {
+                      ...prev,
+                      [scopedKey]: updatedWeek,
+                      [currentWeek]: updatedWeek,
+                    };
+                  });
+                }}
                 onUpdateTitle={(title) => {
-                  const wb = currentWeekState.wristbandData || {
-                    rows: 16,
-                    columns: [
-                      { color: 'yellow', plays: [] },
-                      { color: 'blue', plays: [] },
-                    ],
-                  };
+                  const wb = currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA;
                   setWeeklyData((prev) => ({
                     ...prev,
                     [currentWeek]: {
@@ -5812,13 +5988,7 @@ function mergeRemoteWeeklyData(
                   }));
                 }}
                 onClearPlays={() => {
-                  const wb = currentWeekState.wristbandData || {
-                    rows: 16,
-                    columns: [
-                      { color: 'yellow', plays: [] },
-                      { color: 'blue', plays: [] },
-                    ],
-                  };
+                  const wb = currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA;
                   setWeeklyData((prev) => ({
                     ...prev,
                     [currentWeek]: {
@@ -5826,23 +5996,17 @@ function mergeRemoteWeeklyData(
                       wristbandData: {
                         ...wb,
                         columns: [
-                          { color: 'yellow', plays: Array(16).fill({ text: '' }) },
-                          { color: 'blue', plays: Array(16).fill({ text: '' }) },
+                          { color: '#facc15', plays: Array(13).fill({ text: '' }) },
+                          { color: '#3b82f6', plays: Array(13).fill({ text: '' }) },
                         ],
                       },
                     },
                   }));
                 }}
                 onBulkFillPlays={(plays) => {
-                  const wb = currentWeekState.wristbandData || {
-                    rows: 16,
-                    columns: [
-                      { color: 'yellow', plays: [] },
-                      { color: 'blue', plays: [] },
-                    ],
-                  };
-                  const yellowPlays = plays.slice(0, 16).map((p) => ({ text: p }));
-                  const bluePlays = plays.slice(16, 32).map((p) => ({ text: p }));
+                  const wb = currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA;
+                  const yellowPlays = plays.slice(0, 13).map((p) => ({ text: p }));
+                  const bluePlays = plays.slice(13, 26).map((p) => ({ text: p }));
                   setWeeklyData((prev) => ({
                     ...prev,
                     [currentWeek]: {
@@ -5850,24 +6014,18 @@ function mergeRemoteWeeklyData(
                       wristbandData: {
                         ...wb,
                         columns: [
-                          { color: 'yellow', plays: yellowPlays },
-                          { color: 'blue', plays: bluePlays },
+                          { color: '#facc15', plays: yellowPlays },
+                          { color: '#3b82f6', plays: bluePlays },
                         ],
                       },
                     },
                   }));
                 }}
                 onUpdatePlay={(colIdx, rowIdx, text) => {
-                  const wb = currentWeekState.wristbandData || {
-                    rows: 16,
-                    columns: [
-                      { color: 'yellow', plays: [] },
-                      { color: 'blue', plays: [] },
-                    ],
-                  };
+                  const wb = currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA;
                   const cols = [...(wb.columns || [])];
-                  if (!cols[0]) cols[0] = { color: 'yellow', plays: [] };
-                  if (!cols[1]) cols[1] = { color: 'blue', plays: [] };
+                  if (!cols[0]) cols[0] = { color: '#facc15', plays: [] };
+                  if (!cols[1]) cols[1] = { color: '#3b82f6', plays: [] };
 
                   const targetCol = { ...cols[colIdx] };
                   const plays = [...(targetCol.plays || [])];
@@ -5895,6 +6053,28 @@ function mergeRemoteWeeklyData(
                   setMasterPlayLibrary(newPlays);
                   latestStateRef.current.masterPlayLibrary = newPlays;
                   safeJSONSet('footballMasterPlays', newPlays);
+                  debouncedSave('all');
+                }}
+                playDatabase={playDatabase}
+                onUpdatePlayDatabase={(newDb) => {
+                  setPlayDatabase(newDb);
+                  latestStateRef.current.playDatabase = newDb;
+                  safeJSONSet('footballPlayDatabase', newDb);
+                  debouncedSave('all');
+                }}
+                callSheetData={callSheetData}
+                onUpdateCallSheetData={(newCs) => {
+                  setCallSheetData(newCs);
+                  latestStateRef.current.callSheetData = newCs;
+                  safeJSONSet('footballCallSheetData', newCs);
+                  debouncedSave('all');
+                }}
+                deletedPlayIds={deletedPlayIds}
+                onUpdateDeletedPlayIds={(newDeleted) => {
+                  setDeletedPlayIds(newDeleted);
+                  latestStateRef.current.deletedPlayIds = newDeleted;
+                  safeJSONSet('footballDeletedPlayIds', newDeleted);
+                  debouncedSave('all');
                 }}
               />
             )}
@@ -6334,8 +6514,8 @@ function mergeRemoteWeeklyData(
             )}
           </div>
 
-          {/* Master Roster Sidebar (Shown on Depth Charts, Scrimmage, Wristband) */}
-          {!['mobile_hub', 'drills', 'scouting', 'guide', 'practice', 'users', 'schedule', 'compliance', 'call_sheet'].includes(
+          {/* Master Roster Sidebar (Shown on Depth Charts and Scrimmage) */}
+          {!['mobile_hub', 'game_day', 'wristband', 'drills', 'scouting', 'guide', 'practice', 'users', 'schedule', 'compliance', 'call_sheet'].includes(
             activeUnit
           ) && (
             <RosterSidebar

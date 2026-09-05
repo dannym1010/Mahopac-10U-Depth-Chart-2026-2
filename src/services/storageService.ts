@@ -37,28 +37,51 @@ export function safeJSONParse<T>(key: string, fallback: T): T {
 }
 
 export function safeJSONStringify(data: any, space?: number): string {
+  if (data === undefined) return '{}';
   try {
     const seen = new WeakSet();
-    return JSON.stringify(
+    const result = JSON.stringify(
       data,
       (_k, val) => {
         if (typeof val === 'object' && val !== null) {
-          if (
-            typeof window !== 'undefined' &&
-            (val === window || (val as any).window === window || val instanceof Event || val instanceof EventTarget)
-          ) {
+          try {
+            // Guard against Window, iframe window, or global scope objects
+            if (
+              (typeof window !== 'undefined' && (val === window || val === window.top || val === window.parent || val === window.self)) ||
+              val.constructor?.name === 'Window' ||
+              val.constructor?.name === 'global' ||
+              (typeof (val as any).setInterval === 'function' && typeof (val as any).document === 'object') ||
+              ((val as any).window && (val as any).window === val)
+            ) {
+              return undefined;
+            }
+            // Guard against DOM nodes, documents, events
+            if (
+              (typeof Node !== 'undefined' && val instanceof Node) ||
+              (typeof Event !== 'undefined' && val instanceof Event) ||
+              (typeof EventTarget !== 'undefined' && val instanceof EventTarget) ||
+              val.constructor?.name === 'HTMLDocument' ||
+              val.constructor?.name === 'Document'
+            ) {
+              return undefined;
+            }
+            // Ignore React internal fiber or element references that may contain circular DOM nodes
+            if ((val as any).$$typeof || (val as any)._owner || (val as any)._store) {
+              return undefined;
+            }
+            if (seen.has(val)) {
+              return undefined;
+            }
+            seen.add(val);
+          } catch {
             return undefined;
           }
-          if (typeof Node !== 'undefined' && val instanceof Node) return undefined;
-          // Ignore React internal fiber or element references that may contain circular DOM nodes
-          if ((val as any).$$typeof || (val as any)._owner || (val as any)._store) return undefined;
-          if (seen.has(val)) return undefined;
-          seen.add(val);
         }
         return val;
       },
       space
     );
+    return typeof result === 'string' ? result : '{}';
   } catch (e) {
     console.warn('safeJSONStringify fallback caught error:', e);
     return '{}';
@@ -71,6 +94,9 @@ export function deepClone<T>(obj: T): T {
   }
   try {
     const str = safeJSONStringify(obj);
+    if (!str || str === 'undefined' || str === '{}') {
+      if (Array.isArray(obj)) return [] as unknown as T;
+    }
     return JSON.parse(str);
   } catch {
     return obj;
