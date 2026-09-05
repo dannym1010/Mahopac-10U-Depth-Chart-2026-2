@@ -57,12 +57,32 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     try {
-      const dataStr = e.dataTransfer.getData('application/json');
+      const dataStr =
+        e.dataTransfer.getData('application/json') ||
+        e.dataTransfer.getData('callSheetPlayTransfer');
       if (dataStr) {
         const parsed = JSON.parse(dataStr);
-        if (parsed && parsed.name && onDropPlay) {
-          onDropPlay(parsed);
+        if (parsed && (parsed.name || parsed.text) && onDropPlay) {
+          onDropPlay({
+            ...parsed,
+            name: parsed.name || parsed.text,
+          });
+          return;
         }
+      }
+      const textStr = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('text');
+      if (textStr && onDropPlay) {
+        try {
+          const parsed = JSON.parse(textStr);
+          if (parsed && (parsed.name || parsed.text)) {
+            onDropPlay({ ...parsed, name: parsed.name || parsed.text });
+            return;
+          }
+        } catch {}
+        onDropPlay({
+          id: `play_${Date.now()}`,
+          name: textStr.trim().toUpperCase(),
+        });
       }
     } catch (err) {
       console.error('Failed to parse dropped play:', err);
@@ -242,6 +262,19 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
 
   return (
     <div
+      draggable={Boolean(hasRealName && !isInlineEditing)}
+      onDragStart={(e) => {
+        if (!play || !hasRealName) return;
+        const playData: CallSheetPlay = { ...play };
+        let jsonStr = '';
+        try {
+          jsonStr = JSON.stringify(playData);
+          e.dataTransfer.setData('application/json', jsonStr);
+          e.dataTransfer.setData('callSheetPlayTransfer', jsonStr);
+          e.dataTransfer.setData('text/plain', play.name);
+        } catch {}
+        e.dataTransfer.effectAllowed = 'copyMove';
+      }}
       onClick={onSlotClick}
       onDoubleClick={() => setIsInlineEditing(true)}
       onDragOver={handleDragOver}

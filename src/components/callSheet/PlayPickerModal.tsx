@@ -6,6 +6,7 @@ import {
   Sparkles,
   Star,
   Check,
+  CheckSquare,
   Zap,
   Trash2,
   Tag,
@@ -35,10 +36,12 @@ interface PlayPickerModalProps {
   databasePlays: PlayDatabaseEntry[];
   wristbandData?: WristbandData;
   onSelectPlay: (play: CallSheetPlay) => void;
+  onSelectMultiplePlays?: (plays: CallSheetPlay[]) => void;
   onClearSlot: () => void;
   onAddCustomToDatabase?: (entry: PlayDatabaseEntry) => void;
   onDeleteFromDatabase?: (playId: string) => void;
   onOpenExcelImport?: () => void;
+  initialMultiSelect?: boolean;
 }
 
 const PLAY_TYPE_COLORS: Record<PlayType, { bg: string; text: string; border: string }> = {
@@ -64,10 +67,12 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
   databasePlays,
   wristbandData,
   onSelectPlay,
+  onSelectMultiplePlays,
   onClearSlot,
   onAddCustomToDatabase,
   onDeleteFromDatabase,
   onOpenExcelImport,
+  initialMultiSelect,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
@@ -75,6 +80,10 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
   const [filterSituationOnly, setFilterSituationOnly] = useState(true);
   const [isCreatingCustom, setIsCreatingCustom] = useState(false);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [isMultiSelect, setIsMultiSelect] = useState<boolean>(
+    initialMultiSelect ?? Boolean(onSelectMultiplePlays)
+  );
+  const [selectedQueue, setSelectedQueue] = useState<PlayDatabaseEntry[]>([]);
 
   // Derive live wristband index so plays only show color if they have a spot on the wristband
   const effectiveWristbandData = useMemo(() => {
@@ -175,9 +184,9 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handlePick = (dbPlay: PlayDatabaseEntry) => {
+  const dbPlayToCallSheetPlay = (dbPlay: PlayDatabaseEntry): CallSheetPlay => {
     const match = lookupWristbandPlay(dbPlay.name, wristbandIndex);
-    const playItem: CallSheetPlay = {
+    return {
       id: `call_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       name: dbPlay.name,
       formation: dbPlay.formation,
@@ -203,7 +212,34 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
       personnel: dbPlay.personnel || extractPersonnel(dbPlay),
       notes: dbPlay.concept,
     };
+  };
+
+  const handlePick = (dbPlay: PlayDatabaseEntry) => {
+    const playItem = dbPlayToCallSheetPlay(dbPlay);
     onSelectPlay(playItem);
+    onClose();
+  };
+
+  const handleTogglePlayInQueue = (play: PlayDatabaseEntry) => {
+    setSelectedQueue((prev) => {
+      const idx = prev.findIndex((p) => p.id === play.id);
+      if (idx >= 0) {
+        return prev.filter((_, i) => i !== idx);
+      } else {
+        return [...prev, play];
+      }
+    });
+  };
+
+  const handleConfirmMultiple = () => {
+    if (selectedQueue.length === 0) return;
+    const converted = selectedQueue.map(dbPlayToCallSheetPlay);
+    if (onSelectMultiplePlays) {
+      onSelectMultiplePlays(converted);
+    } else if (onSelectPlay && converted[0]) {
+      onSelectPlay(converted[0]);
+    }
+    setSelectedQueue([]);
     onClose();
   };
 
@@ -252,16 +288,23 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
               <BookOpen className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base sm:text-lg font-black text-slate-100 tracking-tight">
-                  Pick Play for Slot #{slotIndex + 1}
+                  {isMultiSelect ? 'Select Multiple Plays in Order' : `Pick Play for Slot #${slotIndex + 1}`}
                 </h2>
                 <span className="text-[11px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
                   {sectionTitle}
                 </span>
+                {isMultiSelect && (
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                    Starting at Slot #{slotIndex + 1}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-400">
-                Select a recommended play from your database or write in a custom call.
+                {isMultiSelect
+                  ? 'Click plays in the order you want them on the wristband (1, 2, 3...).'
+                  : 'Select a recommended play from your database or write in a custom call.'}
               </p>
             </div>
           </div>
@@ -298,9 +341,9 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
           </div>
         )}
 
-        {/* Action Toggle (Browse Database vs Create Custom) */}
-        <div className="px-5 pt-3 pb-2 flex items-center justify-between gap-2 border-b border-slate-800 bg-slate-900/60">
-          <div className="flex items-center gap-1.5 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
+        {/* Action Toggle (Browse Database vs Create Custom vs Multi-Select) */}
+        <div className="px-5 pt-3 pb-2 flex items-center justify-between gap-2 border-b border-slate-800 bg-slate-900/60 flex-wrap">
+          <div className="flex items-center gap-1.5 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 flex-wrap">
             <button
               type="button"
               onClick={() => setIsCreatingCustom(false)}
@@ -324,6 +367,24 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
               <Plus className="w-3.5 h-3.5" />
               <span>Write Custom Play</span>
             </button>
+            {onSelectMultiplePlays && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMultiSelect(!isMultiSelect);
+                  setSelectedQueue([]);
+                }}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  isMultiSelect
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Click multiple plays to place them in order"
+              >
+                <CheckSquare className="w-3.5 h-3.5" />
+                <span>{isMultiSelect ? 'Multi-Select (In Order) ON' : 'Multi-Select Mode'}</span>
+              </button>
+            )}
             {onOpenExcelImport && (
               <button
                 type="button"
@@ -430,12 +491,39 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
             <div className="flex-1 overflow-y-auto space-y-2 pr-1 no-scrollbar min-h-[220px]">
               {filteredPlays.map((play) => {
                 const style = PLAY_TYPE_COLORS[play.type] || PLAY_TYPE_COLORS.run;
+                const queueIdx = selectedQueue.findIndex((p) => p.id === play.id);
+                const isSelectedInQueue = queueIdx >= 0;
+                const orderNum = queueIdx + 1;
+
                 return (
                   <div
                     key={play.id}
-                    onClick={() => handlePick(play)}
-                    className="p-3 bg-slate-800/80 hover:bg-slate-750 hover:border-indigo-500/60 border border-slate-700/70 rounded-2xl cursor-pointer transition-all flex items-start justify-between gap-3 group active:scale-[0.99]"
+                    onClick={() => {
+                      if (isMultiSelect) {
+                        handleTogglePlayInQueue(play);
+                      } else {
+                        handlePick(play);
+                      }
+                    }}
+                    className={`p-3 rounded-2xl cursor-pointer transition-all flex items-start justify-between gap-3 group active:scale-[0.99] border ${
+                      isSelectedInQueue
+                        ? 'bg-indigo-950/40 border-indigo-500 ring-2 ring-indigo-500/50 shadow-md'
+                        : 'bg-slate-800/80 hover:bg-slate-750 hover:border-indigo-500/60 border-slate-700/70'
+                    }`}
                   >
+                    {isMultiSelect && (
+                      <div className="shrink-0 pt-0.5">
+                        {isSelectedInQueue ? (
+                          <span className="w-6 h-6 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center shadow-md ring-2 ring-indigo-400 font-mono">
+                            #{orderNum}
+                          </span>
+                        ) : (
+                          <span className="w-6 h-6 rounded-full bg-slate-800/90 text-slate-500 border border-slate-700 group-hover:border-indigo-500/50 group-hover:text-indigo-400 text-xs flex items-center justify-center font-bold">
+                            +
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <div className="space-y-1 min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         {(() => {
@@ -546,12 +634,53 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                           </button>
                         )
                       )}
-                      <button
-                        type="button"
-                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black shadow-md transition-all group-hover:scale-105"
-                      >
-                        Assign
-                      </button>
+                      {isMultiSelect ? (
+                        <div className="flex items-center gap-1">
+                          {isSelectedInQueue ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTogglePlayInQueue(play);
+                              }}
+                              className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center gap-1 cursor-pointer"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>#{orderNum}</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTogglePlayInQueue(play);
+                              }}
+                              className="px-2.5 py-1.5 bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white rounded-xl text-xs font-bold border border-slate-700 hover:border-indigo-500 transition-all flex items-center gap-1 cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Select</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePick(play);
+                            }}
+                            className="px-2 py-1.5 rounded-xl text-slate-400 hover:text-indigo-200 hover:bg-slate-800 text-[10px] font-bold transition-colors cursor-pointer"
+                            title="Assign this play only right now"
+                          >
+                            Assign
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black shadow-md transition-all group-hover:scale-105"
+                        >
+                          Assign
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -581,6 +710,78 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                 </div>
               )}
             </div>
+
+            {isMultiSelect && (
+              <div className="p-3 sm:p-4 bg-slate-950 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0 rounded-b-3xl">
+                <div className="flex items-center gap-2 overflow-x-auto py-1 no-scrollbar min-w-0 flex-1">
+                  <span className="text-xs font-bold text-slate-300 shrink-0 flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[11px] font-black font-mono">
+                      {selectedQueue.length}
+                    </span>
+                    <span className="hidden sm:inline">
+                      {selectedQueue.length === 1 ? 'Selected in Order:' : 'Selected in Order:'}
+                    </span>
+                  </span>
+                  {selectedQueue.length === 0 ? (
+                    <span className="text-xs text-slate-500 italic truncate">
+                      Click plays in the list above to add them to your wristband in order
+                    </span>
+                  ) : (
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 max-w-full no-scrollbar">
+                      {selectedQueue.map((item, idx) => (
+                        <span
+                          key={`${item.id}_${idx}`}
+                          className="px-2 py-1 rounded-lg bg-indigo-900/50 border border-indigo-500/50 text-indigo-200 text-xs font-bold flex items-center gap-1.5 shrink-0"
+                        >
+                          <span className="text-amber-400 font-mono font-black">#{idx + 1}</span>
+                          <span className="max-w-[130px] truncate">{item.name}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedQueue((prev) => prev.filter((_, i) => i !== idx));
+                            }}
+                            className="text-slate-400 hover:text-white ml-0.5 cursor-pointer text-sm font-bold"
+                            title="Remove from queue"
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 justify-end">
+                  {selectedQueue.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedQueue([])}
+                      className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors cursor-pointer"
+                    >
+                      Clear Queue
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={selectedQueue.length === 0}
+                    onClick={handleConfirmMultiple}
+                    className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-md ${
+                      selectedQueue.length > 0
+                        ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer hover:scale-[1.02]'
+                        : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                    }`}
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>
+                      {selectedQueue.length === 0
+                        ? 'Click Plays to Add in Order'
+                        : `Add ${selectedQueue.length} ${selectedQueue.length === 1 ? 'Play' : 'Plays'} in Order`}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* Custom Play Form */
@@ -669,6 +870,41 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
               >
                 Back to Database
               </button>
+              {isMultiSelect && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (!customName.trim()) return;
+                    const dbEntry: PlayDatabaseEntry = {
+                      id: `db_custom_${Date.now()}`,
+                      name: customName.trim(),
+                      unit,
+                      formation: customFormation.trim(),
+                      type: customType,
+                      situations: situationKeywords.length > 0 ? situationKeywords : [sectionTitle],
+                      personnel: customPersonnel.trim() || undefined,
+                      wristbandNum: customWristbandNum ? parseInt(customWristbandNum, 10) : undefined,
+                      concept: customConcept.trim() || undefined,
+                      tags: ['Custom', customType],
+                    };
+                    if (onAddCustomToDatabase) {
+                      onAddCustomToDatabase(dbEntry);
+                    }
+                    setSelectedQueue((prev) => [...prev, dbEntry]);
+                    setCustomName('');
+                    setCustomFormation('');
+                    setCustomPersonnel('');
+                    setCustomConcept('');
+                    setCustomWristbandNum('');
+                    setIsCreatingCustom(false);
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Save & Add to Selection Queue</span>
+                </button>
+              )}
               <button
                 type="submit"
                 className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-md shadow-emerald-600/30 transition-all cursor-pointer flex items-center gap-1.5"

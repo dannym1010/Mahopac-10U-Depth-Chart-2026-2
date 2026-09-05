@@ -36,6 +36,7 @@ interface PlayBankSidebarProps {
   plays: PlayDatabaseEntry[];
   wristbandData?: WristbandData;
   onAddCustomPlay: () => void;
+  onAddMultiplePlaysToWristband?: (plays: PlayDatabaseEntry[]) => void;
   onOpenExcelImport?: () => void;
   onDeletePlay?: (playId: string) => void;
   onDeleteMultiplePlays?: (playIds: string[]) => void;
@@ -49,6 +50,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
   plays,
   wristbandData,
   onAddCustomPlay,
+  onAddMultiplePlaysToWristband,
   onOpenExcelImport,
   onDeletePlay,
   onDeleteMultiplePlays,
@@ -59,6 +61,8 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [isManageMode, setIsManageMode] = useState(false);
+  const [isOrderSelectMode, setIsOrderSelectMode] = useState(false);
+  const [orderedQueue, setOrderedQueue] = useState<PlayDatabaseEntry[]>([]);
   const [selectedPlayIds, setSelectedPlayIds] = useState<Record<string, boolean>>({});
   const [playToDelete, setPlayToDelete] = useState<PlayDatabaseEntry | null>(null);
   const [isConfirmResetOpen, setIsConfirmResetOpen] = useState(false);
@@ -246,6 +250,25 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
               <Trash2 className="w-3.5 h-3.5" />
               <span className="text-[10px]">{isManageMode ? 'Done' : 'Manage'}</span>
             </button>
+
+            {onAddMultiplePlaysToWristband && !isManageMode && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOrderSelectMode(!isOrderSelectMode);
+                  setOrderedQueue([]);
+                }}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  isOrderSelectMode
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-indigo-400 hover:text-indigo-200 hover:bg-indigo-950/40'
+                }`}
+                title={isOrderSelectMode ? 'Cancel order select mode' : 'Select multiple plays in order to place on wristband'}
+              >
+                <CheckSquare className="w-3.5 h-3.5" />
+                <span className="text-[10px]">{isOrderSelectMode ? 'Cancel' : 'In Order'}</span>
+              </button>
+            )}
 
             {onOpenExcelImport && !isManageMode && (
               <button
@@ -449,112 +472,150 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
 
         {/* Plays List - Scrolls independently with visible slim scrollbar */}
         <div className="flex-1 overflow-y-auto min-h-0 p-2.5 space-y-1.5 overscroll-contain scrollbar-thin scrollbar-thumb-slate-700 hover:scrollbar-thumb-slate-600 scrollbar-track-slate-950/40">
-          {filteredPlays.map((play) => (
-            <div
-              key={play.id}
-              draggable={!isManageMode}
-              onDragStart={(e) => handleDragStart(e, play)}
-              onClick={() => {
-                if (isManageMode) {
-                  handleToggleSelectPlay(play.id);
+          {filteredPlays.map((play) => {
+            const queueIdx = orderedQueue.findIndex((p) => p.id === play.id);
+            const isQueued = queueIdx >= 0;
+            const orderNum = queueIdx + 1;
+
+            return (
+              <div
+                key={play.id}
+                draggable={!isManageMode && !isOrderSelectMode}
+                onDragStart={(e) => handleDragStart(e, play)}
+                onClick={() => {
+                  if (isManageMode) {
+                    handleToggleSelectPlay(play.id);
+                  } else if (isOrderSelectMode) {
+                    setOrderedQueue((prev) => {
+                      const idx = prev.findIndex((p) => p.id === play.id);
+                      if (idx >= 0) {
+                        return prev.filter((_, i) => i !== idx);
+                      } else {
+                        return [...prev, play];
+                      }
+                    });
+                  }
+                }}
+                className={`p-2.5 border rounded-xl transition-all select-none group shadow-xs ${
+                  isManageMode || isOrderSelectMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
+                } ${
+                  isManageMode && selectedPlayIds[play.id]
+                    ? 'bg-rose-950/30 border-rose-500/60 ring-1 ring-rose-500/40'
+                    : isOrderSelectMode && isQueued
+                    ? 'bg-indigo-950/40 border-indigo-500 ring-2 ring-indigo-500/50 shadow-md'
+                    : 'bg-slate-850 hover:bg-slate-800 border-slate-750 hover:border-indigo-500/60'
+                }`}
+                title={
+                  isManageMode
+                    ? 'Click to select for deletion'
+                    : isOrderSelectMode
+                    ? isQueued
+                      ? `Selected #${orderNum} - click to remove`
+                      : 'Click to select in order'
+                    : 'Drag onto any slot in the call sheet or wristband'
                 }
-              }}
-              className={`p-2.5 border rounded-xl transition-all select-none group shadow-xs ${
-                isManageMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
-              } ${
-                selectedPlayIds[play.id]
-                  ? 'bg-rose-950/30 border-rose-500/60 ring-1 ring-rose-500/40'
-                  : 'bg-slate-850 hover:bg-slate-800 border-slate-750 hover:border-indigo-500/60'
-              }`}
-              title={isManageMode ? 'Click to select for deletion' : 'Drag onto any slot in the call sheet'}
-            >
-              <div className="flex items-center justify-between gap-1.5 mb-1">
-                <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                  {isManageMode && (
-                    <div className="shrink-0 mr-0.5">
-                      {selectedPlayIds[play.id] ? (
-                        <CheckSquare className="w-4 h-4 text-rose-400" />
-                      ) : (
-                        <Square className="w-4 h-4 text-slate-500" />
-                      )}
-                    </div>
-                  )}
-                  {(() => {
-                    const match = lookupWristbandPlay(play.name, wristbandIndex);
-                    if (match) {
-                      // Play HAS a spot on the active wristband -> render with wristband color
-                      const bg = match.numberBgColor || '#facc15';
-                      const fg = isDarkColor(bg) ? '#ffffff' : '#000000';
-                      return (
-                        <span
-                          style={{
-                            backgroundColor: bg,
-                            color: fg,
-                          }}
-                          className="px-1 py-0.2 rounded font-black text-[9px] font-mono shrink-0 shadow-2xs border border-black/20"
-                          title={`${match.wristbandTitle} • Slot #${match.slotLabel}`}
-                        >
-                          #{match.slotLabel}
-                        </span>
-                      );
-                    }
+              >
+                <div className="flex items-center justify-between gap-1.5 mb-1">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                    {isManageMode && (
+                      <div className="shrink-0 mr-0.5">
+                        {selectedPlayIds[play.id] ? (
+                          <CheckSquare className="w-4 h-4 text-rose-400" />
+                        ) : (
+                          <Square className="w-4 h-4 text-slate-500" />
+                        )}
+                      </div>
+                    )}
+                    {isOrderSelectMode && (
+                      <div className="shrink-0 mr-1">
+                        {isQueued ? (
+                          <span className="w-5 h-5 rounded-full bg-indigo-600 text-white font-black text-[10px] flex items-center justify-center shadow-xs ring-1 ring-indigo-400 font-mono">
+                            #{orderNum}
+                          </span>
+                        ) : (
+                          <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-500 border border-slate-700 group-hover:border-indigo-500 text-[10px] flex items-center justify-center font-bold">
+                            +
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {(() => {
+                      const match = lookupWristbandPlay(play.name, wristbandIndex);
+                      if (match) {
+                        // Play HAS a spot on the active wristband -> render with wristband color
+                        const bg = match.numberBgColor || '#facc15';
+                        const fg = isDarkColor(bg) ? '#ffffff' : '#000000';
+                        return (
+                          <span
+                            style={{
+                              backgroundColor: bg,
+                              color: fg,
+                            }}
+                            className="px-1 py-0.2 rounded font-black text-[9px] font-mono shrink-0 shadow-2xs border border-black/20"
+                            title={`${match.wristbandTitle} • Slot #${match.slotLabel}`}
+                          >
+                            #{match.slotLabel}
+                          </span>
+                        );
+                      }
 
-                    // Play DOES NOT have a spot on the wristband:
-                    // "If a play doesnt have a spot on the wristband it shouldnt have a color in the play bank"
-                    // If the entry has a custom wristbandNum, show uncolored (transparent bg, neutral slate border/text)
-                    if (play.wristbandNum) {
-                      return (
-                        <span
-                          className="px-1 py-0.2 rounded font-mono text-[9px] font-semibold text-slate-400 bg-transparent border border-slate-700/70 shrink-0"
-                          title="No spot on active wristband"
-                        >
-                          #{play.wristbandNum}
-                        </span>
-                      );
-                    }
+                      // Play DOES NOT have a spot on the wristband:
+                      // "If a play doesnt have a spot on the wristband it shouldnt have a color in the play bank"
+                      // If the entry has a custom wristbandNum, show uncolored (transparent bg, neutral slate border/text)
+                      if (play.wristbandNum) {
+                        return (
+                          <span
+                            className="px-1 py-0.2 rounded font-mono text-[9px] font-semibold text-slate-400 bg-transparent border border-slate-700/70 shrink-0"
+                            title="No spot on active wristband"
+                          >
+                            #{play.wristbandNum}
+                          </span>
+                        );
+                      }
 
-                    return null;
-                  })()}
-                  <span className="font-bold text-xs text-slate-100 group-hover:text-white uppercase truncate">
-                    {play.name}
-                  </span>
+                      return null;
+                    })()}
+                    <span className="font-bold text-xs text-slate-100 group-hover:text-white uppercase truncate">
+                      {play.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {onDeletePlay && !isManageMode && !isOrderSelectMode && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setPlayToDelete(play);
+                        }}
+                        className="p-1 rounded-md text-slate-400 hover:text-rose-400 hover:bg-rose-950/60 transition-all cursor-pointer"
+                        title={`Delete "${play.name}" from play bank`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {!isManageMode && !isOrderSelectMode && (
+                      <GripVertical className="w-3.5 h-3.5 text-slate-500 group-hover:text-indigo-400 shrink-0" />
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {onDeletePlay && !isManageMode && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        setPlayToDelete(play);
-                      }}
-                      className="p-1 rounded-md text-slate-400 hover:text-rose-400 hover:bg-rose-950/60 transition-all cursor-pointer"
-                      title={`Delete "${play.name}" from play bank`}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                  {!isManageMode && (
-                    <GripVertical className="w-3.5 h-3.5 text-slate-500 group-hover:text-indigo-400 shrink-0" />
+
+                <div className="flex items-center gap-1 flex-wrap text-[9px]">
+                  <span className="px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-mono border border-slate-700">
+                    {play.formation}
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded bg-indigo-950/60 text-indigo-300 font-bold uppercase border border-indigo-500/30">
+                    {play.type.replace('_', ' ')}
+                  </span>
+                  {play.personnel && (
+                    <span className="text-slate-400 truncate">
+                      • {play.personnel}
+                    </span>
                   )}
                 </div>
               </div>
-
-              <div className="flex items-center gap-1 flex-wrap text-[9px]">
-                <span className="px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-mono border border-slate-700">
-                  {play.formation}
-                </span>
-                <span className="px-1.5 py-0.2 rounded bg-indigo-950/60 text-indigo-300 font-bold uppercase border border-indigo-500/30">
-                  {play.type.replace('_', ' ')}
-                </span>
-                {play.personnel && (
-                  <span className="text-slate-400 truncate">
-                    • {play.personnel}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
 
           {filteredPlays.length === 0 && (
             <div className="text-center py-10 space-y-3 text-slate-400 text-xs px-2">
@@ -578,6 +639,53 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
             </div>
           )}
         </div>
+
+        {/* Order Select Sticky Bottom Bar */}
+        {isOrderSelectMode && onAddMultiplePlaysToWristband && (
+          <div className="p-3 bg-slate-950 border-t border-slate-800 flex flex-col gap-2 shrink-0">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-slate-300 flex items-center gap-1.5">
+                <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">
+                  {orderedQueue.length}
+                </span>
+                <span>Plays selected in order</span>
+              </span>
+              {orderedQueue.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setOrderedQueue([])}
+                  className="text-[11px] text-slate-400 hover:text-white font-bold cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <button
+              type="button"
+              disabled={orderedQueue.length === 0}
+              onClick={() => {
+                if (orderedQueue.length > 0) {
+                  onAddMultiplePlaysToWristband(orderedQueue);
+                  setOrderedQueue([]);
+                  setIsOrderSelectMode(false);
+                }
+              }}
+              className={`w-full py-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-md ${
+                orderedQueue.length > 0
+                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer shadow-indigo-600/30'
+                  : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+              }`}
+            >
+              <Check className="w-4 h-4" />
+              <span>
+                {orderedQueue.length === 0
+                  ? 'Click plays above in order'
+                  : `Add ${orderedQueue.length} Plays in Order`}
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* Footer Summary & Reset */}
         <div className="p-2.5 border-t border-slate-800/80 bg-slate-950/70 flex items-center justify-between text-[10px] text-slate-400">

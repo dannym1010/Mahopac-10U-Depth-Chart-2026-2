@@ -299,6 +299,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
 
   // Drag-over visual feedback on slots
   const [dragOverSlot, setDragOverSlot] = useState<{ colIdx: number; rowIdx: number } | null>(null);
+  const isDraggingRef = useRef<boolean>(false);
 
   // Helper to commit changes to storage, internal state & parent
   const commitWristbandData = (updated: WristbandData) => {
@@ -318,9 +319,9 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     }
   };
 
-  const updateCurrentWristband = (updater: (wb: SingleWristband) => SingleWristband) => {
+  const updateWristbandById = (targetWbId: string, updater: (wb: SingleWristband) => SingleWristband): WristbandData => {
     const nextWristbands = wristbands.map((wb) => {
-      if (wb.id === currentWristband.id) {
+      if (wb.id === targetWbId) {
         return updater(wb);
       }
       return wb;
@@ -331,6 +332,11 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
       activeWristbandId: currentWristband.id,
     };
     commitWristbandData(nextData);
+    return nextData;
+  };
+
+  const updateCurrentWristband = (updater: (wb: SingleWristband) => SingleWristband): WristbandData => {
+    return updateWristbandById(currentWristband.id, updater);
   };
 
   // Calculates slot label (1, 2, ... 13 / 14 ... 26 or continuous)
@@ -365,7 +371,8 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     colTextColor: string,
     colHeaderName: string,
     formation?: string,
-    type?: PlayType
+    type?: PlayType,
+    freshWristbandData?: WristbandData
   ) => {
     if (!playText || !playText.trim()) return;
     const norm = normalizePlayName(playText);
@@ -414,9 +421,185 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     if (onUpdateCallSheetData) {
       const currentCs: CallSheetFullData =
         callSheetData || safeJSONParse<CallSheetFullData | null>('footballCallSheetData', null) || DEFAULT_CALL_SHEET_DATA;
-      const syncedCs = syncWristbandToCallSheet(normalizedData, currentCs, updatedDb || playDatabase);
+      const syncedCs = syncWristbandToCallSheet(freshWristbandData || normalizedData, currentCs, updatedDb || playDatabase);
       safeJSONSet('footballCallSheetData', syncedCs);
       onUpdateCallSheetData(syncedCs);
+    }
+  };
+
+  // Move or swap plays between two wristband slots
+  const handleSwapOrMoveSlots = (
+    sourceWbId: string,
+    sourceColIdx: number,
+    sourceRowIdx: number,
+    targetWbId: string,
+    targetColIdx: number,
+    targetRowIdx: number
+  ) => {
+    // If dropped on the exact same slot, do nothing
+    if (
+      sourceWbId === targetWbId &&
+      sourceColIdx === targetColIdx &&
+      sourceRowIdx === targetRowIdx
+    ) {
+      return;
+    }
+
+    const sourceWb = wristbands.find((w) => w.id === sourceWbId);
+    const targetWb = wristbands.find((w) => w.id === targetWbId);
+    if (!sourceWb || !targetWb) return;
+
+    const sourceCol = sourceWb.columns[sourceColIdx];
+    const targetCol = targetWb.columns[targetColIdx];
+    if (!sourceCol || !targetCol) return;
+
+    const sourcePlay = sourceCol.plays?.[sourceRowIdx];
+    if (!sourcePlay || !sourcePlay.text || !sourcePlay.text.trim()) return;
+
+    const targetPlay = targetCol.plays?.[targetRowIdx];
+    const hasTargetPlay = Boolean(targetPlay && targetPlay.text && targetPlay.text.trim());
+
+    // Calculate target slot number & styling
+    const targetRows = targetWb.rowsCount || 13;
+    const targetWbIndex = wristbands.findIndex((w) => w.id === targetWb.id);
+    const targetWbStart = getWristbandStartNumber(wristbands, targetWbIndex >= 0 ? targetWbIndex : 0);
+    const targetSlotNumber =
+      targetWb.labelingMode === 'same_per_card'
+        ? targetColIdx * targetRows + targetRowIdx + 1
+        : targetWbStart + targetColIdx * targetRows + targetRowIdx;
+    const targetColColor =
+      targetCol.numberBgColor || targetCol.color || (targetColIdx === 0 ? '#facc15' : '#38bdf8');
+    const targetColTextColor = targetCol.numberTextColor || getContrastTextColor(targetColColor);
+    const targetColHeaderName =
+      targetCol.name || (targetColIdx === 0 ? 'Left Column' : 'Right Column');
+
+    // Calculate source slot number & styling (for swapping)
+    const sourceRows = sourceWb.rowsCount || 13;
+    const sourceWbIndex = wristbands.findIndex((w) => w.id === sourceWb.id);
+    const sourceWbStart = getWristbandStartNumber(wristbands, sourceWbIndex >= 0 ? sourceWbIndex : 0);
+    const sourceSlotNumber =
+      sourceWb.labelingMode === 'same_per_card'
+        ? sourceColIdx * sourceRows + sourceRowIdx + 1
+        : sourceWbStart + sourceColIdx * sourceRows + sourceRowIdx;
+    const sourceColColor =
+      sourceCol.numberBgColor || sourceCol.color || (sourceColIdx === 0 ? '#facc15' : '#38bdf8');
+    const sourceColTextColor = sourceCol.numberTextColor || getContrastTextColor(sourceColColor);
+    const sourceColHeaderName =
+      sourceCol.name || (sourceColIdx === 0 ? 'Left Column' : 'Right Column');
+
+    // Prepare updated plays
+    const movedSourceToTarget: WristbandPlay = {
+      ...sourcePlay,
+      wristbandNum: targetSlotNumber,
+      numberHighlightColor: targetColColor,
+      numberTextColor: targetColTextColor,
+      customLabel: undefined,
+    };
+
+    const swappedTargetToSource: WristbandPlay = hasTargetPlay
+      ? {
+          ...targetPlay!,
+          wristbandNum: sourceSlotNumber,
+          numberHighlightColor: sourceColColor,
+          numberTextColor: sourceColTextColor,
+          customLabel: undefined,
+        }
+      : { text: '', rowHighlightColor: undefined };
+
+    // Update wristband data immutably
+    const nextWristbands = wristbands.map((wb) => {
+      // Case 1: Same wristband move/swap
+      if (sourceWbId === targetWbId && wb.id === sourceWbId) {
+        const nextCols = [...wb.columns];
+
+        if (sourceColIdx === targetColIdx) {
+          const col = { ...nextCols[sourceColIdx] };
+          const plays = [...(col.plays || [])];
+          while (plays.length <= Math.max(sourceRowIdx, targetRowIdx)) {
+            plays.push({ text: '' });
+          }
+          plays[targetRowIdx] = movedSourceToTarget;
+          plays[sourceRowIdx] = swappedTargetToSource;
+          col.plays = plays;
+          nextCols[sourceColIdx] = col;
+        } else {
+          const sCol = { ...nextCols[sourceColIdx] };
+          const sPlays = [...(sCol.plays || [])];
+          while (sPlays.length <= sourceRowIdx) sPlays.push({ text: '' });
+          sPlays[sourceRowIdx] = swappedTargetToSource;
+          sCol.plays = sPlays;
+          nextCols[sourceColIdx] = sCol;
+
+          const tCol = { ...nextCols[targetColIdx] };
+          const tPlays = [...(tCol.plays || [])];
+          while (tPlays.length <= targetRowIdx) tPlays.push({ text: '' });
+          tPlays[targetRowIdx] = movedSourceToTarget;
+          tCol.plays = tPlays;
+          nextCols[targetColIdx] = tCol;
+        }
+        return { ...wb, columns: nextCols };
+      }
+
+      // Case 2: Across different wristbands
+      if (wb.id === sourceWbId) {
+        const nextCols = [...wb.columns];
+        const col = { ...nextCols[sourceColIdx] };
+        const plays = [...(col.plays || [])];
+        while (plays.length <= sourceRowIdx) plays.push({ text: '' });
+        plays[sourceRowIdx] = swappedTargetToSource;
+        col.plays = plays;
+        nextCols[sourceColIdx] = col;
+        return { ...wb, columns: nextCols };
+      }
+
+      if (wb.id === targetWbId) {
+        const nextCols = [...wb.columns];
+        const col = { ...nextCols[targetColIdx] };
+        const plays = [...(col.plays || [])];
+        while (plays.length <= targetRowIdx) plays.push({ text: '' });
+        plays[targetRowIdx] = movedSourceToTarget;
+        col.plays = plays;
+        nextCols[targetColIdx] = col;
+        return { ...wb, columns: nextCols };
+      }
+
+      return wb;
+    });
+
+    const nextData: WristbandData = {
+      ...normalizedData,
+      wristbands: nextWristbands,
+      activeWristbandId: currentWristband.id,
+    };
+
+    commitWristbandData(nextData);
+
+    // Sync moved source play to Call Sheet & DB
+    if (movedSourceToTarget.text) {
+      syncPlayToDatabaseAndCallSheet(
+        movedSourceToTarget.text,
+        targetSlotNumber,
+        targetColColor,
+        targetColTextColor,
+        targetColHeaderName,
+        movedSourceToTarget.formation,
+        movedSourceToTarget.type as PlayType,
+        nextData
+      );
+    }
+
+    // If swapped, sync target play to Call Sheet & DB
+    if (hasTargetPlay && swappedTargetToSource.text) {
+      syncPlayToDatabaseAndCallSheet(
+        swappedTargetToSource.text,
+        sourceSlotNumber,
+        sourceColColor,
+        sourceColTextColor,
+        sourceColHeaderName,
+        swappedTargetToSource.formation,
+        swappedTargetToSource.type as PlayType,
+        nextData
+      );
     }
   };
 
@@ -445,41 +628,54 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
         (playInput.isHighlighted ? playInput.highlightColor : undefined);
     }
 
-    const rows = currentWristband.rowsCount || 13;
-    const wbIndex = wristbands.findIndex((w) => w.id === currentWristband.id);
+    const targetWb = wristbands.find((w) => w.id === wbId) || currentWristband;
+    const rows = targetWb.rowsCount || 13;
+    const wbIndex = wristbands.findIndex((w) => w.id === targetWb.id);
     const wbStart = getWristbandStartNumber(wristbands, wbIndex >= 0 ? wbIndex : 0);
-    const slotNumber = currentWristband.labelingMode === 'same_per_card'
+    const slotNumber = targetWb.labelingMode === 'same_per_card'
       ? colIdx * rows + rowIdx + 1
       : wbStart + colIdx * rows + rowIdx;
-    const col = currentWristband.columns[colIdx];
+    const col = targetWb.columns[colIdx];
     const colColor = col?.numberBgColor || col?.color || (colIdx === 0 ? '#facc15' : '#38bdf8');
     const colTextColor = col?.numberTextColor || getContrastTextColor(colColor);
     const colHeaderName = col?.name || (colIdx === 0 ? 'Left Column' : 'Right Column');
 
-    updateCurrentWristband((wb) => {
-      const nextCols = [...wb.columns];
-      const targetCol = { ...nextCols[colIdx] };
-      const nextPlays = [...(targetCol.plays || [])];
+    const nextWristbands = wristbands.map((wb) => {
+      if (wb.id === targetWb.id) {
+        const nextCols = [...wb.columns];
+        const targetCol = { ...nextCols[colIdx] };
+        const nextPlays = [...(targetCol.plays || [])];
 
-      while (nextPlays.length <= rowIdx) {
-        nextPlays.push({ text: '' });
+        while (nextPlays.length <= rowIdx) {
+          nextPlays.push({ text: '' });
+        }
+
+        nextPlays[rowIdx] = {
+          ...nextPlays[rowIdx],
+          text: playName,
+          formation,
+          type,
+          wristbandNum: slotNumber,
+          numberHighlightColor: colColor,
+          numberTextColor: colTextColor,
+          rowHighlightColor: rowHighlight || nextPlays[rowIdx]?.rowHighlightColor,
+          customLabel: undefined,
+        };
+
+        targetCol.plays = nextPlays;
+        nextCols[colIdx] = targetCol;
+        return { ...wb, columns: nextCols };
       }
-
-      nextPlays[rowIdx] = {
-        ...nextPlays[rowIdx],
-        text: playName,
-        formation,
-        type,
-        wristbandNum: slotNumber,
-        numberHighlightColor: colColor,
-        numberTextColor: colTextColor,
-        rowHighlightColor: rowHighlight || nextPlays[rowIdx]?.rowHighlightColor,
-      };
-
-      targetCol.plays = nextPlays;
-      nextCols[colIdx] = targetCol;
-      return { ...wb, columns: nextCols };
+      return wb;
     });
+
+    const nextData: WristbandData = {
+      ...normalizedData,
+      wristbands: nextWristbands,
+      activeWristbandId: currentWristband.id,
+    };
+
+    commitWristbandData(nextData);
 
     if (playName) {
       syncPlayToDatabaseAndCallSheet(
@@ -489,24 +685,179 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
         colTextColor,
         colHeaderName,
         formation,
-        type
+        type,
+        nextData
+      );
+    }
+  };
+
+  // Handle assigning multiple plays in order starting at a given slot
+  const handleAssignMultiplePlaysInOrder = (
+    wbId: string,
+    startColIdx: number,
+    startRowIdx: number,
+    plays: (CallSheetPlay | PlayDatabaseEntry | WristbandPlay | any)[]
+  ) => {
+    if (!plays || plays.length === 0) return;
+
+    const targetWb = wristbands.find((w) => w.id === wbId) || currentWristband;
+    let rowsCount = targetWb.rowsCount || 13;
+    const colsCount = Math.max(targetWb.columns.length, 1);
+    const wbIndex = wristbands.findIndex((w) => w.id === targetWb.id);
+    const wbStart = getWristbandStartNumber(wristbands, wbIndex >= 0 ? wbIndex : 0);
+
+    // Deep clone the columns
+    const updatedCols = targetWb.columns.map((c) => ({
+      ...c,
+      plays: [...(c.plays || [])],
+    }));
+
+    // If plays count exceeds current total capacity from start position, check if we need to auto-expand rowsCount
+    const currentAvailableSlots = (colsCount - 1 - startColIdx) * rowsCount + (rowsCount - startRowIdx);
+    if (plays.length > currentAvailableSlots) {
+      const neededRows = Math.ceil((startColIdx * rowsCount + startRowIdx + plays.length) / colsCount);
+      if (neededRows > rowsCount) {
+        rowsCount = Math.min(Math.max(neededRows, rowsCount), 30);
+      }
+    }
+
+    let currentCol = startColIdx;
+    let currentRow = startRowIdx;
+
+    const syncedPlaysList: {
+      playName: string;
+      slotNumber: number;
+      colColor: string;
+      colTextColor: string;
+      colHeaderName: string;
+      formation: string;
+      type: PlayType | undefined;
+    }[] = [];
+
+    for (let i = 0; i < plays.length; i++) {
+      const playInput = plays[i];
+      let playName = '';
+      let formation = '';
+      let type: PlayType | undefined = undefined;
+      let rowHighlight: string | undefined = undefined;
+
+      if (typeof playInput === 'string') {
+        playName = playInput.trim().toUpperCase();
+      } else if (playInput && typeof playInput === 'object') {
+        playName = ((playInput.name || playInput.text || '') as string).trim().toUpperCase();
+        formation = playInput.formation || '';
+        type = playInput.type;
+        rowHighlight =
+          playInput.rowHighlightColor ||
+          playInput.highlightColor ||
+          playInput.wristbandRowColor ||
+          (playInput.isHighlighted ? playInput.highlightColor : undefined);
+      }
+
+      if (currentCol >= updatedCols.length) {
+        break;
+      }
+
+      const col = updatedCols[currentCol];
+      const colColor = col?.numberBgColor || col?.color || (currentCol === 0 ? '#facc15' : '#38bdf8');
+      const colTextColor = col?.numberTextColor || getContrastTextColor(colColor);
+      const colHeaderName = col?.name || (currentCol === 0 ? 'Left Column' : 'Right Column');
+      const slotNumber = targetWb.labelingMode === 'same_per_card'
+        ? currentCol * rowsCount + currentRow + 1
+        : wbStart + currentCol * rowsCount + currentRow;
+
+      while (col.plays.length <= currentRow) {
+        col.plays.push({ text: '' });
+      }
+
+      col.plays[currentRow] = {
+        ...col.plays[currentRow],
+        text: playName,
+        formation,
+        type,
+        wristbandNum: slotNumber,
+        numberHighlightColor: colColor,
+        numberTextColor: colTextColor,
+        rowHighlightColor: rowHighlight || col.plays[currentRow]?.rowHighlightColor,
+        customLabel: undefined,
+      };
+
+      if (playName) {
+        syncedPlaysList.push({
+          playName,
+          slotNumber,
+          colColor,
+          colTextColor,
+          colHeaderName,
+          formation,
+          type,
+        });
+      }
+
+      // Advance to next slot in order
+      currentRow++;
+      if (currentRow >= rowsCount) {
+        currentRow = 0;
+        currentCol++;
+      }
+    }
+
+    const nextWristbands = wristbands.map((wb) => {
+      if (wb.id === targetWb.id) {
+        return {
+          ...wb,
+          rowsCount,
+          columns: updatedCols,
+        };
+      }
+      return wb;
+    });
+
+    const nextData: WristbandData = {
+      ...normalizedData,
+      wristbands: nextWristbands,
+      activeWristbandId: currentWristband.id,
+    };
+
+    commitWristbandData(nextData);
+
+    // Sync all assigned plays
+    for (const item of syncedPlaysList) {
+      syncPlayToDatabaseAndCallSheet(
+        item.playName,
+        item.slotNumber,
+        item.colColor,
+        item.colTextColor,
+        item.colHeaderName,
+        item.formation,
+        item.type,
+        nextData
       );
     }
   };
 
   // Handle clearing a slot
   const handleClearSlot = (wbId: string, colIdx: number, rowIdx: number) => {
-    updateCurrentWristband((wb) => {
-      const nextCols = [...wb.columns];
-      const targetCol = { ...nextCols[colIdx] };
-      const nextPlays = [...(targetCol.plays || [])];
-      if (nextPlays[rowIdx]) {
-        nextPlays[rowIdx] = { text: '', rowHighlightColor: undefined };
+    const nextWristbands = wristbands.map((wb) => {
+      if (wb.id === wbId) {
+        const nextCols = [...wb.columns];
+        const targetCol = { ...nextCols[colIdx] };
+        const nextPlays = [...(targetCol.plays || [])];
+        if (nextPlays[rowIdx]) {
+          nextPlays[rowIdx] = { text: '', rowHighlightColor: undefined };
+        }
+        targetCol.plays = nextPlays;
+        nextCols[colIdx] = targetCol;
+        return { ...wb, columns: nextCols };
       }
-      targetCol.plays = nextPlays;
-      nextCols[colIdx] = targetCol;
-      return { ...wb, columns: nextCols };
+      return wb;
     });
+    const nextData: WristbandData = {
+      ...normalizedData,
+      wristbands: nextWristbands,
+      activeWristbandId: currentWristband.id,
+    };
+    commitWristbandData(nextData);
   };
 
   // Drag and drop handler
@@ -517,9 +868,37 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     rowIdx: number
   ) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragOverSlot(null);
+
     try {
-      // 1. Try application/json (standard from PlayBankSidebar and Call Sheet)
+      // 1. Check for wristband slot drag (reordering/swapping/moving between slots)
+      const wbDragStr = e.dataTransfer.getData('application/wristband-slot-drag');
+      if (wbDragStr) {
+        try {
+          const parsedWb = JSON.parse(wbDragStr);
+          if (
+            parsedWb &&
+            parsedWb.source === 'wristband_slot' &&
+            typeof parsedWb.sourceColIdx === 'number' &&
+            typeof parsedWb.sourceRowIdx === 'number'
+          ) {
+            handleSwapOrMoveSlots(
+              parsedWb.sourceWbId || wbId,
+              parsedWb.sourceColIdx,
+              parsedWb.sourceRowIdx,
+              wbId,
+              colIdx,
+              rowIdx
+            );
+            return;
+          }
+        } catch (err) {
+          console.error('Error parsing wristband-slot-drag data:', err);
+        }
+      }
+
+      // 2. Try application/json (standard from PlayBankSidebar and Call Sheet)
       const appJson = e.dataTransfer.getData('application/json');
       if (appJson) {
         try {
@@ -531,7 +910,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
         } catch {}
       }
 
-      // 2. Try callSheetPlayTransfer
+      // 3. Try callSheetPlayTransfer
       const customTransfer = e.dataTransfer.getData('callSheetPlayTransfer');
       if (customTransfer) {
         try {
@@ -543,8 +922,8 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
         } catch {}
       }
 
-      // 3. Try text/plain
-      const text = e.dataTransfer.getData('text/plain');
+      // 4. Try text/plain or text
+      const text = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('text');
       if (text) {
         try {
           const parsed = JSON.parse(text);
@@ -1138,6 +1517,38 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                 <option value="letter_num">Letters &amp; Numbers (A1, B1...)</option>
               </select>
             </div>
+
+            {/* Quick Add Plays in Order Button */}
+            {userRole === 'admin' && (
+              <button
+                type="button"
+                onClick={() => {
+                  let firstEmptyCol = 0;
+                  let firstEmptyRow = 0;
+                  let foundEmpty = false;
+                  const cols = currentWristband.columns || [];
+                  const rows = currentWristband.rowsCount || 13;
+                  for (let c = 0; c < cols.length; c++) {
+                    for (let r = 0; r < rows; r++) {
+                      const text = cols[c]?.plays?.[r]?.text;
+                      if (!text || !text.trim()) {
+                        firstEmptyCol = c;
+                        firstEmptyRow = r;
+                        foundEmpty = true;
+                        break;
+                      }
+                    }
+                    if (foundEmpty) break;
+                  }
+                  setPickingSlot({ wbId: currentWristband.id, colIdx: firstEmptyCol, rowIdx: firstEmptyRow });
+                }}
+                className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer sm:ml-auto"
+                title="Select multiple plays and add them to wristband in the order you click them"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Plays in Order</span>
+              </button>
+            )}
           </div>
 
           {/* =========================================================================
@@ -1227,6 +1638,29 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                       <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-black/20 text-current">
                         {filledCount} / {rows}
                       </span>
+
+                      {/* Quick Add Button in Column Header */}
+                      {userRole === 'admin' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            let firstEmptyRow = 0;
+                            for (let r = 0; r < rows; r++) {
+                              const text = plays[r]?.text;
+                              if (!text || !text.trim()) {
+                                firstEmptyRow = r;
+                                break;
+                              }
+                            }
+                            setPickingSlot({ wbId: currentWristband.id, colIdx: cIdx, rowIdx: firstEmptyRow });
+                          }}
+                          className="px-1.5 py-0.5 rounded bg-black/20 hover:bg-black/30 font-bold text-[10px] flex items-center gap-0.5 transition-colors cursor-pointer"
+                          title={`Add plays in order starting in ${col.name || (cIdx === 0 ? 'Left' : 'Right')} Column`}
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Add</span>
+                        </button>
+                      )}
 
                       {/* Palette Swatch Trigger */}
                       {userRole === 'admin' && (
@@ -1369,6 +1803,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                           key={rIdx}
                           draggable={!isInline && isFilled}
                           onDragStart={(e) => {
+                            isDraggingRef.current = true;
                             const playData: CallSheetPlay = {
                               id: `wb_slot_${cIdx}_${rIdx}_${Date.now()}`,
                               name: play.text,
@@ -1381,31 +1816,58 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                               wristbandRowColor: play.rowHighlightColor,
                             };
                             const jsonStr = safeJSONStringify(playData);
+                            const wbSlotDragData = {
+                              source: 'wristband_slot',
+                              sourceWbId: currentWristband.id,
+                              sourceColIdx: cIdx,
+                              sourceRowIdx: rIdx,
+                              play: {
+                                text: play.text,
+                                formation: play.formation,
+                                type: play.type,
+                                rowHighlightColor: play.rowHighlightColor,
+                              },
+                            };
+                            const wbSlotDragStr = safeJSONStringify(wbSlotDragData);
                             try {
+                              e.dataTransfer.setData('application/wristband-slot-drag', wbSlotDragStr);
                               e.dataTransfer.setData('application/json', jsonStr);
                               e.dataTransfer.setData('callSheetPlayTransfer', jsonStr);
                               e.dataTransfer.setData('text/plain', play.text);
                             } catch {}
                             e.dataTransfer.effectAllowed = 'copyMove';
                           }}
+                          onDragEnd={() => {
+                            setDragOverSlot(null);
+                            setTimeout(() => {
+                              isDraggingRef.current = false;
+                            }, 150);
+                          }}
                           onDragOver={(e) => {
                             e.preventDefault();
                             e.dataTransfer.dropEffect = 'copy';
+                          }}
+                          onDragEnter={(e) => {
+                            e.preventDefault();
                             if (dragOverSlot?.colIdx !== cIdx || dragOverSlot?.rowIdx !== rIdx) {
                               setDragOverSlot({ colIdx: cIdx, rowIdx: rIdx });
                             }
                           }}
-                          onDragLeave={() => {
-                            if (dragOverSlot?.colIdx === cIdx && dragOverSlot?.rowIdx === rIdx) {
-                              setDragOverSlot(null);
+                          onDragLeave={(e) => {
+                            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                              if (dragOverSlot?.colIdx === cIdx && dragOverSlot?.rowIdx === rIdx) {
+                                setDragOverSlot(null);
+                              }
                             }
                           }}
                           onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
                             setDragOverSlot(null);
                             handleDropOnSlot(e, currentWristband.id, cIdx, rIdx);
                           }}
                           onClick={() => {
-                            if (isInline) return;
+                            if (isInline || isDraggingRef.current) return;
                             // Single click opens PlayPickerModal (same as Call Sheet!)
                             setPickingSlot({ wbId: currentWristband.id, colIdx: cIdx, rowIdx: rIdx });
                           }}
@@ -1632,7 +2094,49 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
           onToggleOpen={() => setIsPlayBankOpen(!isPlayBankOpen)}
           onAddCustomPlay={() => {
             // Find first empty slot to pick play or open picker
-            setPickingSlot({ wbId: currentWristband.id, colIdx: 0, rowIdx: 0 });
+            let firstEmptyCol = 0;
+            let firstEmptyRow = 0;
+            let foundEmpty = false;
+            const cols = currentWristband.columns || [];
+            const rows = currentWristband.rowsCount || 13;
+            for (let c = 0; c < cols.length; c++) {
+              for (let r = 0; r < rows; r++) {
+                const text = cols[c]?.plays?.[r]?.text;
+                if (!text || !text.trim()) {
+                  firstEmptyCol = c;
+                  firstEmptyRow = r;
+                  foundEmpty = true;
+                  break;
+                }
+              }
+              if (foundEmpty) break;
+            }
+            setPickingSlot({ wbId: currentWristband.id, colIdx: firstEmptyCol, rowIdx: firstEmptyRow });
+          }}
+          onAddMultiplePlaysToWristband={(playsToAdd) => {
+            let firstEmptyCol = 0;
+            let firstEmptyRow = 0;
+            let foundEmpty = false;
+            const cols = currentWristband.columns || [];
+            const rows = currentWristband.rowsCount || 13;
+            for (let c = 0; c < cols.length; c++) {
+              for (let r = 0; r < rows; r++) {
+                const text = cols[c]?.plays?.[r]?.text;
+                if (!text || !text.trim()) {
+                  firstEmptyCol = c;
+                  firstEmptyRow = r;
+                  foundEmpty = true;
+                  break;
+                }
+              }
+              if (foundEmpty) break;
+            }
+            handleAssignMultiplePlaysInOrder(
+              currentWristband.id,
+              firstEmptyCol,
+              firstEmptyRow,
+              playsToAdd
+            );
           }}
           onOpenExcelImport={() => setIsExcelImportOpen(true)}
           onDeletePlay={(playId) => {
@@ -1667,6 +2171,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
           currentPlay={activePickerSlotPlay}
           databasePlays={playDatabase}
           wristbandData={normalizedData}
+          initialMultiSelect={true}
           onSelectPlay={(selectedPlay) => {
             if (pickingSlot) {
               handleAssignPlayToSlot(
@@ -1674,6 +2179,17 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                 pickingSlot.colIdx,
                 pickingSlot.rowIdx,
                 selectedPlay
+              );
+            }
+            setPickingSlot(null);
+          }}
+          onSelectMultiplePlays={(selectedPlays) => {
+            if (pickingSlot && selectedPlays.length > 0) {
+              handleAssignMultiplePlaysInOrder(
+                pickingSlot.wbId,
+                pickingSlot.colIdx,
+                pickingSlot.rowIdx,
+                selectedPlays
               );
             }
             setPickingSlot(null);
