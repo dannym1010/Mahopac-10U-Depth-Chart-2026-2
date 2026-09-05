@@ -7,6 +7,7 @@
 import { PracticePlan, PracticePeriod, RosterPlayer, AttendanceRecord, SeasonConfig, calculatePlayerCompliance, SingleWristband, WristbandPlay } from '../types';
 import { calculatePlayerHours, getPlayerHoursBreakdown } from './hoursCalculation';
 import { formatWeekLabel } from './seasonWeekUtils';
+import { getWristbandStartNumber } from './wristbandLinking';
 
 export interface PrintOptions {
   beforePrint?: () => void;
@@ -2118,22 +2119,20 @@ export function generateWristbandPrintHTML(
     rowIdx: number,
     play?: WristbandPlay
   ): string => {
-    if (play?.customLabel) return play.customLabel;
-    const mode = wb.labelingMode || 'same_per_card';
+    if (play?.customLabel && isNaN(Number(play.customLabel))) return play.customLabel;
+    const mode = wb.labelingMode || 'continuous';
     const rows = wb.rowsCount || 13;
 
     if (mode === 'same_per_card') {
       return String(colIdx * rows + rowIdx + 1);
     }
-    if (mode === 'continuous') {
-      const prevRowsTotal = wbIndex * (rows * (wb.columns?.length || 2));
-      return String(prevRowsTotal + colIdx * rows + rowIdx + 1);
-    }
     if (mode === 'letter_num') {
       const letter = colIdx === 0 ? 'A' : colIdx === 1 ? 'B' : 'C';
       return `${letter}${rowIdx + 1}`;
     }
-    return String(colIdx * rows + rowIdx + 1);
+    // Continuous numbering starting after previous wristband
+    const wbStart = getWristbandStartNumber(wristbands, wbIndex);
+    return String(wbStart + colIdx * rows + rowIdx);
   };
 
   const cardsHtml = wristbands

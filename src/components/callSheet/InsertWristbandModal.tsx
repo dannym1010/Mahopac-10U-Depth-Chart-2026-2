@@ -21,6 +21,7 @@ import {
   syncCallSheetWithWristbands,
   extractPersonnel,
   normalizePlayName,
+  getWristbandStartNumber,
 } from '../../utils/wristbandLinking';
 
 interface InsertWristbandModalProps {
@@ -92,17 +93,15 @@ export const InsertWristbandModal: React.FC<InsertWristbandModalProps> = ({
         (col.plays || []).forEach((p, rIdx) => {
           if (!p.text || !p.text.trim()) return;
 
+          const wbStart = getWristbandStartNumber(wristbands, wbIdx);
           let slotLabel = `${rIdx + 1}`;
-          let wbNum = rIdx + 1;
-          if (p.customLabel) {
+          let wbNum = wbStart + cIdx * rows + rIdx;
+          if (p.customLabel && isNaN(Number(p.customLabel))) {
             slotLabel = p.customLabel;
-            const parsed = parseInt(p.customLabel.replace(/[^\d]/g, ''), 10);
-            if (!isNaN(parsed)) wbNum = parsed;
           } else if (wb.labelingMode === 'same_per_card') {
             wbNum = cIdx * rows + rIdx + 1;
             slotLabel = String(wbNum);
-          } else if (wb.labelingMode === 'continuous') {
-            wbNum = (wb.startNumber || 1) + cIdx * rows + rIdx;
+          } else {
             slotLabel = String(wbNum);
           }
 

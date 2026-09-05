@@ -17,7 +17,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { CallSheetSection, CallSheetPlay, PlayDatabaseEntry } from '../../types/callSheet';
-import { inferFormation, extractPersonnel } from '../../utils/wristbandLinking';
+import { inferFormation, extractPersonnel, getWristbandStartNumber } from '../../utils/wristbandLinking';
 import { SingleWristband, WristbandColumn, WristbandData, WristbandPlay } from '../../types';
 import {
   DEFAULT_WRISTBAND_1,
@@ -225,13 +225,15 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
     if (!wbPlay) return null;
 
     // Calculate slot number
+    const wbIndex = availableWristbands.findIndex((w) => w.id === wb.id);
+    const wbStart = getWristbandStartNumber(availableWristbands, wbIndex >= 0 ? wbIndex : 0);
     let slotNum = wbPlay.wristbandNum;
-    if (!slotNum) {
-      if (wb.labelingMode === 'continuous') {
-        const offset = colIdx === 0 ? 0 : wb.columns?.[0]?.plays?.length || 13;
-        slotNum = (wb.startNumber || 1) + offset + rowIdx;
+    if (!slotNum || (wb.id === 'wb_2' && Number(slotNum) <= 26 && wbStart > 26)) {
+      if (wb.labelingMode === 'same_per_card') {
+        slotNum = colIdx * (wb.rowsCount || 13) + rowIdx + 1;
       } else {
-        slotNum = (wb.startNumber || 1) + rowIdx;
+        const offset = colIdx === 0 ? 0 : wb.columns?.[0]?.plays?.length || 13;
+        slotNum = wbStart + offset + rowIdx;
       }
     }
 

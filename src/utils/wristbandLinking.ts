@@ -17,6 +17,37 @@ export interface WristbandSlotMatch {
 }
 
 /**
+ * Calculates the start number for any wristband in the collection.
+ * The 2nd wristband (and subsequent wristbands) start with the number
+ * directly after the last number on the previous wristband.
+ */
+export const getWristbandStartNumber = (
+  wristbands: SingleWristband[],
+  wbIndex: number
+): number => {
+  if (wbIndex <= 0) {
+    return wristbands[0]?.startNumber || 1;
+  }
+  const currentWb = wristbands[wbIndex];
+  if (currentWb?.labelingMode === 'same_per_card') {
+    return 1;
+  }
+  if (currentWb?.startNumber && currentWb.startNumber > 1) {
+    return currentWb.startNumber;
+  }
+  // Sum up total slots from all previous wristbands
+  let currentStart = wristbands[0]?.startNumber || 1;
+  for (let i = 0; i < wbIndex; i++) {
+    const prevWb = wristbands[i];
+    const prevRows = prevWb?.rowsCount || 13;
+    const prevCols = prevWb?.columns?.length || 2;
+    const prevSlots = prevRows * prevCols;
+    currentStart += prevSlots;
+  }
+  return currentStart;
+};
+
+/**
  * Determines whether a given hex color is perceptually dark,
  * useful for auto-selecting white vs black text on badges.
  */
@@ -325,23 +356,20 @@ export function buildWristbandIndex(
         if (!play.text || !play.text.trim()) return;
 
         // Slot number / label
+        const wbStart = getWristbandStartNumber(wristbandList, wbIdx);
         let slotLabel = `${rIdx + 1}`;
-        let wbNum = rIdx + 1;
-        if (play.customLabel) {
+        let wbNum = wbStart + cIdx * rows + rIdx;
+        if (play.customLabel && isNaN(Number(play.customLabel))) {
           slotLabel = play.customLabel;
-          const parsed = parseInt(play.customLabel.replace(/[^\d]/g, ''), 10);
-          if (!isNaN(parsed)) wbNum = parsed;
         } else if (wb.labelingMode === 'same_per_card') {
           wbNum = cIdx * rows + rIdx + 1;
-          slotLabel = String(wbNum);
-        } else if (wb.labelingMode === 'continuous') {
-          const base = (wb.startNumber || 1) + wbIdx * (rows * (wb.columns?.length || 2));
-          wbNum = base + cIdx * rows + rIdx;
           slotLabel = String(wbNum);
         } else if (wb.labelingMode === 'letter_num') {
           const letter = cIdx === 0 ? 'A' : cIdx === 1 ? 'B' : 'C';
           slotLabel = `${letter}${rIdx + 1}`;
           wbNum = cIdx * rows + rIdx + 1;
+        } else {
+          slotLabel = String(wbNum);
         }
 
         // Color resolution
@@ -554,14 +582,17 @@ export function syncWristbandToCallSheet(
     type?: string;
   }>();
 
-  wristbands.forEach((wb) => {
+  wristbands.forEach((wb, wbIdx) => {
     const rows = wb.rowsCount || 13;
+    const wbStart = getWristbandStartNumber(wristbands, wbIdx);
     (wb.columns || []).forEach((col, colIdx) => {
       const colColor = col.numberBgColor || col.color || (colIdx === 0 ? '#facc15' : '#38bdf8');
       const textColor = col.numberTextColor || (isDarkColor(colColor) ? '#ffffff' : '#000000');
       (col.plays || []).forEach((p, rowIdx) => {
-        const slotNumber = colIdx * rows + rowIdx + 1;
-        const slotLabel = p.customLabel || `${slotNumber}`;
+        const slotNumber = wb.labelingMode === 'same_per_card'
+          ? colIdx * rows + rowIdx + 1
+          : wbStart + colIdx * rows + rowIdx;
+        const slotLabel = (p.customLabel && isNaN(Number(p.customLabel))) ? p.customLabel : `${slotNumber}`;
         const key = `${wb.id}_${colIdx}_${rowIdx}`;
         const formation = inferFormation(p.text || '', 'offense', p.formation);
         slotByWbColRow.set(key, {
@@ -678,6 +709,8 @@ export function syncWristbandToCallSheet(
       const col1: WristbandColumn = wb.columns[0] || { name: 'Left Column', color: '#facc15', numberBgColor: '#facc15', numberTextColor: '#000000', plays: [] };
       const col2: WristbandColumn = wb.columns[1] || { name: 'Right Column', color: '#38bdf8', numberBgColor: '#38bdf8', numberTextColor: '#000000', plays: [] };
       const rows = wb.rowsCount || 13;
+      const wbIndex = wristbands.findIndex((w) => w.id === wb!.id);
+      const wbStart = getWristbandStartNumber(wristbands, wbIndex >= 0 ? wbIndex : 0);
 
       if (mode === 'full_two_col' || sec.columnsCount === 2) {
         const maxRows = Math.max(col1.plays?.length || 0, col2.plays?.length || 0, rows);
@@ -686,8 +719,8 @@ export function syncWristbandToCallSheet(
         for (let r = 0; r < maxRows; r++) {
           // Col 1 play
           const p1 = col1.plays?.[r];
-          const slotNum1 = r + 1;
-          const slotLabel1 = p1?.customLabel || `${slotNum1}`;
+          const slotNum1 = wb.labelingMode === 'same_per_card' ? r + 1 : wbStart + r;
+          const slotLabel1 = (p1?.customLabel && isNaN(Number(p1.customLabel))) ? p1.customLabel : `${slotNum1}`;
           const color1 = col1.numberBgColor || col1.color || '#facc15';
           const textCol1 = col1.numberTextColor || (isDarkColor(color1) ? '#ffffff' : '#000000');
           const name1 = (p1?.text || '').trim();
@@ -723,8 +756,8 @@ export function syncWristbandToCallSheet(
 
           // Col 2 play
           const p2 = col2.plays?.[r];
-          const slotNum2 = rows + r + 1;
-          const slotLabel2 = p2?.customLabel || `${slotNum2}`;
+          const slotNum2 = wb.labelingMode === 'same_per_card' ? rows + r + 1 : wbStart + rows + r;
+          const slotLabel2 = (p2?.customLabel && isNaN(Number(p2.customLabel))) ? p2.customLabel : `${slotNum2}`;
           const color2 = col2.numberBgColor || col2.color || '#38bdf8';
           const textCol2 = col2.numberTextColor || (isDarkColor(color2) ? '#ffffff' : '#000000');
           const name2 = (p2?.text || '').trim();
@@ -781,8 +814,8 @@ export function syncWristbandToCallSheet(
         const targetCol = colIdx === 1 ? col2 : col1;
         const targetPlays = targetCol.plays || [];
         const plays: (CallSheetPlay | null)[] = targetPlays.map((p, r) => {
-          const slotNum = colIdx * rows + r + 1;
-          const slotLabel = p.customLabel || `${slotNum}`;
+          const slotNum = wb.labelingMode === 'same_per_card' ? colIdx * rows + r + 1 : wbStart + colIdx * rows + r;
+          const slotLabel = (p.customLabel && isNaN(Number(p.customLabel))) ? p.customLabel : `${slotNum}`;
           const color = targetCol.numberBgColor || targetCol.color || (colIdx === 1 ? '#38bdf8' : '#facc15');
           const textCol = targetCol.numberTextColor || (isDarkColor(color) ? '#ffffff' : '#000000');
           const name = (p.text || '').trim();

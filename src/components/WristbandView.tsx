@@ -35,7 +35,7 @@ import { SingleWristband, WristbandColumn, WristbandData, WristbandPlay, UserRol
 import { PlayDatabaseEntry, CallSheetFullData, CallSheetPlay, PlayType } from '../types/callSheet';
 import { deepClone, safeJSONStringify, safeJSONSet, safeJSONParse } from '../services/storageService';
 import { printWristbandInserts, generateWristbandPrintHTML, openCleanPrintTab, triggerPrint } from '../utils/printUtils';
-import { extractPersonnel, getPersonnelSubTabs, normalizePlayName, syncCallSheetWithWristbands, syncWristbandToCallSheet } from '../utils/wristbandLinking';
+import { extractPersonnel, getPersonnelSubTabs, normalizePlayName, syncCallSheetWithWristbands, syncWristbandToCallSheet, getWristbandStartNumber } from '../utils/wristbandLinking';
 import { PlayPickerModal } from './callSheet/PlayPickerModal';
 import { PlayBankSidebar } from './callSheet/PlayBankSidebar';
 import { ExcelPlayImportModal } from './callSheet/ExcelPlayImportModal';
@@ -135,6 +135,86 @@ interface WristbandViewProps {
   onBulkFillPlays?: (plays: string[]) => void;
 }
 
+/**
+ * Ensures the 2nd wristband (and any subsequent wristbands) starts with the number
+ * directly after the last number on the previous wristband.
+ */
+export const normalizeWristbandContinuousNumbering = (data: WristbandData): WristbandData => {
+  if (!data?.wristbands || data.wristbands.length <= 1) {
+    return data;
+  }
+  let prevEnd = 0;
+  let hasAnyChange = false;
+
+  const nextWristbands = data.wristbands.map((wb, idx) => {
+    const rows = wb.rowsCount || 13;
+    const cols = wb.columns?.length || 2;
+    const totalSlots = rows * cols;
+
+    if (idx === 0) {
+      const wbStart = wb.startNumber || 1;
+      prevEnd = wbStart + totalSlots - 1;
+      return wb;
+    }
+
+    // For 2nd wristband and beyond, start after previous wristband
+    const expectedStart = prevEnd + 1;
+    prevEnd = expectedStart + totalSlots - 1;
+
+    const isWb2OrNeedsStart = !wb.startNumber || wb.startNumber === 1 || wb.id === 'wb_2' || wb.labelingMode === 'same_per_card';
+    const finalStart = isWb2OrNeedsStart ? expectedStart : (wb.startNumber || expectedStart);
+
+    if (wb.startNumber !== finalStart || wb.labelingMode === 'same_per_card') {
+      hasAnyChange = true;
+    }
+
+    const updatedCols = (wb.columns || []).map((col, cIdx) => {
+      const colStart = finalStart + cIdx * rows;
+      const colEnd = colStart + rows - 1;
+      let colName = col.name;
+      if (colName && (colName.includes('(1 - 13)') || colName.includes('(14 - 26)'))) {
+        colName = cIdx === 0 ? `LEFT COLUMN (${colStart} - ${colEnd})` : `RIGHT COLUMN (${colStart} - ${colEnd})`;
+        hasAnyChange = true;
+      }
+      const updatedPlays = (col.plays || []).map((p, rIdx) => {
+        const slotNum = colStart + rIdx;
+        const needsNumUpdate = p.wristbandNum !== slotNum;
+        const isOldNumericLabel = p.customLabel && !isNaN(Number(p.customLabel)) && Number(p.customLabel) <= 26 && finalStart > 26;
+        if (needsNumUpdate || isOldNumericLabel) {
+          hasAnyChange = true;
+          return {
+            ...p,
+            wristbandNum: slotNum,
+            customLabel: isOldNumericLabel ? String(slotNum) : p.customLabel,
+          };
+        }
+        return p;
+      });
+      return {
+        ...col,
+        name: colName,
+        plays: updatedPlays,
+      };
+    });
+
+    let newSubtitle = wb.subtitle;
+    if (newSubtitle && (newSubtitle.includes('1 - 26') || newSubtitle.includes('SAME LABELING'))) {
+      newSubtitle = `CARDS ${finalStart} - ${prevEnd} (CONTINUOUS)`;
+      hasAnyChange = true;
+    }
+
+    return {
+      ...wb,
+      startNumber: finalStart,
+      labelingMode: (wb.labelingMode === 'same_per_card' && (wb.id === 'wb_2' || idx >= 1)) ? 'continuous' : (wb.labelingMode || 'continuous'),
+      subtitle: newSubtitle,
+      columns: updatedCols,
+    };
+  });
+
+  return hasAnyChange ? { ...data, wristbands: nextWristbands } : data;
+};
+
 export const WristbandView: React.FC<WristbandViewProps> = ({
   wristbandData: propWristbandData,
   userRole,
@@ -148,14 +228,18 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
 }) => {
   // Internal state for resilient, instantaneous editing and printing
   const [internalData, setInternalData] = useState<WristbandData>(() => {
+    let initial: WristbandData;
     if (propWristbandData?.wristbands && propWristbandData.wristbands.length > 0) {
-      return propWristbandData;
+      initial = propWristbandData;
+    } else {
+      const saved = safeJSONParse<WristbandData | null>('footballWristbandData', null);
+      if (saved?.wristbands && saved.wristbands.length > 0) {
+        initial = saved;
+      } else {
+        initial = INITIAL_TWO_WRISTBANDS_DATA;
+      }
     }
-    const saved = safeJSONParse<WristbandData | null>('footballWristbandData', null);
-    if (saved?.wristbands && saved.wristbands.length > 0) {
-      return saved;
-    }
-    return INITIAL_TWO_WRISTBANDS_DATA;
+    return normalizeWristbandContinuousNumbering(initial);
   });
 
   // Guard against stale prop overwriting fresh local edits
@@ -167,7 +251,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
       return;
     }
     if (propWristbandData?.wristbands && propWristbandData.wristbands.length > 0) {
-      setInternalData(propWristbandData);
+      setInternalData(normalizeWristbandContinuousNumbering(propWristbandData));
     }
   }, [propWristbandData]);
 
@@ -249,31 +333,28 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     commitWristbandData(nextData);
   };
 
-  // Calculates slot label (1, 2, ... 13 / 14 ... 26 or letters)
+  // Calculates slot label (1, 2, ... 13 / 14 ... 26 or continuous)
   const getSlotLabel = (
     wb: SingleWristband,
     colIdx: number,
     rowIdx: number,
     play?: WristbandPlay
   ): string => {
-    if (play?.customLabel) return play.customLabel;
-    const mode = wb.labelingMode || 'same_per_card';
+    if (play?.customLabel && isNaN(Number(play.customLabel))) return play.customLabel;
+    const mode = wb.labelingMode || 'continuous';
     const rows = wb.rowsCount || 13;
 
     if (mode === 'same_per_card') {
       const num = colIdx * rows + rowIdx + 1;
       return String(num);
     }
-    if (mode === 'continuous') {
-      const wbIndex = wristbands.findIndex((w) => w.id === wb.id);
-      const prevRowsTotal = wbIndex * (rows * (wb.columns?.length || 2));
-      return String(prevRowsTotal + colIdx * rows + rowIdx + 1);
-    }
     if (mode === 'letter_num') {
       const letter = colIdx === 0 ? 'A' : colIdx === 1 ? 'B' : 'C';
       return `${letter}${rowIdx + 1}`;
     }
-    return String(colIdx * rows + rowIdx + 1);
+    const wbIndex = wristbands.findIndex((w) => w.id === wb.id);
+    const wbStart = getWristbandStartNumber(wristbands, wbIndex >= 0 ? wbIndex : 0);
+    return String(wbStart + colIdx * rows + rowIdx);
   };
 
   // Synchronize assigned play with Play Database and Call Sheet
@@ -365,7 +446,11 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     }
 
     const rows = currentWristband.rowsCount || 13;
-    const slotNumber = colIdx * rows + rowIdx + 1;
+    const wbIndex = wristbands.findIndex((w) => w.id === currentWristband.id);
+    const wbStart = getWristbandStartNumber(wristbands, wbIndex >= 0 ? wbIndex : 0);
+    const slotNumber = currentWristband.labelingMode === 'same_per_card'
+      ? colIdx * rows + rowIdx + 1
+      : wbStart + colIdx * rows + rowIdx;
     const col = currentWristband.columns[colIdx];
     const colColor = col?.numberBgColor || col?.color || (colIdx === 0 ? '#facc15' : '#38bdf8');
     const colTextColor = col?.numberTextColor || getContrastTextColor(colColor);
@@ -501,10 +586,14 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
 
     // Also update all plays currently in this column in playDatabase & callSheetData
     const rows = currentWristband.rowsCount || 13;
+    const wbIndex = wristbands.findIndex((w) => w.id === currentWristband.id);
+    const wbStart = getWristbandStartNumber(wristbands, wbIndex >= 0 ? wbIndex : 0);
     const col = currentWristband.columns[colIdx];
     (col.plays || []).forEach((play, rIdx) => {
       if (play.text && play.text.trim()) {
-        const slotNumber = colIdx * rows + rIdx + 1;
+        const slotNumber = currentWristband.labelingMode === 'same_per_card'
+          ? colIdx * rows + rIdx + 1
+          : wbStart + colIdx * rows + rIdx;
         syncPlayToDatabaseAndCallSheet(
           play.text,
           slotNumber,
@@ -811,26 +900,44 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                   onClick={() => {
                     const newIdx = wristbands.length + 1;
                     const rows = currentWristband.rowsCount || 13;
+                    const prevWbIdx = wristbands.length - 1;
+                    const prevWb = wristbands[prevWbIdx];
+                    const prevStart = getWristbandStartNumber(wristbands, prevWbIdx);
+                    const prevSlots = (prevWb?.rowsCount || 13) * (prevWb?.columns?.length || 2);
+                    const nextStart = prevStart + prevSlots;
+                    const nextEnd = nextStart + rows * 2 - 1;
+                    const col1Start = nextStart;
+                    const col1End = col1Start + rows - 1;
+                    const col2Start = col1End + 1;
+                    const col2End = nextEnd;
+
                     const newWb: SingleWristband = {
                       id: `wb_${Date.now()}`,
                       title: `WRISTBAND ${newIdx} • NEW INSERT`,
-                      subtitle: `CARDS 1 - 26`,
-                      labelingMode: 'same_per_card',
+                      subtitle: `CARDS ${nextStart} - ${nextEnd} (CONTINUOUS)`,
+                      labelingMode: 'continuous',
+                      startNumber: nextStart,
                       rowsCount: rows,
                       columns: [
                         {
-                          name: `LEFT COLUMN (1 - ${rows})`,
+                          name: `LEFT COLUMN (${col1Start} - ${col1End})`,
                           color: '#facc15',
                           numberBgColor: '#facc15',
                           numberTextColor: '#000000',
-                          plays: Array.from({ length: rows }, () => ({ text: '' })),
+                          plays: Array.from({ length: rows }, (_, r) => ({
+                            text: '',
+                            wristbandNum: col1Start + r,
+                          })),
                         },
                         {
-                          name: `RIGHT COLUMN (${rows + 1} - ${rows * 2})`,
+                          name: `RIGHT COLUMN (${col2Start} - ${col2End})`,
                           color: '#38bdf8',
                           numberBgColor: '#38bdf8',
                           numberTextColor: '#000000',
-                          plays: Array.from({ length: rows }, () => ({ text: '' })),
+                          plays: Array.from({ length: rows }, (_, r) => ({
+                            text: '',
+                            wristbandNum: col2Start + r,
+                          })),
                         },
                       ],
                     };
