@@ -36,6 +36,37 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
   const [clipboardPlay, setClipboardPlay] = useState<CallSheetPlay | null>(() => getCopiedPlay());
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Unconditionally evaluate hooks at top level before any early returns (Prevents React Error #300)
+  const cleanPlayName = useMemo(() => {
+    if (!play?.name) return '';
+    return play.name
+      .replace(/^#\s*\d*\s*[-.:]?\s*/i, '')
+      .replace(/^\d+[\.\)]\s+/, '')
+      .replace(/^#\s*/, '')
+      .trim();
+  }, [play?.name]);
+
+  // Suppress 21 L / 21 R and 21 formation & personnel text to give maximum space to the play name
+  const displayFormation = useMemo(() => {
+    const rawForm = (play?.formation || '').trim();
+    const nameToCheck = (play?.name || '').toUpperCase();
+    const upperForm = rawForm.toUpperCase();
+    if (
+      upperForm === '21' ||
+      upperForm === '21 L' ||
+      upperForm === '21 R' ||
+      upperForm.includes('21') ||
+      nameToCheck.includes(upperForm) ||
+      nameToCheck.startsWith('21') ||
+      nameToCheck.includes('21 L') ||
+      nameToCheck.includes('21 R') ||
+      /\b21\b/.test(nameToCheck)
+    ) {
+      return '';
+    }
+    return rawForm;
+  }, [play?.formation, play?.name]);
+
   useEffect(() => {
     return subscribeCopiedPlay((latest) => {
       setClipboardPlay(latest);
@@ -360,16 +391,6 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
   const isStarred = Boolean(play.isStarred);
   const isLongName = play.name.length > 20;
 
-  // Clean play name to strip any leading hash symbol or index prefix
-  const cleanPlayName = useMemo(() => {
-    if (!play.name) return '';
-    return play.name
-      .replace(/^#\s*\d*\s*[-.:]?\s*/i, '')
-      .replace(/^\d+[\.\)]\s+/, '')
-      .replace(/^#\s*/, '')
-      .trim();
-  }, [play.name]);
-
   const effectiveBgStyle: React.CSSProperties | undefined = rowHighlightColor
     ? {
         backgroundColor: rowHighlightColor,
@@ -379,27 +400,6 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
         printColorAdjust: 'exact',
       }
     : undefined;
-
-  // Suppress 21 L / 21 R and 21 formation & personnel text to give maximum space to the play name
-  const displayFormation = useMemo(() => {
-    const rawForm = (play.formation || '').trim();
-    const nameToCheck = (play.name || '').toUpperCase();
-    const upperForm = rawForm.toUpperCase();
-    if (
-      upperForm === '21' ||
-      upperForm === '21 L' ||
-      upperForm === '21 R' ||
-      upperForm.includes('21') ||
-      nameToCheck.includes(upperForm) ||
-      nameToCheck.startsWith('21') ||
-      nameToCheck.includes('21 L') ||
-      nameToCheck.includes('21 R') ||
-      /\b21\b/.test(nameToCheck)
-    ) {
-      return '';
-    }
-    return rawForm;
-  }, [play.formation, play.name]);
 
   return (
     <div
