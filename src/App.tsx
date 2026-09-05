@@ -37,6 +37,7 @@ import {
   Team,
   formatWeekLabel,
   SectionLock,
+  WristbandData,
 } from './types';
 import {
   MASTER_ROSTER,
@@ -662,9 +663,14 @@ export default function App() {
         defScopedState?.opponent ||
         '',
       wristbandData:
+        (scopedState?.wristbandData?.wristbands?.length ? scopedState.wristbandData : undefined) ||
+        (legacyState?.wristbandData?.wristbands?.length ? legacyState.wristbandData : undefined) ||
+        (defScopedState?.wristbandData?.wristbands?.length ? defScopedState.wristbandData : undefined) ||
         scopedState?.wristbandData ||
         legacyState?.wristbandData ||
-        defScopedState?.wristbandData,
+        defScopedState?.wristbandData ||
+        safeJSONParse<WristbandData | null>('footballWristbandData', null) ||
+        INITIAL_TWO_WRISTBANDS_DATA,
       scouting:
         scopedState?.scouting ||
         legacyState?.scouting ||
@@ -774,7 +780,8 @@ function mergeRemoteWeeklyData(
 
   const merged: Record<string, WeekState> = { ...remoteWeekly };
   const scopedKey = `${activeTeamId}__week_${currentWeek}`;
-  const isActivelyEditingLocally = Date.now() - lastLocalEditTime < 15000;
+  const timeSinceEdit = Date.now() - lastLocalEditTime;
+  const isActivelyEditingLocally = timeSinceEdit < 15000;
 
   for (const weekKey of Object.keys(localWeekly)) {
     const localState = localWeekly[weekKey];
@@ -845,16 +852,25 @@ function mergeRemoteWeeklyData(
         }
       }
 
-      // Safe merge for wristbandData: never overwrite local plays with empty remote plays
+      // Safe merge for wristbandData: never overwrite local plays with remote data during active edits or if remote lacks plays
       const localHasWristbandPlays = localState.wristbandData?.wristbands?.some((wb: any) =>
         wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
       );
       const remoteHasWristbandPlays = remoteState.wristbandData?.wristbands?.some((wb: any) =>
         wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
       );
-      const safeWristbandData = remoteHasWristbandPlays
-        ? remoteState.wristbandData
-        : (localHasWristbandPlays ? localState.wristbandData : (remoteState.wristbandData || localState.wristbandData));
+      let safeWristbandData = remoteState.wristbandData;
+      if (activeUnit === 'wristband' || timeSinceEdit < 30000) {
+        safeWristbandData = localHasWristbandPlays
+          ? localState.wristbandData
+          : (localState.wristbandData || remoteState.wristbandData);
+      } else if (localHasWristbandPlays && !remoteHasWristbandPlays) {
+        safeWristbandData = localState.wristbandData;
+      } else if (localState.wristbandData?.wristbands?.length && !remoteState.wristbandData?.wristbands?.length) {
+        safeWristbandData = localState.wristbandData;
+      } else {
+        safeWristbandData = remoteState.wristbandData || localState.wristbandData;
+      }
 
       merged[weekKey] = {
         ...remoteState,
@@ -889,9 +905,18 @@ function mergeRemoteWeeklyData(
       const remoteHasWristbandPlays = remoteState.wristbandData?.wristbands?.some((wb: any) =>
         wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
       );
-      const safeWristbandData = remoteHasWristbandPlays
-        ? remoteState.wristbandData
-        : (localHasWristbandPlays ? localState.wristbandData : (remoteState.wristbandData || localState.wristbandData));
+      let safeWristbandData = remoteState.wristbandData;
+      if (activeUnit === 'wristband' || timeSinceEdit < 30000) {
+        safeWristbandData = localHasWristbandPlays
+          ? localState.wristbandData
+          : (localState.wristbandData || remoteState.wristbandData);
+      } else if (localHasWristbandPlays && !remoteHasWristbandPlays) {
+        safeWristbandData = localState.wristbandData;
+      } else if (localState.wristbandData?.wristbands?.length && !remoteState.wristbandData?.wristbands?.length) {
+        safeWristbandData = localState.wristbandData;
+      } else {
+        safeWristbandData = remoteState.wristbandData || localState.wristbandData;
+      }
 
       merged[weekKey] = {
         ...localState,
@@ -6058,156 +6083,7 @@ function mergeRemoteWeeklyData(
                   safeJSONSet('footballPlayDatabase', newDb);
                   debouncedSave('all');
                 }}
-                onUpdateWristbandData={(updatedWb) => {
-                  lastLocalEditTimeRef.current = Date.now();
-                  safeJSONSet('footballWristbandData', updatedWb);
-                  const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
-                  setWeeklyData((prev) => {
-                    const existingWeek = prev[scopedKey] || prev[currentWeek] || {
-                      formations: defaultFormations,
-                      depthChart: {},
-                      scrimmageChart: {},
-                      opponent: '',
-                    };
-                    const updatedWeek = {
-                      ...existingWeek,
-                      wristbandData: updatedWb,
-                    };
-                    const nextWeekly = {
-                      ...prev,
-                      [scopedKey]: updatedWeek,
-                      [currentWeek]: updatedWeek,
-                    };
-                    latestStateRef.current.weeklyData = nextWeekly;
-                    safeJSONSet('footballWeeklyData', nextWeekly);
-                    return nextWeekly;
-                  });
-                  debouncedSave('all');
-                }}
-                onUpdateTitle={(title) => {
-                  lastLocalEditTimeRef.current = Date.now();
-                  const wb = currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA;
-                  const updatedWb = { ...wb, title };
-                  safeJSONSet('footballWristbandData', updatedWb);
-                  const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
-                  setWeeklyData((prev) => {
-                    const existingWeek = prev[scopedKey] || prev[currentWeek] || {
-                      formations: defaultFormations,
-                      depthChart: {},
-                      scrimmageChart: {},
-                      opponent: '',
-                    };
-                    const updatedWeek = { ...existingWeek, wristbandData: updatedWb };
-                    const nextWeekly = {
-                      ...prev,
-                      [scopedKey]: updatedWeek,
-                      [currentWeek]: updatedWeek,
-                    };
-                    latestStateRef.current.weeklyData = nextWeekly;
-                    safeJSONSet('footballWeeklyData', nextWeekly);
-                    return nextWeekly;
-                  });
-                  debouncedSave('all');
-                }}
-                onClearPlays={() => {
-                  lastLocalEditTimeRef.current = Date.now();
-                  const wb = currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA;
-                  const updatedWb = {
-                    ...wb,
-                    columns: [
-                      { color: '#facc15', plays: Array(13).fill({ text: '' }) },
-                      { color: '#3b82f6', plays: Array(13).fill({ text: '' }) },
-                    ],
-                  };
-                  safeJSONSet('footballWristbandData', updatedWb);
-                  const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
-                  setWeeklyData((prev) => {
-                    const existingWeek = prev[scopedKey] || prev[currentWeek] || {
-                      formations: defaultFormations,
-                      depthChart: {},
-                      scrimmageChart: {},
-                      opponent: '',
-                    };
-                    const updatedWeek = { ...existingWeek, wristbandData: updatedWb };
-                    const nextWeekly = {
-                      ...prev,
-                      [scopedKey]: updatedWeek,
-                      [currentWeek]: updatedWeek,
-                    };
-                    latestStateRef.current.weeklyData = nextWeekly;
-                    safeJSONSet('footballWeeklyData', nextWeekly);
-                    return nextWeekly;
-                  });
-                  debouncedSave('all');
-                }}
-                onBulkFillPlays={(plays) => {
-                  lastLocalEditTimeRef.current = Date.now();
-                  const wb = currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA;
-                  const yellowPlays = plays.slice(0, 13).map((p) => ({ text: p }));
-                  const bluePlays = plays.slice(13, 26).map((p) => ({ text: p }));
-                  const updatedWb = {
-                    ...wb,
-                    columns: [
-                      { color: '#facc15', plays: yellowPlays },
-                      { color: '#3b82f6', plays: bluePlays },
-                    ],
-                  };
-                  safeJSONSet('footballWristbandData', updatedWb);
-                  const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
-                  setWeeklyData((prev) => {
-                    const existingWeek = prev[scopedKey] || prev[currentWeek] || {
-                      formations: defaultFormations,
-                      depthChart: {},
-                      scrimmageChart: {},
-                      opponent: '',
-                    };
-                    const updatedWeek = { ...existingWeek, wristbandData: updatedWb };
-                    const nextWeekly = {
-                      ...prev,
-                      [scopedKey]: updatedWeek,
-                      [currentWeek]: updatedWeek,
-                    };
-                    latestStateRef.current.weeklyData = nextWeekly;
-                    safeJSONSet('footballWeeklyData', nextWeekly);
-                    return nextWeekly;
-                  });
-                  debouncedSave('all');
-                }}
-                onUpdatePlay={(colIdx, rowIdx, text) => {
-                  lastLocalEditTimeRef.current = Date.now();
-                  const wb = currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA;
-                  const cols = [...(wb.columns || [])];
-                  if (!cols[0]) cols[0] = { color: '#facc15', plays: [] };
-                  if (!cols[1]) cols[1] = { color: '#3b82f6', plays: [] };
-
-                  const targetCol = { ...cols[colIdx] };
-                  const plays = [...(targetCol.plays || [])];
-                  plays[rowIdx] = { text };
-                  targetCol.plays = plays;
-                  cols[colIdx] = targetCol;
-
-                  const updatedWb = { ...wb, columns: cols };
-                  safeJSONSet('footballWristbandData', updatedWb);
-                  const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
-                  setWeeklyData((prev) => {
-                    const existingWeek = prev[scopedKey] || prev[currentWeek] || {
-                      formations: defaultFormations,
-                      depthChart: {},
-                      scrimmageChart: {},
-                      opponent: '',
-                    };
-                    const updatedWeek = { ...existingWeek, wristbandData: updatedWb };
-                    const nextWeekly = {
-                      ...prev,
-                      [scopedKey]: updatedWeek,
-                      [currentWeek]: updatedWeek,
-                    };
-                    latestStateRef.current.weeklyData = nextWeekly;
-                    safeJSONSet('footballWeeklyData', nextWeekly);
-                    return nextWeekly;
-                  });
-                  debouncedSave('all');
-                }}
+                onUpdateWristbandData={handleUpdateWristbandData}
               />
             )}
 

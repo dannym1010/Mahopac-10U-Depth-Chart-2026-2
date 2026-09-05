@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Star, Trash2, Edit2, Check, X } from 'lucide-react';
 import { CallSheetPlay } from '../../types/callSheet';
 import { WristbandSlotMatch, isDarkColor } from '../../utils/wristbandLinking';

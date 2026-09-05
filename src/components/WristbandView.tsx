@@ -39,6 +39,7 @@ import { extractPersonnel, getPersonnelSubTabs, normalizePlayName, syncCallSheet
 import { PlayPickerModal } from './callSheet/PlayPickerModal';
 import { PlayBankSidebar } from './callSheet/PlayBankSidebar';
 import { ExcelPlayImportModal } from './callSheet/ExcelPlayImportModal';
+import { DEFAULT_CALL_SHEET_DATA } from '../data/callSheetData';
 import {
   DEFAULT_WRISTBAND_1,
   DEFAULT_WRISTBAND_2,
@@ -157,8 +158,14 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     return INITIAL_TWO_WRISTBANDS_DATA;
   });
 
-  // Synchronize internal state when prop changes from parent
+  // Guard against stale prop overwriting fresh local edits
+  const lastEditTimeRef = useRef<number>(0);
+
+  // Synchronize internal state when prop changes from parent (only if not recently edited locally)
   useEffect(() => {
+    if (Date.now() - lastEditTimeRef.current < 2500) {
+      return;
+    }
     if (propWristbandData?.wristbands && propWristbandData.wristbands.length > 0) {
       setInternalData(propWristbandData);
     }
@@ -211,6 +218,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
 
   // Helper to commit changes to storage, internal state & parent
   const commitWristbandData = (updated: WristbandData) => {
+    lastEditTimeRef.current = Date.now();
     setInternalData(updated);
     safeJSONSet('footballWristbandData', updated);
     if (onUpdateWristbandData) {
@@ -219,12 +227,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     // Automatically keep Call Sheet wristband tables & linked plays synchronized
     if (onUpdateCallSheetData) {
       const currentCs: CallSheetFullData =
-        callSheetData || safeJSONParse<CallSheetFullData | null>('footballCallSheetData', null) || {
-          offenseSections: [],
-          defenseSections: [],
-          offenseScript: [],
-          defenseScript: [],
-        };
+        callSheetData || safeJSONParse<CallSheetFullData | null>('footballCallSheetData', null) || DEFAULT_CALL_SHEET_DATA;
       const syncedCs = syncWristbandToCallSheet(updated, currentCs, playDatabase);
       safeJSONSet('footballCallSheetData', syncedCs);
       onUpdateCallSheetData(syncedCs);
@@ -287,9 +290,10 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     const norm = normalizePlayName(playText);
 
     // 1. Update matching play in playDatabase
+    let updatedDb: PlayDatabaseEntry[] | undefined;
     if (playDatabase && onUpdatePlayDatabase) {
       let foundMatch = false;
-      const updatedDb = playDatabase.map((dbEntry) => {
+      updatedDb = playDatabase.map((dbEntry) => {
         if (normalizePlayName(dbEntry.name) === norm) {
           foundMatch = true;
           return {
@@ -320,7 +324,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
           situations: ['1-10', 'Base'],
           tags: ['Wristband Play'],
         };
-        updatedDb.unshift(newDbEntry);
+        updatedDb = [newDbEntry, ...updatedDb];
       }
       onUpdatePlayDatabase(updatedDb);
     }
@@ -328,13 +332,8 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     // 2. Synchronize across Call Sheet
     if (onUpdateCallSheetData) {
       const currentCs: CallSheetFullData =
-        callSheetData || safeJSONParse<CallSheetFullData | null>('footballCallSheetData', null) || {
-          offenseSections: [],
-          defenseSections: [],
-          offenseScript: [],
-          defenseScript: [],
-        };
-      const syncedCs = syncWristbandToCallSheet(nextData, currentCs, updatedDb || playDatabase);
+        callSheetData || safeJSONParse<CallSheetFullData | null>('footballCallSheetData', null) || DEFAULT_CALL_SHEET_DATA;
+      const syncedCs = syncWristbandToCallSheet(normalizedData, currentCs, updatedDb || playDatabase);
       safeJSONSet('footballCallSheetData', syncedCs);
       onUpdateCallSheetData(syncedCs);
     }

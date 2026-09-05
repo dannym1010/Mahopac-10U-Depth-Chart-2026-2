@@ -1,5 +1,5 @@
 import { PlayDatabaseEntry, CallSheetFullData, CallSheetSection, CallSheetPlay } from '../types/callSheet';
-import { WristbandData, SingleWristband } from '../types';
+import { WristbandData, SingleWristband, WristbandColumn } from '../types';
 
 export interface WristbandSlotMatch {
   wristbandId: string;
@@ -532,7 +532,8 @@ export function createSectionFromWristband(
  */
 export function syncWristbandToCallSheet(
   wbData: WristbandData,
-  callSheetData: CallSheetFullData
+  callSheetData: CallSheetFullData,
+  playDb?: PlayDatabaseEntry[]
 ): CallSheetFullData {
   if (!wbData?.wristbands || !callSheetData) return callSheetData;
 
@@ -668,14 +669,14 @@ export function syncWristbandToCallSheet(
       }
     }
     // Fallback to first wristband if available
-    if (!wb && wristbandList.length > 0) {
-      wb = wristbandList[0];
+    if (!wb && wristbands.length > 0) {
+      wb = wristbands[0];
     }
 
     if (isWbPreset && wb) {
       const mode = sec.wristbandPresetMode || (sec.columnsCount === 2 ? 'full_two_col' : 'col_1');
-      const col1 = wb.columns[0] || { name: 'Left Column', color: '#facc15', textColor: '#000000', plays: [] };
-      const col2 = wb.columns[1] || { name: 'Right Column', color: '#38bdf8', textColor: '#000000', plays: [] };
+      const col1: WristbandColumn = wb.columns[0] || { name: 'Left Column', color: '#facc15', numberBgColor: '#facc15', numberTextColor: '#000000', plays: [] };
+      const col2: WristbandColumn = wb.columns[1] || { name: 'Right Column', color: '#38bdf8', numberBgColor: '#38bdf8', numberTextColor: '#000000', plays: [] };
       const rows = wb.rowsCount || 13;
 
       if (mode === 'full_two_col' || sec.columnsCount === 2) {
