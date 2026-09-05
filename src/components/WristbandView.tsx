@@ -244,18 +244,41 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
 
   // Guard against stale prop overwriting fresh local edits
   const lastEditTimeRef = useRef<number>(0);
+  const lastEmittedWbJson = useRef<string>(safeJSONStringify(internalData));
 
   // Synchronize internal state when prop changes from parent (only if not recently edited locally)
   useEffect(() => {
-    if (Date.now() - lastEditTimeRef.current < 2500) {
+    if (Date.now() - lastEditTimeRef.current < 15000) {
       return;
     }
     if (propWristbandData?.wristbands && propWristbandData.wristbands.length > 0) {
-      setInternalData(normalizeWristbandContinuousNumbering(propWristbandData));
+      const incomingJson = safeJSONStringify(propWristbandData);
+      if (incomingJson !== lastEmittedWbJson.current) {
+        lastEmittedWbJson.current = incomingJson;
+        setInternalData(normalizeWristbandContinuousNumbering(propWristbandData));
+      }
     }
   }, [propWristbandData]);
 
   const normalizedData: WristbandData = internalData;
+  const internalDataRef = useRef<WristbandData>(internalData);
+  useEffect(() => {
+    internalDataRef.current = internalData;
+  }, [internalData]);
+
+  // In-memory slot drag reference to guarantee drag-and-drop between cells never fails
+  const activeSlotDragRef = useRef<{
+    source: 'wristband_slot';
+    sourceWbId: string;
+    sourceColIdx: number;
+    sourceRowIdx: number;
+    play: {
+      text: string;
+      formation?: string;
+      type?: string;
+      rowHighlightColor?: string;
+    };
+  } | null>(null);
 
   const wristbands = normalizedData.wristbands || [DEFAULT_WRISTBAND_1, DEFAULT_WRISTBAND_2];
 
@@ -304,6 +327,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
   // Helper to commit changes to storage, internal state & parent
   const commitWristbandData = (updated: WristbandData) => {
     lastEditTimeRef.current = Date.now();
+    lastEmittedWbJson.current = safeJSONStringify(updated);
     setInternalData(updated);
     safeJSONSet('footballWristbandData', updated);
     if (onUpdateWristbandData) {
@@ -445,8 +469,11 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
       return;
     }
 
-    const sourceWb = wristbands.find((w) => w.id === sourceWbId);
-    const targetWb = wristbands.find((w) => w.id === targetWbId);
+    const currentData = internalDataRef.current || internalData;
+    const currentWristbands = currentData.wristbands || wristbands;
+
+    const sourceWb = currentWristbands.find((w) => w.id === sourceWbId);
+    const targetWb = currentWristbands.find((w) => w.id === targetWbId);
     if (!sourceWb || !targetWb) return;
 
     const sourceCol = sourceWb.columns[sourceColIdx];
@@ -461,8 +488,8 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
 
     // Calculate target slot number & styling
     const targetRows = targetWb.rowsCount || 13;
-    const targetWbIndex = wristbands.findIndex((w) => w.id === targetWb.id);
-    const targetWbStart = getWristbandStartNumber(wristbands, targetWbIndex >= 0 ? targetWbIndex : 0);
+    const targetWbIndex = currentWristbands.findIndex((w) => w.id === targetWb.id);
+    const targetWbStart = getWristbandStartNumber(currentWristbands, targetWbIndex >= 0 ? targetWbIndex : 0);
     const targetSlotNumber =
       targetWb.labelingMode === 'same_per_card'
         ? targetColIdx * targetRows + targetRowIdx + 1
@@ -475,8 +502,8 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
 
     // Calculate source slot number & styling (for swapping)
     const sourceRows = sourceWb.rowsCount || 13;
-    const sourceWbIndex = wristbands.findIndex((w) => w.id === sourceWb.id);
-    const sourceWbStart = getWristbandStartNumber(wristbands, sourceWbIndex >= 0 ? sourceWbIndex : 0);
+    const sourceWbIndex = currentWristbands.findIndex((w) => w.id === sourceWb.id);
+    const sourceWbStart = getWristbandStartNumber(currentWristbands, sourceWbIndex >= 0 ? sourceWbIndex : 0);
     const sourceSlotNumber =
       sourceWb.labelingMode === 'same_per_card'
         ? sourceColIdx * sourceRows + sourceRowIdx + 1
@@ -507,7 +534,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
       : { text: '', rowHighlightColor: undefined };
 
     // Update wristband data immutably
-    const nextWristbands = wristbands.map((wb) => {
+    const nextWristbands = currentWristbands.map((wb) => {
       // Case 1: Same wristband move/swap
       if (sourceWbId === targetWbId && wb.id === sourceWbId) {
         const nextCols = [...wb.columns];
@@ -567,11 +594,12 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     });
 
     const nextData: WristbandData = {
-      ...normalizedData,
+      ...currentData,
       wristbands: nextWristbands,
       activeWristbandId: currentWristband.id,
     };
 
+    internalDataRef.current = nextData;
     commitWristbandData(nextData);
 
     // Sync moved source play to Call Sheet & DB
@@ -870,32 +898,49 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     e.preventDefault();
     e.stopPropagation();
     setDragOverSlot(null);
+    isDraggingRef.current = false;
 
     try {
       // 1. Check for wristband slot drag (reordering/swapping/moving between slots)
+      let parsedWb: any = null;
       const wbDragStr = e.dataTransfer.getData('application/wristband-slot-drag');
       if (wbDragStr) {
         try {
-          const parsedWb = JSON.parse(wbDragStr);
-          if (
-            parsedWb &&
-            parsedWb.source === 'wristband_slot' &&
-            typeof parsedWb.sourceColIdx === 'number' &&
-            typeof parsedWb.sourceRowIdx === 'number'
-          ) {
-            handleSwapOrMoveSlots(
-              parsedWb.sourceWbId || wbId,
-              parsedWb.sourceColIdx,
-              parsedWb.sourceRowIdx,
-              wbId,
-              colIdx,
-              rowIdx
-            );
-            return;
-          }
-        } catch (err) {
-          console.error('Error parsing wristband-slot-drag data:', err);
-        }
+          parsedWb = JSON.parse(wbDragStr);
+        } catch {}
+      }
+      if (!parsedWb && activeSlotDragRef.current) {
+        parsedWb = activeSlotDragRef.current;
+      }
+      if (!parsedWb && (window as any).__activeWbSlotDrag) {
+        parsedWb = (window as any).__activeWbSlotDrag;
+      }
+
+      if (
+        parsedWb &&
+        parsedWb.source === 'wristband_slot' &&
+        typeof parsedWb.sourceColIdx === 'number' &&
+        typeof parsedWb.sourceRowIdx === 'number'
+      ) {
+        const srcWbId = parsedWb.sourceWbId || wbId;
+        const srcColIdx = parsedWb.sourceColIdx;
+        const srcRowIdx = parsedWb.sourceRowIdx;
+
+        activeSlotDragRef.current = null;
+        (window as any).__activeWbSlotDrag = null;
+
+        // Schedule on next tick so browser drag session cleanly finishes
+        setTimeout(() => {
+          handleSwapOrMoveSlots(
+            srcWbId,
+            srcColIdx,
+            srcRowIdx,
+            wbId,
+            colIdx,
+            rowIdx
+          );
+        }, 0);
+        return;
       }
 
       // 2. Try application/json (standard from PlayBankSidebar and Call Sheet)
@@ -1800,7 +1845,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
 
                       return (
                         <div
-                          key={rIdx}
+                          key={`${currentWristband.id}_c${cIdx}_r${rIdx}`}
                           draggable={!isInline && isFilled}
                           onDragStart={(e) => {
                             isDraggingRef.current = true;
@@ -1817,7 +1862,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                             };
                             const jsonStr = safeJSONStringify(playData);
                             const wbSlotDragData = {
-                              source: 'wristband_slot',
+                              source: 'wristband_slot' as const,
                               sourceWbId: currentWristband.id,
                               sourceColIdx: cIdx,
                               sourceRowIdx: rIdx,
@@ -1828,6 +1873,9 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                                 rowHighlightColor: play.rowHighlightColor,
                               },
                             };
+                            activeSlotDragRef.current = wbSlotDragData;
+                            (window as any).__activeWbSlotDrag = wbSlotDragData;
+
                             const wbSlotDragStr = safeJSONStringify(wbSlotDragData);
                             try {
                               e.dataTransfer.setData('application/wristband-slot-drag', wbSlotDragStr);
@@ -1835,17 +1883,17 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                               e.dataTransfer.setData('callSheetPlayTransfer', jsonStr);
                               e.dataTransfer.setData('text/plain', play.text);
                             } catch {}
-                            e.dataTransfer.effectAllowed = 'copy';
+                            e.dataTransfer.effectAllowed = 'copyMove';
                           }}
                           onDragEnd={() => {
                             setDragOverSlot(null);
-                            setTimeout(() => {
-                              isDraggingRef.current = false;
-                            }, 150);
+                            activeSlotDragRef.current = null;
+                            (window as any).__activeWbSlotDrag = null;
+                            isDraggingRef.current = false;
                           }}
                           onDragOver={(e) => {
                             e.preventDefault();
-                            e.dataTransfer.dropEffect = 'copy';
+                            e.dataTransfer.dropEffect = 'move';
                           }}
                           onDragEnter={(e) => {
                             e.preventDefault();
@@ -1864,6 +1912,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                             e.preventDefault();
                             e.stopPropagation();
                             setDragOverSlot(null);
+                            isDraggingRef.current = false;
                             handleDropOnSlot(e, currentWristband.id, cIdx, rIdx);
                           }}
                           onClick={() => {

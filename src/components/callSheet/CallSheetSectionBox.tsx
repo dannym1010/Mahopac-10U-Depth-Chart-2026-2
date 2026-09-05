@@ -248,7 +248,7 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
           onDropOnTable?.(e, section.id);
         }
       }}
-      className={`border shadow-xs rounded-none overflow-hidden print:border-black flex flex-col transition-all group ${containerClasses} ${
+      className={`border shadow-xs rounded-none overflow-hidden print:overflow-visible print:border-black callsheet-section-card callsheet-avoid-break flex flex-col transition-all group ${containerClasses} ${
         isDragging ? 'opacity-35 ring-2 ring-indigo-500 scale-[0.98]' : ''
       } ${
         isDragTarget ? 'ring-2 ring-indigo-500 shadow-lg scale-[1.01] border-indigo-500' : ''

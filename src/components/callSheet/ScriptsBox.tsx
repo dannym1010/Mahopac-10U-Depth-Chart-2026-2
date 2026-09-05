@@ -40,7 +40,7 @@ export const ScriptsBox: React.FC<ScriptsBoxProps> = ({
 
   return (
     <div
-      className={`border shadow-xs rounded-none overflow-hidden print:border-black flex flex-col group transition-all ${containerClasses}`}
+      className={`border shadow-xs rounded-none overflow-hidden print:overflow-visible print:border-black callsheet-scripts-box callsheet-avoid-break flex flex-col group transition-all ${containerClasses}`}
     >
       {/* Header Bar matching reference: Purple header */}
       <div

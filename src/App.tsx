@@ -93,7 +93,7 @@ import { NavigationTabs } from './components/NavigationTabs';
 import { RosterSidebar } from './components/RosterSidebar';
 import { FormationsView } from './components/FormationsView';
 import { ScrimmageView } from './components/ScrimmageView';
-import { WristbandView } from './components/WristbandView';
+import { WristbandView, normalizeWristbandContinuousNumbering } from './components/WristbandView';
 import { CallSheetMainView } from './components/CallSheetMainView';
 import { GameDayHubView } from './components/GameDayHubView';
 import { USER_IMPORTED_GAME_DAY_PLAYS, INITIAL_TWO_WRISTBANDS_DATA } from './data/userGameDayPlays';
@@ -206,6 +206,13 @@ export default function App() {
     const saved = safeJSONParse('footballCallSheetData', null);
     if (saved && typeof saved === 'object') return saved;
     return DEFAULT_CALL_SHEET_DATA;
+  });
+  const [wristbandData, setWristbandData] = useState<WristbandData>(() => {
+    const saved = safeJSONParse<WristbandData | null>('footballWristbandData', null);
+    if (saved && Array.isArray(saved.wristbands) && saved.wristbands.length > 0) {
+      return saved;
+    }
+    return INITIAL_TWO_WRISTBANDS_DATA;
   });
   const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>(() => {
     const saved = safeJSONParse('footballScheduleEvents', null);
@@ -426,6 +433,7 @@ export default function App() {
     masterPlayLibrary,
     playDatabase,
     callSheetData,
+    wristbandData,
     deletedPlayIds,
     collapsedFolders,
     scheduleEvents,
@@ -451,6 +459,7 @@ export default function App() {
       masterPlayLibrary,
       playDatabase,
       callSheetData,
+      wristbandData,
       deletedPlayIds,
       collapsedFolders,
       scheduleEvents,
@@ -666,9 +675,6 @@ export default function App() {
         (scopedState?.wristbandData?.wristbands?.length ? scopedState.wristbandData : undefined) ||
         (legacyState?.wristbandData?.wristbands?.length ? legacyState.wristbandData : undefined) ||
         (defScopedState?.wristbandData?.wristbands?.length ? defScopedState.wristbandData : undefined) ||
-        scopedState?.wristbandData ||
-        legacyState?.wristbandData ||
-        defScopedState?.wristbandData ||
         safeJSONParse<WristbandData | null>('footballWristbandData', null) ||
         INITIAL_TWO_WRISTBANDS_DATA,
       scouting:
@@ -719,10 +725,12 @@ export default function App() {
         depthChart: currentResolved.depthChart || {},
         scrimmageChart: currentResolved.scrimmageChart || {},
         opponent: currentResolved.opponent || '',
-        wristbandData: currentResolved.wristbandData || {
-          rows: 10,
-          columns: [{ color: 'blue', plays: [] }],
-        },
+        wristbandData:
+          (currentResolved.wristbandData?.wristbands?.length
+            ? deepClone(currentResolved.wristbandData)
+            : undefined) ||
+          safeJSONParse<WristbandData | null>('footballWristbandData', null) ||
+          INITIAL_TWO_WRISTBANDS_DATA,
         scouting: currentResolved.scouting || {
           year: '2026',
           week: `Week ${week}`,
@@ -860,12 +868,12 @@ function mergeRemoteWeeklyData(
         wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
       );
       let safeWristbandData = remoteState.wristbandData;
-      if (activeUnit === 'wristband' || timeSinceEdit < 30000) {
-        safeWristbandData = localHasWristbandPlays
-          ? localState.wristbandData
-          : (localState.wristbandData || remoteState.wristbandData);
-      } else if (localHasWristbandPlays && !remoteHasWristbandPlays) {
-        safeWristbandData = localState.wristbandData;
+      if (localHasWristbandPlays) {
+        if (!remoteHasWristbandPlays || activeUnit === 'wristband' || timeSinceEdit < 120000) {
+          safeWristbandData = localState.wristbandData;
+        } else {
+          safeWristbandData = remoteState.wristbandData?.wristbands?.length ? remoteState.wristbandData : localState.wristbandData;
+        }
       } else if (localState.wristbandData?.wristbands?.length && !remoteState.wristbandData?.wristbands?.length) {
         safeWristbandData = localState.wristbandData;
       } else {
@@ -906,12 +914,12 @@ function mergeRemoteWeeklyData(
         wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
       );
       let safeWristbandData = remoteState.wristbandData;
-      if (activeUnit === 'wristband' || timeSinceEdit < 30000) {
-        safeWristbandData = localHasWristbandPlays
-          ? localState.wristbandData
-          : (localState.wristbandData || remoteState.wristbandData);
-      } else if (localHasWristbandPlays && !remoteHasWristbandPlays) {
-        safeWristbandData = localState.wristbandData;
+      if (localHasWristbandPlays) {
+        if (!remoteHasWristbandPlays || activeUnit === 'wristband' || timeSinceEdit < 120000) {
+          safeWristbandData = localState.wristbandData;
+        } else {
+          safeWristbandData = remoteState.wristbandData?.wristbands?.length ? remoteState.wristbandData : localState.wristbandData;
+        }
       } else if (localState.wristbandData?.wristbands?.length && !remoteState.wristbandData?.wristbands?.length) {
         safeWristbandData = localState.wristbandData;
       } else {
@@ -1118,14 +1126,44 @@ function mergeRemoteWeeklyData(
       safeJSONSet('footballMasterPlays', data.masterPlayLibrary);
     }
     if (data.playDatabase && Array.isArray(data.playDatabase)) {
-      setPlayDatabase(data.playDatabase);
-      latestStateRef.current.playDatabase = data.playDatabase;
-      safeJSONSet('footballPlayDatabase', data.playDatabase);
+      if (Date.now() - lastLocalEditTimeRef.current < 15000 && (activeUnitRef.current === 'call_sheet' || activeUnitRef.current === 'wristband')) {
+        // Preserving local play database changes during active session
+      } else {
+        setPlayDatabase(data.playDatabase);
+        latestStateRef.current.playDatabase = data.playDatabase;
+        safeJSONSet('footballPlayDatabase', data.playDatabase);
+      }
     }
-    if (data.callSheetData && typeof data.callSheetData === 'object') {
-      setCallSheetData(data.callSheetData);
-      latestStateRef.current.callSheetData = data.callSheetData;
-      safeJSONSet('footballCallSheetData', data.callSheetData);
+    if (data.callSheetData && typeof data.callSheetData === 'object' && (data.callSheetData.offenseSections || data.callSheetData.defenseSections)) {
+      if (Date.now() - lastLocalEditTimeRef.current < 15000 && activeUnitRef.current === 'call_sheet') {
+        // Coach is actively editing call sheet locally, do not overwrite with remote pulse
+      } else {
+        const localCs = latestStateRef.current.callSheetData || callSheetData;
+        const localSecCount = (localCs?.offenseSections?.length || 0) + (localCs?.defenseSections?.length || 0);
+        const remoteSecCount = (data.callSheetData.offenseSections?.length || 0) + (data.callSheetData.defenseSections?.length || 0);
+        if (localSecCount > remoteSecCount && (Date.now() - lastLocalEditTimeRef.current < 60000)) {
+          // Local has more sections and was edited within 60s, keep local
+        } else {
+          setCallSheetData(data.callSheetData);
+          latestStateRef.current.callSheetData = data.callSheetData;
+          safeJSONSet('footballCallSheetData', data.callSheetData);
+        }
+      }
+    }
+    if (
+      data.wristbandData &&
+      typeof data.wristbandData === 'object' &&
+      Array.isArray(data.wristbandData.wristbands) &&
+      data.wristbandData.wristbands.length > 0
+    ) {
+      if (Date.now() - lastLocalEditTimeRef.current < 15000 && activeUnitRef.current === 'wristband') {
+        // Coach is actively editing wristbands locally, do not overwrite with remote pulse
+      } else {
+        const normWb = normalizeWristbandContinuousNumbering(data.wristbandData);
+        setWristbandData(normWb);
+        latestStateRef.current.wristbandData = normWb;
+        safeJSONSet('footballWristbandData', normWb);
+      }
     }
     if (data.deletedPlayIds && Array.isArray(data.deletedPlayIds)) {
       setDeletedPlayIds(data.deletedPlayIds);
@@ -1195,6 +1233,7 @@ function mergeRemoteWeeklyData(
     safeJSONSet('footballMasterPlays', currentState.masterPlayLibrary);
     safeJSONSet('footballPlayDatabase', currentState.playDatabase);
     safeJSONSet('footballCallSheetData', currentState.callSheetData);
+    safeJSONSet('footballWristbandData', currentState.wristbandData);
     safeJSONSet('footballDeletedPlayIds', currentState.deletedPlayIds);
     safeJSONSet('footballCollapsedFolders', currentState.collapsedFolders);
     safeJSONSet('footballScheduleEvents', currentState.scheduleEvents);
@@ -1218,6 +1257,7 @@ function mergeRemoteWeeklyData(
       masterPlayLibrary: currentState.masterPlayLibrary,
       playDatabase: currentState.playDatabase,
       callSheetData: currentState.callSheetData,
+      wristbandData: currentState.wristbandData,
       deletedPlayIds: currentState.deletedPlayIds,
       collapsedFolders: currentState.collapsedFolders,
       scheduleEvents: currentState.scheduleEvents,
@@ -4529,6 +4569,12 @@ function mergeRemoteWeeklyData(
      ========================================================================= */
   const handleExportFullBackup = () => {
     try {
+      const activeWb =
+        latestStateRef.current.wristbandData ||
+        safeJSONParse<WristbandData | null>('footballWristbandData', null) ||
+        currentWeekState.wristbandData ||
+        INITIAL_TWO_WRISTBANDS_DATA;
+
       const fullBackup = {
         weeklyData,
         defaultFormations,
@@ -4541,6 +4587,10 @@ function mergeRemoteWeeklyData(
         teamSavedCoaches,
         staffList,
         masterPlayLibrary,
+        playDatabase: latestStateRef.current.playDatabase || playDatabase,
+        callSheetData: latestStateRef.current.callSheetData || callSheetData,
+        wristbandData: activeWb,
+        deletedPlayIds: latestStateRef.current.deletedPlayIds || deletedPlayIds,
         collapsedFolders,
         scheduleEvents,
         roster,
@@ -4614,6 +4664,16 @@ function mergeRemoteWeeklyData(
       const importedPlays = shouldImport('masterPlayLibrary')
         ? parsed.masterPlayLibrary || null
         : null;
+      const importedPlayDb = shouldImport('playDatabase')
+        ? parsed.playDatabase || null
+        : null;
+      const importedCallSheet = shouldImport('callSheetData')
+        ? parsed.callSheetData || parsed.callSheet || null
+        : null;
+      const importedWristband = shouldImport('wristbandData')
+        ? parsed.wristbandData || parsed.wristband || null
+        : null;
+      const importedDeletedPlays = parsed.deletedPlayIds || null;
       const importedCollapsed = shouldImport('cascadingDrills')
         ? parsed.collapsedFolders || {}
         : null;
@@ -4683,6 +4743,43 @@ function mergeRemoteWeeklyData(
         safeJSONSet('footballMasterPlays', importedPlays);
         restoredList.push('🎯 Play Library');
       }
+      if (importedPlayDb && Array.isArray(importedPlayDb)) {
+        setPlayDatabase(importedPlayDb);
+        latestStateRef.current.playDatabase = importedPlayDb;
+        safeJSONSet('footballPlayDatabase', importedPlayDb);
+        restoredList.push('📚 Play Database');
+      }
+      if (importedCallSheet && (importedCallSheet.offenseSections || importedCallSheet.defenseSections)) {
+        setCallSheetData(importedCallSheet);
+        latestStateRef.current.callSheetData = importedCallSheet;
+        safeJSONSet('footballCallSheetData', importedCallSheet);
+        restoredList.push('📑 Call Sheet');
+      }
+      if (importedWristband && Array.isArray(importedWristband.wristbands) && importedWristband.wristbands.length > 0) {
+        const normWb = normalizeWristbandContinuousNumbering(importedWristband);
+        setWristbandData(normWb);
+        latestStateRef.current.wristbandData = normWb;
+        safeJSONSet('footballWristbandData', normWb);
+
+        const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+        setWeeklyData((prev) => {
+          const wk = prev[scopedKey] || prev[currentWeek] || {};
+          const next = {
+            ...prev,
+            [scopedKey]: { ...wk, wristbandData: normWb },
+            [currentWeek]: { ...wk, wristbandData: normWb },
+          };
+          latestStateRef.current.weeklyData = next;
+          safeJSONSet('footballWeeklyData', next);
+          return next;
+        });
+        restoredList.push('🔤 Wristbands');
+      }
+      if (importedDeletedPlays && Array.isArray(importedDeletedPlays)) {
+        setDeletedPlayIds(importedDeletedPlays);
+        latestStateRef.current.deletedPlayIds = importedDeletedPlays;
+        safeJSONSet('footballDeletedPlayIds', importedDeletedPlays);
+      }
       if (importedCollapsed) {
         setCollapsedFolders(importedCollapsed);
         safeJSONSet('footballCollapsedFolders', importedCollapsed);
@@ -4727,6 +4824,14 @@ function mergeRemoteWeeklyData(
           savedCoaches: importedSavedCoaches || savedCoaches,
           staffList: importedStaffList || staffList,
           masterPlayLibrary: importedPlays || masterPlayLibrary,
+          playDatabase: importedPlayDb || playDatabase,
+          callSheetData: importedCallSheet || callSheetData,
+          wristbandData: importedWristband || wristbandData,
+          deletedPlayIds: importedDeletedPlays || deletedPlayIds,
+          roster: importedRoster || roster,
+          teams: importedTeams || teams,
+          seasonConfig: importedSeasonConfig || seasonConfig,
+          attendanceLogs: importedAttendance || attendanceLogs,
           collapsedFolders: importedCollapsed || collapsedFolders,
           scheduleEvents: importedSchedule || scheduleEvents,
         });
@@ -5430,6 +5535,8 @@ function mergeRemoteWeeklyData(
 
   const handleUpdateWristbandData = (updatedWb: WristbandData) => {
     lastLocalEditTimeRef.current = Date.now();
+    setWristbandData(updatedWb);
+    latestStateRef.current.wristbandData = updatedWb;
     safeJSONSet('footballWristbandData', updatedWb);
     const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
     setWeeklyData((prev) => {
@@ -6018,7 +6125,7 @@ function mergeRemoteWeeklyData(
                   setDeletedPlayIds(newIds);
                   safeJSONSet('footballDeletedPlayIds', newIds);
                 }}
-                wristbandData={currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA}
+                wristbandData={wristbandData || currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA}
                 onUpdateWristbandData={handleUpdateWristbandData}
                 scouting={currentWeekState.scouting || {}}
                 onUpdateScouting={(field, val) => {
@@ -6065,7 +6172,7 @@ function mergeRemoteWeeklyData(
             {/* 3. Wristband Builder */}
             {activeUnit === 'wristband' && (
               <WristbandView
-                wristbandData={currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA}
+                wristbandData={wristbandData || currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA}
                 userRole={userRole}
                 masterPlayLibrary={masterPlayLibrary}
                 playDatabase={playDatabase}
@@ -6119,7 +6226,7 @@ function mergeRemoteWeeklyData(
                   safeJSONSet('footballDeletedPlayIds', newDeleted);
                   debouncedSave('all');
                 }}
-                wristbandData={currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA}
+                wristbandData={wristbandData || currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA}
               />
             )}
 

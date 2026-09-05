@@ -39,6 +39,7 @@ import { PlayPickerModal } from './callSheet/PlayPickerModal';
 import { PlayBankSidebar } from './callSheet/PlayBankSidebar';
 import { ExcelPlayImportModal } from './callSheet/ExcelPlayImportModal';
 import { AddTableModal } from './callSheet/AddTableModal';
+import { CallSheetPrintModal } from './callSheet/CallSheetPrintModal';
 
 interface CallSheetMainViewProps {
   activeTeamName?: string;
@@ -75,13 +76,18 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
   // Call sheet state with localStorage & remote sync
   const [callSheetData, setCallSheetData] = useState<CallSheetFullData>(() => {
-    if (propCallSheetData && propCallSheetData.offenseSections && propCallSheetData.defenseSections) {
-      return propCallSheetData;
-    }
     const saved = safeJSONParse<CallSheetFullData | null>('footballCallSheetData', null);
-    if (saved && saved.offenseSections && saved.defenseSections) {
-      return saved;
+    const propHasData = propCallSheetData && propCallSheetData.offenseSections && propCallSheetData.defenseSections;
+    const savedHasData = saved && saved.offenseSections && saved.defenseSections;
+
+    if (propHasData && savedHasData) {
+      // Pick the more complete dataset (e.g. more sections/plays)
+      const propSecCount = (propCallSheetData.offenseSections?.length || 0) + (propCallSheetData.defenseSections?.length || 0);
+      const savedSecCount = (saved.offenseSections?.length || 0) + (saved.defenseSections?.length || 0);
+      return savedSecCount >= propSecCount ? saved : propCallSheetData;
     }
+    if (propHasData) return propCallSheetData;
+    if (savedHasData) return saved;
     return DEFAULT_CALL_SHEET_DATA;
   });
 
@@ -107,9 +113,10 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   });
 
   // Safeguard refs to prevent infinite render loops between prop sync and state updates
-  const lastEmittedCallSheetJson = useRef<string>('');
-  const lastEmittedPlayDbJson = useRef<string>('');
+  const lastEmittedCallSheetJson = useRef<string>(safeJSONStringify(callSheetData));
+  const lastEmittedPlayDbJson = useRef<string>(safeJSONStringify(playDatabase));
   const isLocalEditRef = useRef<number>(0);
+  const lastSyncedWbJsonRef = useRef<string>(safeJSONStringify(propWristbandData));
 
   // Centralized safe updater that immediately updates local state, localStorage, and parent App state
   const applyCallSheetUpdate = useCallback((updater: CallSheetFullData | ((prev: CallSheetFullData) => CallSheetFullData)) => {
@@ -142,7 +149,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   useEffect(() => {
     if (propCallSheetData && propCallSheetData.offenseSections) {
       // Prevent stale parent prop re-renders from overwriting recent local user edits
-      if (Date.now() - isLocalEditRef.current < 5000) {
+      if (Date.now() - isLocalEditRef.current < 15000) {
         return;
       }
       const incomingJson = safeJSONStringify(propCallSheetData);
@@ -165,7 +172,11 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
   // Re-sync call sheet tables whenever wristband data changes
   useEffect(() => {
-    if (propWristbandData) {
+    if (propWristbandData && Array.isArray(propWristbandData.wristbands)) {
+      const wbJson = safeJSONStringify(propWristbandData);
+      if (wbJson === lastSyncedWbJsonRef.current) return;
+      lastSyncedWbJsonRef.current = wbJson;
+
       setCallSheetData((prev) => {
         const synced = syncWristbandToCallSheet(propWristbandData, prev, playDatabase);
         const syncedJson = safeJSONStringify(synced);
@@ -216,6 +227,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
     return callSheetData.desktopGridColumns || 4;
   });
   const [isExcelImportOpen, setIsExcelImportOpen] = useState(false);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [addTableModalState, setAddTableModalState] = useState<{
     isOpen: boolean;
     group: 'top_situations' | 'red_zone' | 'tempo_game_mgmt' | 'custom';
@@ -708,11 +720,11 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
   // Print Call Sheet
   const handlePrint = () => {
-    window.print();
+    setIsPrintModalOpen(true);
   };
 
   return (
-    <div className="h-[calc(100vh-4.5rem)] bg-slate-900 text-slate-100 flex flex-col font-sans overflow-hidden">
+    <div className="h-[calc(100vh-4.5rem)] bg-slate-900 text-slate-100 flex flex-col font-sans overflow-hidden callsheet-root-container print:h-auto print:overflow-visible print:bg-white print:text-black">
       {/* 1. Main Navigation Toolbar (Hidden when printing) */}
       <header className="bg-slate-850 border-b border-slate-750 px-3 sm:px-6 py-2.5 shrink-0 shadow-md print:hidden">
         <div className="max-w-[1500px] mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -935,9 +947,9 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
       </header>
 
       {/* 2. Main Content Area */}
-      <div className="flex-1 flex overflow-hidden min-h-0">
+      <div className="flex-1 flex overflow-hidden min-h-0 callsheet-inner-container print:h-auto print:overflow-visible print:block">
         {/* Main sheet container */}
-        <main className="flex-1 overflow-y-auto min-h-0 p-2 sm:p-4 print:p-0 print:overflow-visible overscroll-contain">
+        <main className="flex-1 overflow-y-auto min-h-0 p-2 sm:p-4 print:p-0 print:overflow-visible callsheet-scroll-container overscroll-contain">
           {/* Printable Call Sheet Header Bar */}
           <div className="hidden print:block mb-3 border-b-2 border-black pb-2 text-black">
             <div className="flex items-center justify-between">
@@ -1071,6 +1083,17 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
         onClose={() => setAddTableModalState((prev) => ({ ...prev, isOpen: false }))}
         onAddSection={handleConfirmAddSection}
         onAddSections={handleConfirmAddSections}
+      />
+
+      {/* 6. Dedicated Call Sheet Print & Lamination Modal */}
+      <CallSheetPrintModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        callSheetData={callSheetData}
+        activeUnit={activeUnit}
+        activeTeamName={activeTeamName}
+        wristbandData={normalizedWristbandData}
+        gridColumns={gridColumns}
       />
     </div>
   );

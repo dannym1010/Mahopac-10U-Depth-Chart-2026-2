@@ -1630,6 +1630,44 @@ export function inspectBackupModules(parsed: any): ModuleInfo[] {
   const hasRoster = Array.isArray(parsed.roster) && parsed.roster.length > 0;
   const rosterCount = hasRoster ? parsed.roster.length : 0;
 
+  // Call Sheet Data
+  const csObj = parsed.callSheetData || parsed.callSheet;
+  const hasCallSheet = Boolean(
+    csObj &&
+    (Array.isArray(csObj.offenseSections) || Array.isArray(csObj.defenseSections)) &&
+    ((csObj.offenseSections?.length || 0) + (csObj.defenseSections?.length || 0) > 0)
+  );
+  let callSheetSecCount = 0;
+  let callSheetPlayCount = 0;
+  if (hasCallSheet && csObj) {
+    const allSecs = [...(csObj.offenseSections || []), ...(csObj.defenseSections || [])];
+    callSheetSecCount = allSecs.length;
+    allSecs.forEach((sec: any) => {
+      callSheetPlayCount += (sec.plays || []).filter(Boolean).length;
+    });
+  }
+
+  // Wristband Data
+  const wbObj = parsed.wristbandData || parsed.wristband;
+  const hasWristband = Boolean(
+    wbObj &&
+    Array.isArray(wbObj.wristbands) &&
+    wbObj.wristbands.length > 0
+  );
+  const wristbandCount = hasWristband ? wbObj.wristbands.length : 0;
+  let totalWbPlays = 0;
+  if (hasWristband) {
+    wbObj.wristbands.forEach((wb: any) => {
+      (wb.columns || []).forEach((col: any) => {
+        totalWbPlays += (col.plays || []).filter((p: any) => p && p.text && p.text.trim()).length;
+      });
+    });
+  }
+
+  // Game Day Play Database
+  const hasPlayDb = Array.isArray(parsed.playDatabase) && parsed.playDatabase.length > 0;
+  const playDbCount = hasPlayDb ? parsed.playDatabase.length : 0;
+
   return [
     {
       key: 'cascadingDrills',
@@ -1711,6 +1749,33 @@ export function inspectBackupModules(parsed: any): ModuleInfo[] {
       countLabel: hasSchedule ? `${scheduleCount} calendar events` : 'Not found in file',
       description: 'Games, practices, scrimmages, and location details',
       isAvailable: hasSchedule,
+    },
+    {
+      key: 'callSheetData',
+      name: '📑 Sideline Call Sheet',
+      category: 'Game Day & Sideline',
+      icon: <FileText className="w-5 h-5 text-emerald-400" />,
+      countLabel: hasCallSheet ? `${callSheetSecCount} sections • ${callSheetPlayCount} plays` : 'Not found in file',
+      description: 'Offensive & Defensive game day call sheet tables, scripts, & situational sections',
+      isAvailable: hasCallSheet,
+    },
+    {
+      key: 'wristbandData',
+      name: '🔤 Player Wristband Cards',
+      category: 'Game Day & Sideline',
+      icon: <Square className="w-5 h-5 text-cyan-400" />,
+      countLabel: hasWristband ? `${wristbandCount} wristband cards • ${totalWbPlays} plays` : 'Not found in file',
+      description: 'Continuous-numbered wristband inserts, column colors, and player play assignments',
+      isAvailable: hasWristband,
+    },
+    {
+      key: 'playDatabase',
+      name: '📚 Game Day Play Database',
+      category: 'Playbook Core',
+      icon: <Database className="w-5 h-5 text-indigo-400" />,
+      countLabel: hasPlayDb ? `${playDbCount} game day plays` : 'Not found in file',
+      description: 'Master catalog of tagged plays with personnel groupings, motions, and run/pass tags',
+      isAvailable: hasPlayDb,
     },
     {
       key: 'roster',

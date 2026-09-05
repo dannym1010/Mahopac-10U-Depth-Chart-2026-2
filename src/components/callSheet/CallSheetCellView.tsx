@@ -251,36 +251,36 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onKeyDown={handleKeyDown}
-        className={`h-7 sm:h-7.5 px-2 border-b flex items-center justify-between text-xs transition-all cursor-pointer group outline-none ${baseBgClass} ${
+        className={`callsheet-cell-slot callsheet-slot-empty h-7 sm:h-7.5 px-2 border-b flex items-center justify-between text-xs transition-all cursor-pointer group outline-none print:border-slate-300 print:bg-white ${baseBgClass} ${
           isDragOver ? 'ring-2 ring-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/50' : ''
         }`}
         title="Click to select play, or paste copied play (Ctrl+V)"
       >
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="flex items-center gap-2 min-w-0 flex-1 print:hidden">
           {clipboardPlay ? (
             <button
               type="button"
               onClick={(e) => handlePastePlay(e)}
-              className="text-[10.5px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex items-center gap-1.5 cursor-pointer"
+              className="text-[10.5px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex items-center gap-1.5 cursor-pointer print:hidden"
               title={`Paste copied play: ${clipboardPlay.name}`}
             >
               <ClipboardPaste className="w-3 h-3 text-indigo-500" />
               <span>Paste {clipboardPlay.name}</span>
             </button>
           ) : (
-            <span className="text-[10px] text-indigo-500/80 dark:text-indigo-400/80 font-bold">
+            <span className="text-[10px] text-indigo-500/80 dark:text-indigo-400/80 font-bold print:hidden">
               + Pick Play
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 print:hidden">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               setIsInlineEditing(true);
             }}
-            className="text-[10px] text-slate-500 hover:text-indigo-400 font-bold px-1 py-0.5 rounded cursor-pointer"
+            className="text-[10px] text-slate-500 hover:text-indigo-400 font-bold px-1 py-0.5 rounded cursor-pointer print:hidden"
             title="Type play directly"
           >
             Type
@@ -289,7 +289,7 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
             <button
               type="button"
               onClick={(e) => handlePastePlay(e)}
-              className="p-1 rounded text-indigo-500 hover:bg-indigo-500/20 transition-colors cursor-pointer"
+              className="p-1 rounded text-indigo-500 hover:bg-indigo-500/20 transition-colors cursor-pointer print:hidden"
               title={`Paste ${clipboardPlay.name}`}
             >
               <ClipboardPaste className="w-3 h-3" />
@@ -396,7 +396,9 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
       onDrop={handleDrop}
       onKeyDown={handleKeyDown}
       style={effectiveBgStyle}
-      className={`min-h-[28px] sm:min-h-[30px] py-1 px-1.5 sm:px-2 border-b flex items-center justify-between gap-1 text-xs select-none transition-all cursor-pointer group print:py-0.5 print:min-h-0 outline-none ${
+      className={`min-h-[28px] sm:min-h-[30px] py-1 px-1.5 sm:px-2 border-b flex items-center justify-between gap-1 text-xs select-none transition-all cursor-pointer group print:py-0.5 print:min-h-0 outline-none callsheet-cell-slot ${
+        !hasRealName ? 'callsheet-slot-empty' : ''
+      } ${
         rowHighlightColor ? 'text-slate-900 border-slate-300' : baseBgClass
       } ${isDragOver ? 'ring-2 ring-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/50' : ''}`}
       title="Click to change play, drag to copy to another cell, or press Ctrl+C / Ctrl+V"

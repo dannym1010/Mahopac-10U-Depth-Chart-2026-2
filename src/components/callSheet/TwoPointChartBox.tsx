@@ -86,7 +86,7 @@ export const TwoPointChartBox: React.FC<TwoPointChartBoxProps> = ({
 
   return (
     <div
-      className={`border shadow-xs rounded-none overflow-hidden print:border-black flex flex-col transition-all ${
+      className={`border shadow-xs rounded-none overflow-hidden print:overflow-visible print:border-black callsheet-twopoint-box callsheet-avoid-break flex flex-col transition-all ${
         highlightEnabled
           ? 'border-yellow-400/80 dark:border-yellow-700/60 bg-white dark:bg-slate-900'
           : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900'

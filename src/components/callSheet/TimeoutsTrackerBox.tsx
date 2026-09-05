@@ -73,7 +73,7 @@ export const TimeoutsTrackerBox: React.FC<TimeoutsTrackerBoxProps> = ({
 
   return (
     <div
-      className={`border shadow-xs rounded-none overflow-hidden print:border-black flex flex-col transition-all ${containerClasses}`}
+      className={`border shadow-xs rounded-none overflow-hidden print:overflow-visible print:border-black callsheet-timeouts-box callsheet-avoid-break flex flex-col transition-all ${containerClasses}`}
     >
       {/* Header bar */}
       <div className="py-1 px-2.5 bg-slate-200/90 dark:bg-slate-800 border-b border-slate-300 dark:border-slate-700 flex items-center justify-between text-center">

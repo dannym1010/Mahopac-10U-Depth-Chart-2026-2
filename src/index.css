@@ -44,8 +44,8 @@ body {
 /* Print Optimization & Physical Printer Driver Reliability */
 @media print {
   @page {
-    size: letter portrait;
-    margin: 0.25in;
+    size: auto;
+    margin: 0.2in;
   }
 
   /* Reset outer container constraints so physical printer drivers and browser preview can paginate smoothly */
@@ -54,7 +54,7 @@ body {
     background-color: #ffffff !important;
     background: #ffffff !important;
     color: #000000 !important;
-    font-size: var(--print-font-size, 12px) !important;
+    font-size: var(--print-font-size, 11px) !important;
     width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
@@ -84,6 +84,99 @@ body {
     overflow: visible !important;
     position: static !important;
     display: block !important;
+  }
+
+  /* Call Sheet and multi-page print container resets (Prevents height/overflow clipping) */
+  body.is-printing-callsheet,
+  body.is-printing-callsheet #root,
+  body.is-printing-callsheet main,
+  body.is-printing-callsheet div,
+  .callsheet-root-container,
+  .callsheet-inner-container,
+  .callsheet-scroll-container,
+  .callsheet-main-content {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+
+  /* Table and card break-inside avoidance: Never cut tables in half across page breaks */
+  .callsheet-section-card,
+  .callsheet-table-box,
+  .callsheet-scripts-box,
+  .callsheet-twopoint-box,
+  .callsheet-timeouts-box,
+  .callsheet-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    overflow: visible !important;
+    margin-bottom: 6px !important;
+  }
+
+  /* Row container */
+  .callsheet-row-container {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    overflow: visible !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Page break before red zone when in 2-page fit mode */
+  body.callsheet-split-2page .callsheet-redzone-container,
+  .callsheet-split-2page .callsheet-redzone-container {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
+
+  /* Compact density */
+  body.callsheet-density-compact,
+  .callsheet-density-compact {
+    font-size: 9.5px !important;
+  }
+  body.callsheet-density-compact .callsheet-cell-slot,
+  .callsheet-density-compact .callsheet-cell-slot {
+    min-height: 22px !important;
+    padding-top: 1px !important;
+    padding-bottom: 1px !important;
+  }
+
+  /* Ultra compact (Fit 1 page) */
+  body.callsheet-density-ultra,
+  .callsheet-density-ultra {
+    font-size: 8.5px !important;
+  }
+  body.callsheet-density-ultra .callsheet-cell-slot,
+  .callsheet-density-ultra .callsheet-cell-slot {
+    min-height: 18px !important;
+    padding-top: 0.5px !important;
+    padding-bottom: 0.5px !important;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+  }
+  body.callsheet-density-ultra .wristband-number-badge,
+  .callsheet-density-ultra .wristband-number-badge {
+    font-size: 7.5px !important;
+    padding: 0px 2px !important;
+  }
+
+  /* Hide empty slots when toggled */
+  body.callsheet-hide-empty .callsheet-slot-empty,
+  .callsheet-hide-empty .callsheet-slot-empty {
+    display: none !important;
+  }
+
+  /* When empty slots are kept in print, suppress all placeholder text and edit buttons */
+  .callsheet-slot-empty span,
+  .callsheet-slot-empty button,
+  .callsheet-slot-empty div {
+    display: none !important;
+  }
+  .callsheet-slot-empty {
+    min-height: 20px !important;
+    background: #ffffff !important;
+    border-bottom: 1px solid #e2e8f0 !important;
   }
 
   /* Disable transitions, animations, backdrop filters, and heavy shadows that hang hardware printer spoolers */

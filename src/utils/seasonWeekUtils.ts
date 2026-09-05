@@ -51,10 +51,12 @@ export function normalizeWeeklyData(
       depthChart,
       scrimmageChart,
       opponent: weekState.opponent || '',
-      wristbandData: weekState.wristbandData || {
-        rows: 10,
-        columns: [{ color: 'blue', plays: [] }],
-      },
+      wristbandData:
+        weekState.wristbandData &&
+        Array.isArray((weekState.wristbandData as any).wristbands) &&
+        (weekState.wristbandData as any).wristbands.length > 0
+          ? deepClone(weekState.wristbandData)
+          : undefined,
       scouting: weekState.scouting || {
         year: '2026',
         week: key,

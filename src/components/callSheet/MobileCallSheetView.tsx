@@ -419,7 +419,7 @@ export const MobileCallSheetView: React.FC<MobileCallSheetViewProps> = ({
                                 )}
                               </div>
                             ) : (
-                              <span className="text-xs text-slate-500 italic">
+                              <span className="text-xs text-slate-500 italic print:hidden">
                                 + Tap to pick play
                               </span>
                             )}

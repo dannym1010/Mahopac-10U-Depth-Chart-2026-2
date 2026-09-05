@@ -446,23 +446,23 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
   const getStandardGridClass = () => {
     switch (gridColumns) {
       case 2:
-        return 'grid grid-cols-1 sm:grid-cols-2 gap-2.5 items-start';
+        return 'grid grid-cols-1 sm:grid-cols-2 print:grid-cols-2 gap-2.5 items-start';
       case 3:
-        return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 items-start';
+        return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3 gap-2.5 items-start';
       case 5:
-        return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 items-start';
+        return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 print:grid-cols-5 gap-2 items-start';
       case 4:
       default:
-        return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 items-start';
+        return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 print:grid-cols-4 gap-2.5 items-start';
     }
   };
 
   return (
-    <div className="w-full max-w-[1440px] mx-auto bg-white dark:bg-slate-950 p-2 sm:p-4 rounded-none shadow-md space-y-4 font-sans print:p-0 print:shadow-none print:bg-white print:text-black">
+    <div className="w-full max-w-[1440px] mx-auto bg-white dark:bg-slate-950 p-2 sm:p-4 rounded-none shadow-md space-y-4 font-sans print:p-0 print:shadow-none print:bg-white print:text-black callsheet-main-content print:max-w-none print:w-full print:overflow-visible">
       {/* =========================================================================
           1. TOP SITUATIONAL SECTION (Drag-and-Drop Rows & Custom Table Counts)
           ========================================================================= */}
-      <div className="space-y-3">
+      <div className="space-y-3 callsheet-avoid-break print:overflow-visible">
         {/* Header Bar */}
         <div className="flex items-center justify-between px-1 flex-wrap gap-2 print:hidden">
           <div className="flex items-center gap-2">
@@ -535,7 +535,7 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
             const tableCount = row.sections.length;
             return (
               <React.Fragment key={`sit-row-${row.rowIndex}`}>
-                <div className="space-y-1.5 transition-all">
+                <div className="space-y-1.5 transition-all callsheet-row-container print:overflow-visible">
                 {/* Row Header & Toolbar (screen only) */}
                 <div className="flex items-center justify-between px-1 py-0.5 text-[10.5px] border-b border-slate-200/80 dark:border-slate-800/80 text-slate-600 dark:text-slate-400 print:hidden select-none">
                   <div className="flex items-center gap-2">
@@ -790,7 +790,7 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
           2. RED ZONE SECTION (Big Banner, Global Red Zone Highlight, Auto-Formatting Grid)
           ========================================================================= */}
       <div
-        className={`border-2 border-red-600 rounded-none overflow-hidden transition-all ${
+        className={`border-2 border-red-600 rounded-none overflow-hidden print:overflow-visible transition-all callsheet-redzone-container callsheet-avoid-break ${
           highlightRedZone
             ? 'bg-rose-100/70 p-2 sm:p-2.5 shadow-xs dark:bg-rose-950/20'
             : 'bg-white dark:bg-slate-900 p-2 sm:p-2.5'
@@ -901,9 +901,9 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
       {/* =========================================================================
           5. BOTTOM SECTION: SCRIPTS, 2-POINT CHART, & TIMEOUTS TRACKER
           ========================================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start pt-2">
+      <div className="grid grid-cols-1 md:grid-cols-12 print:grid-cols-12 gap-3 print:gap-2 items-start pt-2 callsheet-bottom-container callsheet-avoid-break print:overflow-visible">
         {/* Scripts Column */}
-        <div className="md:col-span-4 lg:col-span-4">
+        <div className="md:col-span-4 lg:col-span-4 print:col-span-4 callsheet-scripts-box callsheet-avoid-break print:overflow-visible">
           <ScriptsBox
             scriptPlays={scriptPlays}
             columnsCount={callSheetData.scriptColumnsCount || 1}
@@ -919,7 +919,7 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
         </div>
 
         {/* 2-Point Conversion Decision Matrix */}
-        <div className="md:col-span-5 lg:col-span-5">
+        <div className="md:col-span-5 lg:col-span-5 print:col-span-5 callsheet-twopoint-box callsheet-avoid-break print:overflow-visible">
           <TwoPointChartBox
             rules={callSheetData.twoPointRules}
             highlightEnabled={callSheetData.twoPointHighlightEnabled ?? true}
@@ -929,7 +929,7 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
         </div>
 
         {/* Timeouts Left Tracker */}
-        <div className="md:col-span-3 lg:col-span-3">
+        <div className="md:col-span-3 lg:col-span-3 print:col-span-3 callsheet-timeouts-box callsheet-avoid-break print:overflow-visible">
           <TimeoutsTrackerBox
             timeouts={callSheetData.timeouts}
             highlightEnabled={callSheetData.timeoutsHighlightEnabled ?? false}

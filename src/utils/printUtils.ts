@@ -8,12 +8,16 @@ import { PracticePlan, PracticePeriod, RosterPlayer, AttendanceRecord, SeasonCon
 import { calculatePlayerHours, getPlayerHoursBreakdown } from './hoursCalculation';
 import { formatWeekLabel } from './seasonWeekUtils';
 import { getWristbandStartNumber } from './wristbandLinking';
+import { CallSheetFullData, CallSheetSection, CallSheetPlay } from '../types/callSheet';
 
 export interface PrintOptions {
   beforePrint?: () => void;
   afterPrint?: () => void;
   targetElementSelector?: string;
   documentTitle?: string;
+  orientation?: 'portrait' | 'landscape';
+  extraStyles?: string;
+  bodyClasses?: string[];
 }
 
 /**
@@ -22,7 +26,7 @@ export interface PrintOptions {
 export function triggerPrint(options?: PrintOptions) {
   if (typeof window === 'undefined') return;
 
-  const { beforePrint, afterPrint } = options || {};
+  const { beforePrint, afterPrint, orientation, extraStyles, bodyClasses, documentTitle } = options || {};
 
   if (beforePrint) {
     try {
@@ -32,8 +36,38 @@ export function triggerPrint(options?: PrintOptions) {
     }
   }
 
+  // Inject dynamic print style if orientation or extraStyles specified
+  let styleEl: HTMLStyleElement | null = null;
+  if (orientation || extraStyles) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'dynamic-print-helper-style';
+    styleEl.textContent = `
+      @media print {
+        @page {
+          size: letter ${orientation || 'landscape'} !important;
+          margin: 0.2in !important;
+        }
+        ${extraStyles || ''}
+      }
+    `;
+    document.head.appendChild(styleEl);
+  }
+
+  // Backup and set document title if provided
+  const prevTitle = document.title;
+  if (documentTitle) {
+    document.title = documentTitle;
+  }
+
   document.documentElement.classList.add('is-printing');
   document.body.classList.add('is-printing');
+
+  if (bodyClasses && Array.isArray(bodyClasses)) {
+    bodyClasses.forEach((cls) => {
+      document.documentElement.classList.add(cls);
+      document.body.classList.add(cls);
+    });
+  }
 
   let cleanedUp = false;
   const doCleanup = () => {
@@ -41,6 +75,18 @@ export function triggerPrint(options?: PrintOptions) {
     cleanedUp = true;
     document.documentElement.classList.remove('is-printing');
     document.body.classList.remove('is-printing');
+    if (bodyClasses && Array.isArray(bodyClasses)) {
+      bodyClasses.forEach((cls) => {
+        document.documentElement.classList.remove(cls);
+        document.body.classList.remove(cls);
+      });
+    }
+    if (styleEl && styleEl.parentNode) {
+      styleEl.parentNode.removeChild(styleEl);
+    }
+    if (documentTitle && prevTitle) {
+      document.title = prevTitle;
+    }
     window.removeEventListener('afterprint', doCleanup);
     window.removeEventListener('focus', onFocusReturn);
     if (afterPrint) {
@@ -2422,6 +2468,714 @@ export function printWristbandInserts(
 ) {
   const html = generateWristbandPrintHTML(wristbands, activeTeamName, documentTitle);
   const title = documentTitle || `${activeTeamName}_Wristband_Inserts`;
+  printCleanHTML(html, title);
+}
+
+export interface CallSheetPrintOptions {
+  orientation?: 'landscape' | 'portrait';
+  density?: 'standard' | 'compact' | 'ultra';
+  fitMode?: 'auto' | '1page' | '2page';
+  inkFriendly?: boolean;
+  hideEmptySlots?: boolean;
+  sectionsFilter?: {
+    topSituations?: boolean;
+    redZone?: boolean;
+    tempo?: boolean;
+    custom?: boolean;
+    scripts?: boolean;
+    twoPoint?: boolean;
+    timeouts?: boolean;
+  };
+}
+
+/**
+ * Generates standalone, bulletproof printable HTML for the Call Sheet.
+ * Zero dependency on app container layouts, guaranteed never to cut off.
+ */
+export function generateCallSheetPrintHTML(
+  callSheetData: CallSheetFullData,
+  activeUnit: 'offense' | 'defense' = 'offense',
+  activeTeamName: string = 'Mahopac 10U',
+  documentTitle?: string,
+  options?: CallSheetPrintOptions
+): string {
+  const orientation = options?.orientation || 'landscape';
+  const density = options?.density || 'compact';
+  const fitMode = options?.fitMode || 'auto';
+  const inkFriendly = options?.inkFriendly || false;
+  const hideEmptySlots = options?.hideEmptySlots || false;
+  const filter = options?.sectionsFilter || {
+    topSituations: true,
+    redZone: true,
+    tempo: true,
+    custom: true,
+    scripts: true,
+    twoPoint: true,
+    timeouts: true,
+  };
+
+  const isOffense = activeUnit === 'offense';
+  const unitLabel = isOffense ? 'OFFENSE' : 'DEFENSE';
+  const title = documentTitle || `${activeTeamName} • ${unitLabel} Call Sheet`;
+  const sheetTitle = callSheetData.title || `${unitLabel} Situational Call Sheet`;
+  const gameDate = callSheetData.gameDate || '';
+  const opponent = callSheetData.opponent ? `vs ${callSheetData.opponent}` : '';
+
+  const getContrastColor = (hexColor?: string): string => {
+    if (!hexColor) return '#000000';
+    let hex = hexColor.replace('#', '');
+    if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    const r = parseInt(hex.substring(0, 2), 16) || 0;
+    const g = parseInt(hex.substring(2, 4), 16) || 0;
+    const b = parseInt(hex.substring(4, 6), 16) || 0;
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+    return yiq >= 128 ? '#000000' : '#ffffff';
+  };
+
+  const cleanNum = (val?: string | number): string => {
+    if (val === undefined || val === null || val === '') return '';
+    return String(val).replace(/^#+/, '').trim();
+  };
+
+  const sections = isOffense
+    ? callSheetData.offenseSections || []
+    : callSheetData.defenseSections || [];
+
+  const topSituations = sections.filter((s) => s.group === 'top_situations');
+  const redZone = sections.filter((s) => s.group === 'red_zone');
+  const tempo = sections.filter((s) => s.group === 'tempo_game_mgmt');
+  const custom = sections.filter((s) => s.group === 'custom');
+  const rawScripts = isOffense ? callSheetData.offenseScript || [] : callSheetData.defenseScript || [];
+
+  // Density sizing
+  let baseFontSize = '9pt';
+  let cellPadding = '2px 4px';
+  let badgeFontSize = '8pt';
+  let headerPadding = '3px 6px';
+  let gridGap = '6px';
+
+  if (density === 'ultra') {
+    baseFontSize = '8pt';
+    cellPadding = '1px 3px';
+    badgeFontSize = '7pt';
+    headerPadding = '2px 4px';
+    gridGap = '4px';
+  } else if (density === 'standard') {
+    baseFontSize = '10pt';
+    cellPadding = '3px 5px';
+    badgeFontSize = '8.5pt';
+    headerPadding = '4px 6px';
+    gridGap = '8px';
+  }
+
+  const renderSectionCard = (sec: CallSheetSection) => {
+    const headerBg = inkFriendly ? '#f1f5f9' : sec.headerBgColor || '#0284c7';
+    const headerText = inkFriendly ? '#000000' : sec.headerTextColor || getContrastColor(headerBg);
+    const validPlays = sec.plays.filter((p) => p && p.name && p.name.trim() !== '');
+
+    let playsToRender = sec.plays;
+    if (hideEmptySlots) {
+      playsToRender = validPlays.length > 0 ? validPlays : [];
+    }
+
+    const rowsHtml = playsToRender
+      .map((play, idx) => {
+        if (!play || !play.name || !play.name.trim()) {
+          if (hideEmptySlots) return '';
+          return `
+            <div class="callsheet-cell empty-slot" style="padding: ${cellPadding};">
+              <span class="slot-empty-text">&nbsp;</span>
+            </div>
+          `;
+        }
+
+        const match = play.wristbandSlotMatch;
+        const numVal = cleanNum(play.wristbandNum || match?.slotNumber);
+        const numBg = inkFriendly
+          ? '#e2e8f0'
+          : match?.numberBgColor || match?.color || play.wristbandColor || '#38bdf8';
+        const numText = inkFriendly ? '#000000' : match?.numberTextColor || getContrastColor(numBg);
+
+        // Formation check
+        let formation = play.formation || '';
+        if (formation === '21') {
+          formation = /\bLEFT\b|21\s*L/i.test(play.name) ? '21 L' : '21 R';
+        }
+
+        return `
+          <div class="callsheet-cell" style="padding: ${cellPadding};">
+            <div class="cell-main">
+              ${
+                numVal
+                  ? `<span class="wrist-badge" style="background: ${numBg}; color: ${numText}; font-size: ${badgeFontSize};">${numVal}</span>`
+                  : ''
+              }
+              <span class="play-name">${play.name}</span>
+            </div>
+            <div class="cell-meta">
+              ${formation ? `<span class="formation-tag">(${formation})</span>` : ''}
+              ${play.personnel ? `<span class="personnel-tag">${play.personnel}</span>` : ''}
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+
+    return `
+      <div class="section-card">
+        <div class="card-header" style="background: ${headerBg}; color: ${headerText}; padding: ${headerPadding};">
+          <span class="card-title">${sec.title}</span>
+          <span class="card-count">${validPlays.length}/${sec.slotsCount}</span>
+        </div>
+        <div class="card-body">
+          ${rowsHtml || '<div class="callsheet-cell empty-slot"><span class="slot-empty-text">No plays assigned</span></div>'}
+        </div>
+      </div>
+    `;
+  };
+
+  const renderSectionGrid = (sectionList: CallSheetSection[], cols = orientation === 'landscape' ? 4 : 2) => {
+    if (!sectionList || sectionList.length === 0) return '';
+    const cards = sectionList.map((sec) => renderSectionCard(sec)).join('');
+    return `
+      <div class="cards-grid" style="grid-template-columns: repeat(${cols}, 1fr); gap: ${gridGap};">
+        ${cards}
+      </div>
+    `;
+  };
+
+  // Build Sections HTML
+  let topSituationsHtml = '';
+  if (filter.topSituations && topSituations.length > 0) {
+    topSituationsHtml = `
+      <div class="section-group">
+        <div class="group-banner">SITUATIONAL CALLS &amp; DOWN-AND-DISTANCE</div>
+        ${renderSectionGrid(topSituations, orientation === 'landscape' ? 4 : 2)}
+      </div>
+    `;
+  }
+
+  let redZoneHtml = '';
+  if (filter.redZone && redZone.length > 0) {
+    redZoneHtml = `
+      <div class="section-group redzone-group ${fitMode === '2page' ? 'page-break-before' : ''}">
+        <div class="group-banner redzone-banner">RED ZONE &amp; GOAL LINE (INSIDE 20)</div>
+        ${renderSectionGrid(redZone, orientation === 'landscape' ? 4 : 2)}
+      </div>
+    `;
+  }
+
+  let tempoHtml = '';
+  if (filter.tempo && tempo.length > 0) {
+    tempoHtml = `
+      <div class="section-group">
+        <div class="group-banner">TEMPO, CLOCK &amp; SPECIALS</div>
+        ${renderSectionGrid(tempo, orientation === 'landscape' ? 4 : 2)}
+      </div>
+    `;
+  }
+
+  let customHtml = '';
+  if (filter.custom && custom.length > 0) {
+    customHtml = `
+      <div class="section-group">
+        <div class="group-banner">CUSTOM SITUATIONS</div>
+        ${renderSectionGrid(custom, orientation === 'landscape' ? 4 : 2)}
+      </div>
+    `;
+  }
+
+  // Scripts Box
+  let scriptsHtml = '';
+  if (filter.scripts) {
+    const filledScripts = rawScripts
+      .map((p, idx) => ({ play: p, num: idx + 1 }))
+      .filter((item) => (hideEmptySlots ? item.play && item.play.name : true));
+
+    const scriptItemsHtml = filledScripts
+      .map(({ play, num }) => {
+        if (!play || !play.name) {
+          return `
+            <div class="script-row empty-row">
+              <span class="script-num">${num}.</span>
+              <span class="script-name text-muted">&nbsp;</span>
+            </div>
+          `;
+        }
+        const match = play.wristbandSlotMatch;
+        const numVal = cleanNum(play.wristbandNum || match?.slotNumber);
+        const numBg = inkFriendly ? '#e2e8f0' : match?.numberBgColor || play.wristbandColor || '#e2e8f0';
+        const numText = inkFriendly ? '#000' : match?.numberTextColor || getContrastColor(numBg);
+
+        return `
+          <div class="script-row">
+            <span class="script-num">${num}.</span>
+            ${numVal ? `<span class="wrist-badge" style="background: ${numBg}; color: ${numText}; font-size: ${badgeFontSize};">${numVal}</span>` : ''}
+            <span class="script-name">${play.name}</span>
+            ${play.formation ? `<span class="formation-tag">(${play.formation})</span>` : ''}
+          </div>
+        `;
+      })
+      .join('');
+
+    scriptsHtml = `
+      <div class="bottom-card scripts-card">
+        <div class="card-header scripts-header" style="padding: ${headerPadding};">
+          <span>SCRIPTS (OPENING 15)</span>
+          <span>${rawScripts.filter((p) => p && p.name).length}/${rawScripts.length || 15}</span>
+        </div>
+        <div class="scripts-body" style="padding: 2px;">
+          ${scriptItemsHtml || '<div class="text-muted p-1">No scripted plays</div>'}
+        </div>
+      </div>
+    `;
+  }
+
+  // 2-Point Conversion Decision Matrix
+  let twoPointHtml = '';
+  if (filter.twoPoint) {
+    const rules = callSheetData.twoPointRules || [
+      { pointDiff: -15, leadAction: 'Go for 1', leadHighlight: false, trailAction: 'Go for 2', trailHighlight: true, notes: 'Down 15 after TD' },
+      { pointDiff: -14, leadAction: 'Go for 1', leadHighlight: false, trailAction: 'Go for 1', trailHighlight: false, notes: 'Down 14 after TD' },
+      { pointDiff: -13, leadAction: 'Go for 1', leadHighlight: false, trailAction: 'Go for 2', trailHighlight: true, notes: 'Down 13 after TD' },
+      { pointDiff: -12, leadAction: 'Go for 1', leadHighlight: false, trailAction: 'Go for 1', trailHighlight: false, notes: 'Down 12 after TD' },
+      { pointDiff: -11, leadAction: 'Go for 1', leadHighlight: false, trailAction: 'Go for 2', trailHighlight: true, notes: 'Down 11 after TD' },
+      { pointDiff: -10, leadAction: 'Go for 1', leadHighlight: false, trailAction: 'Go for 1', trailHighlight: false, notes: 'Down 10 after TD' },
+      { pointDiff: -9, leadAction: 'Go for 1', leadHighlight: false, trailAction: 'Go for 2', trailHighlight: true, notes: 'Down 9 after TD' },
+      { pointDiff: -8, leadAction: 'Go for 1', leadHighlight: false, trailAction: 'Go for 2', trailHighlight: true, notes: 'Down 8 after TD' },
+      { pointDiff: -5, leadAction: 'Go for 1', leadHighlight: false, trailAction: 'Go for 2', trailHighlight: true, notes: 'Down 5 after TD' },
+      { pointDiff: -4, leadAction: 'Go for 1', leadHighlight: false, trailAction: 'Go for 2', trailHighlight: true, notes: 'Down 4 after TD' },
+      { pointDiff: -2, leadAction: 'Go for 1', leadHighlight: false, trailAction: 'Go for 2', trailHighlight: true, notes: 'Down 2 after TD' },
+      { pointDiff: -1, leadAction: 'Go for 1', leadHighlight: false, trailAction: 'Go for 2', trailHighlight: true, notes: 'Down 1 after TD' },
+      { pointDiff: 1, leadAction: 'Go for 2', leadHighlight: true, trailAction: 'Go for 1', trailHighlight: false, notes: 'Up 1 after TD' },
+      { pointDiff: 2, leadAction: 'Go for 2', leadHighlight: true, trailAction: 'Go for 1', trailHighlight: false, notes: 'Up 2 after TD' },
+    ];
+
+    const rulesRowsHtml = rules
+      .slice(0, 14)
+      .map((r) => `
+        <tr>
+          <td class="diff-cell">${r.pointDiff > 0 ? `+${r.pointDiff}` : r.pointDiff}</td>
+          <td class="${r.trailHighlight ? 'action-highlight' : ''}">${r.trailAction}</td>
+          <td class="${r.leadHighlight ? 'action-highlight' : ''}">${r.leadAction}</td>
+        </tr>
+      `)
+      .join('');
+
+    twoPointHtml = `
+      <div class="bottom-card twopoint-card">
+        <div class="card-header twopoint-header" style="padding: ${headerPadding};">
+          <span>2-PT CONVERSION MATRIX</span>
+        </div>
+        <div class="twopoint-table-wrap">
+          <table class="twopoint-table">
+            <thead>
+              <tr>
+                <th>DIFF</th>
+                <th>TRAILING</th>
+                <th>LEADING</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rulesRowsHtml}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  // Timeouts Tracker
+  let timeoutsHtml = '';
+  if (filter.timeouts) {
+    const timeoutsCount = callSheetData.timeoutsCount || 3;
+    const makeBoxes = () => {
+      let b = '';
+      for (let i = 1; i <= timeoutsCount; i++) {
+        b += `<span class="timeout-check-box">[ &nbsp; ]</span>`;
+      }
+      return b;
+    };
+
+    timeoutsHtml = `
+      <div class="bottom-card timeouts-card">
+        <div class="card-header timeouts-header" style="padding: ${headerPadding};">
+          <span>TIMEOUTS LEFT</span>
+        </div>
+        <div class="timeouts-body" style="padding: 6px;">
+          <div class="timeout-half">
+            <div class="half-title">1ST HALF</div>
+            <div class="half-row">
+              <span class="team-label">US:</span>
+              ${makeBoxes()}
+            </div>
+            <div class="half-row">
+              <span class="team-label">OPP:</span>
+              ${makeBoxes()}
+            </div>
+          </div>
+          <div class="timeout-half" style="margin-top: 6px;">
+            <div class="half-title">2ND HALF</div>
+            <div class="half-row">
+              <span class="team-label">US:</span>
+              ${makeBoxes()}
+            </div>
+            <div class="half-row">
+              <span class="team-label">OPP:</span>
+              ${makeBoxes()}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Bottom section grid
+  let bottomSectionHtml = '';
+  if (filter.scripts || filter.twoPoint || filter.timeouts) {
+    bottomSectionHtml = `
+      <div class="section-group bottom-group">
+        <div class="bottom-grid">
+          ${scriptsHtml}
+          ${twoPointHtml}
+          ${timeoutsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${title}</title>
+  <style>
+    @page {
+      size: letter ${orientation};
+      margin: 0.2in;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #ffffff;
+      color: #000000;
+      font-size: ${baseFontSize};
+      line-height: 1.25;
+      overflow: visible !important;
+    }
+    .print-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #000000;
+      padding-bottom: 4px;
+      margin-bottom: 6px;
+    }
+    .banner-title-area {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .banner-team {
+      font-size: 14pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .banner-unit {
+      font-size: 11pt;
+      font-weight: 900;
+      padding: 1px 6px;
+      border-radius: 3px;
+      background: ${isOffense ? '#0284c7' : '#dc2626'};
+      color: #ffffff;
+      text-transform: uppercase;
+    }
+    .banner-meta {
+      font-size: 8.5pt;
+      font-weight: 700;
+      color: #334155;
+    }
+    .section-group {
+      margin-bottom: 8px;
+      page-break-inside: auto;
+      break-inside: auto;
+    }
+    .page-break-before {
+      page-break-before: always !important;
+      break-before: page !important;
+    }
+    .group-banner {
+      font-size: 8.5pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: #e2e8f0;
+      color: #0f172a;
+      padding: 2px 6px;
+      margin-bottom: 4px;
+      border: 1px solid #cbd5e1;
+    }
+    .redzone-banner {
+      background: #fee2e2;
+      color: #991b1b;
+      border-color: #fca5a5;
+    }
+    .cards-grid {
+      display: grid;
+      width: 100%;
+    }
+    .section-card {
+      border: 1.2px solid #000000;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      overflow: visible !important;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #000000;
+      font-weight: 900;
+      text-transform: uppercase;
+      font-size: 8.5pt;
+    }
+    .card-title {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-count {
+      font-size: 7.5pt;
+      opacity: 0.85;
+      font-family: monospace;
+    }
+    .card-body {
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+    }
+    .callsheet-cell {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #e2e8f0;
+      gap: 4px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .callsheet-cell:last-child {
+      border-bottom: none;
+    }
+    .empty-slot {
+      background: #f8fafc;
+      justify-content: center;
+    }
+    .slot-empty-text {
+      color: #94a3b8;
+      font-style: italic;
+      font-size: 7.5pt;
+    }
+    .cell-main {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+    }
+    .wrist-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+      border-radius: 2px;
+      font-family: monospace;
+      font-weight: 900;
+      border: 1px solid rgba(0,0,0,0.25);
+      flex-shrink: 0;
+      line-height: 1.3;
+    }
+    .play-name {
+      font-weight: 900;
+      text-transform: uppercase;
+      word-break: break-word;
+      line-height: 1.15;
+    }
+    .cell-meta {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      flex-shrink: 0;
+      font-size: 7.5pt;
+    }
+    .formation-tag {
+      color: #475569;
+      font-weight: 700;
+      font-family: monospace;
+    }
+    .personnel-tag {
+      background: #e2e8f0;
+      color: #1e293b;
+      padding: 0 3px;
+      border-radius: 2px;
+      font-weight: 800;
+      font-size: 7pt;
+      font-family: monospace;
+    }
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 4.5fr 4.5fr 3fr;
+      gap: ${gridGap};
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    @media (max-width: 700px) {
+      .bottom-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .bottom-card {
+      border: 1.2px solid #000000;
+      background: #ffffff;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .scripts-header {
+      background: #7e22ce;
+      color: #ffffff;
+    }
+    .scripts-body {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .script-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 1.5px 3px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 8pt;
+    }
+    .script-num {
+      font-weight: 900;
+      font-family: monospace;
+      color: #475569;
+      width: 18px;
+    }
+    .script-name {
+      font-weight: 900;
+      text-transform: uppercase;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .twopoint-header {
+      background: #334155;
+      color: #ffffff;
+    }
+    .twopoint-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7.5pt;
+      text-align: center;
+    }
+    .twopoint-table th {
+      background: #e2e8f0;
+      font-weight: 900;
+      padding: 2px;
+      border: 1px solid #cbd5e1;
+    }
+    .twopoint-table td {
+      padding: 1.5px 2px;
+      border: 1px solid #e2e8f0;
+      font-weight: 700;
+    }
+    .diff-cell {
+      font-family: monospace;
+      font-weight: 900;
+    }
+    .action-highlight {
+      background: #fef08a !important;
+      color: #854d0e !important;
+      font-weight: 900 !important;
+    }
+    .timeouts-header {
+      background: #0f172a;
+      color: #ffffff;
+    }
+    .half-title {
+      font-weight: 900;
+      font-size: 7.5pt;
+      color: #475569;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+    }
+    .half-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 2px;
+      font-size: 8pt;
+    }
+    .team-label {
+      font-weight: 900;
+      width: 32px;
+    }
+    .timeout-check-box {
+      font-family: monospace;
+      font-weight: 900;
+      font-size: 9pt;
+    }
+    .text-muted {
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="print-banner">
+    <div class="banner-title-area">
+      <span class="banner-team">${activeTeamName}</span>
+      <span class="banner-unit">${unitLabel}</span>
+      <span style="font-weight: 900; text-transform: uppercase;">${sheetTitle}</span>
+    </div>
+    <div class="banner-meta">
+      ${opponent ? `<span>${opponent}</span> &bull; ` : ''}
+      <span>${gameDate || 'Sideline Master'}</span>
+    </div>
+  </div>
+
+  ${topSituationsHtml}
+  ${redZoneHtml}
+  ${tempoHtml}
+  ${customHtml}
+  ${bottomSectionHtml}
+</body>
+</html>`;
+}
+
+/**
+ * Print Call Sheet using dedicated isolated print engine.
+ */
+export function printCallSheet(
+  callSheetData: CallSheetFullData,
+  activeUnit: 'offense' | 'defense' = 'offense',
+  activeTeamName: string = 'Mahopac 10U',
+  documentTitle?: string,
+  options?: CallSheetPrintOptions
+) {
+  const html = generateCallSheetPrintHTML(callSheetData, activeUnit, activeTeamName, documentTitle, options);
+  const title = documentTitle || `${activeTeamName}_${activeUnit.toUpperCase()}_Call_Sheet`;
   printCleanHTML(html, title);
 }
 
