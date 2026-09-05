@@ -318,12 +318,13 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
       notes: play.concept,
     };
     const jsonStr = safeJSONStringify(playData);
+    (window as any).__activeCallSheetPlayDrag = playData;
     try {
       e.dataTransfer.setData('application/json', jsonStr);
       e.dataTransfer.setData('callSheetPlayTransfer', jsonStr);
       e.dataTransfer.setData('text/plain', play.name || jsonStr);
     } catch {}
-    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.effectAllowed = 'copyMove';
   };
 
   // Drag handler for plays on the wristband table (explicit copy, leaves wristband intact)
@@ -351,13 +352,14 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
         highlightTarget: 'number_only',
       },
     };
+    (window as any).__activeCallSheetPlayDrag = playData;
     const jsonStr = safeJSONStringify(playData);
     try {
       e.dataTransfer.setData('application/json', jsonStr);
       e.dataTransfer.setData('callSheetPlayTransfer', jsonStr);
       e.dataTransfer.setData('text/plain', item.playText);
     } catch {}
-    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.effectAllowed = 'copyMove';
   };
 
   const handleCopyWristbandPlay = (item: typeof wristbandCardPlays[0]) => {
@@ -787,6 +789,9 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                       key={item.id}
                       draggable
                       onDragStart={(e) => handleDragWristbandPlay(e, item)}
+                      onDragEnd={() => {
+                        (window as any).__activeCallSheetPlayDrag = null;
+                      }}
                       className="group p-2 rounded-xl border border-slate-750 bg-slate-850 hover:bg-slate-800 hover:border-indigo-500/60 transition-all cursor-grab active:cursor-grabbing shadow-xs select-none"
                       title="Drag to situation table (copies play, leaves wristband unchanged)"
                       style={
@@ -903,6 +908,9 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                       key={play.id}
                       draggable={!isManageMode && !isOrderSelectMode}
                       onDragStart={(e) => handleDragStart(e, play)}
+                      onDragEnd={() => {
+                        (window as any).__activeCallSheetPlayDrag = null;
+                      }}
                       onClick={() => {
                         if (isManageMode) {
                           handleToggleSelectPlay(play.id);

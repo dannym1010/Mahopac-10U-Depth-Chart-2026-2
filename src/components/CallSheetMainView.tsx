@@ -348,11 +348,11 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
     });
   };
 
-  // Handle assigning play from picker or drag-and-drop
+  // Handle assigning play from picker or drag-and-drop (always copies play, leaving source slot intact)
   const handleAssignPlayToSlot = (
     sectionId: string,
     slotIndex: number,
-    play: CallSheetPlay & { sourceSectionId?: string; sourceSlotIndex?: number }
+    play: CallSheetPlay
   ) => {
     applyCallSheetUpdate((prev) => {
       const next = { ...prev };
@@ -362,43 +362,12 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
         playToAssign.formation = inferFormation(playToAssign.name, activeUnit, playToAssign.formation);
       }
 
-      const sourceSecId = play.sourceSectionId;
-      const sourceSlotIdx = play.sourceSlotIndex;
-      const isMovingFromSlot = sourceSecId !== undefined && sourceSlotIdx !== undefined;
-
-      // Clean drag metadata before persisting
+      // Generate a fresh unique ID for the copied cell play
+      playToAssign.id = `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
       delete (playToAssign as any).sourceSectionId;
       delete (playToAssign as any).sourceSlotIndex;
 
-      // If moving from a slot to a different slot, clear or swap source slot
-      if (isMovingFromSlot && (sourceSecId !== sectionId || sourceSlotIdx !== slotIndex)) {
-        if (sourceSecId === 'script') {
-          if (activeUnit === 'offense') {
-            const arr = [...(next.offenseScript || [])];
-            if (arr[sourceSlotIdx] !== undefined) arr[sourceSlotIdx] = null;
-            next.offenseScript = arr;
-          } else {
-            const arr = [...(next.defenseScript || [])];
-            if (arr[sourceSlotIdx] !== undefined) arr[sourceSlotIdx] = null;
-            next.defenseScript = arr;
-          }
-        } else {
-          const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
-          const sections = [...(next[sectionsKey] || [])];
-          const srcIdx = sections.findIndex((s) => s.id === sourceSecId);
-          if (srcIdx >= 0) {
-            const srcSec = { ...sections[srcIdx] };
-            const srcPlays = [...(srcSec.plays || [])];
-            if (srcPlays[sourceSlotIdx] !== undefined) {
-              srcPlays[sourceSlotIdx] = null;
-              srcSec.plays = srcPlays;
-              sections[srcIdx] = srcSec;
-              next[sectionsKey] = sections;
-            }
-          }
-        }
-      }
-
+      // Assign to destination slot (leaving source intact as a COPY)
       if (sectionId === 'script') {
         if (activeUnit === 'offense') {
           const arr = [...(next.offenseScript || [])];

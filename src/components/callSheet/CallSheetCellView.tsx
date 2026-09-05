@@ -128,7 +128,7 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
     }
     e.preventDefault();
     e.stopPropagation();
-    e.dataTransfer.dropEffect = 'move';
+    e.dataTransfer.dropEffect = 'copy';
     if (!isDragOver) setIsDragOver(true);
   };
 
@@ -148,9 +148,21 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
+    const activeDrag = (window as any).__activeCallSheetPlayDrag;
     (window as any).__activeCallSheetPlayDrag = null;
 
     try {
+      // 1. Direct active drag memory object (handles all browsers and iframes reliably)
+      if (activeDrag && (activeDrag.name || activeDrag.text) && onDropPlay) {
+        onDropPlay({
+          ...activeDrag,
+          id: `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          name: activeDrag.name || activeDrag.text,
+        });
+        return;
+      }
+
+      // 2. Try application/json or callSheetPlayTransfer
       const dataStr =
         e.dataTransfer.getData('application/json') ||
         e.dataTransfer.getData('callSheetPlayTransfer');
@@ -159,14 +171,14 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
         if (parsed && (parsed.name || parsed.text) && onDropPlay) {
           onDropPlay({
             ...parsed,
-            id: parsed.id || `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            id: `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
             name: parsed.name || parsed.text,
-            sourceSectionId: parsed.sourceSectionId,
-            sourceSlotIndex: parsed.sourceSlotIndex,
           });
           return;
         }
       }
+
+      // 3. Try plain text
       const textStr = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('text');
       if (textStr && onDropPlay) {
         try {
@@ -174,10 +186,8 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
           if (parsed && (parsed.name || parsed.text)) {
             onDropPlay({
               ...parsed,
-              id: parsed.id || `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+              id: `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
               name: parsed.name || parsed.text,
-              sourceSectionId: parsed.sourceSectionId,
-              sourceSlotIndex: parsed.sourceSlotIndex,
             });
             return;
           }
