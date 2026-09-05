@@ -489,11 +489,15 @@ export function parseTimeString(str: string): number {
 
 // Multi-Coach Section Locks (Depth Chart / Units)
 export async function fetchServerLocks(): Promise<any[]> {
+  if (isServerApiAvailable === false) return [];
   try {
     const res = await fetch('/api/locks', { cache: 'no-store' });
     if (res.ok) {
+      isServerApiAvailable = true;
       const data = await res.json();
       return Array.isArray(data.locks) ? data.locks : [];
+    } else if (res.status === 404) {
+      isServerApiAvailable = false;
     }
   } catch {}
   return [];
@@ -507,6 +511,7 @@ export async function acquireServerLock(params: {
   holderName: string;
   force?: boolean;
 }): Promise<{ success: boolean; lock?: any; lockedByOther?: boolean; existingLock?: any; message?: string }> {
+  if (isServerApiAvailable === false) return { success: false };
   try {
     const res = await fetch('/api/locks/acquire', {
       method: 'POST',
@@ -515,6 +520,8 @@ export async function acquireServerLock(params: {
     });
     if (res.ok) {
       return await res.json();
+    } else if (res.status === 404) {
+      isServerApiAvailable = false;
     }
   } catch {}
   return { success: false };
@@ -527,6 +534,7 @@ export async function releaseServerLock(params: {
   holderEmail: string;
   force?: boolean;
 }): Promise<boolean> {
+  if (isServerApiAvailable === false) return false;
   try {
     const res = await fetch('/api/locks/release', {
       method: 'POST',
@@ -544,6 +552,7 @@ export async function heartbeatServerLock(params: {
   unit: string;
   holderEmail: string;
 }): Promise<boolean> {
+  if (isServerApiAvailable === false) return false;
   try {
     const res = await fetch('/api/locks/heartbeat', {
       method: 'POST',
