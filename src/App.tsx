@@ -5994,26 +5994,7 @@ function mergeRemoteWeeklyData(
                   safeJSONSet('footballDeletedPlayIds', newIds);
                 }}
                 wristbandData={currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA}
-                onUpdateWristbandData={(updatedWb) => {
-                  setWeeklyData((prev) => {
-                    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
-                    const existingWeek = prev[scopedKey] || prev[currentWeek] || {
-                      formations: defaultFormations,
-                      depthChart: {},
-                      scrimmageChart: {},
-                      opponent: '',
-                    };
-                    const updatedWeek = {
-                      ...existingWeek,
-                      wristbandData: updatedWb,
-                    };
-                    return {
-                      ...prev,
-                      [scopedKey]: updatedWeek,
-                      [currentWeek]: updatedWeek,
-                    };
-                  });
-                }}
+                onUpdateWristbandData={handleUpdateWristbandData}
                 scouting={currentWeekState.scouting || {}}
                 onUpdateScouting={(field, val) => {
                   setWeeklyData((prev) => {
