@@ -264,6 +264,8 @@ export interface FormationBoard {
 
 export interface WristbandPlay {
   text: string;
+  formation?: string;
+  type?: string;
   customLabel?: string;
   highlightColor?: string; // e.g. 'yellow' | 'lime' | 'cyan' | 'rose' | 'amber' | 'purple' or hex
   numberHighlightColor?: string; // highlight just the play number badge

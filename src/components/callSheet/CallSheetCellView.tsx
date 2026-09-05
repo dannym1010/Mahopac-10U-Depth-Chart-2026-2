@@ -219,7 +219,9 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
 
   const rowHighlightColor =
     (play.wristbandHighlightTarget === 'full_row' && play.wristbandRowColor) ||
-    (match?.highlightTarget === 'full_row' && match?.rowHighlightColor);
+    (match?.highlightTarget === 'full_row' && match?.rowHighlightColor) ||
+    play.wristbandRowColor ||
+    (play.isHighlighted && play.highlightColor ? play.highlightColor : undefined);
 
   const effectiveBgStyle = rowHighlightColor ? { backgroundColor: rowHighlightColor } : undefined;
 
@@ -261,8 +263,14 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
         )}
 
         {/* Play Name */}
-        <span className="font-black text-[11px] sm:text-[11.5px] uppercase tracking-tight truncate text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-300">
-          {play.name}
+        <span
+          className={`font-black text-[11px] sm:text-[11.5px] uppercase tracking-tight truncate ${
+            !play.name
+              ? 'text-slate-400 dark:text-slate-500 italic font-normal'
+              : 'text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-300'
+          }`}
+        >
+          {play.name || '(Open Slot)'}
         </span>
 
         {/* Formation or Type tag */}

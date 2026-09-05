@@ -5951,6 +5951,14 @@ function mergeRemoteWeeklyData(
                 userRole={userRole}
                 masterPlayLibrary={masterPlayLibrary}
                 playDatabase={playDatabase}
+                callSheetData={callSheetData}
+                activeTeamName={currentActiveTeam?.name || 'Mahopac 10U'}
+                onUpdateCallSheetData={(newCs) => {
+                  setCallSheetData(newCs);
+                  latestStateRef.current.callSheetData = newCs;
+                  safeJSONSet('footballCallSheetData', newCs);
+                  debouncedSave('all');
+                }}
                 onUpdatePlayDatabase={(newDb) => {
                   setPlayDatabase(newDb);
                   latestStateRef.current.playDatabase = newDb;
@@ -6076,6 +6084,7 @@ function mergeRemoteWeeklyData(
                   safeJSONSet('footballDeletedPlayIds', newDeleted);
                   debouncedSave('all');
                 }}
+                wristbandData={currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA}
               />
             )}
 

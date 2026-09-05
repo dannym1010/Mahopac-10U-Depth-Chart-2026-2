@@ -21,14 +21,21 @@ export interface CallSheetPlay {
   wristbandTitle?: string;
   wristbandColor?: string;
   wristbandNumberColor?: string;
+  wristbandTextColor?: string;
   wristbandRowColor?: string;
   wristbandHighlightTarget?: 'number_only' | 'full_row';
+  isHighlighted?: boolean;
+  highlightColor?: string;
   wristbandSlotMatch?: {
     wristbandId: string;
     wristbandTitle: string;
-    cardLabel: string;
+    cardLabel?: string;
     slotNumber: number | string;
+    colIdx?: number;
+    rowIdx?: number;
+    color?: string;
     numberBgColor?: string;
+    numberTextColor?: string;
     rowHighlightColor?: string;
     highlightTarget?: 'number_only' | 'full_row';
   };
@@ -105,6 +112,7 @@ export interface PlayDatabaseEntry {
   wristbandLabel?: string;
   wristbandColor?: string;
   wristbandNumberColor?: string;
+  wristbandTextColor?: string;
   wristbandHighlightTarget?: 'number_only' | 'full_row';
   wristbandSlotMatch?: {
     wristbandId: string;

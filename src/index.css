@@ -508,6 +508,62 @@ body {
     print-color-adjust: exact !important;
   }
 
+  .wristband-cutout-wrapper {
+    position: relative !important;
+    padding: 6px !important;
+    border: 1px dashed #94a3b8 !important;
+    display: inline-block !important;
+    margin: 12px auto !important;
+    background: #ffffff !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .wristband-cutout-label {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    font-size: 8px !important;
+    font-family: monospace !important;
+    font-weight: 700 !important;
+    color: #64748b !important;
+    text-transform: uppercase !important;
+    margin-bottom: 3px !important;
+  }
+
+  .wristband-print-play-text {
+    display: block !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+    font-size: 8.5px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    color: #000000 !important;
+    line-height: 1 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  /* Call Sheet Clean Print Rules */
+  .call-sheet-print-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .call-sheet-section-box {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    border: 1.5px solid #000000 !important;
+    background-color: #ffffff !important;
+    margin-bottom: 8px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   .wristband-num-pill-yellow {
     background-color: #facc15 !important;
     color: #000000 !important;

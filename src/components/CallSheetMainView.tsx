@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Printer,
   Sparkles,
@@ -13,6 +13,7 @@ import {
   LayoutGrid,
   Columns,
   FileSpreadsheet,
+  BookmarkCheck,
 } from 'lucide-react';
 import {
   CallSheetFullData,
@@ -28,6 +29,8 @@ import {
   DEFAULT_OFFENSE_SECTIONS,
   DEFAULT_DEFENSE_SECTIONS,
 } from '../data/callSheetData';
+import { WristbandData } from '../types';
+import { INITIAL_TWO_WRISTBANDS_DATA } from '../data/userGameDayPlays';
 import { safeJSONParse, safeJSONSet, safeJSONStringify } from '../services/storageService';
 import { ComputerCallSheetView } from './callSheet/ComputerCallSheetView';
 import { MobileCallSheetView } from './callSheet/MobileCallSheetView';
@@ -46,6 +49,7 @@ interface CallSheetMainViewProps {
   onUpdateCallSheetData?: (data: CallSheetFullData) => void;
   deletedPlayIds?: string[];
   onUpdateDeletedPlayIds?: (ids: string[]) => void;
+  wristbandData?: WristbandData;
 }
 
 export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
@@ -58,6 +62,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   onUpdateCallSheetData,
   deletedPlayIds: propDeletedPlayIds,
   onUpdateDeletedPlayIds,
+  wristbandData: propWristbandData,
 }) => {
   // Permanently deleted play IDs tracking (guarantees deleted plays never reappear on refresh)
   const [deletedPlayIds, setDeletedPlayIds] = useState<string[]>(() => {
@@ -142,6 +147,18 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
     return 'computer';
   });
   const [highlightRedZone, setHighlightRedZone] = useState(true);
+  // Normalize wristband data
+  const normalizedWristbandData: WristbandData = useMemo(() => {
+    if (propWristbandData?.wristbands && propWristbandData.wristbands.length > 0) {
+      return propWristbandData;
+    }
+    const saved = safeJSONParse<WristbandData | null>('footballWristbandData', null);
+    if (saved?.wristbands && saved.wristbands.length > 0) {
+      return saved;
+    }
+    return INITIAL_TWO_WRISTBANDS_DATA;
+  }, [propWristbandData]);
+
   // Default to showing the Play Bank on computer view as requested by user
   const [isPlayBankOpen, setIsPlayBankOpen] = useState(true);
   const [gridColumns, setGridColumns] = useState<number>(() => {
@@ -151,9 +168,11 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   const [addTableModalState, setAddTableModalState] = useState<{
     isOpen: boolean;
     group: 'top_situations' | 'red_zone' | 'tempo_game_mgmt' | 'custom';
+    initialTab?: 'wristband' | 'custom';
   }>({
     isOpen: false,
     group: 'top_situations',
+    initialTab: 'wristband',
   });
 
   // Play Picker Modal state
@@ -319,21 +338,27 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
   // Handle adding a new section table via modal
   const handleAddSection = (
-    group: 'top_situations' | 'red_zone' | 'tempo_game_mgmt' | 'custom' = 'top_situations'
+    group: 'top_situations' | 'red_zone' | 'tempo_game_mgmt' | 'custom' = 'top_situations',
+    initialTab: 'wristband' | 'custom' = 'wristband'
   ) => {
     setAddTableModalState({
       isOpen: true,
       group,
+      initialTab,
+    });
+  };
+
+  const handleConfirmAddSections = (newSections: CallSheetSection[]) => {
+    setCallSheetData((prev) => {
+      const next = { ...prev };
+      const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
+      next[sectionsKey] = [...next[sectionsKey], ...newSections];
+      return next;
     });
   };
 
   const handleConfirmAddSection = (newSection: CallSheetSection) => {
-    setCallSheetData((prev) => {
-      const next = { ...prev };
-      const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
-      next[sectionsKey] = [...next[sectionsKey], newSection];
-      return next;
-    });
+    handleConfirmAddSections([newSection]);
   };
 
   // Grid layout columns changer
@@ -773,10 +798,27 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
               <span className="hidden sm:inline">Import Excel</span>
             </button>
 
+            {/* Wristband Preset Table Button */}
+            <button
+              type="button"
+              onClick={() =>
+                setAddTableModalState({
+                  isOpen: true,
+                  group: 'top_situations',
+                  initialTab: 'wristband',
+                })
+              }
+              className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+              title="Add preset table populated from any wristband with matching numbers & highlights"
+            >
+              <BookmarkCheck className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Wristband Preset</span>
+            </button>
+
             {/* Add Section Button */}
             <button
               type="button"
-              onClick={() => handleAddSection('top_situations')}
+              onClick={() => handleAddSection('top_situations', 'custom')}
               className="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
               title="Add a new situation table to the sheet"
             >
@@ -946,8 +988,12 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
         isOpen={addTableModalState.isOpen}
         activeUnit={activeUnit}
         initialGroup={addTableModalState.group}
+        initialTab={addTableModalState.initialTab || 'wristband'}
+        wristbandData={normalizedWristbandData}
+        playDatabase={playDatabase}
         onClose={() => setAddTableModalState((prev) => ({ ...prev, isOpen: false }))}
         onAddSection={handleConfirmAddSection}
+        onAddSections={handleConfirmAddSections}
       />
     </div>
   );
