@@ -192,6 +192,35 @@ body {
     will-change: auto !important;
   }
 
+  /* Prevent any hover or active text color changes (e.g. purple/indigo hover) from appearing in printed output */
+  *:hover,
+  *:active,
+  *:focus,
+  .group:hover *,
+  .group:focus * {
+    color: inherit;
+  }
+
+  /* Force all callsheet play cells, text, and labels to print crisp black, regardless of mouse hover */
+  .callsheet-cell-slot,
+  .callsheet-cell-slot span,
+  .callsheet-cell-slot div,
+  .callsheet-cell-slot p,
+  .callsheet-cell-slot:hover,
+  .callsheet-cell-slot:hover *,
+  .group:hover .callsheet-cell-slot,
+  .group:hover .callsheet-cell-slot * {
+    color: #000000 !important;
+  }
+
+  /* Keep badge and colored section header text crisp and intact */
+  .wristband-number-badge,
+  [data-wristband-badge="true"],
+  .callsheet-section-header,
+  .callsheet-section-header * {
+    color: inherit !important;
+  }
+
   /* Hide navigation, toolbars, buttons, inputs, and modals in print */
   header,
   nav,

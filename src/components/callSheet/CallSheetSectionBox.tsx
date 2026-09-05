@@ -234,15 +234,21 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
   return (
     <div
       onDragOver={(e) => {
-        if (e.dataTransfer.types.includes('application/callsheet-table-drag')) {
+        const isTableDrag =
+          (window as any).__activeCallSheetTableDrag ||
+          e.dataTransfer.types.includes('application/callsheet-table-drag');
+        if (isTableDrag) {
           e.preventDefault();
           e.stopPropagation();
           onDragOverTable?.(e, section.id);
         }
       }}
       onDrop={(e) => {
-        const tableId = e.dataTransfer.getData('application/callsheet-table-drag');
-        if (tableId) {
+        const isTableDrag =
+          (window as any).__activeCallSheetTableDrag ||
+          e.dataTransfer.types.includes('application/callsheet-table-drag') ||
+          e.dataTransfer.getData('application/callsheet-table-drag');
+        if (isTableDrag) {
           e.preventDefault();
           e.stopPropagation();
           onDropOnTable?.(e, section.id);
@@ -259,9 +265,16 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
         draggable={isDraggable && !isEditing}
         onDragStart={(e) => {
           if (isEditing) return;
+          (window as any).__activeCallSheetTableDrag = section.id;
+          e.dataTransfer.setData('application/callsheet-table-drag', section.id);
+          e.dataTransfer.setData('text/plain', section.id);
+          e.dataTransfer.effectAllowed = 'move';
           onDragStartTable?.(e, section.id);
         }}
-        onDragEnd={onDragEndTable}
+        onDragEnd={(e) => {
+          (window as any).__activeCallSheetTableDrag = null;
+          onDragEndTable?.(e);
+        }}
         className={`py-1 px-2 flex items-center justify-between font-black text-xs uppercase tracking-wider select-none relative transition-colors ${
           isDraggable && !isEditing ? 'cursor-grab active:cursor-grabbing' : ''
         }`}
@@ -276,9 +289,9 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
               {isDraggable && (
                 <div
                   title="Drag table to rearrange or move across rows"
-                  className="cursor-grab active:cursor-grabbing p-0.5 -ml-1 text-inherit opacity-70 hover:opacity-100 hover:bg-black/20 rounded transition-opacity print:hidden shrink-0 flex items-center"
+                  className="cursor-grab active:cursor-grabbing p-1 -ml-1 text-inherit opacity-85 hover:opacity-100 hover:bg-black/25 rounded transition-opacity print:hidden shrink-0 flex items-center"
                 >
-                  <GripVertical className="w-3.5 h-3.5" />
+                  <GripVertical className="w-4 h-4" />
                 </div>
               )}
               <span

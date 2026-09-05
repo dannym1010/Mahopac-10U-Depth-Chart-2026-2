@@ -88,6 +88,13 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
   };
 
   const handleDragOver = (e: React.DragEvent) => {
+    // If a table is being dragged to re-order, let the event bubble cleanly to the table container
+    if (
+      (window as any).__activeCallSheetTableDrag ||
+      e.dataTransfer.types.includes('application/callsheet-table-drag')
+    ) {
+      return;
+    }
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
     if (!isDragOver) setIsDragOver(true);
@@ -98,6 +105,13 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
   };
 
   const handleDrop = (e: React.DragEvent) => {
+    // If a table is being dragged, let the parent section/box handle the drop
+    if (
+      (window as any).__activeCallSheetTableDrag ||
+      e.dataTransfer.types.includes('application/callsheet-table-drag')
+    ) {
+      return;
+    }
     e.preventDefault();
     setIsDragOver(false);
     try {
@@ -444,7 +458,7 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
           } ${
             !hasRealName
               ? 'text-slate-400 dark:text-slate-500 italic font-normal print:hidden'
-              : 'text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 print:text-black'
+              : 'text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 print:!text-black print:group-hover:!text-black'
           }`}
         >
           {hasRealName ? (
@@ -456,7 +470,7 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
 
         {/* Formation or Type tag */}
         {displayFormation && (
-          <span className="text-[9px] text-slate-500 dark:text-slate-400 font-mono shrink-0 hidden sm:inline-block print:text-[8px] print:inline-block">
+          <span className="text-[9px] text-slate-500 dark:text-slate-400 font-mono shrink-0 hidden sm:inline-block print:text-[8px] print:inline-block print:!text-slate-800 print:group-hover:!text-slate-800">
             ({displayFormation})
           </span>
         )}

@@ -207,6 +207,42 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
     commitRows(updatedRows);
   };
 
+  // Move table precisely relative to a target table (before or after)
+  const moveTableToTarget = (
+    sourceId: string,
+    targetSectionId: string,
+    targetRowIndex: number,
+    position: 'before' | 'after'
+  ) => {
+    const sourceSec = sections.find((s) => s.id === sourceId);
+    if (!sourceSec || sourceId === targetSectionId) return;
+
+    // Remove source from all rows first
+    const updatedRows = situationalRows.map((r) => ({
+      rowIndex: r.rowIndex,
+      sections: r.sections.filter((s) => s.id !== sourceId),
+    }));
+
+    // Find or create target row
+    let targetRow = updatedRows.find((r) => r.rowIndex === targetRowIndex);
+    if (!targetRow) {
+      targetRow = { rowIndex: targetRowIndex, sections: [] };
+      updatedRows.push(targetRow);
+      updatedRows.sort((a, b) => a.rowIndex - b.rowIndex);
+    }
+
+    const targetIdx = targetRow.sections.findIndex((s) => s.id === targetSectionId);
+    if (targetIdx !== -1) {
+      const insertAt = position === 'before' ? targetIdx : targetIdx + 1;
+      targetRow.sections.splice(insertAt, 0, sourceSec);
+    } else {
+      targetRow.sections.push(sourceSec);
+    }
+
+    setEmptyRowIndices((prev) => prev.filter((idx) => idx !== targetRowIndex));
+    commitRows(updatedRows);
+  };
+
   // Move table left or right within its row
   const handleMoveTableInRow = (secId: string, direction: -1 | 1) => {
     const updatedRows = situationalRows.map((r) => ({
@@ -285,8 +321,204 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
     }
   };
 
+  // Red Zone reordering handlers
+  const handleMoveRzTable = (secId: string, direction: -1 | 1) => {
+    const curIdx = rzSections.findIndex((s) => s.id === secId);
+    if (curIdx === -1) return;
+    const targetIdx = curIdx + direction;
+    if (targetIdx < 0 || targetIdx >= rzSections.length) return;
+
+    const updatedRz = [...rzSections];
+    const temp = updatedRz[curIdx];
+    updatedRz[curIdx] = updatedRz[targetIdx];
+    updatedRz[targetIdx] = temp;
+
+    const otherSections = sections.filter((s) => !rzSections.some((rz) => rz.id === s.id));
+    if (onReorderSections) {
+      onReorderSections([...otherSections, ...updatedRz]);
+    }
+  };
+
+  const handleDragOverRzTable = (e: React.DragEvent, targetSectionId: string) => {
+    const activeDragId =
+      (window as any).__activeCallSheetTableDrag || draggingSectionId;
+    if (!activeDragId || activeDragId === targetSectionId) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+    const position = e.clientX < midX ? 'before' : 'after';
+    setDragOverTarget({ sectionId: targetSectionId, rowIndex: -99, position });
+  };
+
+  const handleDropOnRzTable = (e: React.DragEvent, targetSectionId: string) => {
+    const sourceId =
+      (window as any).__activeCallSheetTableDrag ||
+      e.dataTransfer.getData('application/callsheet-table-drag') ||
+      draggingSectionId;
+    if (!sourceId || sourceId === targetSectionId) {
+      (window as any).__activeCallSheetTableDrag = null;
+      setDraggingSectionId(null);
+      setDragOverTarget(null);
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+
+    const srcIdx = rzSections.findIndex((s) => s.id === sourceId);
+    const targetIdx = rzSections.findIndex((s) => s.id === targetSectionId);
+    if (srcIdx !== -1 && targetIdx !== -1) {
+      const updatedRz = [...rzSections];
+      const [removed] = updatedRz.splice(srcIdx, 1);
+      const position = dragOverTarget?.position || 'after';
+      const newTargetIdx = updatedRz.findIndex((s) => s.id === targetSectionId);
+      const insertAt = position === 'before' ? newTargetIdx : newTargetIdx + 1;
+      updatedRz.splice(Math.max(0, insertAt), 0, removed);
+
+      const otherSections = sections.filter((s) => !rzSections.some((rz) => rz.id === s.id));
+      if (onReorderSections) {
+        onReorderSections([...otherSections, ...updatedRz]);
+      }
+    }
+    (window as any).__activeCallSheetTableDrag = null;
+    setDraggingSectionId(null);
+    setDragOverTarget(null);
+  };
+
+  // Tempo & Game Management reordering handlers
+  const handleMoveTempoTable = (secId: string, direction: -1 | 1) => {
+    const curIdx = tempoSections.findIndex((s) => s.id === secId);
+    if (curIdx === -1) return;
+    const targetIdx = curIdx + direction;
+    if (targetIdx < 0 || targetIdx >= tempoSections.length) return;
+
+    const updated = [...tempoSections];
+    const temp = updated[curIdx];
+    updated[curIdx] = updated[targetIdx];
+    updated[targetIdx] = temp;
+
+    const otherSections = sections.filter((s) => !tempoSections.some((ts) => ts.id === s.id));
+    if (onReorderSections) {
+      onReorderSections([...otherSections, ...updated]);
+    }
+  };
+
+  const handleDragOverTempoTable = (e: React.DragEvent, targetSectionId: string) => {
+    const activeDragId =
+      (window as any).__activeCallSheetTableDrag || draggingSectionId;
+    if (!activeDragId || activeDragId === targetSectionId) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+    const position = e.clientX < midX ? 'before' : 'after';
+    setDragOverTarget({ sectionId: targetSectionId, rowIndex: -98, position });
+  };
+
+  const handleDropOnTempoTable = (e: React.DragEvent, targetSectionId: string) => {
+    const sourceId =
+      (window as any).__activeCallSheetTableDrag ||
+      e.dataTransfer.getData('application/callsheet-table-drag') ||
+      draggingSectionId;
+    if (!sourceId || sourceId === targetSectionId) {
+      (window as any).__activeCallSheetTableDrag = null;
+      setDraggingSectionId(null);
+      setDragOverTarget(null);
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+
+    const srcIdx = tempoSections.findIndex((s) => s.id === sourceId);
+    const targetIdx = tempoSections.findIndex((s) => s.id === targetSectionId);
+    if (srcIdx !== -1 && targetIdx !== -1) {
+      const updated = [...tempoSections];
+      const [removed] = updated.splice(srcIdx, 1);
+      const position = dragOverTarget?.position || 'after';
+      const newTargetIdx = updated.findIndex((s) => s.id === targetSectionId);
+      const insertAt = position === 'before' ? newTargetIdx : newTargetIdx + 1;
+      updated.splice(Math.max(0, insertAt), 0, removed);
+
+      const otherSections = sections.filter((s) => !tempoSections.some((ts) => ts.id === s.id));
+      if (onReorderSections) {
+        onReorderSections([...otherSections, ...updated]);
+      }
+    }
+    (window as any).__activeCallSheetTableDrag = null;
+    setDraggingSectionId(null);
+    setDragOverTarget(null);
+  };
+
+  // Custom sections reordering handlers
+  const handleMoveCustomTable = (secId: string, direction: -1 | 1) => {
+    const curIdx = customSections.findIndex((s) => s.id === secId);
+    if (curIdx === -1) return;
+    const targetIdx = curIdx + direction;
+    if (targetIdx < 0 || targetIdx >= customSections.length) return;
+
+    const updated = [...customSections];
+    const temp = updated[curIdx];
+    updated[curIdx] = updated[targetIdx];
+    updated[targetIdx] = temp;
+
+    const otherSections = sections.filter((s) => !customSections.some((cs) => cs.id === s.id));
+    if (onReorderSections) {
+      onReorderSections([...otherSections, ...updated]);
+    }
+  };
+
+  const handleDragOverCustomTable = (e: React.DragEvent, targetSectionId: string) => {
+    const activeDragId =
+      (window as any).__activeCallSheetTableDrag || draggingSectionId;
+    if (!activeDragId || activeDragId === targetSectionId) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+    const position = e.clientX < midX ? 'before' : 'after';
+    setDragOverTarget({ sectionId: targetSectionId, rowIndex: -97, position });
+  };
+
+  const handleDropOnCustomTable = (e: React.DragEvent, targetSectionId: string) => {
+    const sourceId =
+      (window as any).__activeCallSheetTableDrag ||
+      e.dataTransfer.getData('application/callsheet-table-drag') ||
+      draggingSectionId;
+    if (!sourceId || sourceId === targetSectionId) {
+      (window as any).__activeCallSheetTableDrag = null;
+      setDraggingSectionId(null);
+      setDragOverTarget(null);
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+
+    const srcIdx = customSections.findIndex((s) => s.id === sourceId);
+    const targetIdx = customSections.findIndex((s) => s.id === targetSectionId);
+    if (srcIdx !== -1 && targetIdx !== -1) {
+      const updated = [...customSections];
+      const [removed] = updated.splice(srcIdx, 1);
+      const position = dragOverTarget?.position || 'after';
+      const newTargetIdx = updated.findIndex((s) => s.id === targetSectionId);
+      const insertAt = position === 'before' ? newTargetIdx : newTargetIdx + 1;
+      updated.splice(Math.max(0, insertAt), 0, removed);
+
+      const otherSections = sections.filter((s) => !customSections.some((cs) => cs.id === s.id));
+      if (onReorderSections) {
+        onReorderSections([...otherSections, ...updated]);
+      }
+    }
+    (window as any).__activeCallSheetTableDrag = null;
+    setDraggingSectionId(null);
+    setDragOverTarget(null);
+  };
+
   // Drag handlers
   const handleDragStartTable = (e: React.DragEvent, sectionId: string) => {
+    (window as any).__activeCallSheetTableDrag = sectionId;
     e.dataTransfer.setData('application/callsheet-table-drag', sectionId);
     e.dataTransfer.setData('text/plain', sectionId);
     e.dataTransfer.effectAllowed = 'move';
@@ -294,6 +526,7 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
   };
 
   const handleDragEndTable = () => {
+    (window as any).__activeCallSheetTableDrag = null;
     setDraggingSectionId(null);
     setDragOverTarget(null);
   };
@@ -303,7 +536,9 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
     targetSectionId: string,
     rowIndex: number
   ) => {
-    if (!draggingSectionId || draggingSectionId === targetSectionId) return;
+    const activeDragId =
+      (window as any).__activeCallSheetTableDrag || draggingSectionId;
+    if (!activeDragId || activeDragId === targetSectionId) return;
     e.preventDefault();
     e.stopPropagation();
 
@@ -318,8 +553,12 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
     targetSectionId: string,
     targetRowIndex: number
   ) => {
-    const sourceId = e.dataTransfer.getData('application/callsheet-table-drag') || draggingSectionId;
+    const sourceId =
+      (window as any).__activeCallSheetTableDrag ||
+      e.dataTransfer.getData('application/callsheet-table-drag') ||
+      draggingSectionId;
     if (!sourceId || sourceId === targetSectionId) {
+      (window as any).__activeCallSheetTableDrag = null;
       setDraggingSectionId(null);
       setDragOverTarget(null);
       return;
@@ -327,32 +566,36 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
     e.preventDefault();
     e.stopPropagation();
 
-    const targetRow = situationalRows.find((r) => r.rowIndex === targetRowIndex);
-    if (!targetRow) return;
-    const targetIdx = targetRow.sections.findIndex((s) => s.id === targetSectionId);
-    const position = dragOverTarget?.position || 'after';
-    const insertIndex = position === 'before' ? targetIdx : targetIdx + 1;
-
-    moveTableToRow(sourceId, targetRowIndex, insertIndex);
+    const position = dragOverTarget?.position === 'before' ? 'before' : 'after';
+    (window as any).__activeCallSheetTableDrag = null;
+    moveTableToTarget(sourceId, targetSectionId, targetRowIndex, position);
     setDraggingSectionId(null);
     setDragOverTarget(null);
   };
 
   const handleDropOnRowEnd = (e: React.DragEvent, targetRowIndex: number) => {
-    const sourceId = e.dataTransfer.getData('application/callsheet-table-drag') || draggingSectionId;
+    const sourceId =
+      (window as any).__activeCallSheetTableDrag ||
+      e.dataTransfer.getData('application/callsheet-table-drag') ||
+      draggingSectionId;
     if (!sourceId) return;
     e.preventDefault();
     e.stopPropagation();
+    (window as any).__activeCallSheetTableDrag = null;
     moveTableToRow(sourceId, targetRowIndex);
     setDraggingSectionId(null);
     setDragOverTarget(null);
   };
 
   const handleDropOnNewRow = (e: React.DragEvent) => {
-    const sourceId = e.dataTransfer.getData('application/callsheet-table-drag') || draggingSectionId;
+    const sourceId =
+      (window as any).__activeCallSheetTableDrag ||
+      e.dataTransfer.getData('application/callsheet-table-drag') ||
+      draggingSectionId;
     if (!sourceId) return;
     e.preventDefault();
     e.stopPropagation();
+    (window as any).__activeCallSheetTableDrag = null;
     const maxRow = situationalRows.reduce((max, r) => Math.max(max, r.rowIndex), -1);
     const newRowIndex = maxRow + 1;
     moveTableToRow(sourceId, newRowIndex);
@@ -361,10 +604,14 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
   };
 
   const handleDropBetweenRows = (e: React.DragEvent, insertRowPosition: number) => {
-    const sourceId = draggingSectionId || e.dataTransfer.getData('application/callsheet-table-drag');
+    const sourceId =
+      (window as any).__activeCallSheetTableDrag ||
+      draggingSectionId ||
+      e.dataTransfer.getData('application/callsheet-table-drag');
     if (!sourceId) return;
     e.preventDefault();
     e.stopPropagation();
+    (window as any).__activeCallSheetTableDrag = null;
 
     const sourceSec = sections.find((s) => s.id === sourceId);
     if (!sourceSec) return;
@@ -813,18 +1060,49 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
 
         {/* Auto-Formatting Red Zone Grid */}
         <div className={getStandardGridClass()}>
-          {rzSections.map((sec) => (
-            <CallSheetSectionBox
-              key={sec.id}
-              section={sec}
-              isRedZoneParent={true}
-              onSlotClick={(slotIdx) => onSlotClick(sec.id, slotIdx)}
-              onClearSlot={(slotIdx) => onClearSlot(sec.id, slotIdx)}
-              onDropPlay={(slotIdx, play) => onDropPlayToSlot(sec.id, slotIdx, play)}
-              onUpdateSection={onUpdateSection}
-              onDeleteSection={onDeleteSection}
-            />
-          ))}
+          {rzSections.map((sec, rzIdx) => {
+            const isDragTargetThis = dragOverTarget?.sectionId === sec.id;
+            const isDraggingThis = draggingSectionId === sec.id;
+            return (
+              <div
+                key={sec.id}
+                className="relative flex flex-col min-w-0"
+                onDragOver={(e) => handleDragOverRzTable(e, sec.id)}
+                onDrop={(e) => handleDropOnRzTable(e, sec.id)}
+              >
+                {/* Drop Indicator Bar on Left (Before) */}
+                {isDragTargetThis && dragOverTarget?.position === 'before' && (
+                  <div className="absolute -left-1.5 top-0 bottom-0 w-1.5 bg-red-600 z-30 rounded shadow-md pointer-events-none animate-pulse" />
+                )}
+
+                <CallSheetSectionBox
+                  section={sec}
+                  isRedZoneParent={true}
+                  onSlotClick={(slotIdx) => onSlotClick(sec.id, slotIdx)}
+                  onClearSlot={(slotIdx) => onClearSlot(sec.id, slotIdx)}
+                  onDropPlay={(slotIdx, play) => onDropPlayToSlot(sec.id, slotIdx, play)}
+                  onUpdateSection={onUpdateSection}
+                  onDeleteSection={onDeleteSection}
+                  isDraggable={true}
+                  onDragStartTable={handleDragStartTable}
+                  onDragEndTable={handleDragEndTable}
+                  onDragOverTable={(e, targetId) => handleDragOverRzTable(e, targetId)}
+                  onDropOnTable={(e, targetId) => handleDropOnRzTable(e, targetId)}
+                  onMoveTableLeft={(secId) => handleMoveRzTable(secId, -1)}
+                  onMoveTableRight={(secId) => handleMoveRzTable(secId, 1)}
+                  canMoveLeft={rzIdx > 0}
+                  canMoveRight={rzIdx < rzSections.length - 1}
+                  isDragTarget={isDragTargetThis}
+                  isDragging={isDraggingThis}
+                />
+
+                {/* Drop Indicator Bar on Right (After) */}
+                {isDragTargetThis && dragOverTarget?.position === 'after' && (
+                  <div className="absolute -right-1.5 top-0 bottom-0 w-1.5 bg-red-600 z-30 rounded shadow-md pointer-events-none animate-pulse" />
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -848,17 +1126,46 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
           </div>
 
           <div className={getStandardGridClass()}>
-            {tempoSections.map((sec) => (
-              <CallSheetSectionBox
-                key={sec.id}
-                section={sec}
-                onSlotClick={(slotIdx) => onSlotClick(sec.id, slotIdx)}
-                onClearSlot={(slotIdx) => onClearSlot(sec.id, slotIdx)}
-                onDropPlay={(slotIdx, play) => onDropPlayToSlot(sec.id, slotIdx, play)}
-                onUpdateSection={onUpdateSection}
-                onDeleteSection={onDeleteSection}
-              />
-            ))}
+            {tempoSections.map((sec, tIdx) => {
+              const isDragTargetThis = dragOverTarget?.sectionId === sec.id;
+              const isDraggingThis = draggingSectionId === sec.id;
+              return (
+                <div
+                  key={sec.id}
+                  className="relative flex flex-col min-w-0"
+                  onDragOver={(e) => handleDragOverTempoTable(e, sec.id)}
+                  onDrop={(e) => handleDropOnTempoTable(e, sec.id)}
+                >
+                  {isDragTargetThis && dragOverTarget?.position === 'before' && (
+                    <div className="absolute -left-1.5 top-0 bottom-0 w-1.5 bg-indigo-600 z-30 rounded shadow-md pointer-events-none animate-pulse" />
+                  )}
+
+                  <CallSheetSectionBox
+                    section={sec}
+                    onSlotClick={(slotIdx) => onSlotClick(sec.id, slotIdx)}
+                    onClearSlot={(slotIdx) => onClearSlot(sec.id, slotIdx)}
+                    onDropPlay={(slotIdx, play) => onDropPlayToSlot(sec.id, slotIdx, play)}
+                    onUpdateSection={onUpdateSection}
+                    onDeleteSection={onDeleteSection}
+                    isDraggable={true}
+                    onDragStartTable={handleDragStartTable}
+                    onDragEndTable={handleDragEndTable}
+                    onDragOverTable={(e, targetId) => handleDragOverTempoTable(e, targetId)}
+                    onDropOnTable={(e, targetId) => handleDropOnTempoTable(e, targetId)}
+                    onMoveTableLeft={(secId) => handleMoveTempoTable(secId, -1)}
+                    onMoveTableRight={(secId) => handleMoveTempoTable(secId, 1)}
+                    canMoveLeft={tIdx > 0}
+                    canMoveRight={tIdx < tempoSections.length - 1}
+                    isDragTarget={isDragTargetThis}
+                    isDragging={isDraggingThis}
+                  />
+
+                  {isDragTargetThis && dragOverTarget?.position === 'after' && (
+                    <div className="absolute -right-1.5 top-0 bottom-0 w-1.5 bg-indigo-600 z-30 rounded shadow-md pointer-events-none animate-pulse" />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -883,17 +1190,46 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
           </div>
 
           <div className={getStandardGridClass()}>
-            {customSections.map((sec) => (
-              <CallSheetSectionBox
-                key={sec.id}
-                section={sec}
-                onSlotClick={(slotIdx) => onSlotClick(sec.id, slotIdx)}
-                onClearSlot={(slotIdx) => onClearSlot(sec.id, slotIdx)}
-                onDropPlay={(slotIdx, play) => onDropPlayToSlot(sec.id, slotIdx, play)}
-                onUpdateSection={onUpdateSection}
-                onDeleteSection={onDeleteSection}
-              />
-            ))}
+            {customSections.map((sec, cIdx) => {
+              const isDragTargetThis = dragOverTarget?.sectionId === sec.id;
+              const isDraggingThis = draggingSectionId === sec.id;
+              return (
+                <div
+                  key={sec.id}
+                  className="relative flex flex-col min-w-0"
+                  onDragOver={(e) => handleDragOverCustomTable(e, sec.id)}
+                  onDrop={(e) => handleDropOnCustomTable(e, sec.id)}
+                >
+                  {isDragTargetThis && dragOverTarget?.position === 'before' && (
+                    <div className="absolute -left-1.5 top-0 bottom-0 w-1.5 bg-indigo-600 z-30 rounded shadow-md pointer-events-none animate-pulse" />
+                  )}
+
+                  <CallSheetSectionBox
+                    section={sec}
+                    onSlotClick={(slotIdx) => onSlotClick(sec.id, slotIdx)}
+                    onClearSlot={(slotIdx) => onClearSlot(sec.id, slotIdx)}
+                    onDropPlay={(slotIdx, play) => onDropPlayToSlot(sec.id, slotIdx, play)}
+                    onUpdateSection={onUpdateSection}
+                    onDeleteSection={onDeleteSection}
+                    isDraggable={true}
+                    onDragStartTable={handleDragStartTable}
+                    onDragEndTable={handleDragEndTable}
+                    onDragOverTable={(e, targetId) => handleDragOverCustomTable(e, targetId)}
+                    onDropOnTable={(e, targetId) => handleDropOnCustomTable(e, targetId)}
+                    onMoveTableLeft={(secId) => handleMoveCustomTable(secId, -1)}
+                    onMoveTableRight={(secId) => handleMoveCustomTable(secId, 1)}
+                    canMoveLeft={cIdx > 0}
+                    canMoveRight={cIdx < customSections.length - 1}
+                    isDragTarget={isDragTargetThis}
+                    isDragging={isDraggingThis}
+                  />
+
+                  {isDragTargetThis && dragOverTarget?.position === 'after' && (
+                    <div className="absolute -right-1.5 top-0 bottom-0 w-1.5 bg-indigo-600 z-30 rounded shadow-md pointer-events-none animate-pulse" />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
