@@ -358,28 +358,23 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
       }
     : undefined;
 
+  // Suppress 21 L / 21 R and 21 formation & personnel text to give maximum space to the play name
   const displayFormation = useMemo(() => {
     const rawForm = (play.formation || '').trim();
     const nameToCheck = (play.name || '').toUpperCase();
-    // Strictly enforce 21 L or 21 R for any 21 play (never Spread)
+    const upperForm = rawForm.toUpperCase();
     if (
-      /\b21\b/.test(nameToCheck) ||
+      upperForm === '21' ||
+      upperForm === '21 L' ||
+      upperForm === '21 R' ||
+      upperForm.includes('21') ||
+      nameToCheck.includes(upperForm) ||
       nameToCheck.startsWith('21') ||
-      nameToCheck.includes('21 R') ||
       nameToCheck.includes('21 L') ||
-      rawForm.includes('21')
+      nameToCheck.includes('21 R') ||
+      /\b21\b/.test(nameToCheck)
     ) {
-      if (
-        /\b21\s*L\b/i.test(nameToCheck) ||
-        nameToCheck.includes('21 L') ||
-        nameToCheck.includes('21L') ||
-        /\b21\s*L\b/i.test(rawForm) ||
-        rawForm.includes('21 L') ||
-        /\bLEFT\b/i.test(nameToCheck)
-      ) {
-        return '21 L';
-      }
-      return '21 R';
+      return '';
     }
     return rawForm;
   }, [play.formation, play.name]);
@@ -449,12 +444,12 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
           </span>
         )}
 
-        {/* Play Name - Full play visible without truncation */}
+        {/* Play Name - Full play visible with expanded space */}
         <span
           className={`font-black uppercase tracking-tight break-words min-w-0 flex-1 print:overflow-visible print:break-words ${
             isLongName
-              ? 'text-[10px] sm:text-[10.5px] leading-tight print:text-[9.5px]'
-              : 'text-[11px] sm:text-[11.5px] leading-tight print:text-[10.5px]'
+              ? 'text-[11px] sm:text-[11.5px] leading-tight print:text-[10px]'
+              : 'text-[12px] sm:text-[13px] leading-tight print:text-[11.5px]'
           } ${
             !hasRealName
               ? 'text-slate-400 dark:text-slate-500 italic font-normal print:hidden'
@@ -468,17 +463,10 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
           )}
         </span>
 
-        {/* Formation or Type tag */}
+        {/* Formation or Type tag (non-21 formations only) */}
         {displayFormation && (
           <span className="text-[9px] text-slate-500 dark:text-slate-400 font-mono shrink-0 hidden sm:inline-block print:text-[8px] print:inline-block print:!text-slate-800 print:group-hover:!text-slate-800">
             ({displayFormation})
-          </span>
-        )}
-
-        {/* Personnel badge */}
-        {play.personnel && (
-          <span className="text-[8.5px] px-1 py-0.2 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono shrink-0 hidden md:inline-block print:text-[8px]">
-            {play.personnel}
           </span>
         )}
 

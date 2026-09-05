@@ -61,7 +61,7 @@ export const USER_IMPORTED_GAME_DAY_PLAYS: PlayDatabaseEntry[] = [
 
 export const DEFAULT_WRISTBAND_1: SingleWristband = {
   id: 'wb_1',
-  title: 'WRISTBAND 1 • 21 SERIES (OFFENSE)',
+  title: 'MAHOPAC 10U • BLUE (1-13) & GOLD (14-26)',
   subtitle: 'CARDS 1 - 26',
   labelingMode: 'same_per_card',
   startNumber: 1,
@@ -70,10 +70,10 @@ export const DEFAULT_WRISTBAND_1: SingleWristband = {
   highlightTarget: 'number_only',
   columns: [
     {
-      name: 'LEFT COLUMN (1 - 13)',
-      color: '#facc15', // gold/yellow
-      numberBgColor: '#facc15',
-      numberTextColor: '#000000',
+      name: 'BLUE (1 - 13)',
+      color: '#2563eb', // royal blue
+      numberBgColor: '#2563eb',
+      numberTextColor: '#ffffff',
       labelPrefix: '',
       plays: [
         { text: '21 L 26 DIVE', customLabel: '1', wristbandNum: 1 },
@@ -82,20 +82,20 @@ export const DEFAULT_WRISTBAND_1: SingleWristband = {
         { text: '21 L 39 TOSS SWEEP', customLabel: '4', wristbandNum: 4 },
         { text: '21 L 39 TOSS SWEEP Z CRACK', customLabel: '5', wristbandNum: 5 },
         { text: '21 L 19 KEEP', customLabel: '6', wristbandNum: 6 },
-        { text: '21 R 19 BOOT', customLabel: '7', wristbandNum: 7, highlightColor: '#fef08a' },
+        { text: '21 R 19 BOOT', customLabel: '7', wristbandNum: 7, highlightColor: '#93c5fd' },
         { text: '21 L 38 POWER', customLabel: '8', wristbandNum: 8 },
         { text: '21 R 38 COUNTER', customLabel: '9', wristbandNum: 9 },
         { text: '21 R TWINS L Z BUBBLE', customLabel: '10', wristbandNum: 10 },
         { text: '21 R TWINS L Z SMOKE', customLabel: '11', wristbandNum: 11 },
-        { text: '21 L 38 POWER PASS', customLabel: '12', wristbandNum: 12, highlightColor: '#fef08a' },
+        { text: '21 L 38 POWER PASS', customLabel: '12', wristbandNum: 12, highlightColor: '#93c5fd' },
         { text: '', customLabel: '13', wristbandNum: 13 },
       ],
     },
     {
-      name: 'RIGHT COLUMN (14 - 26)',
-      color: '#3b82f6', // blue
-      numberBgColor: '#3b82f6',
-      numberTextColor: '#ffffff',
+      name: 'GOLD (14 - 26)',
+      color: '#facc15', // athletic gold
+      numberBgColor: '#facc15',
+      numberTextColor: '#000000',
       labelPrefix: '',
       plays: [
         { text: '21 R 24 DIVE', customLabel: '14', wristbandNum: 14 },
@@ -104,13 +104,13 @@ export const DEFAULT_WRISTBAND_1: SingleWristband = {
         { text: '21 R 31 TOSS SWEEP', customLabel: '17', wristbandNum: 17 },
         { text: '21 R 31 TOSS SWEEP Z CRACK', customLabel: '18', wristbandNum: 18 },
         { text: '21 R 11 KEEP', customLabel: '19', wristbandNum: 19 },
-        { text: '21 L 11 BOOT', customLabel: '20', wristbandNum: 20, highlightColor: '#bfdbfe' },
+        { text: '21 L 11 BOOT', customLabel: '20', wristbandNum: 20, highlightColor: '#fef08a' },
         { text: '21 R 32 POWER', customLabel: '21', wristbandNum: 21 },
         { text: '21 L 32 COUNTER', customLabel: '22', wristbandNum: 22 },
         { text: '21 L TWINS R Z BUBBLE', customLabel: '23', wristbandNum: 23 },
         { text: '21 L TWINS R Z SMOKE', customLabel: '24', wristbandNum: 24 },
-        { text: '21 R 32 POWER PASS', customLabel: '25', wristbandNum: 25, highlightColor: '#bfdbfe' },
-        { text: '21 L TWINS R GO-OUT', customLabel: '26', wristbandNum: 26, highlightColor: '#bfdbfe' },
+        { text: '21 R 32 POWER PASS', customLabel: '25', wristbandNum: 25, highlightColor: '#fef08a' },
+        { text: '21 L TWINS R GO-OUT', customLabel: '26', wristbandNum: 26, highlightColor: '#fef08a' },
       ],
     },
   ],
@@ -118,7 +118,7 @@ export const DEFAULT_WRISTBAND_1: SingleWristband = {
 
 export const DEFAULT_WRISTBAND_2: SingleWristband = {
   id: 'wb_2',
-  title: 'WRISTBAND 2 • 32 & 11 SERIES (OFFENSE)',
+  title: 'MAHOPAC 10U • GREEN (27-39) & PINK (40-52)',
   subtitle: 'CARDS 27 - 52 (CONTINUOUS)',
   labelingMode: 'continuous',
   startNumber: 27,
@@ -127,10 +127,10 @@ export const DEFAULT_WRISTBAND_2: SingleWristband = {
   highlightTarget: 'number_only',
   columns: [
     {
-      name: 'LEFT COLUMN (27 - 39)',
-      color: '#a3e635', // lime/volt
-      numberBgColor: '#a3e635',
-      numberTextColor: '#000000',
+      name: 'GREEN (27 - 39)',
+      color: '#16a34a', // kelly green
+      numberBgColor: '#16a34a',
+      numberTextColor: '#ffffff',
       labelPrefix: '',
       plays: [
         { text: '32 L 26 DIVE', customLabel: '27', wristbandNum: 27 },
@@ -139,19 +139,19 @@ export const DEFAULT_WRISTBAND_2: SingleWristband = {
         { text: '32 L 49 TOSS SWEEP', customLabel: '30', wristbandNum: 30 },
         { text: '32 R 48 COUNTER', customLabel: '31', wristbandNum: 31 },
         { text: '32 L 19 KEEP', customLabel: '32', wristbandNum: 32 },
-        { text: '32 R 19 BOOT', customLabel: '33', wristbandNum: 33, highlightColor: '#ecfccb' },
+        { text: '32 R 19 BOOT', customLabel: '33', wristbandNum: 33, highlightColor: '#bbf7d0' },
         { text: '11 L W JET', customLabel: '34', wristbandNum: 34 },
         { text: '11 L BUBBLE PASS', customLabel: '35', wristbandNum: 35 },
-        { text: '11 L GO-OUT', customLabel: '36', wristbandNum: 36, highlightColor: '#ecfccb' },
+        { text: '11 L GO-OUT', customLabel: '36', wristbandNum: 36, highlightColor: '#bbf7d0' },
         { text: '11 L 18 POWER', customLabel: '37', wristbandNum: 37 },
         { text: '11 L 26 DIVE', customLabel: '38', wristbandNum: 38 },
         { text: '11 L 19 KEEP', customLabel: '39', wristbandNum: 39 },
       ],
     },
     {
-      name: 'RIGHT COLUMN (40 - 52)',
-      color: '#a855f7', // purple
-      numberBgColor: '#a855f7',
+      name: 'PINK (40 - 52)',
+      color: '#ec4899', // athletic pink
+      numberBgColor: '#ec4899',
       numberTextColor: '#ffffff',
       labelPrefix: '',
       plays: [
@@ -161,10 +161,10 @@ export const DEFAULT_WRISTBAND_2: SingleWristband = {
         { text: '32 R 31 TOSS SWEEP', customLabel: '43', wristbandNum: 43 },
         { text: '32 L 32 COUNTER', customLabel: '44', wristbandNum: 44 },
         { text: '32 R 11 KEEP', customLabel: '45', wristbandNum: 45 },
-        { text: '32 L 11 BOOT', customLabel: '46', wristbandNum: 46, highlightColor: '#f3e8ff' },
+        { text: '32 L 11 BOOT', customLabel: '46', wristbandNum: 46, highlightColor: '#fbcfe8' },
         { text: '11 R W JET', customLabel: '47', wristbandNum: 47 },
         { text: '11 R BUBBLE PASS', customLabel: '48', wristbandNum: 48 },
-        { text: '11 R GO-OUT', customLabel: '49', wristbandNum: 49, highlightColor: '#f3e8ff' },
+        { text: '11 R GO-OUT', customLabel: '49', wristbandNum: 49, highlightColor: '#fbcfe8' },
         { text: '11 R 12 POWER', customLabel: '50', wristbandNum: 50 },
         { text: '11 R 24 DIVE', customLabel: '51', wristbandNum: 51 },
         { text: '11 R 11 KEEP', customLabel: '52', wristbandNum: 52 },

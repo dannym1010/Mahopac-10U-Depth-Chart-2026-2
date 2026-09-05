@@ -559,6 +559,7 @@ export const GameDayHubView: React.FC<GameDayHubViewProps> = ({
             <WristbandView
               wristbandData={wristbandData}
               userRole={userRole}
+              activeTeamName={activeTeamName}
               playDatabase={playDatabase}
               onUpdatePlayDatabase={onUpdatePlayDatabase}
               onUpdateWristbandData={onUpdateWristbandData}
@@ -913,6 +914,7 @@ export const GameDayHubView: React.FC<GameDayHubViewProps> = ({
         <WristbandView
           wristbandData={wristbandData}
           userRole={userRole}
+          activeTeamName={activeTeamName}
           playDatabase={playDatabase}
           onUpdatePlayDatabase={onUpdatePlayDatabase}
           onUpdateWristbandData={onUpdateWristbandData}

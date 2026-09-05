@@ -135,12 +135,55 @@ interface WristbandViewProps {
   onBulkFillPlays?: (plays: string[]) => void;
 }
 
+export const STANDARD_WRISTBAND_COLOR_PAIRS = [
+  {
+    col0: { name: 'BLUE', color: '#2563eb', textColor: '#ffffff' },
+    col1: { name: 'GOLD', color: '#facc15', textColor: '#000000' },
+  },
+  {
+    col0: { name: 'GREEN', color: '#16a34a', textColor: '#ffffff' },
+    col1: { name: 'PINK', color: '#ec4899', textColor: '#ffffff' },
+  },
+  {
+    col0: { name: 'ORANGE', color: '#ea580c', textColor: '#ffffff' },
+    col1: { name: 'WHITE', color: '#ffffff', textColor: '#000000' },
+  },
+  {
+    col0: { name: 'RED', color: '#dc2626', textColor: '#ffffff' },
+    col1: { name: 'PURPLE', color: '#9333ea', textColor: '#ffffff' },
+  },
+];
+
+export function getAutoWristbandTitle(
+  wbIdx: number,
+  col0Start: number,
+  col0End: number,
+  col1Start: number,
+  col1End: number,
+  activeTeamName: string = 'Mahopac 10U'
+): { title: string; col0Name: string; col1Name: string; pair: (typeof STANDARD_WRISTBAND_COLOR_PAIRS)[0] } {
+  const pair = STANDARD_WRISTBAND_COLOR_PAIRS[wbIdx % STANDARD_WRISTBAND_COLOR_PAIRS.length];
+  let teamClean = (activeTeamName || 'Mahopac 10U').trim();
+  if (!/\b10U\b/i.test(teamClean)) {
+    teamClean = `${teamClean} 10U`;
+  }
+  const teamTag = teamClean.toUpperCase();
+  const col0Name = `${pair.col0.name} (${col0Start} - ${col0End})`;
+  const col1Name = `${pair.col1.name} (${col1Start} - ${col1End})`;
+  const title = `${teamTag} • ${pair.col0.name} (${col0Start}-${col0End}) & ${pair.col1.name} (${col1Start}-${col1End})`;
+  return { title, col0Name, col1Name, pair };
+}
+
 /**
  * Ensures the 2nd wristband (and any subsequent wristbands) starts with the number
- * directly after the last number on the previous wristband.
+ * directly after the last number on the previous wristband, and auto-formats wristband titles
+ * to: [Team Name] 10U • [Color1] ([1-13]) & [Color2] ([14-26]).
  */
-export const normalizeWristbandContinuousNumbering = (data: WristbandData): WristbandData => {
-  if (!data?.wristbands || data.wristbands.length <= 1) {
+export const normalizeWristbandContinuousNumbering = (
+  data: WristbandData,
+  activeTeamName: string = 'Mahopac 10U'
+): WristbandData => {
+  if (!data?.wristbands || data.wristbands.length === 0) {
     return data;
   }
   let prevEnd = 0;
@@ -151,35 +194,107 @@ export const normalizeWristbandContinuousNumbering = (data: WristbandData): Wris
     const cols = wb.columns?.length || 2;
     const totalSlots = rows * cols;
 
+    let finalStart = wb.startNumber || 1;
     if (idx === 0) {
-      const wbStart = wb.startNumber || 1;
-      prevEnd = wbStart + totalSlots - 1;
-      return wb;
+      finalStart = wb.startNumber || 1;
+      prevEnd = finalStart + totalSlots - 1;
+    } else {
+      // For 2nd wristband and beyond, start after previous wristband
+      const expectedStart = prevEnd + 1;
+      prevEnd = expectedStart + totalSlots - 1;
+      const isWb2OrNeedsStart =
+        !wb.startNumber ||
+        wb.startNumber === 1 ||
+        wb.id === 'wb_2' ||
+        wb.labelingMode === 'same_per_card';
+      finalStart = isWb2OrNeedsStart ? expectedStart : wb.startNumber || expectedStart;
     }
 
-    // For 2nd wristband and beyond, start after previous wristband
-    const expectedStart = prevEnd + 1;
-    prevEnd = expectedStart + totalSlots - 1;
+    if (wb.startNumber !== finalStart) {
+      hasAnyChange = true;
+    }
 
-    const isWb2OrNeedsStart = !wb.startNumber || wb.startNumber === 1 || wb.id === 'wb_2' || wb.labelingMode === 'same_per_card';
-    const finalStart = isWb2OrNeedsStart ? expectedStart : (wb.startNumber || expectedStart);
+    const col0Start = finalStart;
+    const col0End = col0Start + rows - 1;
+    const col1Start = col0End + 1;
+    const col1End = col1Start + rows - 1;
 
-    if (wb.startNumber !== finalStart || wb.labelingMode === 'same_per_card') {
+    const autoFormat = getAutoWristbandTitle(
+      idx,
+      col0Start,
+      col0End,
+      col1Start,
+      col1End,
+      activeTeamName
+    );
+
+    // Auto-update title if empty, legacy/default, or missing colors/numbers
+    let newTitle = wb.title || '';
+    const isLegacyTitle =
+      !newTitle ||
+      newTitle.startsWith('WRISTBAND 1') ||
+      newTitle.startsWith('WRISTBAND 2') ||
+      newTitle.startsWith('WRISTBAND ') ||
+      newTitle.includes('21 SERIES') ||
+      newTitle.includes('32 & 11') ||
+      newTitle.includes('NEW INSERT') ||
+      (!newTitle.includes('BLUE') &&
+        !newTitle.includes('GREEN') &&
+        !newTitle.includes('ORANGE') &&
+        !newTitle.includes('RED'));
+
+    if (isLegacyTitle) {
+      newTitle = autoFormat.title;
       hasAnyChange = true;
     }
 
     const updatedCols = (wb.columns || []).map((col, cIdx) => {
       const colStart = finalStart + cIdx * rows;
       const colEnd = colStart + rows - 1;
+      const expectedColName = cIdx === 0 ? autoFormat.col0Name : autoFormat.col1Name;
+      const expectedColor = cIdx === 0 ? autoFormat.pair.col0.color : autoFormat.pair.col1.color;
+      const expectedTextColor =
+        cIdx === 0 ? autoFormat.pair.col0.textColor : autoFormat.pair.col1.textColor;
+
       let colName = col.name;
-      if (colName && (colName.includes('(1 - 13)') || colName.includes('(14 - 26)'))) {
-        colName = cIdx === 0 ? `LEFT COLUMN (${colStart} - ${colEnd})` : `RIGHT COLUMN (${colStart} - ${colEnd})`;
+      const isLegacyColName =
+        !colName ||
+        colName.includes('LEFT COLUMN') ||
+        colName.includes('RIGHT COLUMN') ||
+        (idx === 0 && cIdx === 0 && colName.includes('GOLD')) ||
+        (idx === 0 && cIdx === 1 && colName.includes('BLUE'));
+
+      if (isLegacyColName) {
+        colName = expectedColName;
         hasAnyChange = true;
       }
+
+      // Sync standard colors
+      let colColor = col.color;
+      let colNumBg = col.numberBgColor;
+      let colNumText = col.numberTextColor;
+      if (
+        isLegacyTitle ||
+        isLegacyColName ||
+        (idx === 0 && cIdx === 0 && colColor !== '#2563eb') ||
+        (idx === 0 && cIdx === 1 && colColor !== '#facc15') ||
+        (idx === 1 && cIdx === 0 && colColor !== '#16a34a') ||
+        (idx === 1 && cIdx === 1 && colColor !== '#ec4899')
+      ) {
+        colColor = expectedColor;
+        colNumBg = expectedColor;
+        colNumText = expectedTextColor;
+        hasAnyChange = true;
+      }
+
       const updatedPlays = (col.plays || []).map((p, rIdx) => {
         const slotNum = colStart + rIdx;
         const needsNumUpdate = p.wristbandNum !== slotNum;
-        const isOldNumericLabel = p.customLabel && !isNaN(Number(p.customLabel)) && Number(p.customLabel) <= 26 && finalStart > 26;
+        const isOldNumericLabel =
+          p.customLabel &&
+          !isNaN(Number(p.customLabel)) &&
+          Number(p.customLabel) <= 26 &&
+          finalStart > 26;
         if (needsNumUpdate || isOldNumericLabel) {
           hasAnyChange = true;
           return {
@@ -190,23 +305,33 @@ export const normalizeWristbandContinuousNumbering = (data: WristbandData): Wris
         }
         return p;
       });
+
       return {
         ...col,
         name: colName,
+        color: colColor,
+        numberBgColor: colNumBg,
+        numberTextColor: colNumText,
         plays: updatedPlays,
       };
     });
 
     let newSubtitle = wb.subtitle;
-    if (newSubtitle && (newSubtitle.includes('1 - 26') || newSubtitle.includes('SAME LABELING'))) {
+    if (
+      newSubtitle &&
+      (newSubtitle.includes('SAME LABELING') ||
+        newSubtitle.includes('1 - 26') ||
+        !newSubtitle.includes(String(finalStart)))
+    ) {
       newSubtitle = `CARDS ${finalStart} - ${prevEnd} (CONTINUOUS)`;
       hasAnyChange = true;
     }
 
     return {
       ...wb,
+      title: newTitle,
       startNumber: finalStart,
-      labelingMode: (wb.labelingMode === 'same_per_card' && (wb.id === 'wb_2' || idx >= 1)) ? 'continuous' : (wb.labelingMode || 'continuous'),
+      labelingMode: idx >= 1 ? 'continuous' : wb.labelingMode || 'same_per_card',
       subtitle: newSubtitle,
       columns: updatedCols,
     };
@@ -239,7 +364,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
         initial = INITIAL_TWO_WRISTBANDS_DATA;
       }
     }
-    return normalizeWristbandContinuousNumbering(initial);
+    return normalizeWristbandContinuousNumbering(initial, activeTeamName);
   });
 
   // Guard against stale prop overwriting fresh local edits
@@ -255,10 +380,17 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
       const incomingJson = safeJSONStringify(propWristbandData);
       if (incomingJson !== lastEmittedWbJson.current) {
         lastEmittedWbJson.current = incomingJson;
-        setInternalData(normalizeWristbandContinuousNumbering(propWristbandData));
+        setInternalData(normalizeWristbandContinuousNumbering(propWristbandData, activeTeamName));
       }
     }
-  }, [propWristbandData]);
+  }, [propWristbandData, activeTeamName]);
+
+  // Sync team name changes into wristbands titles
+  useEffect(() => {
+    if (activeTeamName) {
+      setInternalData((prev) => normalizeWristbandContinuousNumbering(prev, activeTeamName));
+    }
+  }, [activeTeamName]);
 
   const normalizedData: WristbandData = internalData;
   const internalDataRef = useRef<WristbandData>(internalData);
@@ -1314,7 +1446,11 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                   }`}
                 >
                   <Watch className="w-3.5 h-3.5" />
-                  <span>{wb.title ? wb.title.split('•')[0].trim() : `Wristband ${idx + 1}`}</span>
+                  <span>
+                    {wb.title && wb.title.includes('•')
+                      ? wb.title.split('•').slice(1).join('•').trim()
+                      : wb.title || `Wristband ${idx + 1}`}
+                  </span>
                 </button>
               ))}
 
@@ -1322,7 +1458,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    const newIdx = wristbands.length + 1;
+                    const newIdx = wristbands.length;
                     const rows = currentWristband.rowsCount || 13;
                     const prevWbIdx = wristbands.length - 1;
                     const prevWb = wristbands[prevWbIdx];
@@ -1335,29 +1471,38 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                     const col2Start = col1End + 1;
                     const col2End = nextEnd;
 
+                    const auto = getAutoWristbandTitle(
+                      newIdx,
+                      col1Start,
+                      col1End,
+                      col2Start,
+                      col2End,
+                      activeTeamName
+                    );
+
                     const newWb: SingleWristband = {
                       id: `wb_${Date.now()}`,
-                      title: `WRISTBAND ${newIdx} • NEW INSERT`,
+                      title: auto.title,
                       subtitle: `CARDS ${nextStart} - ${nextEnd} (CONTINUOUS)`,
                       labelingMode: 'continuous',
                       startNumber: nextStart,
                       rowsCount: rows,
                       columns: [
                         {
-                          name: `LEFT COLUMN (${col1Start} - ${col1End})`,
-                          color: '#facc15',
-                          numberBgColor: '#facc15',
-                          numberTextColor: '#000000',
+                          name: auto.col0Name,
+                          color: auto.pair.col0.color,
+                          numberBgColor: auto.pair.col0.color,
+                          numberTextColor: auto.pair.col0.textColor,
                           plays: Array.from({ length: rows }, (_, r) => ({
                             text: '',
                             wristbandNum: col1Start + r,
                           })),
                         },
                         {
-                          name: `RIGHT COLUMN (${col2Start} - ${col2End})`,
-                          color: '#38bdf8',
-                          numberBgColor: '#38bdf8',
-                          numberTextColor: '#000000',
+                          name: auto.col1Name,
+                          color: auto.pair.col1.color,
+                          numberBgColor: auto.pair.col1.color,
+                          numberTextColor: auto.pair.col1.textColor,
                           plays: Array.from({ length: rows }, (_, r) => ({
                             text: '',
                             wristbandNum: col2Start + r,
@@ -1501,8 +1646,35 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                 value={currentWristband.title || ''}
                 onChange={(e) => updateCurrentWristband((wb) => ({ ...wb, title: e.target.value }))}
                 className="flex-1 bg-slate-900 border border-slate-750 text-white font-black px-3 py-1.5 rounded-xl text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none uppercase"
-                placeholder="e.g. WRISTBAND 1 • 21 SERIES (OFFENSE)"
+                placeholder="e.g. MAHOPAC 10U • BLUE (1-13) & GOLD (14-26)"
               />
+              {userRole === 'admin' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentIdx = wristbands.findIndex((w) => w.id === currentWristband.id);
+                    const rows = currentWristband.rowsCount || 13;
+                    const startNum = currentWristband.startNumber || 1;
+                    const col0Start = startNum;
+                    const col0End = col0Start + rows - 1;
+                    const col1Start = col0End + 1;
+                    const col1End = col1Start + rows - 1;
+                    const { title: autoTitle } = getAutoWristbandTitle(
+                      currentIdx >= 0 ? currentIdx : 0,
+                      col0Start,
+                      col0End,
+                      col1Start,
+                      col1End,
+                      activeTeamName
+                    );
+                    updateCurrentWristband((wb) => ({ ...wb, title: autoTitle }));
+                  }}
+                  className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700 transition-colors whitespace-nowrap cursor-pointer"
+                  title="Auto-format title with Team, 10U, Colors, and Play numbers"
+                >
+                  Auto Title
+                </button>
+              )}
             </div>
 
             {/* Rows Per Column Selector */}

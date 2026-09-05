@@ -241,13 +241,14 @@ export const MobileCallSheetView: React.FC<MobileCallSheetViewProps> = ({
                     <h4 className="text-xs font-black uppercase truncate text-slate-100">
                       {play ? (play.name || '').replace(/^#\s*\d*\s*[-.:]?\s*/i, '').replace(/^\d+[\.\)]\s+/, '').replace(/^#\s*/, '').trim() : '(Empty Slot - Tap to Pick)'}
                     </h4>
-                    {play?.formation && (
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        {play.name && (play.name.startsWith('21') || play.name.includes('21 R') || play.name.includes('21 L') || /\b21\b/.test(play.name))
-                          ? (/21\s*L/i.test(play.name) || /LEFT/i.test(play.name) || /21\s*L/i.test(play.formation) ? '21 L' : '21 R')
-                          : play.formation}
-                      </span>
-                    )}
+                    {play?.formation &&
+                      !play.formation.includes('21') &&
+                      !play.name?.toUpperCase().includes('21') &&
+                      !play.name?.toUpperCase().includes(play.formation.toUpperCase()) && (
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {play.formation}
+                        </span>
+                      )}
                   </div>
                 </div>
               </div>
@@ -412,11 +413,14 @@ export const MobileCallSheetView: React.FC<MobileCallSheetViewProps> = ({
                                     {play.name}
                                   </span>
                                 </div>
-                                {play.formation && (
-                                  <span className="text-[10px] text-slate-400 font-mono">
-                                    {play.formation}
-                                  </span>
-                                )}
+                                {play.formation &&
+                                  !play.formation.includes('21') &&
+                                  !play.name?.toUpperCase().includes('21') &&
+                                  !play.name?.toUpperCase().includes(play.formation.toUpperCase()) && (
+                                    <span className="text-[10px] text-slate-400 font-mono">
+                                      {play.formation}
+                                    </span>
+                                  )}
                               </div>
                             ) : (
                               <span className="text-xs text-slate-500 italic print:hidden">
