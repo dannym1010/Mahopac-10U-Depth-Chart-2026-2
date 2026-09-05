@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Star, Trash2, Edit2, Check, X } from 'lucide-react';
+import { Star, Trash2, Edit2, Check, X, Copy, ClipboardPaste } from 'lucide-react';
 import { CallSheetPlay } from '../../types/callSheet';
 import { WristbandSlotMatch, isDarkColor } from '../../utils/wristbandLinking';
+import { getCopiedPlay, setCopiedPlay, subscribeCopiedPlay } from '../../utils/callSheetClipboard';
 
 interface CallSheetCellViewProps {
   sectionId: string;
@@ -30,7 +31,16 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
   const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [inlineName, setInlineName] = useState(play?.name || '');
   const [inlineWristband, setInlineWristband] = useState(play?.wristbandNum ? String(play.wristbandNum) : '');
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState(false);
+  const [clipboardPlay, setClipboardPlay] = useState<CallSheetPlay | null>(() => getCopiedPlay());
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return subscribeCopiedPlay((latest) => {
+      setClipboardPlay(latest);
+    });
+  }, []);
 
   useEffect(() => {
     if (play) {
@@ -49,13 +59,47 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
     }
   }, [isInlineEditing]);
 
+  const handleCopyPlay = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (!play || !play.name) return;
+    setCopiedPlay({ ...play });
+    setCopyFeedback(true);
+    setTimeout(() => setCopyFeedback(false), 1600);
+  };
+
+  const handlePastePlay = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (!clipboardPlay) return;
+    const pasted: CallSheetPlay = {
+      ...clipboardPlay,
+      id: `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    };
+    if (onDirectUpdatePlay) {
+      onDirectUpdatePlay(pasted);
+    } else if (onDropPlay) {
+      onDropPlay(pasted);
+    }
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
+    if (!isDragOver) setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    setIsDragOver(false);
     try {
       const dataStr =
         e.dataTransfer.getData('application/json') ||
@@ -65,6 +109,7 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
         if (parsed && (parsed.name || parsed.text) && onDropPlay) {
           onDropPlay({
             ...parsed,
+            id: `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
             name: parsed.name || parsed.text,
           });
           return;
@@ -75,12 +120,16 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
         try {
           const parsed = JSON.parse(textStr);
           if (parsed && (parsed.name || parsed.text)) {
-            onDropPlay({ ...parsed, name: parsed.name || parsed.text });
+            onDropPlay({
+              ...parsed,
+              id: `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+              name: parsed.name || parsed.text,
+            });
             return;
           }
         } catch {}
         onDropPlay({
-          id: `play_${Date.now()}`,
+          id: `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
           name: textStr.trim().toUpperCase(),
         });
       }
@@ -115,11 +164,25 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSaveInline();
-    } else if (e.key === 'Escape') {
-      setInlineName(play?.name || '');
-      setIsInlineEditing(false);
+    if (isInlineEditing) {
+      if (e.key === 'Enter') {
+        handleSaveInline();
+      } else if (e.key === 'Escape') {
+        setInlineName(play?.name || '');
+        setIsInlineEditing(false);
+      }
+      return;
+    }
+
+    // Copy shortcut (Ctrl+C / Cmd+C)
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c' && play?.name) {
+      e.preventDefault();
+      handleCopyPlay();
+    }
+    // Paste shortcut (Ctrl+V / Cmd+V)
+    else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v' && clipboardPlay) {
+      e.preventDefault();
+      handlePastePlay();
     }
   };
 
@@ -133,19 +196,17 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
   if (isInlineEditing) {
     return (
       <div
-        className={`h-7 sm:h-7.5 px-2 border-b flex items-center gap-1 text-xs ${baseBgClass}`}
+        className={`h-7 sm:h-7.5 px-2 border-b flex items-center gap-1.5 text-xs ${baseBgClass}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <span className="text-[10px] text-slate-400 font-mono shrink-0 w-4 text-right">
-          {slotIndex + 1}.
-        </span>
         <input
           type="text"
-          placeholder="#WB"
+          placeholder="WB"
           value={inlineWristband}
           onChange={(e) => setInlineWristband(e.target.value)}
-          className="w-10 px-1 py-0.5 text-[10px] font-mono bg-white dark:bg-slate-800 border border-slate-400 rounded text-slate-900 dark:text-white"
-          title="Wristband #"
+          onKeyDown={handleKeyDown}
+          className="w-10 px-1 py-0.5 text-[10px] font-mono bg-white dark:bg-slate-800 border border-slate-400 rounded text-slate-900 dark:text-white text-center"
+          title="Wristband Number"
         />
         <input
           ref={inputRef}
@@ -154,7 +215,7 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
           value={inlineName}
           onChange={(e) => setInlineName(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="flex-1 px-1.5 py-0.5 text-[11px] font-bold uppercase bg-white dark:bg-slate-800 border border-indigo-500 rounded text-slate-900 dark:text-white"
+          className="flex-1 min-w-0 px-1.5 py-0.5 text-[11px] font-bold uppercase bg-white dark:bg-slate-800 border border-indigo-500 rounded text-slate-900 dark:text-white"
         />
         <button
           type="button"
@@ -166,7 +227,10 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
         </button>
         <button
           type="button"
-          onClick={() => setIsInlineEditing(false)}
+          onClick={() => {
+            setInlineName(play?.name || '');
+            setIsInlineEditing(false);
+          }}
           className="p-1 text-slate-400 hover:bg-slate-500/20 rounded cursor-pointer"
           title="Cancel"
         >
@@ -176,96 +240,116 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
     );
   }
 
-  if (!play) {
+  // If slot is empty
+  if (!play || !play.name || !play.name.trim()) {
     return (
       <div
+        tabIndex={0}
         onClick={onSlotClick}
         onDoubleClick={() => setIsInlineEditing(true)}
         onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`h-7 sm:h-7.5 px-2 border-b flex items-center justify-between text-xs transition-colors cursor-pointer group ${baseBgClass}`}
-        title="Click to select play from library, double-click to type play, or drag from Play Bank"
+        onKeyDown={handleKeyDown}
+        className={`h-7 sm:h-7.5 px-2 border-b flex items-center justify-between text-xs transition-all cursor-pointer group outline-none ${baseBgClass} ${
+          isDragOver ? 'ring-2 ring-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/50' : ''
+        }`}
+        title="Click to select play, or paste copied play (Ctrl+V)"
       >
-        <span className="text-[11px] text-slate-300 dark:text-slate-600 font-mono select-none">
-          {slotIndex + 1}.
-        </span>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {clipboardPlay ? (
+            <button
+              type="button"
+              onClick={(e) => handlePastePlay(e)}
+              className="text-[10.5px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex items-center gap-1.5 cursor-pointer"
+              title={`Paste copied play: ${clipboardPlay.name}`}
+            >
+              <ClipboardPaste className="w-3 h-3 text-indigo-500" />
+              <span>Paste {clipboardPlay.name}</span>
+            </button>
+          ) : (
+            <span className="text-[10px] text-indigo-500/80 dark:text-indigo-400/80 font-bold">
+              + Pick Play
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               setIsInlineEditing(true);
             }}
-            className="text-[10px] text-slate-500 hover:text-indigo-400 font-bold px-1 py-0.5 rounded"
+            className="text-[10px] text-slate-500 hover:text-indigo-400 font-bold px-1 py-0.5 rounded cursor-pointer"
             title="Type play directly"
           >
             Type
           </button>
-          <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-bold">
-            + Pick Play
-          </span>
+          {clipboardPlay && (
+            <button
+              type="button"
+              onClick={(e) => handlePastePlay(e)}
+              className="p-1 rounded text-indigo-500 hover:bg-indigo-500/20 transition-colors cursor-pointer"
+              title={`Paste ${clipboardPlay.name}`}
+            >
+              <ClipboardPaste className="w-3 h-3" />
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
-  const isStarred = !!play.isStarred;
-
-  // Exact wristband number and highlight colors from either play metadata or play.wristbandSlotMatch
+  // Linked wristband metadata
+  const hasRealName = Boolean(play.name && play.name.trim());
   const match = play.wristbandSlotMatch;
-  const displayNum =
-    play.wristbandLabel ||
-    (play.wristbandNum ? String(play.wristbandNum) : '') ||
-    (match ? String(match.slotNumber) : '');
+  const hasWristbandSpot = Boolean(match || play.wristbandNum);
+  const displayNum = match?.slotNumber ? String(match.slotNumber) : (play.wristbandNum ? String(play.wristbandNum) : '');
 
-  const hasWristbandSpot = Boolean(match || play.wristbandNumberColor || play.wristbandColor);
+  // Exact number badge color matching wristband
+  const numberBgColor =
+    play.wristbandNumberColor ||
+    match?.numberBgColor ||
+    (play.wristbandColor && play.wristbandColor.startsWith('#') ? play.wristbandColor : undefined);
 
-  const numberBgColor = hasWristbandSpot
-    ? (play.wristbandNumberColor || match?.numberBgColor || play.wristbandColor)
-    : undefined;
+  const numberTextColor =
+    play.wristbandTextColor ||
+    match?.numberTextColor ||
+    (numberBgColor ? (isDarkColor(numberBgColor) ? '#ffffff' : '#000000') : '#000000');
 
-  const numberTextColor = numberBgColor
-    ? (isDarkColor(numberBgColor) ? '#ffffff' : '#000000')
-    : undefined;
-
+  // Row highlight color
   const rowHighlightColor =
-    (play.wristbandHighlightTarget === 'full_row' && play.wristbandRowColor) ||
-    (match?.highlightTarget === 'full_row' && match?.rowHighlightColor) ||
     play.wristbandRowColor ||
-    (play.isHighlighted && play.highlightColor ? play.highlightColor : undefined);
+    (play.isHighlighted && play.highlightColor ? play.highlightColor : undefined) ||
+    match?.rowHighlightColor;
 
-  const effectiveBgStyle = rowHighlightColor ? { backgroundColor: rowHighlightColor } : undefined;
+  const isStarred = Boolean(play.isStarred);
+  const isLongName = play.name.length > 20;
 
-  const hasRealName = Boolean(
-    play.name &&
-      play.name.trim().length > 0 &&
-      play.name.trim().toLowerCase() !== '(open slot)' &&
-      play.name.trim().toLowerCase() !== 'open slot'
-  );
-
-  const isLongName = Boolean(hasRealName && play.name && play.name.length > 18);
+  const effectiveBgStyle: React.CSSProperties | undefined = rowHighlightColor
+    ? {
+        backgroundColor: rowHighlightColor,
+        borderLeft: `3.5px solid ${numberBgColor || '#4f46e5'}`,
+      }
+    : undefined;
 
   const displayFormation = useMemo(() => {
-    if (!play.formation) return undefined;
-    if (
-      play.name &&
-      (play.name.startsWith('21') || play.name.includes('21 R') || play.name.includes('21 L')) &&
-      play.formation.toLowerCase().includes('spread')
-    ) {
-      if (/TWINS/i.test(play.name)) return '21 Twins';
-      if (/21\s*R/i.test(play.name)) return '21 R';
-      if (/21\s*L/i.test(play.name)) return '21 L';
-      return '21 I-Form';
+    if (play.formation && play.formation.trim()) {
+      return play.formation;
     }
-    return play.formation;
-  }, [play.name, play.formation]);
+    return '';
+  }, [play.formation]);
 
   return (
     <div
+      tabIndex={0}
       draggable={Boolean(hasRealName && !isInlineEditing)}
       onDragStart={(e) => {
         if (!play || !hasRealName) return;
-        const playData: CallSheetPlay = { ...play };
+        const playData: CallSheetPlay = {
+          ...play,
+          id: `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        };
         let jsonStr = '';
         try {
           jsonStr = JSON.stringify(playData);
@@ -273,25 +357,22 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
           e.dataTransfer.setData('callSheetPlayTransfer', jsonStr);
           e.dataTransfer.setData('text/plain', play.name);
         } catch {}
-        e.dataTransfer.effectAllowed = 'copyMove';
+        e.dataTransfer.effectAllowed = 'copy';
       }}
       onClick={onSlotClick}
       onDoubleClick={() => setIsInlineEditing(true)}
       onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onKeyDown={handleKeyDown}
       style={effectiveBgStyle}
-      className={`min-h-[28px] sm:min-h-[30px] py-1 px-1.5 sm:px-2 border-b flex items-center justify-between gap-1 text-xs select-none transition-all cursor-pointer group print:py-0.5 print:min-h-0 ${
+      className={`min-h-[28px] sm:min-h-[30px] py-1 px-1.5 sm:px-2 border-b flex items-center justify-between gap-1 text-xs select-none transition-all cursor-pointer group print:py-0.5 print:min-h-0 outline-none ${
         rowHighlightColor ? 'text-slate-900 border-slate-300' : baseBgClass
-      }`}
-      title="Click to pick from library, double-click to edit directly"
+      } ${isDragOver ? 'ring-2 ring-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/50' : ''}`}
+      title="Click to change play, drag to copy to another cell, or press Ctrl+C / Ctrl+V"
     >
       <div className="flex items-center gap-1.5 min-w-0 flex-1 print:overflow-visible">
-        {/* Slot Number */}
-        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono shrink-0 w-3.5 text-right print:text-[9px]">
-          {slotIndex + 1}.
-        </span>
-
-        {/* Exact Wristband Number Badge matching Wristband Insert & Highlight */}
+        {/* Exact Wristband Number Badge - cleanly displays slot number without hash sign */}
         {displayNum && (
           <span
             data-wristband-badge="true"
@@ -313,12 +394,12 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
             title={
               hasWristbandSpot
                 ? (play.wristbandTitle || match?.wristbandTitle
-                  ? `${play.wristbandTitle || match?.wristbandTitle} #${displayNum}`
-                  : `Wristband #${displayNum}`)
-                : `No spot on wristband (#${displayNum})`
+                  ? `${play.wristbandTitle || match?.wristbandTitle} Slot ${displayNum}`
+                  : `Wristband Slot ${displayNum}`)
+                : `No spot on wristband (${displayNum})`
             }
           >
-            #{displayNum}
+            {displayNum}
           </span>
         )}
 
@@ -354,12 +435,41 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
             {play.personnel}
           </span>
         )}
+
+        {/* Copied feedback badge */}
+        {copyFeedback && (
+          <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/80 px-1 py-0.2 rounded animate-pulse">
+            Copied!
+          </span>
+        )}
       </div>
 
       {/* Right Action Icons */}
       <div className="flex items-center gap-1 shrink-0 print:hidden">
         {isStarred && (
           <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
+        )}
+
+        {/* Copy button */}
+        <button
+          type="button"
+          onClick={handleCopyPlay}
+          className="w-4 h-4 rounded hover:bg-slate-500/20 text-slate-400 hover:text-indigo-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+          title="Copy play (Ctrl+C)"
+        >
+          <Copy className="w-2.5 h-2.5" />
+        </button>
+
+        {/* Paste button if clipboard has play */}
+        {clipboardPlay && (
+          <button
+            type="button"
+            onClick={handlePastePlay}
+            className="w-4 h-4 rounded hover:bg-slate-500/20 text-slate-400 hover:text-emerald-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            title={`Paste ${clipboardPlay.name} (Ctrl+V)`}
+          >
+            <ClipboardPaste className="w-2.5 h-2.5" />
+          </button>
         )}
 
         {/* Quick edit inline button */}

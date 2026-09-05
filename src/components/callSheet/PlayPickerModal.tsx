@@ -538,9 +538,9 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                                   color: fg,
                                 }}
                                 className="px-1.5 py-0.5 rounded-md font-black text-[10px] font-mono shadow-xs border border-black/20"
-                                title={`${match.wristbandTitle} • Slot #${match.slotLabel}`}
+                                title={`${match.wristbandTitle} • Slot ${match.slotLabel}`}
                               >
-                                #{match.slotLabel}
+                                {match.slotLabel}
                               </span>
                             );
                           }
@@ -551,7 +551,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                                 className="px-1.5 py-0.5 rounded-md font-mono text-[10px] font-semibold text-slate-400 bg-transparent border border-slate-700/70"
                                 title="No spot on active wristband"
                               >
-                                #{play.wristbandNum}
+                                {play.wristbandNum}
                               </span>
                             );
                           }

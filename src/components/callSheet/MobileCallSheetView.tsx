@@ -396,16 +396,12 @@ export const MobileCallSheetView: React.FC<MobileCallSheetViewProps> = ({
                           }`}
                         >
                           <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <span className="text-[11px] font-mono text-slate-500 w-4 text-right shrink-0">
-                              {slotIdx + 1}.
-                            </span>
-
                             {play ? (
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   {play.wristbandNum && (
-                                    <span className="px-1 py-0.2 rounded bg-amber-400 text-black font-black text-[9px] font-mono shrink-0">
-                                      #{play.wristbandNum}
+                                    <span className="px-1.5 py-0.5 rounded bg-amber-400 text-black font-black text-[9.5px] font-mono shrink-0 shadow-xs">
+                                      {play.wristbandNum}
                                     </span>
                                   )}
                                   <span className="text-xs font-black uppercase truncate text-slate-100">

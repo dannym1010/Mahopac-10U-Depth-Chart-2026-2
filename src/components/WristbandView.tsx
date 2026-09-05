@@ -1835,7 +1835,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                               e.dataTransfer.setData('callSheetPlayTransfer', jsonStr);
                               e.dataTransfer.setData('text/plain', play.text);
                             } catch {}
-                            e.dataTransfer.effectAllowed = 'copyMove';
+                            e.dataTransfer.effectAllowed = 'copy';
                           }}
                           onDragEnd={() => {
                             setDragOverSlot(null);
