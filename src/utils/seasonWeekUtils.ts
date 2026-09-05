@@ -45,18 +45,12 @@ export function normalizeWeeklyData(
         ? deepClone(weekState.scrimmageChart)
         : {};
 
-    result[key] = {
+    const sanitizedWeek: any = {
       ...weekState,
       formations,
       depthChart,
       scrimmageChart,
       opponent: weekState.opponent || '',
-      wristbandData:
-        weekState.wristbandData &&
-        Array.isArray((weekState.wristbandData as any).wristbands) &&
-        (weekState.wristbandData as any).wristbands.length > 0
-          ? deepClone(weekState.wristbandData)
-          : undefined,
       scouting: weekState.scouting || {
         year: '2026',
         week: key,
@@ -72,6 +66,16 @@ export function normalizeWeeklyData(
         coachNotes: [],
       },
     };
+
+    if (
+      weekState.wristbandData &&
+      Array.isArray((weekState.wristbandData as any).wristbands) &&
+      (weekState.wristbandData as any).wristbands.length > 0
+    ) {
+      sanitizedWeek.wristbandData = deepClone(weekState.wristbandData);
+    }
+
+    result[key] = sanitizedWeek;
   }
 
   return result;

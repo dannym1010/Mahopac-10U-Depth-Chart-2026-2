@@ -1372,17 +1372,17 @@ function mergeRemoteWeeklyData(
     const { db } = getFirebaseServices();
     if (db && initialCloudLoadDoneRef.current) {
       try {
+        const cleanPayload = JSON.parse(
+          JSON.stringify({
+            ...payload,
+            updatedAt: Date.now(),
+            lastAuthor: authorEmail,
+          })
+        );
         await db
           .collection('teamData')
           .doc('depthChartData')
-          .set(
-            {
-              ...payload,
-              updatedAt: Date.now(),
-              lastAuthor: authorEmail,
-            },
-            { merge: true }
-          );
+          .set(cleanPayload, { merge: true });
       } catch (err: any) {
         console.warn('Firestore sync warning:', err);
       }
@@ -2485,15 +2485,44 @@ function mergeRemoteWeeklyData(
       return updatedTeamCoaches;
     });
 
+    // Also scrub this coach from any assigned stations in practiceData
+    updatePracticeDataAndSave((prev) =>
+      prev.map((p) => {
+        if (p.teamId && p.teamId !== tid) return p;
+        const periods = Array.isArray(p.plan) && p.plan.length > 0 ? p.plan : (Array.isArray(p.periods) ? p.periods : []);
+        let changed = false;
+        const updatedPeriods = periods.map((per) => {
+          const stations = Array.isArray(per.stations) ? per.stations : [];
+          const updatedStations = stations.map((st) => {
+            if (!st.coach) return st;
+            const coachTokens = st.coach.split(',').map((c) => c.trim()).filter(Boolean);
+            const filteredTokens = coachTokens.filter((c) => c.toLowerCase() !== normTarget);
+            if (filteredTokens.length !== coachTokens.length) {
+              changed = true;
+              return { ...st, coach: filteredTokens.join(', ') };
+            }
+            return st;
+          });
+          return { ...per, stations: updatedStations };
+        });
+        if (changed) {
+          return { ...p, plan: updatedPeriods, periods: updatedPeriods, lastEdited: Date.now() };
+        }
+        return p;
+      })
+    );
+
     const { db } = getFirebaseServices();
     if (db) {
       db.collection('teamData')
         .doc('depthChartData')
         .set(
-          {
-            teamSavedCoaches: latestStateRef.current.teamSavedCoaches,
-            updatedAt: Date.now(),
-          },
+          JSON.parse(
+            JSON.stringify({
+              teamSavedCoaches: latestStateRef.current.teamSavedCoaches,
+              updatedAt: Date.now(),
+            })
+          ),
           { merge: true }
         )
         .catch((err: any) => console.warn('Firestore delete coach sync error:', err));
@@ -3997,31 +4026,42 @@ function mergeRemoteWeeklyData(
     );
   };
 
+  const getPlanPeriods = (p: PracticePlan): PracticePeriod[] => {
+    if (Array.isArray(p.plan) && p.plan.length > 0) return p.plan;
+    if (Array.isArray(p.periods) && p.periods.length > 0) return p.periods;
+    if (Array.isArray(p.plan)) return p.plan;
+    if (Array.isArray(p.periods)) return p.periods;
+    return [];
+  };
+
   const handleAddPeriod = () => {
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
           const defaultCat =
             cascadingDrills[0]?.name || '⚡ (Warm-up, Agility and Conditioning)';
+          const currentPlan = getPlanPeriods(p);
+          const newPlan = [
+            ...currentPlan,
+            {
+              time: 15,
+              category: defaultCat,
+              format: 'static' as const,
+              stations: [
+                {
+                  name: 'New Station',
+                  desc: 'Drill details...',
+                  coach: '',
+                  focus: 'Effort & technique',
+                },
+              ],
+            },
+          ];
           return {
             ...p,
             lastEdited: Date.now(),
-            plan: [
-              ...p.plan,
-              {
-                time: 15,
-                category: defaultCat,
-                format: 'static',
-                stations: [
-                  {
-                    name: 'New Station',
-                    desc: 'Drill details...',
-                    coach: 'Coach',
-                    focus: 'Effort & technique',
-                  },
-                ],
-              },
-            ],
+            plan: newPlan,
+            periods: newPlan,
           };
         }
         return p;
@@ -4034,9 +4074,11 @@ function mergeRemoteWeeklyData(
       updatePracticeDataAndSave((prev) =>
         prev.map((p) => {
           if (p.id === currentPracticeId) {
-            const plan = [...p.plan];
-            plan.splice(pIdx, 1);
-            return { ...p, plan, lastEdited: Date.now() };
+            const plan = [...getPlanPeriods(p)];
+            if (pIdx >= 0 && pIdx < plan.length) {
+              plan.splice(pIdx, 1);
+            }
+            return { ...p, plan, periods: plan, lastEdited: Date.now() };
           }
           return p;
         })
@@ -4048,12 +4090,12 @@ function mergeRemoteWeeklyData(
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
-          const plan = [...p.plan];
+          const plan = [...getPlanPeriods(p)];
           const newIdx = pIdx + direction;
           if (newIdx < 0 || newIdx >= plan.length) return p;
           const [moved] = plan.splice(pIdx, 1);
           plan.splice(newIdx, 0, moved);
-          return { ...p, plan, lastEdited: Date.now() };
+          return { ...p, plan, periods: plan, lastEdited: Date.now() };
         }
         return p;
       })
@@ -4064,9 +4106,11 @@ function mergeRemoteWeeklyData(
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
-          const plan = [...p.plan];
-          plan[pIdx] = { ...plan[pIdx], time };
-          return { ...p, plan, lastEdited: Date.now() };
+          const plan = [...getPlanPeriods(p)];
+          if (plan[pIdx]) {
+            plan[pIdx] = { ...plan[pIdx], time };
+          }
+          return { ...p, plan, periods: plan, lastEdited: Date.now() };
         }
         return p;
       })
@@ -4077,9 +4121,11 @@ function mergeRemoteWeeklyData(
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
-          const plan = [...p.plan];
-          plan[pIdx] = { ...plan[pIdx], category };
-          return { ...p, plan, lastEdited: Date.now() };
+          const plan = [...getPlanPeriods(p)];
+          if (plan[pIdx]) {
+            plan[pIdx] = { ...plan[pIdx], category };
+          }
+          return { ...p, plan, periods: plan, lastEdited: Date.now() };
         }
         return p;
       })
@@ -4093,9 +4139,11 @@ function mergeRemoteWeeklyData(
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
-          const plan = [...p.plan];
-          plan[pIdx] = { ...plan[pIdx], format };
-          return { ...p, plan, lastEdited: Date.now() };
+          const plan = [...getPlanPeriods(p)];
+          if (plan[pIdx]) {
+            plan[pIdx] = { ...plan[pIdx], format };
+          }
+          return { ...p, plan, periods: plan, lastEdited: Date.now() };
         }
         return p;
       })
@@ -4106,20 +4154,23 @@ function mergeRemoteWeeklyData(
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
-          const plan = [...p.plan];
-          plan[pIdx] = {
-            ...plan[pIdx],
-            stations: [
-              ...plan[pIdx].stations,
-              {
-                name: 'New Station',
-                desc: 'Drill details...',
-                coach: '',
-                focus: 'Execution',
-              },
-            ],
-          };
-          return { ...p, plan, lastEdited: Date.now() };
+          const plan = [...getPlanPeriods(p)];
+          if (plan[pIdx]) {
+            const currentStations = Array.isArray(plan[pIdx].stations) ? plan[pIdx].stations : [];
+            plan[pIdx] = {
+              ...plan[pIdx],
+              stations: [
+                ...currentStations,
+                {
+                  name: 'New Station',
+                  desc: 'Drill details...',
+                  coach: '',
+                  focus: 'Execution',
+                },
+              ],
+            };
+          }
+          return { ...p, plan, periods: plan, lastEdited: Date.now() };
         }
         return p;
       })
@@ -4130,9 +4181,9 @@ function mergeRemoteWeeklyData(
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
-          const plan = [...p.plan];
-          if (!plan[pIdx] || !plan[pIdx].stations) return p;
-          const currentStations = plan[pIdx].stations;
+          const plan = [...getPlanPeriods(p)];
+          if (!plan[pIdx]) return p;
+          const currentStations = Array.isArray(plan[pIdx].stations) ? plan[pIdx].stations : [];
           if (currentStations.length <= 1) {
             // Reset the single station to empty
             const stations = [
@@ -4144,12 +4195,12 @@ function mergeRemoteWeeklyData(
               },
             ];
             plan[pIdx] = { ...plan[pIdx], stations };
-            return { ...p, plan, lastEdited: Date.now() };
+            return { ...p, plan, periods: plan, lastEdited: Date.now() };
           }
           const stations = [...currentStations];
           stations.splice(sIdx, 1);
           plan[pIdx] = { ...plan[pIdx], stations };
-          return { ...p, plan, lastEdited: Date.now() };
+          return { ...p, plan, periods: plan, lastEdited: Date.now() };
         }
         return p;
       })
@@ -4166,11 +4217,16 @@ function mergeRemoteWeeklyData(
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
-          const plan = [...p.plan];
-          const stations = [...plan[pIdx].stations];
-          stations[sIdx] = { ...stations[sIdx], [field]: value };
+          const plan = [...getPlanPeriods(p)];
+          if (!plan[pIdx]) return p;
+          const stations = Array.isArray(plan[pIdx].stations) ? [...plan[pIdx].stations] : [{ name: '', desc: '', coach: '', focus: '' }];
+          if (stations[sIdx]) {
+            stations[sIdx] = { ...stations[sIdx], [field]: value };
+          } else {
+            stations[sIdx] = { name: '', desc: '', coach: '', focus: '', [field]: value };
+          }
           plan[pIdx] = { ...plan[pIdx], stations };
-          return { ...p, plan, lastEdited: Date.now() };
+          return { ...p, plan, periods: plan, lastEdited: Date.now() };
         }
         return p;
       })
@@ -4185,16 +4241,17 @@ function mergeRemoteWeeklyData(
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === currentPracticeId) {
-          const plan = [...p.plan];
-          const stations = [...plan[pIdx].stations];
+          const plan = [...getPlanPeriods(p)];
+          if (!plan[pIdx]) return p;
+          const stations = Array.isArray(plan[pIdx].stations) ? [...plan[pIdx].stations] : [{ name: '', desc: '', coach: '', focus: '' }];
           stations[sIdx] = {
-            ...stations[sIdx],
+            ...(stations[sIdx] || { coach: '' }),
             name: drill.name,
             desc: drill.desc,
             focus: drill.key,
           };
           plan[pIdx] = { ...plan[pIdx], stations };
-          return { ...p, plan, lastEdited: Date.now() };
+          return { ...p, plan, periods: plan, lastEdited: Date.now() };
         }
         return p;
       })
@@ -5261,6 +5318,11 @@ function mergeRemoteWeeklyData(
               : p
           );
         } else {
+          const rawPeriods = Array.isArray(existingPlan.plan) && existingPlan.plan.length > 0
+            ? existingPlan.plan
+            : Array.isArray(existingPlan.periods) && existingPlan.periods.length > 0
+            ? existingPlan.periods
+            : [];
           return [
             ...prev,
             {
@@ -5271,6 +5333,8 @@ function mergeRemoteWeeklyData(
               dayFolder: existingPlan.dayFolder || formattedDayFolder,
               weekFolder: weekFolder,
               year: year,
+              plan: rawPeriods,
+              periods: rawPeriods,
               lastEdited: Date.now(),
             },
           ];

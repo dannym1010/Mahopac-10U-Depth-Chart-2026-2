@@ -2493,6 +2493,20 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                                   className="px-2 py-0.5 rounded-md bg-indigo-950 border border-indigo-500/40 text-[10px] font-bold text-indigo-300 flex items-center gap-1"
                                 >
                                   <span>{c}</span>
+                                  {userRole === 'admin' && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const nextTokens = assignedCoachTokens.filter((_, idx) => idx !== cIdx);
+                                        onUpdateStation(pIdx, sIdx, 'coach', nextTokens.join(', '));
+                                      }}
+                                      className="hover:text-rose-400 text-indigo-400 cursor-pointer p-0.5 rounded"
+                                      title={`Remove ${c} from this station`}
+                                    >
+                                      <X className="w-2.5 h-2.5" />
+                                    </button>
+                                  )}
                                 </span>
                               ))}
                             </div>
@@ -2629,6 +2643,11 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             if (confirm(`Remove "${coachName}" from the team coach list?`)) {
+                                              const updatedTokens = assignedCoachTokens.filter((t) => {
+                                                const normT = t.toLowerCase().replace(/^coach\s+/, '').trim();
+                                                return normT !== normCoach && t.toLowerCase().trim() !== coachName.toLowerCase().trim();
+                                              });
+                                              onUpdateStation(pIdx, sIdx, 'coach', updatedTokens.join(', '));
                                               onDeleteSavedCoach(coachName);
                                             }
                                           }}
