@@ -999,17 +999,17 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
         {/* Main sheet container */}
         <main className="flex-1 overflow-y-auto min-h-0 p-2 sm:p-4 print:p-0 print:overflow-visible callsheet-scroll-container overscroll-contain">
           {/* Printable Call Sheet Header Bar */}
-          <div className="hidden print:block mb-1 border-b border-slate-400 pb-1 text-slate-800">
+          <div className="hidden print:block mb-1 border-b border-slate-300 pb-0.5 bg-white text-slate-900">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black uppercase tracking-wide text-slate-800">
+                <span className="text-xs font-black uppercase tracking-wide text-slate-950">
                   {activeTeamName}
                 </span>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-800 uppercase tracking-wider">
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 border border-slate-300 text-slate-800 uppercase tracking-wider">
                   {activeUnit.toUpperCase()} CALL SHEET
                 </span>
               </div>
-              <div className="text-right text-[10px] font-semibold text-slate-600">
+              <div className="text-right text-[10px] font-bold text-slate-800">
                 {callSheetData.opponent ? `VS. ${callSheetData.opponent} • ` : ''}{callSheetData.gameDate || 'GAMEDAY'}
               </div>
             </div>

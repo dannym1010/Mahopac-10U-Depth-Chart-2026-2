@@ -286,6 +286,32 @@ body {
   }
 
 
+  /* Dedicated Game Day Matchup Banner Print Rules: Compact, light background, low height */
+  .gameday-matchup-banner {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    background-image: none !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    padding: 4px 8px !important;
+    margin: 0 0 6px 0 !important;
+    border-radius: 4px !important;
+    color: #0f172a !important;
+  }
+
+  .gameday-matchup-banner * {
+    color: #0f172a !important;
+    text-shadow: none !important;
+  }
+
+  .gameday-matchup-banner h1 {
+    font-size: 12pt !important;
+    font-weight: 900 !important;
+    line-height: 1.2 !important;
+    margin: 2px 0 !important;
+    color: #0f172a !important;
+  }
+
   /* Dedicated Wristband Cutouts Print Rules: ONLY cutouts spaced out */
   body.is-printing-wristbands #wristband-print-section {
     display: block !important;

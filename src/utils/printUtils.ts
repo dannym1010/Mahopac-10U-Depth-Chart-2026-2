@@ -2895,9 +2895,11 @@ export function generateCallSheetPrintHTML(
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #94a3b8;
+      border-bottom: 1px solid #cbd5e1;
       padding-bottom: 2px;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
+      background: #ffffff;
+      min-height: 0;
     }
     .banner-title-area {
       display: flex;
@@ -2905,25 +2907,26 @@ export function generateCallSheetPrintHTML(
       gap: 6px;
     }
     .banner-team {
-      font-size: 10.5pt;
+      font-size: 10pt;
       font-weight: 800;
-      color: #1e293b;
+      color: #0f172a;
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
     .banner-unit {
-      font-size: 8.5pt;
+      font-size: 8pt;
       font-weight: 800;
       padding: 1px 5px;
       border-radius: 3px;
-      background: ${isOffense ? '#0284c7' : '#dc2626'};
-      color: #ffffff;
+      background: ${inkFriendly ? '#f1f5f9' : isOffense ? '#e0f2fe' : '#fee2e2'};
+      color: ${inkFriendly ? '#000000' : isOffense ? '#0369a1' : '#b91c1c'};
+      border: 1px solid ${inkFriendly ? '#cbd5e1' : isOffense ? '#7dd3fc' : '#fca5a5'};
       text-transform: uppercase;
     }
     .banner-meta {
-      font-size: 8pt;
-      font-weight: 600;
-      color: #475569;
+      font-size: 8.5pt;
+      font-weight: 700;
+      color: #1e293b;
     }
     .section-group {
       margin-bottom: 8px;

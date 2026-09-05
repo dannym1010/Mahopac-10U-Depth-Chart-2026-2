@@ -218,32 +218,32 @@ export const GameDayHubView: React.FC<GameDayHubViewProps> = ({
   return (
     <div id="game-day-hub-content" className="space-y-6">
       {/* Top Game Day Matchup Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-indigo-950/80 border border-slate-700/80 rounded-2xl p-4 md:p-6 shadow-2xl relative overflow-hidden">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="p-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                <Swords className="w-5 h-5" />
+      <div className="gameday-matchup-banner bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-700/80 rounded-xl p-3 sm:p-4 shadow-xl relative overflow-hidden print:bg-white print:bg-none print:border-b print:border-slate-300 print:border-t-0 print:border-l-0 print:border-r-0 print:rounded-none print:p-1.5 print:pb-2 print:my-0 print:mb-2 print:shadow-none">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 print:gap-1">
+          <div className="space-y-1 print:space-y-0.5">
+            <div className="flex flex-wrap items-center gap-2 print:gap-1.5">
+              <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 print:hidden">
+                <Swords className="w-4 h-4" />
               </span>
-              <span className="text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30">
+              <span className="text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/30 print:bg-slate-100 print:text-slate-800 print:border-slate-300 print:text-[10px] print:px-1.5 print:py-0 print:rounded">
                 Game Day Command Center &bull; Week {currentWeek}
               </span>
-              <span className="text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              <span className="text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 print:bg-slate-100 print:text-slate-800 print:border-slate-300 print:text-[10px] print:px-1.5 print:py-0 print:rounded">
                 {activeTeamName}
               </span>
             </div>
 
-            <div className="flex items-center gap-2 pt-1">
-              <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight flex items-center gap-2">
-                <span>VS.</span>
+            <div className="flex items-center gap-2 pt-0.5 print:pt-0">
+              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2 print:text-base print:font-black print:text-slate-900 print:gap-1.5">
+                <span className="text-amber-400 print:text-slate-700">VS.</span>
                 {isQuickOpponentEditing ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 print:hidden">
                     <input
                       type="text"
                       value={tempOpponent}
                       onChange={(e) => setTempOpponent(e.target.value)}
                       placeholder="Opponent Team Name..."
-                      className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1 text-white text-lg font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1 text-white text-base font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                     <button
                       type="button"
@@ -264,8 +264,8 @@ export const GameDayHubView: React.FC<GameDayHubViewProps> = ({
                         setIsQuickOpponentEditing(true);
                       }
                     }}
-                    className={`cursor-pointer hover:text-amber-300 transition-colors border-b border-dashed border-slate-500 ${
-                      opponent ? 'text-white' : 'text-slate-500 italic'
+                    className={`cursor-pointer hover:text-amber-300 transition-colors border-b border-dashed border-slate-500 print:border-none print:text-slate-950 ${
+                      opponent ? 'text-white print:text-slate-950' : 'text-slate-500 italic'
                     }`}
                     title={userRole === 'admin' ? 'Click to edit opponent' : undefined}
                   >
@@ -275,13 +275,13 @@ export const GameDayHubView: React.FC<GameDayHubViewProps> = ({
               </h1>
             </div>
 
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-400 print:hidden">
               Unified Sideline HUD &bull; Pre-Game Practice Plan ({linkedPreGamePlan ? `${linkedPreGamePlan.plan?.length || 0} Periods` : 'Not Created'}) &bull; Call Sheet ({totalCallSheetPlays} plays) &bull; Wristbands ({totalWristbands} active inserts) &bull; Scouting Report &bull; Play Bank ({playDatabase.length} plays)
             </p>
           </div>
 
           {/* Quick Metrics & Actions */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 print:hidden">
             <button
               type="button"
               onClick={handlePrintAll}
@@ -294,7 +294,7 @@ export const GameDayHubView: React.FC<GameDayHubViewProps> = ({
         </div>
 
         {/* Sub-Navigation Tabs */}
-        <div className="mt-5 pt-4 border-t border-slate-800 flex flex-wrap items-center gap-2">
+        <div className="mt-4 pt-3 border-t border-slate-800 flex flex-wrap items-center gap-2 print:hidden">
           <button
             type="button"
             onClick={() => setActiveTab('command')}
