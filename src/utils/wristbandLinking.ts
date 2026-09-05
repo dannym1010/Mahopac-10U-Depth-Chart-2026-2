@@ -553,7 +553,7 @@ export function createSectionFromWristband(
     id: `sec_wb_${wb.id}_${Date.now()}`,
     title: wb.title ? `⌚ ${wb.title.toUpperCase()}` : '⌚ WRISTBAND INSERT PLAYS',
     subtitle: wb.subtitle || `Cards 1 - ${playsList.length}`,
-    headerBgColor: '#09090b',
+    headerBgColor: wb.columns[0]?.color ? (isDarkColor(wb.columns[0].color) ? '#1e3a8a' : wb.columns[0].color) : '#1e3a8a',
     headerTextColor: '#ffffff',
     targetUnit: 'offense',
     group,
@@ -585,51 +585,9 @@ export function syncWristbandToCallSheet(
   wristbands.forEach((wb) => wbMap.set(wb.id, wb));
 
   // Build lookup maps for fast matching
-  const slotByWbColRow = new Map<string, {
-    text: string;
-    slotLabel: string;
-    num: number;
-    colColor: string;
-    textColor: string;
-    rowHighlight?: string;
-    wbTitle: string;
-    formation?: string;
-    type?: string;
-  }>();
-
-  wristbands.forEach((wb, wbIdx) => {
-    const rows = wb.rowsCount || 13;
-    const wbStart = getWristbandStartNumber(wristbands, wbIdx);
-    (wb.columns || []).forEach((col, colIdx) => {
-      const colColor = col.numberBgColor || col.color || (colIdx === 0 ? '#facc15' : '#38bdf8');
-      const textColor = col.numberTextColor || (isDarkColor(colColor) ? '#ffffff' : '#000000');
-      (col.plays || []).forEach((p, rowIdx) => {
-        const slotNumber = wb.labelingMode === 'same_per_card'
-          ? colIdx * rows + rowIdx + 1
-          : wbStart + colIdx * rows + rowIdx;
-        const slotLabel = (p.customLabel && isNaN(Number(p.customLabel))) ? p.customLabel : `${slotNumber}`;
-        const key = `${wb.id}_${colIdx}_${rowIdx}`;
-        const formation = inferFormation(p.text || '', 'offense', p.formation);
-        slotByWbColRow.set(key, {
-          text: (p.text || '').trim(),
-          slotLabel,
-          num: slotNumber,
-          colColor,
-          textColor,
-          rowHighlight: p.rowHighlightColor,
-          wbTitle: wb.title || 'Wristband',
-          formation,
-          type: p.type || 'run',
-        });
-      });
-    });
-  });
-
-  const syncPlay = (play: CallSheetPlay | null): CallSheetPlay | null => {
-    if (!play) return null;
-
-    // Check if play has a wristbandSlotMatch or matching wristband slot
-    let matchedSlot: {
+  const slotByWbColRow = new Map<
+    string,
+    {
       text: string;
       slotLabel: string;
       num: number;
@@ -639,21 +597,101 @@ export function syncWristbandToCallSheet(
       wbTitle: string;
       formation?: string;
       type?: string;
-    } | undefined;
+    }
+  >();
+  const slotByNumber = new Map<
+    number,
+    {
+      wbId: string;
+      colIdx: number;
+      rowIdx: number;
+      text: string;
+      slotLabel: string;
+      num: number;
+      colColor: string;
+      textColor: string;
+      rowHighlight?: string;
+      wbTitle: string;
+      formation?: string;
+      type?: string;
+    }
+  >();
+
+  wristbands.forEach((wb, wbIdx) => {
+    const rows = wb.rowsCount || 13;
+    const wbStart = getWristbandStartNumber(wristbands, wbIdx);
+    (wb.columns || []).forEach((col, colIdx) => {
+      const colColor = col.numberBgColor || col.color || (colIdx === 0 ? '#facc15' : '#38bdf8');
+      const textColor = col.numberTextColor || (isDarkColor(colColor) ? '#ffffff' : '#000000');
+      (col.plays || []).forEach((p, rowIdx) => {
+        const slotNumber =
+          wb.labelingMode === 'same_per_card'
+            ? colIdx * rows + rowIdx + 1
+            : wbStart + colIdx * rows + rowIdx;
+        const slotLabel = p.customLabel && isNaN(Number(p.customLabel)) ? p.customLabel : `${slotNumber}`;
+        const key = `${wb.id}_${colIdx}_${rowIdx}`;
+        const formation = inferFormation(p.text || '', 'offense', p.formation);
+        const slotInfo = {
+          text: (p.text || '').trim(),
+          slotLabel,
+          num: slotNumber,
+          colColor,
+          textColor,
+          rowHighlight: p.rowHighlightColor,
+          wbTitle: wb.title || 'Wristband',
+          formation,
+          type: p.type || 'run',
+        };
+        slotByWbColRow.set(key, slotInfo);
+        if (!slotByNumber.has(slotNumber)) {
+          slotByNumber.set(slotNumber, { ...slotInfo, wbId: wb.id, colIdx, rowIdx });
+        }
+      });
+    });
+  });
+
+  const syncPlay = (play: CallSheetPlay | null): CallSheetPlay | null => {
+    if (!play) return null;
+
+    // Check if play has a wristbandSlotMatch or matching wristband slot
+    let matchedSlot:
+      | {
+          text: string;
+          slotLabel: string;
+          num: number;
+          colColor: string;
+          textColor: string;
+          rowHighlight?: string;
+          wbTitle: string;
+          formation?: string;
+          type?: string;
+          wbId?: string;
+          colIdx?: number;
+          rowIdx?: number;
+        }
+      | undefined;
 
     if (play.wristbandSlotMatch?.wristbandId) {
       const wbId = play.wristbandSlotMatch.wristbandId;
       const colIdx = play.wristbandSlotMatch.colIdx ?? 0;
       const rowIdx = play.wristbandSlotMatch.rowIdx ?? 0;
       matchedSlot = slotByWbColRow.get(`${wbId}_${colIdx}_${rowIdx}`);
-    } else if (play.id.includes('wb_sec_') || play.id.includes('cs_wb_')) {
-      const parts = play.id.split('_');
-      const wbId = parts[2];
-      const colIdx = parseInt(parts[3], 10);
-      const rowIdx = parseInt(parts[4], 10);
-      if (wbId && !isNaN(colIdx) && !isNaN(rowIdx)) {
-        matchedSlot = slotByWbColRow.get(`${wbId}_${colIdx}_${rowIdx}`);
+    }
+
+    if (!matchedSlot && (play.id.includes('wb_sec_') || play.id.includes('cs_wb_'))) {
+      const idMatch = play.id.match(/(?:wb_sec_|cs_wb_)([^_]+)_(?:c?(\d+)_r?(\d+)|(\d+)_(\d+))/);
+      if (idMatch) {
+        const wbId = idMatch[1];
+        const colIdx = parseInt(idMatch[2] ?? idMatch[4], 10);
+        const rowIdx = parseInt(idMatch[3] ?? idMatch[5], 10);
+        if (wbId && !isNaN(colIdx) && !isNaN(rowIdx)) {
+          matchedSlot = slotByWbColRow.get(`${wbId}_${colIdx}_${rowIdx}`);
+        }
       }
+    }
+
+    if (!matchedSlot && play.wristbandNum && typeof play.wristbandNum === 'number') {
+      matchedSlot = slotByNumber.get(play.wristbandNum);
     }
 
     // Determine normalized formation
@@ -671,11 +709,20 @@ export function syncWristbandToCallSheet(
     }
 
     if (matchedSlot) {
-      // PRESERVE user manual edits (play.name, play.customNotes, etc.)
-      // ONLY sync the wristband slot styling/labeling!
+      // If this play originated from a wristband slot and the wristband text is now empty, clear it
+      const isDirectWbPlay = play.id.includes('wb_sec_') || play.id.includes('cs_wb_');
+      if (isDirectWbPlay && !matchedSlot.text) {
+        return null;
+      }
+
+      // Synchronize play name with updated wristband text
+      const nextName = matchedSlot.text || play.name;
+      const nextFormation = formation || inferFormation(nextName, 'offense', matchedSlot.formation);
+
       return {
         ...play,
-        formation: formation || inferFormation(play.name || matchedSlot.text, 'offense', matchedSlot.formation),
+        name: nextName,
+        formation: nextFormation,
         wristbandNum: matchedSlot.num,
         wristbandLabel: matchedSlot.slotLabel,
         wristbandColor: matchedSlot.colColor,
@@ -684,10 +731,10 @@ export function syncWristbandToCallSheet(
         wristbandRowColor: matchedSlot.rowHighlight || play.wristbandRowColor,
         wristbandSlotMatch: {
           ...play.wristbandSlotMatch,
-          wristbandId: play.wristbandSlotMatch?.wristbandId || 'wb_1',
+          wristbandId: play.wristbandSlotMatch?.wristbandId || matchedSlot.wbId || 'wb_1',
           wristbandTitle: play.wristbandSlotMatch?.wristbandTitle || matchedSlot.wbTitle,
-          colIdx: play.wristbandSlotMatch?.colIdx ?? 0,
-          rowIdx: play.wristbandSlotMatch?.rowIdx ?? 0,
+          colIdx: play.wristbandSlotMatch?.colIdx ?? matchedSlot.colIdx ?? 0,
+          rowIdx: play.wristbandSlotMatch?.rowIdx ?? matchedSlot.rowIdx ?? 0,
           color: matchedSlot.colColor,
           slotNumber: matchedSlot.slotLabel,
           numberBgColor: matchedSlot.colColor,
@@ -708,18 +755,9 @@ export function syncWristbandToCallSheet(
   };
 
   const syncSection = (sec: CallSheetSection): CallSheetSection => {
-    // CRITICAL: If the section already has plays (user-populated, customized, or edited),
-    // NEVER destroy or reconstruct them! Preserving coach edits is the absolute top priority.
-    if (sec.plays && sec.plays.length > 0) {
-      return {
-        ...sec,
-        plays: sec.plays.map(syncPlay),
-      };
-    }
-
-    // Only if sec.plays is completely empty (e.g. brand new empty section) and is a wristband preset, initialize it once
     const isWbPreset =
-      sec.wristbandId ||
+      Boolean(sec.wristbandId) ||
+      Boolean(sec.wristbandPresetMode) ||
       sec.id.startsWith('wb_table_') ||
       sec.id.startsWith('sec_wb_') ||
       sec.title.toLowerCase().includes('wristband');
@@ -727,14 +765,17 @@ export function syncWristbandToCallSheet(
     let wb: SingleWristband | undefined;
     if (sec.wristbandId) {
       wb = wbMap.get(sec.wristbandId);
-    } else if (sec.id.startsWith('wb_table_') || sec.id.startsWith('sec_wb_')) {
+    }
+    if (!wb && (sec.id.startsWith('wb_table_') || sec.id.startsWith('sec_wb_'))) {
       const match = sec.id.match(/(?:wb_table_|sec_wb_)([^_]+)/);
       if (match && match[1]) {
-        wb = wbMap.get(match[1]);
+        wb = wbMap.get(match[1]) || wristbands.find((w) => w.id === match[1]);
       }
     }
-    // Fallback to first wristband if available
-    if (!wb && wristbands.length > 0) {
+    if (!wb && isWbPreset) {
+      wb = wristbands.find((w) => sec.title.toLowerCase().includes((w.title || '').toLowerCase()));
+    }
+    if (!wb && isWbPreset && wristbands.length > 0) {
       wb = wristbands[0];
     }
 
@@ -746,6 +787,23 @@ export function syncWristbandToCallSheet(
       const wbIndex = wristbands.findIndex((w) => w.id === wb!.id);
       const wbStart = getWristbandStartNumber(wristbands, wbIndex >= 0 ? wbIndex : 0);
 
+      // Create a map of existing plays by slot key to preserve user notes / custom tags
+      const existingPlayBySlot = new Map<string, CallSheetPlay>();
+      (sec.plays || []).forEach((p) => {
+        if (p) {
+          if (p.wristbandSlotMatch) {
+            existingPlayBySlot.set(`${p.wristbandSlotMatch.colIdx ?? 0}_${p.wristbandSlotMatch.rowIdx ?? 0}`, p);
+          } else if (p.id) {
+            const m = p.id.match(/(?:wb_sec_|cs_wb_)[^_]+_(?:c?(\d+)_r?(\d+)|(\d+)_(\d+))/);
+            if (m) {
+              const c = m[1] ?? m[3];
+              const r = m[2] ?? m[4];
+              existingPlayBySlot.set(`${c}_${r}`, p);
+            }
+          }
+        }
+      });
+
       if (mode === 'full_two_col' || sec.columnsCount === 2) {
         const maxRows = Math.max(col1.plays?.length || 0, col2.plays?.length || 0, rows);
         const interleaved: (CallSheetPlay | null)[] = [];
@@ -754,16 +812,17 @@ export function syncWristbandToCallSheet(
           // Col 1 play
           const p1 = col1.plays?.[r];
           const slotNum1 = wb.labelingMode === 'same_per_card' ? r + 1 : wbStart + r;
-          const slotLabel1 = (p1?.customLabel && isNaN(Number(p1.customLabel))) ? p1.customLabel : `${slotNum1}`;
+          const slotLabel1 = p1?.customLabel && isNaN(Number(p1.customLabel)) ? p1.customLabel : `${slotNum1}`;
           const color1 = col1.numberBgColor || col1.color || '#facc15';
           const textCol1 = col1.numberTextColor || (isDarkColor(color1) ? '#ffffff' : '#000000');
           const name1 = (p1?.text || '').trim();
           const form1 = inferFormation(name1, 'offense', p1?.formation);
           const pers1 = extractPersonnel({ name: name1, formation: form1, unit: 'offense' });
+          const existing1 = existingPlayBySlot.get(`0_${r}`);
 
           const play1: CallSheetPlay | null = name1
             ? {
-                id: `wb_sec_${wb.id}_0_${r}`,
+                id: existing1?.id || `wb_sec_${wb.id}_0_${r}`,
                 name: name1,
                 formation: form1,
                 personnel: pers1,
@@ -774,6 +833,9 @@ export function syncWristbandToCallSheet(
                 wristbandNumberColor: color1,
                 wristbandTextColor: textCol1,
                 wristbandRowColor: p1?.rowHighlightColor,
+                notes: existing1?.notes,
+                isStarred: existing1?.isStarred,
+                gainYards: existing1?.gainYards,
                 wristbandSlotMatch: {
                   wristbandId: wb.id,
                   wristbandTitle: wb.title,
@@ -791,16 +853,17 @@ export function syncWristbandToCallSheet(
           // Col 2 play
           const p2 = col2.plays?.[r];
           const slotNum2 = wb.labelingMode === 'same_per_card' ? rows + r + 1 : wbStart + rows + r;
-          const slotLabel2 = (p2?.customLabel && isNaN(Number(p2.customLabel))) ? p2.customLabel : `${slotNum2}`;
+          const slotLabel2 = p2?.customLabel && isNaN(Number(p2.customLabel)) ? p2.customLabel : `${slotNum2}`;
           const color2 = col2.numberBgColor || col2.color || '#38bdf8';
           const textCol2 = col2.numberTextColor || (isDarkColor(color2) ? '#ffffff' : '#000000');
           const name2 = (p2?.text || '').trim();
           const form2 = inferFormation(name2, 'offense', p2?.formation);
           const pers2 = extractPersonnel({ name: name2, formation: form2, unit: 'offense' });
+          const existing2 = existingPlayBySlot.get(`1_${r}`);
 
           const play2: CallSheetPlay | null = name2
             ? {
-                id: `wb_sec_${wb.id}_1_${r}`,
+                id: existing2?.id || `wb_sec_${wb.id}_1_${r}`,
                 name: name2,
                 formation: form2,
                 personnel: pers2,
@@ -811,6 +874,9 @@ export function syncWristbandToCallSheet(
                 wristbandNumberColor: color2,
                 wristbandTextColor: textCol2,
                 wristbandRowColor: p2?.rowHighlightColor,
+                notes: existing2?.notes,
+                isStarred: existing2?.isStarred,
+                gainYards: existing2?.gainYards,
                 wristbandSlotMatch: {
                   wristbandId: wb.id,
                   wristbandTitle: wb.title,
@@ -848,16 +914,17 @@ export function syncWristbandToCallSheet(
         const targetCol = colIdx === 1 ? col2 : col1;
         const targetPlays = targetCol.plays || [];
         const plays: (CallSheetPlay | null)[] = targetPlays.map((p, r) => {
-          const slotNum = wb.labelingMode === 'same_per_card' ? colIdx * rows + r + 1 : wbStart + colIdx * rows + r;
-          const slotLabel = (p.customLabel && isNaN(Number(p.customLabel))) ? p.customLabel : `${slotNum}`;
+          const slotNum = wb!.labelingMode === 'same_per_card' ? colIdx * rows + r + 1 : wbStart + colIdx * rows + r;
+          const slotLabel = p.customLabel && isNaN(Number(p.customLabel)) ? p.customLabel : `${slotNum}`;
           const color = targetCol.numberBgColor || targetCol.color || (colIdx === 1 ? '#38bdf8' : '#facc15');
           const textCol = targetCol.numberTextColor || (isDarkColor(color) ? '#ffffff' : '#000000');
           const name = (p.text || '').trim();
           if (!name) return null;
           const form = inferFormation(name, 'offense', p.formation);
           const pers = extractPersonnel({ name, formation: form, unit: 'offense' });
+          const existing = existingPlayBySlot.get(`${colIdx}_${r}`);
           return {
-            id: `wb_sec_${wb!.id}_${colIdx}_${r}`,
+            id: existing?.id || `wb_sec_${wb!.id}_${colIdx}_${r}`,
             name,
             formation: form,
             personnel: pers,
@@ -868,6 +935,9 @@ export function syncWristbandToCallSheet(
             wristbandNumberColor: color,
             wristbandTextColor: textCol,
             wristbandRowColor: p.rowHighlightColor,
+            notes: existing?.notes,
+            isStarred: existing?.isStarred,
+            gainYards: existing?.gainYards,
             wristbandSlotMatch: {
               wristbandId: wb!.id,
               wristbandTitle: wb!.title,
@@ -893,15 +963,16 @@ export function syncWristbandToCallSheet(
       }
     }
 
-    // Default: sync individual plays in the section
+    // Default for regular (situational/custom) sections: sync individual plays
     return {
       ...sec,
-      plays: sec.plays.map(syncPlay),
+      plays: (sec.plays || []).map(syncPlay),
     };
   };
 
   return {
     ...callSheetData,
+    lastEdited: Date.now(),
     offenseSections: (callSheetData.offenseSections || []).map(syncSection),
     defenseSections: (callSheetData.defenseSections || []).map(syncSection),
     offenseScript: (callSheetData.offenseScript || []).map(syncPlay),

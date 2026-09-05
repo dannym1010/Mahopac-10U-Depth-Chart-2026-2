@@ -2873,34 +2873,35 @@ export function generateCallSheetPrintHTML(
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 2px solid #000000;
-      padding-bottom: 4px;
-      margin-bottom: 6px;
+      border-bottom: 1px solid #94a3b8;
+      padding-bottom: 2px;
+      margin-bottom: 4px;
     }
     .banner-title-area {
       display: flex;
-      align-items: baseline;
-      gap: 8px;
+      align-items: center;
+      gap: 6px;
     }
     .banner-team {
-      font-size: 14pt;
-      font-weight: 900;
+      font-size: 10.5pt;
+      font-weight: 800;
+      color: #1e293b;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.04em;
     }
     .banner-unit {
-      font-size: 11pt;
-      font-weight: 900;
-      padding: 1px 6px;
+      font-size: 8.5pt;
+      font-weight: 800;
+      padding: 1px 5px;
       border-radius: 3px;
       background: ${isOffense ? '#0284c7' : '#dc2626'};
       color: #ffffff;
       text-transform: uppercase;
     }
     .banner-meta {
-      font-size: 8.5pt;
-      font-weight: 700;
-      color: #334155;
+      font-size: 8pt;
+      font-weight: 600;
+      color: #475569;
     }
     .section-group {
       margin-bottom: 8px;

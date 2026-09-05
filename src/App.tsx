@@ -98,7 +98,7 @@ import { CallSheetMainView } from './components/CallSheetMainView';
 import { GameDayHubView } from './components/GameDayHubView';
 import { USER_IMPORTED_GAME_DAY_PLAYS, INITIAL_TWO_WRISTBANDS_DATA } from './data/userGameDayPlays';
 import { ExcelPlayImportModal } from './components/callSheet/ExcelPlayImportModal';
-import { PlayDatabaseEntry, CallSheetData } from './types/callSheet';
+import { PlayDatabaseEntry, CallSheetData, CallSheetFullData } from './types/callSheet';
 import { MASTER_PLAY_DATABASE, DEFAULT_CALL_SHEET_DATA } from './data/callSheetData';
 import { syncWristbandToCallSheet } from './utils/wristbandLinking';
 import { ScoutingView } from './components/ScoutingView';
@@ -408,6 +408,7 @@ export default function App() {
   const localServerVersionRef = useRef<number>(0);
   const localServerUpdatedAtRef = useRef<number>(0);
   const lastLocalEditTimeRef = useRef<number>(0);
+  const lastLocalCallSheetEditTimeRef = useRef<number>(0);
   const activeUnitRef = useRef<string>(activeUnit);
   const activeTeamIdRef = useRef<string>(activeTeamId);
   const currentWeekRef = useRef<string>(currentWeek);
@@ -1135,19 +1136,37 @@ function mergeRemoteWeeklyData(
       }
     }
     if (data.callSheetData && typeof data.callSheetData === 'object' && (data.callSheetData.offenseSections || data.callSheetData.defenseSections)) {
-      if (Date.now() - lastLocalEditTimeRef.current < 15000 && activeUnitRef.current === 'call_sheet') {
-        // Coach is actively editing call sheet locally, do not overwrite with remote pulse
+      const localCs = latestStateRef.current.callSheetData || callSheetData;
+      const isLocalRecent = Date.now() - Math.max(lastLocalEditTimeRef.current, lastLocalCallSheetEditTimeRef.current) < 120000;
+      const localLastEdited = localCs?.lastEdited || 0;
+      const remoteLastEdited = (data.callSheetData as any)?.lastEdited || 0;
+
+      const countPlays = (cs?: CallSheetFullData) => {
+        if (!cs) return 0;
+        let count = 0;
+        (cs.offenseSections || []).forEach((s) => s.plays?.forEach((p) => { if (p?.name?.trim()) count++; }));
+        (cs.defenseSections || []).forEach((s) => s.plays?.forEach((p) => { if (p?.name?.trim()) count++; }));
+        return count;
+      };
+
+      const localPlayCount = countPlays(localCs);
+      const remotePlayCount = countPlays(data.callSheetData);
+
+      // Do NOT overwrite if:
+      // 1. Local was edited recently (< 2 mins)
+      // 2. Local timestamp is newer than remote
+      // 3. Local has plays while remote is empty
+      if (
+        isLocalRecent ||
+        (localLastEdited > remoteLastEdited && localPlayCount > 0) ||
+        (localPlayCount > 0 && remotePlayCount === 0)
+      ) {
+        // Preserving local call sheet data
       } else {
-        const localCs = latestStateRef.current.callSheetData || callSheetData;
-        const localSecCount = (localCs?.offenseSections?.length || 0) + (localCs?.defenseSections?.length || 0);
-        const remoteSecCount = (data.callSheetData.offenseSections?.length || 0) + (data.callSheetData.defenseSections?.length || 0);
-        if (localSecCount > remoteSecCount && (Date.now() - lastLocalEditTimeRef.current < 60000)) {
-          // Local has more sections and was edited within 60s, keep local
-        } else {
-          setCallSheetData(data.callSheetData);
-          latestStateRef.current.callSheetData = data.callSheetData;
-          safeJSONSet('footballCallSheetData', data.callSheetData);
-        }
+        setCallSheetData(data.callSheetData);
+        latestStateRef.current.callSheetData = data.callSheetData;
+        safeJSONSet('footballCallSheetData', data.callSheetData);
+        safeJSONSet('footballCallSheetData_backup', data.callSheetData);
       }
     }
     if (
@@ -5560,14 +5579,32 @@ function mergeRemoteWeeklyData(
       return nextWeekly;
     });
 
+    const now = Date.now();
+    lastLocalEditTimeRef.current = now;
+    lastLocalCallSheetEditTimeRef.current = now;
+
     // Automatically synchronize call sheet tables whenever wristband is updated
     const currentCs = latestStateRef.current.callSheetData || callSheetData;
     const currentDb = latestStateRef.current.playDatabase || playDatabase;
     const syncedCs = syncWristbandToCallSheet(updatedWb, currentCs, currentDb);
-    setCallSheetData(syncedCs);
-    latestStateRef.current.callSheetData = syncedCs;
-    safeJSONSet('footballCallSheetData', syncedCs);
+    const taggedCs: CallSheetFullData = { ...syncedCs, lastEdited: now };
+    setCallSheetData(taggedCs);
+    latestStateRef.current.callSheetData = taggedCs;
+    safeJSONSet('footballCallSheetData', taggedCs);
+    safeJSONSet('footballCallSheetData_backup', taggedCs);
 
+    debouncedSave('all');
+  };
+
+  const handleUpdateCallSheetData = (newCs: CallSheetFullData) => {
+    const now = Date.now();
+    lastLocalEditTimeRef.current = now;
+    lastLocalCallSheetEditTimeRef.current = now;
+    const taggedCs: CallSheetFullData = { ...newCs, lastEdited: now };
+    setCallSheetData(taggedCs);
+    latestStateRef.current.callSheetData = taggedCs;
+    safeJSONSet('footballCallSheetData', taggedCs);
+    safeJSONSet('footballCallSheetData_backup', taggedCs);
     debouncedSave('all');
   };
 
@@ -6114,12 +6151,7 @@ function mergeRemoteWeeklyData(
                   debouncedSave('all');
                 }}
                 callSheetData={callSheetData}
-                onUpdateCallSheetData={(newCs) => {
-                  setCallSheetData(newCs);
-                  latestStateRef.current.callSheetData = newCs;
-                  safeJSONSet('footballCallSheetData', newCs);
-                  debouncedSave('all');
-                }}
+                onUpdateCallSheetData={handleUpdateCallSheetData}
                 deletedPlayIds={deletedPlayIds}
                 onUpdateDeletedPlayIds={(newIds) => {
                   setDeletedPlayIds(newIds);
@@ -6178,12 +6210,7 @@ function mergeRemoteWeeklyData(
                 playDatabase={playDatabase}
                 callSheetData={callSheetData}
                 activeTeamName={currentActiveTeam?.name || 'Mahopac 10U'}
-                onUpdateCallSheetData={(newCs) => {
-                  setCallSheetData(newCs);
-                  latestStateRef.current.callSheetData = newCs;
-                  safeJSONSet('footballCallSheetData', newCs);
-                  debouncedSave('all');
-                }}
+                onUpdateCallSheetData={handleUpdateCallSheetData}
                 onUpdatePlayDatabase={(newDb) => {
                   setPlayDatabase(newDb);
                   latestStateRef.current.playDatabase = newDb;
@@ -6213,12 +6240,7 @@ function mergeRemoteWeeklyData(
                   debouncedSave('all');
                 }}
                 callSheetData={callSheetData}
-                onUpdateCallSheetData={(newCs) => {
-                  setCallSheetData(newCs);
-                  latestStateRef.current.callSheetData = newCs;
-                  safeJSONSet('footballCallSheetData', newCs);
-                  debouncedSave('all');
-                }}
+                onUpdateCallSheetData={handleUpdateCallSheetData}
                 deletedPlayIds={deletedPlayIds}
                 onUpdateDeletedPlayIds={(newDeleted) => {
                   setDeletedPlayIds(newDeleted);

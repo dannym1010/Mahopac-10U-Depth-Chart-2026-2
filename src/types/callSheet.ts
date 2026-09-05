@@ -101,6 +101,7 @@ export interface CallSheetFullData {
   timeoutsCount?: number; // default 3 per half
   timeoutsHighlightEnabled?: boolean;
   timeouts: TimeoutsState;
+  lastEdited?: number;
 }
 
 export type CallSheetData = CallSheetFullData;
