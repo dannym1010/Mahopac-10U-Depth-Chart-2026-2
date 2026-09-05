@@ -35,6 +35,8 @@ import {
   X,
   SlidersHorizontal,
   RefreshCw,
+  Link2,
+  Unlink,
 } from 'lucide-react';
 import {
   ScheduleEvent,
@@ -67,7 +69,7 @@ interface ScheduleViewProps {
   onDeleteEvent: (id: string) => void;
   onBulkAddEvents?: (events: Omit<ScheduleEvent, 'id' | 'createdAt' | 'lastEdited'>[]) => void;
   onPracticeWizardGenerate?: (result: PracticeWizardGeneratedResult) => void;
-  onNavigateToWeek: (week: string, unit: 'scouting' | 'practice' | 'wristband' | 'groups', practiceId?: string) => void;
+  onNavigateToWeek: (week: string, unit: 'scouting' | 'practice' | 'wristband' | 'groups' | 'game_day', practiceId?: string) => void;
   onSyncGameToWeeklyData?: (week: string, opponent: string, date: string, time: string, location: string) => void;
   onSyncPracticeToPlan?: (event: ScheduleEvent, templateName?: string) => string; // returns practicePlan id
   onImportTeamSnapEvents?: (newEvents: Omit<ScheduleEvent, 'id' | 'createdAt' | 'lastEdited'>[], replaceExisting?: boolean) => void;
@@ -75,7 +77,7 @@ interface ScheduleViewProps {
 }
 
 type ViewMode = 'timeline' | 'month' | 'grid';
-type FilterType = 'all' | 'game' | 'practice' | 'scrimmage' | 'meeting';
+type FilterType = 'all' | 'game' | 'pregame' | 'practice' | 'scrimmage' | 'meeting';
 
 export const ScheduleView: React.FC<ScheduleViewProps> = ({
   scheduleEvents = [],
@@ -116,8 +118,12 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   const [isCadenceWizardOpen, setIsCadenceWizardOpen] = useState(false);
   const [isTeamSnapSyncOpen, setIsTeamSnapSyncOpen] = useState(false);
   const [isToolsDropdownOpen, setIsToolsDropdownOpen] = useState(false);
+  const [isCreatePreGameModalOpen, setIsCreatePreGameModalOpen] = useState(false);
+  const [preGameTargetGameId, setPreGameTargetGameId] = useState('');
+  const [preGameCustomTemplate, setPreGameCustomTemplate] = useState('Pre-Game Warmup & Routine');
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
   const [scoreModalEvent, setScoreModalEvent] = useState<ScheduleEvent | null>(null);
+  const [linkingPreGameEvent, setLinkingPreGameEvent] = useState<ScheduleEvent | null>(null);
 
   // Form states for New Game Modal
   const [gameOpponent, setGameOpponent] = useState('');
@@ -131,6 +137,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   const [gameArrivalMins, setGameArrivalMins] = useState(60);
   const [gameNotes, setGameNotes] = useState('');
   const [autoSyncScouting, setAutoSyncScouting] = useState(true);
+  const [autoCreatePreGamePlan, setAutoCreatePreGamePlan] = useState(true);
+  const [selectedPreGameTemplate, setSelectedPreGameTemplate] = useState('Pre-Game Warmup & Routine');
 
   // Form states for New Practice Modal
   const [practiceTitle, setPracticeTitle] = useState('');
@@ -220,6 +228,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
       // Type Filter
       if (typeFilter !== 'all') {
         if (typeFilter === 'game' && event.type !== 'game' && event.type !== 'tournament') return false;
+        if (typeFilter === 'pregame') {
+          const isGameLike = event.type === 'game' || event.type === 'tournament' || event.type === 'scrimmage';
+          const hasPreGame = Boolean(event.preGamePlanId);
+          if (!isGameLike && !hasPreGame) return false;
+        }
         if (typeFilter === 'practice' && event.type !== 'practice' && event.type !== 'walkthrough') return false;
         if (typeFilter === 'scrimmage' && event.type !== 'scrimmage') return false;
         if (typeFilter === 'meeting' && event.type !== 'meeting') return false;
@@ -345,29 +358,64 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   // Get matching practice plan for an event
   const getLinkedPracticePlan = (evt: ScheduleEvent): PracticePlan | undefined => {
     if (!evt || !practicePlans || !Array.isArray(practicePlans)) return undefined;
-    if (evt.linkedPracticePlanId) {
-      return practicePlans.find((p) => p && p.id === evt.linkedPracticePlanId);
+    const planId = evt.preGamePlanId || evt.linkedPracticePlanId;
+    if (planId) {
+      const found = practicePlans.find((p) => p && p.id === planId);
+      if (found) return found;
     }
+    const isGameEvent = evt.type === 'game' || evt.type === 'tournament' || evt.type === 'scrimmage';
     return practicePlans.find(
       (p) =>
         p &&
-        (p.date === evt.date ||
+        (p.id === planId ||
+          (p.date === evt.date &&
+            (isGameEvent
+              ? p.title?.toLowerCase().includes('pre-game') ||
+                p.title?.toLowerCase().includes('warmup') ||
+                p.title?.toLowerCase().includes('walkthrough')
+              : true)) ||
           (p.weekFolder === `Week ${evt.week}` &&
             p.title &&
             evt.title &&
-            p.title.toLowerCase() === evt.title.toLowerCase()))
+            (p.title.toLowerCase() === evt.title.toLowerCase() ||
+              (isGameEvent &&
+                (p.title.toLowerCase().includes('pre-game') ||
+                  p.title.toLowerCase().includes('warmup'))))))
     );
   };
 
   // Open practice plan from schedule, auto-populating date, time, week folder, day, and title
-  const handleOpenPracticeForEvent = (evt: ScheduleEvent) => {
+  const handleOpenPracticeForEvent = (evt: ScheduleEvent, defaultTemplate?: string) => {
+    const isGame = evt.type === 'game' || evt.type === 'tournament' || evt.type === 'scrimmage';
+    const template = defaultTemplate || (isGame ? 'Pre-Game Warmup & Routine' : undefined);
     if (onSyncPracticeToPlan) {
-      const planId = onSyncPracticeToPlan(evt);
+      const planId = onSyncPracticeToPlan(evt, template);
       onNavigateToWeek(evt.week, 'practice', planId);
     } else {
       const linkedPlan = getLinkedPracticePlan(evt);
       onNavigateToWeek(evt.week, 'practice', linkedPlan?.id);
     }
+  };
+
+  // Quick create and link pre-game practice plan
+  const handleQuickCreatePreGamePlan = (evt: ScheduleEvent, templateName: string = 'Pre-Game Warmup & Routine') => {
+    if (onSyncPracticeToPlan) {
+      const planId = onSyncPracticeToPlan(evt, templateName);
+      onUpdateEvent(evt.id, { linkedPracticePlanId: planId, preGamePlanId: planId });
+      onNavigateToWeek(evt.week, 'practice', planId);
+    }
+  };
+
+  // Link an existing practice plan to a schedule event
+  const handleLinkPlanToEvent = (evtId: string, planId: string) => {
+    onUpdateEvent(evtId, { linkedPracticePlanId: planId, preGamePlanId: planId });
+    setLinkingPreGameEvent(null);
+  };
+
+  // Unlink practice plan from a schedule event
+  const handleUnlinkPlanFromEvent = (evtId: string) => {
+    onUpdateEvent(evtId, { linkedPracticePlanId: undefined, preGamePlanId: undefined });
+    setLinkingPreGameEvent(null);
   };
 
   // Handle Save Game
@@ -390,6 +438,19 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
       arrivalMinutesBefore: gameArrivalMins,
       focusOrNotes: gameNotes.trim(),
     };
+
+    // Auto-create matching Pre-Game Practice Plan
+    if (autoCreatePreGamePlan && onSyncPracticeToPlan) {
+      const dummyEvt: ScheduleEvent = {
+        ...newGame,
+        id: 'evt_' + Date.now(),
+        createdAt: Date.now(),
+        lastEdited: Date.now(),
+      };
+      const planId = onSyncPracticeToPlan(dummyEvt, selectedPreGameTemplate);
+      newGame.linkedPracticePlanId = planId;
+      newGame.preGamePlanId = planId;
+    }
 
     onAddEvent(newGame);
 
@@ -680,6 +741,32 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                   <span>+ Practice</span>
                 </button>
 
+                <button
+                  onClick={() => {
+                    const upcomingGame = safeScheduleEvents.find(
+                      (e) => (e.type === 'game' || e.type === 'tournament' || e.type === 'scrimmage') && !e.isCancelled
+                    );
+                    if (upcomingGame) {
+                      setPreGameTargetGameId(upcomingGame.id);
+                    }
+                    setIsCreatePreGameModalOpen(true);
+                  }}
+                  className="px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl border border-purple-500/80 shadow-md shadow-purple-600/20 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                  title="Create Pre-Game Practice Plan for an upcoming game"
+                >
+                  <ClipboardList className="w-3.5 h-3.5 text-purple-200 stroke-[2.5]" />
+                  <span>+ Pre-Game Plan</span>
+                </button>
+
+                <button
+                  onClick={() => setIsTeamSnapSyncOpen(true)}
+                  className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-orange-300 hover:text-orange-200 font-bold text-xs rounded-xl border border-orange-500/40 hover:border-orange-400 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                  title="Sync and import new practices & games from TeamSnap"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-orange-400" />
+                  <span>Sync TeamSnap</span>
+                </button>
+
                 {/* Consolidated Tools & Sync Dropdown */}
                 <div className="relative">
                   <button
@@ -857,6 +944,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
               [
                 { id: 'all', label: 'All' },
                 { id: 'game', label: '🏈 Games' },
+                { id: 'pregame', label: '⚡ Pre-Game Plans' },
                 { id: 'practice', label: '📋 Practices' },
                 { id: 'scrimmage', label: '⚔️ Scrimmages' },
               ] as { id: FilterType; label: string }[]
@@ -1017,11 +1105,19 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             {nextEvent.type === 'game' || nextEvent.type === 'tournament' ? (
               <>
                 <button
-                  onClick={() => onNavigateToWeek(nextEvent.week, 'scouting')}
-                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1 transition-all"
+                  onClick={() => handleOpenPracticeForEvent(nextEvent)}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-all"
+                  title="Open Pre-Game Practice Plan"
                 >
-                  <FileSpreadsheet className="w-3.5 h-3.5" />
-                  <span>Open Scouting Report</span>
+                  <ClipboardList className="w-3.5 h-3.5" />
+                  <span>Pre-Game Plan</span>
+                </button>
+                <button
+                  onClick={() => onNavigateToWeek(nextEvent.week, 'scouting')}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1 transition-all"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Scouting</span>
                 </button>
                 <button
                   onClick={() => onNavigateToWeek(nextEvent.week, 'wristband')}
@@ -1396,6 +1492,97 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                                         {evt.focusOrNotes}
                                       </p>
                                     )}
+
+                                    {/* DEDICATED PRE-GAME PRACTICE PLAN SPOT */}
+                                    {isGame && (
+                                      <div className="mt-3 pt-2.5 border-t border-slate-800/80">
+                                        <div className="flex items-center justify-between gap-1 mb-1.5">
+                                          <span className="text-[10.5px] font-black uppercase tracking-wider text-indigo-300 flex items-center gap-1.5">
+                                            <ClipboardList className="w-3.5 h-3.5 text-indigo-400" />
+                                            Pre-Game Practice Plan
+                                          </span>
+                                          {linkedPlan ? (
+                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9.5px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                              Plan Linked
+                                            </span>
+                                          ) : (
+                                            <span className="text-[10px] font-bold text-slate-400">
+                                              No plan attached
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        {linkedPlan ? (
+                                          <div className="bg-indigo-950/40 border border-indigo-500/30 hover:border-indigo-500/50 rounded-xl p-2.5 transition-all">
+                                            <div className="flex items-start justify-between gap-2">
+                                              <div className="min-w-0 flex-1">
+                                                <h5 className="font-extrabold text-slate-100 text-xs truncate">
+                                                  {linkedPlan.title || 'Pre-Game Warmup & Routine'}
+                                                </h5>
+                                                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-[10.5px] text-indigo-200/90 font-medium">
+                                                  <span>
+                                                    {linkedPlan.periods?.length || linkedPlan.plan?.length || 0} Periods
+                                                  </span>
+                                                  {linkedPlan.startTime && (
+                                                    <>
+                                                      <span>&bull;</span>
+                                                      <span>Warmup: {formatTimeDisplay(linkedPlan.startTime)}{linkedPlan.endTime ? ` - ${formatTimeDisplay(linkedPlan.endTime)}` : ''}</span>
+                                                    </>
+                                                  )}
+                                                </div>
+                                              </div>
+                                              {userRole === 'admin' && (
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setLinkingPreGameEvent(evt);
+                                                  }}
+                                                  className="p-1 text-slate-400 hover:text-slate-200 hover:bg-indigo-900/50 rounded-lg transition-colors cursor-pointer"
+                                                  title="Edit pre-game plan link"
+                                                >
+                                                  <Edit2 className="w-3 h-3" />
+                                                </button>
+                                              )}
+                                            </div>
+
+                                            <button
+                                              onClick={() => handleOpenPracticeForEvent(evt)}
+                                              className="w-full mt-2 py-1.5 px-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                                            >
+                                              <ClipboardList className="w-3.5 h-3.5" />
+                                              <span>Open Pre-Game Plan</span>
+                                              <ArrowRight className="w-3 h-3" />
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <div className="bg-slate-900/60 border border-dashed border-slate-700 hover:border-indigo-500/50 rounded-xl p-2.5 text-center transition-all">
+                                            <p className="text-[11px] text-slate-400 mb-2">
+                                              Create or attach a pre-game warmup routine for this game
+                                            </p>
+                                            <div className="flex items-center gap-1.5">
+                                              <button
+                                                onClick={() => handleQuickCreatePreGamePlan(evt, 'Pre-Game Warmup & Routine')}
+                                                className="flex-1 py-1.5 px-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] rounded-lg shadow-xs flex items-center justify-center gap-1 transition-all cursor-pointer"
+                                              >
+                                                <Plus className="w-3 h-3" />
+                                                <span>+ Add Pre-Game Plan</span>
+                                              </button>
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setLinkingPreGameEvent(evt);
+                                                }}
+                                                className="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-[11px] rounded-lg border border-slate-700 transition-colors cursor-pointer"
+                                                title="Link existing practice plan"
+                                              >
+                                                Link...
+                                              </button>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
 
@@ -1404,17 +1591,30 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                                   {isGame ? (
                                     <>
                                       <button
-                                        onClick={() => onNavigateToWeek(evt.week, 'scouting')}
-                                        className="flex-1 px-3 py-1.5 bg-indigo-600/90 hover:bg-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs"
+                                        onClick={() => handleOpenPracticeForEvent(evt, 'Pre-Game Warmup & Routine')}
+                                        className="flex-1 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                                        title="Open or Create Pre-Game Practice Plan"
                                       >
-                                        <FileSpreadsheet className="w-3.5 h-3.5" />
-                                        <span>Open Scouting Report</span>
+                                        <ClipboardList className="w-3.5 h-3.5 text-purple-200" />
+                                        <span>
+                                          {linkedPlan
+                                            ? `Pre-Game Plan (${linkedPlan.periods?.length || linkedPlan.plan?.length || 0} Periods)`
+                                            : '⚡ Create Pre-Game Plan'}
+                                        </span>
                                       </button>
                                       <button
-                                        onClick={() => onNavigateToWeek(evt.week, 'wristband')}
-                                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold rounded-xl border border-slate-700 transition-all"
+                                        onClick={() => onNavigateToWeek(evt.week, 'game_day')}
+                                        className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold rounded-xl border border-slate-700 flex items-center justify-center gap-1 transition-all cursor-pointer"
+                                        title="Open Game Day Hub"
                                       >
-                                        <span>Wristband</span>
+                                        <span>Game Day</span>
+                                      </button>
+                                      <button
+                                        onClick={() => onNavigateToWeek(evt.week, 'scouting')}
+                                        className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                                      >
+                                        <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-400" />
+                                        <span>Scouting</span>
                                       </button>
                                     </>
                                   ) : (
@@ -1651,22 +1851,33 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                       </td>
                       <td className="p-3 whitespace-nowrap">
                         {isGame ? (
-                          evt.result?.outcome ? (
-                            <span
-                              className={`px-2 py-0.5 rounded font-black text-[10px] ${
-                                evt.result.outcome === 'W'
-                                  ? 'bg-emerald-500 text-slate-950'
-                                  : 'bg-rose-500 text-white'
-                              }`}
-                            >
-                              {evt.result.outcome} {evt.result.teamScore} - {evt.result.opponentScore}
-                            </span>
-                          ) : (
-                            <span className="text-slate-500 italic">Upcoming</span>
-                          )
+                          <div className="space-y-1">
+                            {evt.result?.outcome ? (
+                              <span
+                                className={`px-2 py-0.5 rounded font-black text-[10px] ${
+                                  evt.result.outcome === 'W'
+                                    ? 'bg-emerald-500 text-slate-950'
+                                    : 'bg-rose-500 text-white'
+                                }`}
+                              >
+                                {evt.result.outcome} {evt.result.teamScore} - {evt.result.opponentScore}
+                              </span>
+                            ) : (
+                              <div className="text-slate-400 text-[10.5px]">Upcoming Game</div>
+                            )}
+                            {linkedPlan ? (
+                              <div className="text-indigo-300 text-[10.5px] font-bold flex items-center gap-1">
+                                <ClipboardList className="w-3 h-3 text-indigo-400" />
+                                <span>Pre-Game Plan ({linkedPlan.periods?.length || linkedPlan.plan?.length || 0} per)</span>
+                              </div>
+                            ) : (
+                              <div className="text-slate-500 text-[10px] italic">No pre-game plan</div>
+                            )}
+                          </div>
                         ) : linkedPlan ? (
-                          <span className="text-indigo-300 text-[11px] font-bold">
-                            ✅ Plan ({linkedPlan.plan?.length || 0} periods)
+                          <span className="text-indigo-300 text-[11px] font-bold flex items-center gap-1">
+                            <ClipboardList className="w-3 h-3 text-indigo-400" />
+                            <span>Plan ({linkedPlan.periods?.length || linkedPlan.plan?.length || 0} periods)</span>
                           </span>
                         ) : (
                           <span className="text-slate-500 italic">No plan yet</span>
@@ -1675,12 +1886,29 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                       <td className="p-3 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
                           {isGame ? (
-                            <button
-                              onClick={() => onNavigateToWeek(evt.week, 'scouting')}
-                              className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition-all"
-                            >
-                              Scouting
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleOpenPracticeForEvent(evt, 'Pre-Game Warmup & Routine')}
+                                className="px-2.5 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs rounded-lg flex items-center gap-1 transition-all shadow-xs cursor-pointer"
+                                title="Open or Create Pre-Game Practice Plan"
+                              >
+                                <ClipboardList className="w-3 h-3 text-purple-200" />
+                                <span>{linkedPlan ? 'Pre-Game Plan' : '+ Pre-Game Plan'}</span>
+                              </button>
+                              <button
+                                onClick={() => onNavigateToWeek(evt.week, 'game_day')}
+                                className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-lg border border-slate-700 transition-all cursor-pointer"
+                                title="Open Game Day Hub"
+                              >
+                                Game Day
+                              </button>
+                              <button
+                                onClick={() => onNavigateToWeek(evt.week, 'scouting')}
+                                className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-lg border border-slate-700 transition-all cursor-pointer"
+                              >
+                                Scouting
+                              </button>
+                            </>
                           ) : (
                             <button
                               onClick={() => handleOpenPracticeForEvent(evt)}
@@ -1923,6 +2151,49 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                   🔗 Automatically sync to Week {gameWeek} Scouting Report &amp; Gameplan
                 </span>
               </label>
+
+              {/* Pre-Game Practice Plan Auto-Creator */}
+              <div className="p-3 bg-slate-900/90 rounded-2xl border border-slate-700/80 space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoCreatePreGamePlan}
+                    onChange={(e) => setAutoCreatePreGamePlan(e.target.checked)}
+                    className="rounded text-indigo-500"
+                  />
+                  <span className="text-slate-200 text-xs font-bold flex items-center gap-1.5">
+                    <ClipboardList className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>⚡ Automatically create Pre-Game Practice Plan (Warmup &amp; Routine)</span>
+                  </span>
+                </label>
+                {autoCreatePreGamePlan && (
+                  <div className="pl-6 space-y-2 pt-1 border-t border-slate-800/80">
+                    <div>
+                      <label className="block text-[11px] text-slate-400 font-semibold mb-1">
+                        Pre-Game Routine Template:
+                      </label>
+                      <select
+                        value={selectedPreGameTemplate}
+                        onChange={(e) => setSelectedPreGameTemplate(e.target.value)}
+                        className="w-full bg-slate-800 text-slate-100 text-xs p-2 rounded-xl border border-slate-700 font-bold focus:border-indigo-400 focus:outline-none"
+                      >
+                        <option value="Pre-Game Warmup & Routine">
+                          ⚡ Pre-Game Warmup &amp; Routine (Dynamic, Air Mesh, Defense Shuck, ST Review)
+                        </option>
+                        <option value="Walkthrough / Light">
+                          🚶 Walkthrough / Light (Chalk Talk, Air Mesh, Defensive Fits)
+                        </option>
+                        <option value="Standard Practice">
+                          📋 Standard Practice Template
+                        </option>
+                      </select>
+                    </div>
+                    <p className="text-[10.5px] text-slate-400">
+                      Creates a tailored practice plan scheduled {gameArrivalMins}m prior to kickoff ({gameStartTime}) at {gameLocation || 'the stadium'}.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-700">
@@ -2087,6 +2358,123 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                 className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md"
               >
                 Save Practice to Schedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CREATE PRE-GAME PRACTICE PLAN */}
+      {isCreatePreGameModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-300 flex items-center justify-center font-black">
+                  <ClipboardList className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-slate-100">
+                    Create Pre-Game Practice Plan
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Generate an official pre-game warmup &amp; routine tailored for game day
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsCreatePreGameModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-700/50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-black text-slate-300 uppercase tracking-wider text-[10px] mb-1">
+                  Target Scheduled Game
+                </label>
+                <select
+                  value={preGameTargetGameId}
+                  onChange={(e) => setPreGameTargetGameId(e.target.value)}
+                  className="w-full bg-slate-900 text-slate-100 font-bold p-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-400"
+                >
+                  <option value="">-- Choose a Game from Schedule --</option>
+                  {safeScheduleEvents
+                    .filter((e) => (e.type === 'game' || e.type === 'tournament' || e.type === 'scrimmage') && !e.isCancelled)
+                    .map((game) => {
+                      const hasPlan = Boolean(game.preGamePlanId || game.linkedPracticePlanId);
+                      return (
+                        <option key={game.id} value={game.id}>
+                          Week {game.week}: {game.title} &bull; {game.date} ({game.startTime || 'TBD'}) {hasPlan ? '✓ (Plan Attached)' : ''}
+                        </option>
+                      );
+                    })}
+                </select>
+                {safeScheduleEvents.filter((e) => e.type === 'game' || e.type === 'tournament' || e.type === 'scrimmage').length === 0 && (
+                  <p className="text-[11px] text-amber-400 mt-1">
+                    No games found on the schedule. Create a game first or generate plans for upcoming dates.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block font-black text-slate-300 uppercase tracking-wider text-[10px] mb-1">
+                  Pre-Game Warmup Template
+                </label>
+                <select
+                  value={preGameCustomTemplate}
+                  onChange={(e) => setPreGameCustomTemplate(e.target.value)}
+                  className="w-full bg-slate-900 text-slate-100 font-bold p-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-400"
+                >
+                  <option value="Pre-Game Warmup & Routine">
+                    Pre-Game Warmup &amp; Routine (Dynamic Stretch, Indy Circuits, Team Scripts, Speeches)
+                  </option>
+                  <option value="Pre-Game Walkthrough">
+                    Pre-Game Walkthrough (Shells, Signals, Redzone &amp; Special Teams)
+                  </option>
+                  <option value="Offense & Defense Full Practice">
+                    Standard Practice (Inside Run, Perimeter, Scrimmage)
+                  </option>
+                </select>
+              </div>
+
+              <div className="p-3 bg-purple-950/30 border border-purple-500/20 rounded-xl space-y-1.5 text-purple-200 text-xs">
+                <div className="font-bold flex items-center gap-1.5 text-purple-300">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  What happens when you create:
+                </div>
+                <ul className="list-disc pl-4 space-y-1 text-[11px] text-purple-200/80">
+                  <li>Calculates arrival countdown (e.g. 60 min before kickoff)</li>
+                  <li>Adds structured periods: dynamic stretch, offensive line drive, DB/WR routes, team script</li>
+                  <li>Links directly into your Practice Generator and the Game Day Hub</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-700">
+              <button
+                onClick={() => setIsCreatePreGameModalOpen(false)}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const targetGame = safeScheduleEvents.find((e) => e.id === preGameTargetGameId);
+                  if (!targetGame) {
+                    alert('Please select a game from your schedule.');
+                    return;
+                  }
+                  handleQuickCreatePreGamePlan(targetGame, preGameCustomTemplate);
+                  setIsCreatePreGameModalOpen(false);
+                }}
+                disabled={!preGameTargetGameId}
+                className="px-5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Create &amp; Open Plan</span>
               </button>
             </div>
           </div>
@@ -2395,6 +2783,72 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                 />
               </div>
 
+              {/* Linked Practice / Pre-Game Plan Spot */}
+              <div className="p-3 bg-slate-900/90 rounded-2xl border border-slate-700/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-200 text-xs flex items-center gap-1.5">
+                    <ClipboardList className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>
+                      {editingEvent.type === 'game' || editingEvent.type === 'scrimmage'
+                        ? 'Pre-Game Practice Plan & Warmup'
+                        : 'Linked Practice Plan'}
+                    </span>
+                  </label>
+                  {editingEvent.preGamePlanId || editingEvent.linkedPracticePlanId ? (
+                    <span className="text-[10px] font-black text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">
+                      Plan Linked
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-slate-500 italic">None Attached</span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    value={editingEvent.preGamePlanId || editingEvent.linkedPracticePlanId || ''}
+                    onChange={(e) => {
+                      const val = e.target.value || undefined;
+                      setEditingEvent({
+                        ...editingEvent,
+                        linkedPracticePlanId: val,
+                        preGamePlanId: val,
+                      });
+                    }}
+                    className="flex-1 bg-slate-950 text-slate-100 text-xs font-semibold p-2 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
+                  >
+                    <option value="">-- No Practice Plan Attached --</option>
+                    {practicePlans.map((plan) => (
+                      <option key={plan.id} value={plan.id}>
+                        {plan.title || 'Untitled Plan'} ({plan.weekFolder || 'No Week'} &bull; {plan.date || 'No Date'})
+                      </option>
+                    ))}
+                  </select>
+
+                  {(editingEvent.type === 'game' || editingEvent.type === 'scrimmage') &&
+                    !editingEvent.preGamePlanId &&
+                    !editingEvent.linkedPracticePlanId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onSyncPracticeToPlan) {
+                            const planId = onSyncPracticeToPlan(editingEvent, 'Pre-Game Warmup & Routine');
+                            setEditingEvent({
+                              ...editingEvent,
+                              linkedPracticePlanId: planId,
+                              preGamePlanId: planId,
+                            });
+                          }
+                        }}
+                        className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 flex items-center gap-1 cursor-pointer"
+                        title="Create matching pre-game warmup plan now"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Create Warmup</span>
+                      </button>
+                    )}
+                </div>
+              </div>
+
               <div className="flex items-center justify-between p-3 bg-slate-900/80 rounded-xl border border-slate-700">
                 <div>
                   <div className="text-xs font-bold text-slate-200">Event Cancellation Status</div>
@@ -2430,6 +2884,113 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
               >
                 Save Changes
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Link Pre-Game Practice Plan Modal */}
+      {linkingPreGameEvent && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-700">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-indigo-500/20 text-indigo-300 rounded-xl">
+                  <ClipboardList className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-100 text-base">Pre-Game Practice Plan Link</h3>
+                  <p className="text-xs text-slate-400">
+                    {linkingPreGameEvent.title} &bull; {formatDateDisplay(linkingPreGameEvent.date)}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setLinkingPreGameEvent(null)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  Select Existing Practice Plan to Attach:
+                </label>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {practicePlans && practicePlans.length > 0 ? (
+                    practicePlans.map((plan) => {
+                      const isCurrentlyLinked =
+                        linkingPreGameEvent.preGamePlanId === plan.id ||
+                        linkingPreGameEvent.linkedPracticePlanId === plan.id;
+                      return (
+                        <div
+                          key={plan.id}
+                          onClick={() => handleLinkPlanToEvent(linkingPreGameEvent.id, plan.id)}
+                          className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                            isCurrentlyLinked
+                              ? 'bg-indigo-950/60 border-indigo-400 ring-2 ring-indigo-500/30'
+                              : 'bg-slate-900/60 border-slate-700/80 hover:border-indigo-500/50 hover:bg-slate-900'
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <div className="font-extrabold text-sm text-slate-100 truncate">
+                              {plan.title || 'Untitled Practice Plan'}
+                            </div>
+                            <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
+                              <span>{plan.weekFolder || 'Week Plan'}</span>
+                              <span>&bull;</span>
+                              <span>{plan.date ? formatDateDisplay(plan.date) : 'No Date'}</span>
+                              <span>&bull;</span>
+                              <span className="text-indigo-300 font-bold">
+                                {plan.periods?.length || plan.plan?.length || 0} Periods
+                              </span>
+                            </div>
+                          </div>
+                          {isCurrentlyLinked ? (
+                            <span className="px-2.5 py-1 bg-indigo-600 text-white font-black text-xs rounded-xl shrink-0">
+                              Current Link
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 bg-slate-800 text-indigo-300 font-bold text-xs rounded-xl border border-slate-700 shrink-0">
+                              Link Plan
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-6 text-slate-400 text-xs">
+                      No practice plans found. Create one below!
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-700 flex items-center justify-between gap-2">
+                {linkingPreGameEvent.preGamePlanId || linkingPreGameEvent.linkedPracticePlanId ? (
+                  <button
+                    onClick={() => handleUnlinkPlanFromEvent(linkingPreGameEvent.id)}
+                    className="px-3 py-2 bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/80 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Unlink className="w-3.5 h-3.5" />
+                    <span>Unlink Current Plan</span>
+                  </button>
+                ) : (
+                  <div />
+                )}
+
+                <button
+                  onClick={() =>
+                    handleQuickCreatePreGamePlan(linkingPreGameEvent, 'Pre-Game Warmup & Routine')
+                  }
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create Fresh Warmup Plan</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

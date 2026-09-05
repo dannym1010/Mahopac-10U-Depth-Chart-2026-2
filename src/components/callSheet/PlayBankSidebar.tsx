@@ -212,7 +212,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
         onClick={onToggleOpen}
       />
 
-      <div className="fixed inset-y-0 right-0 z-40 w-84 max-w-[88vw] sm:relative sm:inset-auto sm:w-84 bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col h-full print:hidden shrink-0">
+      <div className="fixed inset-y-0 right-0 z-40 w-84 max-w-[88vw] sm:relative sm:inset-auto sm:w-84 bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col h-full min-h-0 print:hidden shrink-0">
         {/* Header */}
         <div className="p-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-850">
           <div className="flex items-center gap-2">
@@ -447,8 +447,8 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
           </div>
         )}
 
-        {/* Plays List */}
-        <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5 no-scrollbar">
+        {/* Plays List - Scrolls independently with visible slim scrollbar */}
+        <div className="flex-1 overflow-y-auto min-h-0 p-2.5 space-y-1.5 overscroll-contain scrollbar-thin scrollbar-thumb-slate-700 hover:scrollbar-thumb-slate-600 scrollbar-track-slate-950/40">
           {filteredPlays.map((play) => (
             <div
               key={play.id}

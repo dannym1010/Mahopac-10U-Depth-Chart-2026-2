@@ -37,6 +37,7 @@ interface CallSheetSectionBoxProps {
   onMoveTableRight?: (sectionId: string) => void;
   onMoveTableUpRow?: (sectionId: string) => void;
   onMoveTableDownRow?: (sectionId: string) => void;
+  onMoveTableToRow?: (sectionId: string, targetRowIndex: number) => void;
   canMoveLeft?: boolean;
   canMoveRight?: boolean;
   canMoveUpRow?: boolean;
@@ -44,6 +45,7 @@ interface CallSheetSectionBoxProps {
   isDragTarget?: boolean;
   isDragging?: boolean;
   rowIndex?: number;
+  availableRowIndices?: number[];
 }
 
 const COLOR_SWATCHES = [
@@ -114,6 +116,7 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
   onMoveTableRight,
   onMoveTableUpRow,
   onMoveTableDownRow,
+  onMoveTableToRow,
   canMoveLeft = false,
   canMoveRight = false,
   canMoveUpRow = false,
@@ -121,6 +124,7 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
   isDragTarget = false,
   isDragging = false,
   rowIndex,
+  availableRowIndices = [],
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(section.title);
@@ -459,12 +463,32 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
           </div>
 
           {/* Row Placement quick controls */}
-          {(canMoveLeft || canMoveRight || canMoveUpRow || canMoveDownRow || rowIndex !== undefined) && (
+          {(canMoveLeft || canMoveRight || canMoveUpRow || canMoveDownRow || rowIndex !== undefined || onMoveTableToRow) && (
             <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800 flex-wrap">
-              <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                <GripVertical className="w-3 h-3" />
-                Row {rowIndex !== undefined ? rowIndex + 1 : 1} Position:
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                  <GripVertical className="w-3 h-3" />
+                  Row {rowIndex !== undefined ? rowIndex + 1 : 1}:
+                </span>
+                {onMoveTableToRow && availableRowIndices.length > 0 && (
+                  <select
+                    value={rowIndex !== undefined ? rowIndex : 0}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (!isNaN(val)) onMoveTableToRow(section.id, val);
+                    }}
+                    className="bg-slate-800 text-indigo-300 font-bold text-[10px] rounded px-1.5 py-0.5 border border-slate-700 focus:outline-none cursor-pointer"
+                    title="Change which row this table belongs to"
+                  >
+                    {availableRowIndices.map((r) => (
+                      <option key={r} value={r}>
+                        Move to Row {r + 1}
+                      </option>
+                    ))}
+                    <option value={Math.max(...availableRowIndices, 0) + 1}>+ New Row</option>
+                  </select>
+                )}
+              </div>
               <div className="flex items-center gap-1">
                 {canMoveLeft && (
                   <button

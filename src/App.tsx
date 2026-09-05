@@ -844,18 +844,29 @@ function mergeRemoteWeeklyData(
         }
       }
 
+      // Safe merge for wristbandData: never overwrite local plays with empty remote plays
+      const localHasWristbandPlays = localState.wristbandData?.wristbands?.some((wb: any) =>
+        wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
+      );
+      const remoteHasWristbandPlays = remoteState.wristbandData?.wristbands?.some((wb: any) =>
+        wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
+      );
+      const safeWristbandData = remoteHasWristbandPlays
+        ? remoteState.wristbandData
+        : (localHasWristbandPlays ? localState.wristbandData : (remoteState.wristbandData || localState.wristbandData));
+
       merged[weekKey] = {
         ...remoteState,
         formations: mergedFormations,
         depthChart: mergedDC,
         scrimmageChart: mergedSC,
         opponent: remoteState.opponent || localState.opponent || '',
-        wristbandData: remoteState.wristbandData || localState.wristbandData,
+        wristbandData: safeWristbandData,
         scouting: remoteState.scouting || localState.scouting,
       };
     } else {
       // Not actively editing locally:
-      // Remote cloud state is authoritative.
+      // Remote cloud state is authoritative, but safeguard populated local wristband plays
       const mergedFormations: FormationBoard[] =
         remoteFormations.length > 0
           ? remoteFormations
@@ -871,12 +882,23 @@ function mergeRemoteWeeklyData(
           ? remoteState.scrimmageChart
           : localState.scrimmageChart || {};
 
+      const localHasWristbandPlays = localState.wristbandData?.wristbands?.some((wb: any) =>
+        wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
+      );
+      const remoteHasWristbandPlays = remoteState.wristbandData?.wristbands?.some((wb: any) =>
+        wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
+      );
+      const safeWristbandData = remoteHasWristbandPlays
+        ? remoteState.wristbandData
+        : (localHasWristbandPlays ? localState.wristbandData : (remoteState.wristbandData || localState.wristbandData));
+
       merged[weekKey] = {
         ...localState,
         ...remoteState,
         formations: mergedFormations,
         depthChart: mergedDC,
         scrimmageChart: mergedSC,
+        wristbandData: safeWristbandData,
       };
     }
   }
@@ -4946,19 +4968,52 @@ function mergeRemoteWeeklyData(
     }
 
     // 3. Year, Time, Location & Title
+    const isGame = event.type === 'game' || event.type === 'tournament' || event.type === 'scrimmage';
     const year = event.date && event.date.includes('-') ? event.date.split('-')[0] : '2026';
-    const startTime = event.startTime || event.time || '17:30';
-    const endTime = event.endTime || '19:00';
+    
+    // For games, default the warmup window based on arrivalMinutesBefore (e.g. 60-90m prior to kickoff)
+    let startTime = event.startTime || event.time || '17:30';
+    let endTime = event.endTime || '19:00';
+    if (isGame && event.startTime) {
+      const arrivalMins = event.arrivalMinutesBefore || 60;
+      const [hStr, mStr] = event.startTime.split(':');
+      const kickoffTotalMins = parseInt(hStr || '12', 10) * 60 + parseInt(mStr || '00', 10);
+      const warmupStartMins = Math.max(0, kickoffTotalMins - arrivalMins);
+      const warmupEndMins = Math.max(warmupStartMins + 30, kickoffTotalMins - 15);
+      
+      const formatMins = (mins: number) => {
+        const h = Math.floor(mins / 60) % 24;
+        const m = mins % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      };
+      startTime = formatMins(warmupStartMins);
+      endTime = formatMins(warmupEndMins);
+    }
+
     const location = event.location || 'Crane Road';
-    const title = event.title || `${weekFolder} Practice`;
+    const title = isGame
+      ? (event.title.toLowerCase().includes('pre-game') || event.title.toLowerCase().includes('warmup')
+          ? event.title
+          : `Pre-Game Warmup: ${event.title}`)
+      : (event.title || `${weekFolder} Practice`);
 
     // 4. Find existing practice plan
-    let existing = event.linkedPracticePlanId
-      ? practiceData.find((p) => p && p.id === event.linkedPracticePlanId)
+    const targetPlanId = event.preGamePlanId || event.linkedPracticePlanId;
+    let existing = targetPlanId
+      ? practiceData.find((p) => p && p.id === targetPlanId)
       : undefined;
 
     if (!existing && event.date) {
-      existing = practiceData.find((p) => p && p.date === event.date);
+      existing = practiceData.find(
+        (p) =>
+          p &&
+          p.date === event.date &&
+          (isGame
+            ? p.title?.toLowerCase().includes('pre-game') ||
+              p.title?.toLowerCase().includes('warmup') ||
+              p.id === targetPlanId
+            : true)
+      );
     }
 
     if (!existing) {
@@ -5029,7 +5084,13 @@ function mergeRemoteWeeklyData(
       if (event.linkedPracticePlanId !== existingId) {
         setScheduleEvents((prev) => {
           const next = prev.map((ev) =>
-            ev.id === event.id ? { ...ev, linkedPracticePlanId: existingId } : ev
+            ev.id === event.id
+              ? {
+                  ...ev,
+                  linkedPracticePlanId: existingId,
+                  preGamePlanId: isGame ? existingId : ev.preGamePlanId,
+                }
+              : ev
           );
           safeJSONSet('footballScheduleEvents', next);
           latestStateRef.current.scheduleEvents = next;
@@ -5043,10 +5104,11 @@ function mergeRemoteWeeklyData(
 
     // 5. Create new plan auto-populated with date, time, week folder, and day
     const newPracticeId = 'prac_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+    const defaultTemplateKey = isGame ? 'Pre-Game Warmup & Routine' : 'Standard Practice';
     const planTemplate =
       templateName && DEFAULT_PRACTICE_TEMPLATES[templateName]
         ? DEFAULT_PRACTICE_TEMPLATES[templateName]
-        : DEFAULT_PRACTICE_TEMPLATES['Standard Practice'] || [];
+        : (DEFAULT_PRACTICE_TEMPLATES[defaultTemplateKey] || DEFAULT_PRACTICE_TEMPLATES['Standard Practice'] || []);
 
     const newPlan: PracticePlan = {
       id: newPracticeId,
@@ -5068,7 +5130,13 @@ function mergeRemoteWeeklyData(
 
     setScheduleEvents((prev) => {
       const next = prev.map((ev) =>
-        ev.id === event.id ? { ...ev, linkedPracticePlanId: newPracticeId } : ev
+        ev.id === event.id
+          ? {
+              ...ev,
+              linkedPracticePlanId: newPracticeId,
+              preGamePlanId: isGame ? newPracticeId : ev.preGamePlanId,
+            }
+          : ev
       );
       safeJSONSet('footballScheduleEvents', next);
       latestStateRef.current.scheduleEvents = next;
@@ -5941,6 +6009,13 @@ function mergeRemoteWeeklyData(
                 activeTeamRoster={activeTeamRoster}
                 currentUser={currentUser}
                 onNavigateToSchedule={() => setActiveUnit('schedule')}
+                practicePlans={practiceData}
+                onSyncPracticeToPlan={handleSyncPracticeToPlan}
+                onNavigateToPractice={(planId) => {
+                  if (planId) setCurrentPracticeId(planId);
+                  setActiveUnit('practice');
+                }}
+                onUpdateScheduleEvent={handleUpdateScheduleEvent}
               />
             )}
 
@@ -5966,8 +6041,10 @@ function mergeRemoteWeeklyData(
                   debouncedSave('all');
                 }}
                 onUpdateWristbandData={(updatedWb) => {
+                  lastLocalEditTimeRef.current = Date.now();
+                  safeJSONSet('footballWristbandData', updatedWb);
+                  const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
                   setWeeklyData((prev) => {
-                    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
                     const existingWeek = prev[scopedKey] || prev[currentWeek] || {
                       formations: defaultFormations,
                       depthChart: {},
@@ -5978,58 +6055,108 @@ function mergeRemoteWeeklyData(
                       ...existingWeek,
                       wristbandData: updatedWb,
                     };
-                    return {
+                    const nextWeekly = {
                       ...prev,
                       [scopedKey]: updatedWeek,
                       [currentWeek]: updatedWeek,
                     };
+                    latestStateRef.current.weeklyData = nextWeekly;
+                    safeJSONSet('footballWeeklyData', nextWeekly);
+                    return nextWeekly;
                   });
+                  debouncedSave('all');
                 }}
                 onUpdateTitle={(title) => {
+                  lastLocalEditTimeRef.current = Date.now();
                   const wb = currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA;
-                  setWeeklyData((prev) => ({
-                    ...prev,
-                    [currentWeek]: {
-                      ...prev[currentWeek],
-                      wristbandData: { ...wb, title },
-                    },
-                  }));
+                  const updatedWb = { ...wb, title };
+                  safeJSONSet('footballWristbandData', updatedWb);
+                  const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+                  setWeeklyData((prev) => {
+                    const existingWeek = prev[scopedKey] || prev[currentWeek] || {
+                      formations: defaultFormations,
+                      depthChart: {},
+                      scrimmageChart: {},
+                      opponent: '',
+                    };
+                    const updatedWeek = { ...existingWeek, wristbandData: updatedWb };
+                    const nextWeekly = {
+                      ...prev,
+                      [scopedKey]: updatedWeek,
+                      [currentWeek]: updatedWeek,
+                    };
+                    latestStateRef.current.weeklyData = nextWeekly;
+                    safeJSONSet('footballWeeklyData', nextWeekly);
+                    return nextWeekly;
+                  });
+                  debouncedSave('all');
                 }}
                 onClearPlays={() => {
+                  lastLocalEditTimeRef.current = Date.now();
                   const wb = currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA;
-                  setWeeklyData((prev) => ({
-                    ...prev,
-                    [currentWeek]: {
-                      ...prev[currentWeek],
-                      wristbandData: {
-                        ...wb,
-                        columns: [
-                          { color: '#facc15', plays: Array(13).fill({ text: '' }) },
-                          { color: '#3b82f6', plays: Array(13).fill({ text: '' }) },
-                        ],
-                      },
-                    },
-                  }));
+                  const updatedWb = {
+                    ...wb,
+                    columns: [
+                      { color: '#facc15', plays: Array(13).fill({ text: '' }) },
+                      { color: '#3b82f6', plays: Array(13).fill({ text: '' }) },
+                    ],
+                  };
+                  safeJSONSet('footballWristbandData', updatedWb);
+                  const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+                  setWeeklyData((prev) => {
+                    const existingWeek = prev[scopedKey] || prev[currentWeek] || {
+                      formations: defaultFormations,
+                      depthChart: {},
+                      scrimmageChart: {},
+                      opponent: '',
+                    };
+                    const updatedWeek = { ...existingWeek, wristbandData: updatedWb };
+                    const nextWeekly = {
+                      ...prev,
+                      [scopedKey]: updatedWeek,
+                      [currentWeek]: updatedWeek,
+                    };
+                    latestStateRef.current.weeklyData = nextWeekly;
+                    safeJSONSet('footballWeeklyData', nextWeekly);
+                    return nextWeekly;
+                  });
+                  debouncedSave('all');
                 }}
                 onBulkFillPlays={(plays) => {
+                  lastLocalEditTimeRef.current = Date.now();
                   const wb = currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA;
                   const yellowPlays = plays.slice(0, 13).map((p) => ({ text: p }));
                   const bluePlays = plays.slice(13, 26).map((p) => ({ text: p }));
-                  setWeeklyData((prev) => ({
-                    ...prev,
-                    [currentWeek]: {
-                      ...prev[currentWeek],
-                      wristbandData: {
-                        ...wb,
-                        columns: [
-                          { color: '#facc15', plays: yellowPlays },
-                          { color: '#3b82f6', plays: bluePlays },
-                        ],
-                      },
-                    },
-                  }));
+                  const updatedWb = {
+                    ...wb,
+                    columns: [
+                      { color: '#facc15', plays: yellowPlays },
+                      { color: '#3b82f6', plays: bluePlays },
+                    ],
+                  };
+                  safeJSONSet('footballWristbandData', updatedWb);
+                  const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+                  setWeeklyData((prev) => {
+                    const existingWeek = prev[scopedKey] || prev[currentWeek] || {
+                      formations: defaultFormations,
+                      depthChart: {},
+                      scrimmageChart: {},
+                      opponent: '',
+                    };
+                    const updatedWeek = { ...existingWeek, wristbandData: updatedWb };
+                    const nextWeekly = {
+                      ...prev,
+                      [scopedKey]: updatedWeek,
+                      [currentWeek]: updatedWeek,
+                    };
+                    latestStateRef.current.weeklyData = nextWeekly;
+                    safeJSONSet('footballWeeklyData', nextWeekly);
+                    return nextWeekly;
+                  });
+                  debouncedSave('all');
                 }}
                 onUpdatePlay={(colIdx, rowIdx, text) => {
+                  lastLocalEditTimeRef.current = Date.now();
                   const wb = currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA;
                   const cols = [...(wb.columns || [])];
                   if (!cols[0]) cols[0] = { color: '#facc15', plays: [] };
@@ -6041,13 +6168,27 @@ function mergeRemoteWeeklyData(
                   targetCol.plays = plays;
                   cols[colIdx] = targetCol;
 
-                  setWeeklyData((prev) => ({
-                    ...prev,
-                    [currentWeek]: {
-                      ...prev[currentWeek],
-                      wristbandData: { ...wb, columns: cols },
-                    },
-                  }));
+                  const updatedWb = { ...wb, columns: cols };
+                  safeJSONSet('footballWristbandData', updatedWb);
+                  const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+                  setWeeklyData((prev) => {
+                    const existingWeek = prev[scopedKey] || prev[currentWeek] || {
+                      formations: defaultFormations,
+                      depthChart: {},
+                      scrimmageChart: {},
+                      opponent: '',
+                    };
+                    const updatedWeek = { ...existingWeek, wristbandData: updatedWb };
+                    const nextWeekly = {
+                      ...prev,
+                      [scopedKey]: updatedWeek,
+                      [currentWeek]: updatedWeek,
+                    };
+                    latestStateRef.current.weeklyData = nextWeekly;
+                    safeJSONSet('footballWeeklyData', nextWeekly);
+                    return nextWeekly;
+                  });
+                  debouncedSave('all');
                 }}
               />
             )}

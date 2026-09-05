@@ -145,9 +145,10 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
 
   // Helper to commit reordered situational sections
   const commitRows = (rows: { rowIndex: number; sections: CallSheetSection[] }[]) => {
-    // Re-index all sections across all rows
+    // Filter out rows that have no sections to ensure clean sequential rows
+    const activeRows = rows.filter((r) => r.sections.length > 0);
     const newTopSections: CallSheetSection[] = [];
-    rows.forEach((row, newRowIdx) => {
+    activeRows.forEach((row, newRowIdx) => {
       row.sections.forEach((sec, orderIdx) => {
         newTopSections.push({
           ...sec,
@@ -156,6 +157,9 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
         });
       });
     });
+
+    // Clear empty row indices or retain intentional empty rows
+    setEmptyRowIndices([]);
 
     // Recombine with non-top sections
     const nonTopSections = sections.filter((s) => !topSections.some((ts) => ts.id === s.id));
@@ -356,22 +360,50 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
     setDragOverTarget(null);
   };
 
+  const handleDropBetweenRows = (e: React.DragEvent, insertRowPosition: number) => {
+    const sourceId = draggingSectionId || e.dataTransfer.getData('application/callsheet-table-drag');
+    if (!sourceId) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const sourceSec = sections.find((s) => s.id === sourceId);
+    if (!sourceSec) return;
+
+    // Filter out sourceSec from current rows
+    const nonSourceRows = situationalRows
+      .map((r) => ({
+        rowIndex: r.rowIndex,
+        sections: r.sections.filter((s) => s.id !== sourceId),
+      }))
+      .filter((r) => r.sections.length > 0);
+
+    // Insert new row containing sourceSec at insertRowPosition
+    nonSourceRows.splice(insertRowPosition, 0, {
+      rowIndex: 9999,
+      sections: [sourceSec],
+    });
+
+    commitRows(nonSourceRows);
+    setDraggingSectionId(null);
+    setDragOverTarget(null);
+  };
+
   // Helper to determine responsive grid classes based on table count in a row
   const getRowGridClass = (count: number) => {
     switch (count) {
       case 1:
-        return 'grid grid-cols-1 w-full gap-2.5 items-start';
+        return 'grid grid-cols-1 print:grid-cols-1 w-full gap-2.5 items-start';
       case 2:
-        return 'grid grid-cols-1 sm:grid-cols-2 w-full gap-2.5 items-start';
+        return 'grid grid-cols-1 sm:grid-cols-2 print:grid-cols-2 w-full gap-2.5 items-start';
       case 3:
-        return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-full gap-2.5 items-start';
+        return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3 w-full gap-2.5 items-start';
       case 4:
-        return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full gap-2.5 items-start';
+        return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 print:grid-cols-4 w-full gap-2.5 items-start';
       case 5:
-        return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 w-full gap-2 items-start';
+        return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 print:grid-cols-5 w-full gap-2 items-start';
       case 6:
       default:
-        return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 w-full gap-2 items-start';
+        return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 print:grid-cols-6 w-full gap-2 items-start';
     }
   };
 
@@ -467,10 +499,8 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
           {situationalRows.map((row, rowIdx) => {
             const tableCount = row.sections.length;
             return (
-              <div
-                key={`sit-row-${row.rowIndex}`}
-                className="space-y-1.5 transition-all"
-              >
+              <React.Fragment key={`sit-row-${row.rowIndex}`}>
+                <div className="space-y-1.5 transition-all">
                 {/* Row Header & Toolbar (screen only) */}
                 <div className="flex items-center justify-between px-1 py-0.5 text-[10.5px] border-b border-slate-200/80 dark:border-slate-800/80 text-slate-600 dark:text-slate-400 print:hidden select-none">
                   <div className="flex items-center gap-2">
@@ -563,7 +593,11 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
                   </div>
                 ) : (
                   <div
-                    className={getRowGridClass(tableCount)}
+                    className={getRowGridClass(
+                      draggingSectionId && !row.sections.some((s) => s.id === draggingSectionId)
+                        ? tableCount + 1
+                        : tableCount
+                    )}
                     onDragOver={(e) => {
                       if (e.dataTransfer.types.includes('application/callsheet-table-drag')) {
                         e.preventDefault();
@@ -579,6 +613,7 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
                           key={sec.id}
                           className="relative flex flex-col min-w-0"
                           onDragOver={(e) => handleDragOverTable(e, sec.id, row.rowIndex)}
+                          onDrop={(e) => handleDropOnTable(e, sec.id, row.rowIndex)}
                         >
                           {/* Drop Indicator Bar on Left (Before) */}
                           {isDragTargetThis && dragOverTarget?.position === 'before' && (
@@ -601,6 +636,8 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
                             onMoveTableRight={(secId) => handleMoveTableInRow(secId, 1)}
                             onMoveTableUpRow={(secId) => handleMoveTableAcrossRows(secId, -1)}
                             onMoveTableDownRow={(secId) => handleMoveTableAcrossRows(secId, 1)}
+                            onMoveTableToRow={(secId, targetRowIdx) => moveTableToRow(secId, targetRowIdx)}
+                            availableRowIndices={situationalRows.map((r) => r.rowIndex)}
                             canMoveLeft={secIdx > 0}
                             canMoveRight={secIdx < row.sections.length - 1}
                             canMoveUpRow={rowIdx > 0}
@@ -617,11 +654,68 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
                         </div>
                       );
                     })}
+
+                    {/* End-of-row drop slot when dragging a table from elsewhere */}
+                    {draggingSectionId && !row.sections.some((s) => s.id === draggingSectionId) && (
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDragOverTarget({ rowIndex: row.rowIndex, position: 'row-end' });
+                        }}
+                        onDragLeave={() => {
+                          if (dragOverTarget?.rowIndex === row.rowIndex && dragOverTarget?.position === 'row-end') {
+                            setDragOverTarget(null);
+                          }
+                        }}
+                        onDrop={(e) => handleDropOnRowEnd(e, row.rowIndex)}
+                        className={`border-2 border-dashed rounded min-h-[140px] flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer p-3 select-none print:hidden ${
+                          dragOverTarget?.rowIndex === row.rowIndex && dragOverTarget?.position === 'row-end'
+                            ? 'border-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 scale-[1.01] shadow-md'
+                            : 'border-slate-300 dark:border-slate-800 text-slate-400 dark:text-slate-500 hover:border-indigo-400 hover:text-indigo-500 hover:bg-slate-50 dark:hover:bg-slate-900/30'
+                        }`}
+                        title={`Drop here to place table at the end of Row ${rowIdx + 1}`}
+                      >
+                        <Plus className="w-5 h-5 text-indigo-500" />
+                        <span className="text-xs font-bold text-center">Drop in Row {rowIdx + 1}</span>
+                        <span className="text-[10px] font-mono text-slate-400">
+                          ({tableCount + 1} tables &bull; 1/{tableCount + 1} width)
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            );
-          })}
+
+              {/* Inter-row drop indicator to split or insert a new row between rows */}
+              {draggingSectionId && rowIdx < situationalRows.length - 1 && (
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragOverTarget({ rowIndex: row.rowIndex, position: 'new-row-between' as any });
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverTarget?.position === ('new-row-between' as any)) {
+                      setDragOverTarget(null);
+                    }
+                  }}
+                  onDrop={(e) => handleDropBetweenRows(e, rowIdx + 1)}
+                  className={`h-6 -my-1 rounded transition-all flex items-center justify-center print:hidden cursor-pointer ${
+                    dragOverTarget?.rowIndex === row.rowIndex && dragOverTarget?.position === ('new-row-between' as any)
+                      ? 'bg-indigo-500/20 border-2 border-dashed border-indigo-500 py-3 h-10'
+                      : 'opacity-0 hover:opacity-100 hover:bg-indigo-500/10'
+                  }`}
+                  title="Drop here to insert a brand new row in between"
+                >
+                  <span className="text-[10.5px] font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-900 px-3 py-0.5 rounded shadow-xs border border-indigo-300 dark:border-indigo-700">
+                    + Drop here to insert a new row between Row {rowIdx + 1} and Row {rowIdx + 2}
+                  </span>
+                </div>
+              )}
+            </React.Fragment>
+          );
+        })}
 
           {/* Bottom Drop Zone / Add Row Trigger */}
           <div

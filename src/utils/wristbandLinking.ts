@@ -198,9 +198,25 @@ export function buildWristbandIndex(
   wristbandData?: WristbandData
 ): Map<string, WristbandSlotMatch> {
   const index = new Map<string, WristbandSlotMatch>();
-  if (!wristbandData || !wristbandData.wristbands) return index;
+  if (!wristbandData) return index;
 
-  wristbandData.wristbands.forEach((wb, wbIdx) => {
+  const wristbandList =
+    wristbandData.wristbands && wristbandData.wristbands.length > 0
+      ? wristbandData.wristbands
+      : wristbandData.columns && wristbandData.columns.length > 0
+      ? [
+          {
+            id: wristbandData.activeWristbandId || 'wb_1',
+            title: wristbandData.title || 'Wristband',
+            rowsCount: wristbandData.rows || 13,
+            columns: wristbandData.columns,
+          },
+        ]
+      : [];
+
+  if (wristbandList.length === 0) return index;
+
+  wristbandList.forEach((wb, wbIdx) => {
     const wbShort = `WB${wbIdx + 1}`;
     const rows = wb.rowsCount || 13;
     const highlightTarget = wb.highlightTarget || 'number_only';

@@ -656,7 +656,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
+    <div className="h-[calc(100vh-4.5rem)] bg-slate-900 text-slate-100 flex flex-col font-sans overflow-hidden">
       {/* 1. Main Navigation Toolbar (Hidden when printing) */}
       <header className="bg-slate-850 border-b border-slate-750 px-3 sm:px-6 py-2.5 shrink-0 shadow-md print:hidden">
         <div className="max-w-[1500px] mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -879,9 +879,9 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
       </header>
 
       {/* 2. Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Main sheet container */}
-        <main className="flex-1 overflow-y-auto p-2 sm:p-4 print:p-0 print:overflow-visible">
+        <main className="flex-1 overflow-y-auto min-h-0 p-2 sm:p-4 print:p-0 print:overflow-visible overscroll-contain">
           {/* Printable Call Sheet Header Bar */}
           <div className="hidden print:block mb-3 border-b-2 border-black pb-2 text-black">
             <div className="flex items-center justify-between">

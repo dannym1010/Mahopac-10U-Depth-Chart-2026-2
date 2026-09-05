@@ -1473,6 +1473,72 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
         }
       ]
     }
+  ],
+  "Pre-Game Warmup & Routine": [
+    {
+      time: 15,
+      category: "⚡ (Warm-up, Agility and Conditioning)",
+      format: "static",
+      stations: [
+        {
+          name: "Full Team Dynamic Warmup & Activation",
+          desc: "Dynamic stretching, knee tucks, high knees, butt kicks, 10-yard build-up sprints",
+          coach: "",
+          focus: "Game readiness, muscle activation & joint mobility"
+        }
+      ]
+    },
+    {
+      time: 15,
+      category: "🏈 Offense",
+      format: "rotating",
+      stations: [
+        {
+          name: "QB / WR Passing Tree & Routes vs Air",
+          desc: "Snaps, quick game, intermediate routes, timing & sidelines",
+          coach: "",
+          focus: "Throw on time, crisp cuts & secure catches"
+        },
+        {
+          name: "OL / RB Run Fit & Mesh Warmup",
+          desc: "Inside zone, dive mesh, gap footwork and first-step punch",
+          coach: "",
+          focus: "Clean handoffs & first step explosion"
+        }
+      ]
+    },
+    {
+      time: 15,
+      category: "🛡️ Defense",
+      format: "rotating",
+      stations: [
+        {
+          name: "DL Get-Off & Punch Shuck",
+          desc: "Reaction to ball snap, violent punch, lockout and shed",
+          coach: "",
+          focus: "Fast twitch get-off, no offsides"
+        },
+        {
+          name: "DB / LB Pursuit & Breakdown Angles",
+          desc: "Angle of pursuit, breakdown, shuffle, tag off hip",
+          coach: "",
+          focus: "Proper angle to outside hip, leverage"
+        }
+      ]
+    },
+    {
+      time: 15,
+      category: "📋 General",
+      format: "static",
+      stations: [
+        {
+          name: "Special Teams & Opening Script Review",
+          desc: "Kickoff, Kick Return, Punt alignment, call & walk through first 5 scripted plays",
+          coach: "",
+          focus: "Personnel groups, zero pre-snap penalties, game focus"
+        }
+      ]
+    }
   ]
 };
 
@@ -1937,6 +2003,8 @@ export const DEFAULT_SCHEDULE_EVENTS: ScheduleEvent[] = [
     opponent: "Suffern",
     uniform: "White Away Jerseys",
     arrivalMinutesBefore: 90,
+    linkedPracticePlanId: "p_g1_pregame",
+    preGamePlanId: "p_g1_pregame",
     focusOrNotes: "Regular Season Opener! Arrival Time: 10:30 AM at Suffern Middle School.",
     createdAt: 1725200000000,
     lastEdited: 1725200000000,
@@ -2678,6 +2746,84 @@ export const DEFAULT_INITIAL_PRACTICES: PracticePlan[] = [
             desc: "Offense vs Defense 15-play situational scrimmage with referee whistle.",
             coach: "",
             focus: "Game speed execution and player rotations"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "p_g1_pregame",
+    teamId: "team_10u",
+    year: "2026",
+    weekFolder: "Week 1",
+    dayFolder: "Sunday 9/06",
+    date: "2026-09-06",
+    startTime: "10:30",
+    endTime: "11:45",
+    title: "Pre-Game Warmup & Routine @ Suffern",
+    location: "Suffern Middle School",
+    periods: [
+      {
+        time: 15,
+        category: "⚡ (Warm-up, Agility and Conditioning)",
+        format: "static",
+        stations: [
+          {
+            name: "Full Team Dynamic Warmup & Activation",
+            desc: "Dynamic stretching, knee tucks, high knees, butt kicks, 10-yard build-up sprints",
+            coach: "Coach Dave",
+            focus: "Game readiness, muscle activation & joint mobility"
+          }
+        ]
+      },
+      {
+        time: 15,
+        category: "🏈 Offense",
+        format: "rotating",
+        stations: [
+          {
+            name: "QB / WR Passing Tree & Routes vs Air",
+            desc: "Snaps, quick game, intermediate routes, timing & sidelines",
+            coach: "Coach John",
+            focus: "Throw on time, crisp cuts & secure catches"
+          },
+          {
+            name: "OL / RB Run Fit & Mesh Warmup",
+            desc: "Inside zone, dive mesh, gap footwork and first-step punch",
+            coach: "Coach Mike",
+            focus: "Clean handoffs & first step explosion"
+          }
+        ]
+      },
+      {
+        time: 15,
+        category: "🛡️ Defense",
+        format: "rotating",
+        stations: [
+          {
+            name: "DL Get-Off & Punch Shuck",
+            desc: "Reaction to ball snap, violent punch, lockout and shed",
+            coach: "Coach Pete",
+            focus: "Fast twitch get-off, no offsides"
+          },
+          {
+            name: "DB / LB Pursuit & Breakdown Angles",
+            desc: "Angle of pursuit, breakdown, shuffle, tag off hip",
+            coach: "Coach Tom",
+            focus: "Proper angle to outside hip, leverage"
+          }
+        ]
+      },
+      {
+        time: 15,
+        category: "📋 General",
+        format: "static",
+        stations: [
+          {
+            name: "Special Teams & Opening Script Review",
+            desc: "Kickoff, Kick Return, Punt alignment, call & walk through first 5 scripted plays",
+            coach: "Head Coach",
+            focus: "Personnel groups, zero pre-snap penalties, game focus"
           }
         ]
       }

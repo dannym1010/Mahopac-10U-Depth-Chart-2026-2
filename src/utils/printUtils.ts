@@ -4,7 +4,7 @@
  * Supports direct window printing, clean standalone iframe printing, and new tab printable view.
  */
 
-import { PracticePlan, PracticePeriod, RosterPlayer, AttendanceRecord, SeasonConfig, calculatePlayerCompliance } from '../types';
+import { PracticePlan, PracticePeriod, RosterPlayer, AttendanceRecord, SeasonConfig, calculatePlayerCompliance, SingleWristband, WristbandPlay } from '../types';
 import { calculatePlayerHours, getPlayerHoursBreakdown } from './hoursCalculation';
 import { formatWeekLabel } from './seasonWeekUtils';
 
@@ -2084,4 +2084,346 @@ export function printSinglePlayerHourReport(options: SinglePlayerHourReportOptio
   const title = `Practice_Certificate_${options.player.firstName}_${options.player.lastName}_#${options.player.num}`;
   printCleanHTML(html, title);
 }
+
+/**
+ * Generates clean, standalone printable HTML for physical 4.5" x 2.25" wristband inserts.
+ * Renders exact dimensions, dashed cut guides, team branding, colored column badges,
+ * and high-contrast play typography.
+ */
+export function generateWristbandPrintHTML(
+  wristbands: SingleWristband[],
+  activeTeamName: string = 'Mahopac 10U',
+  documentTitle?: string
+): string {
+  const title = documentTitle || `${activeTeamName} Wristband Inserts`;
+
+  const getContrastColor = (hexColor: string, defaultColor?: string): string => {
+    if (defaultColor) return defaultColor;
+    if (!hexColor) return '#000000';
+    let hex = hexColor.replace('#', '');
+    if (hex.length === 3) {
+      hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    const r = parseInt(hex.substring(0, 2), 16) || 0;
+    const g = parseInt(hex.substring(2, 4), 16) || 0;
+    const b = parseInt(hex.substring(4, 6), 16) || 0;
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+    return yiq >= 128 ? '#000000' : '#ffffff';
+  };
+
+  const getSlotLabel = (
+    wb: SingleWristband,
+    wbIndex: number,
+    colIdx: number,
+    rowIdx: number,
+    play?: WristbandPlay
+  ): string => {
+    if (play?.customLabel) return play.customLabel;
+    const mode = wb.labelingMode || 'same_per_card';
+    const rows = wb.rowsCount || 13;
+
+    if (mode === 'same_per_card') {
+      return String(colIdx * rows + rowIdx + 1);
+    }
+    if (mode === 'continuous') {
+      const prevRowsTotal = wbIndex * (rows * (wb.columns?.length || 2));
+      return String(prevRowsTotal + colIdx * rows + rowIdx + 1);
+    }
+    if (mode === 'letter_num') {
+      const letter = colIdx === 0 ? 'A' : colIdx === 1 ? 'B' : 'C';
+      return `${letter}${rowIdx + 1}`;
+    }
+    return String(colIdx * rows + rowIdx + 1);
+  };
+
+  const cardsHtml = wristbands
+    .map((wb, wbIdx) => {
+      const rows = wb.rowsCount || 13;
+      const cols = wb.columns && wb.columns.length > 0 ? wb.columns : [
+        { color: '#facc15', plays: [] },
+        { color: '#38bdf8', plays: [] },
+      ];
+
+      const colHeadersHtml = cols
+        .map((col, cIdx) => {
+          const colBg = col.numberBgColor || col.color || (cIdx === 0 ? '#facc15' : '#38bdf8');
+          const colText = col.headerTextColor || getContrastColor(colBg, col.numberTextColor);
+          const colName =
+            col.name ||
+            (cIdx === 0 ? `COL 1 (1 - ${rows})` : `COL 2 (${rows + 1} - ${rows * 2})`);
+
+          return `
+            <div class="col-head" style="background-color: ${colBg}; color: ${colText};">
+              ${colName}
+            </div>
+          `;
+        })
+        .join('');
+
+      const colsBodyHtml = cols
+        .map((col, cIdx) => {
+          const plays = col.plays || [];
+          const colBg = col.numberBgColor || col.color || (cIdx === 0 ? '#facc15' : '#38bdf8');
+
+          const rowsHtml = Array.from({ length: rows })
+            .map((_, rIdx) => {
+              const play = plays[rIdx] || { text: '' };
+              const slotLabel = getSlotLabel(wb, wbIdx, cIdx, rIdx, play);
+              const numberBg = play.numberHighlightColor || colBg;
+              const numberTextColor = play.numberTextColor || col.numberTextColor || getContrastColor(numberBg);
+              const rowBg = play.rowHighlightColor || '#ffffff';
+              const playText = (play.text || '—').trim() || '—';
+
+              return `
+                <div class="row-item" style="background-color: ${rowBg}; height: calc(100% / ${rows});">
+                  <div class="slot-num" style="background-color: ${numberBg}; color: ${numberTextColor};">
+                    ${slotLabel}
+                  </div>
+                  <div class="slot-text">
+                    ${playText}
+                  </div>
+                </div>
+              `;
+            })
+            .join('');
+
+          return `
+            <div class="col-body">
+              ${rowsHtml}
+            </div>
+          `;
+        })
+        .join('');
+
+      return `
+        <div class="card-wrapper">
+          <div class="cut-guide">
+            <span>✂ CUT ALONG DASHED LINE</span>
+            <span>STANDARD 4.5&quot; &times; 2.25&quot; WRIST COACH INSERT</span>
+          </div>
+          <div class="card-box">
+            <div class="card-header">
+              ${wb.title || 'WRISTBAND INSERT'} &bull; ${activeTeamName.toUpperCase()}
+            </div>
+            <div class="cols-header">
+              ${colHeadersHtml}
+            </div>
+            <div class="cols-grid">
+              ${colsBodyHtml}
+            </div>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${title}</title>
+  <style>
+    @page {
+      size: letter portrait;
+      margin: 0.35in;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #ffffff;
+      color: #000000;
+    }
+    .print-header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding-bottom: 8px;
+      border-bottom: 1.5px solid #0f172a;
+    }
+    .print-header h1 {
+      font-size: 14pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      margin: 0;
+      letter-spacing: 0.04em;
+    }
+    .print-header p {
+      font-size: 8.5pt;
+      color: #475569;
+      margin: 3px 0 0 0;
+      font-weight: 700;
+    }
+    .cards-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 26px;
+      margin: 0 auto;
+    }
+    .card-wrapper {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      width: 4.5in;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .cut-guide {
+      width: 4.5in;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 7.5pt;
+      font-family: monospace;
+      font-weight: bold;
+      color: #334155;
+      margin-bottom: 4px;
+      letter-spacing: 0.05em;
+    }
+    .card-box {
+      width: 4.5in;
+      height: 2.25in;
+      min-width: 4.5in;
+      max-width: 4.5in;
+      min-height: 2.25in;
+      max-height: 2.25in;
+      border: 1.5px dashed #000000;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    .card-header {
+      background: #000000;
+      color: #ffffff;
+      text-align: center;
+      font-family: monospace, sans-serif;
+      font-size: 9pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      padding: 2px 4px;
+      border-bottom: 1.5px solid #000000;
+      letter-spacing: 0.04em;
+      height: 18px;
+      line-height: 15px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 0;
+    }
+    .cols-header {
+      display: flex;
+      border-bottom: 1.5px solid #000000;
+      height: 16px;
+      flex-shrink: 0;
+    }
+    .col-head {
+      flex: 1;
+      text-align: center;
+      font-family: monospace, sans-serif;
+      font-size: 8pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: 1.5px solid #000000;
+      overflow: hidden;
+      white-space: nowrap;
+      padding: 0 4px;
+    }
+    .col-head:last-child {
+      border-right: none;
+    }
+    .cols-grid {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      height: calc(2.25in - 34px);
+    }
+    .col-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-right: 1.5px solid #000000;
+      height: 100%;
+      overflow: hidden;
+    }
+    .col-body:last-child {
+      border-right: none;
+    }
+    .row-item {
+      display: flex;
+      align-items: stretch;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+      font-size: 8pt;
+      line-height: 1;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    .row-item:last-child {
+      border-bottom: none;
+    }
+    .slot-num {
+      width: 22px;
+      min-width: 22px;
+      max-width: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: monospace, sans-serif;
+      font-weight: 900;
+      font-size: 8pt;
+      border-right: 1px solid rgba(0, 0, 0, 0.4);
+      user-select: none;
+      flex-shrink: 0;
+    }
+    .slot-text {
+      flex: 1;
+      padding: 0 4px;
+      display: flex;
+      align-items: center;
+      font-family: monospace, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-weight: 900;
+      font-size: 7.5pt;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #000000;
+    }
+  </style>
+</head>
+<body>
+  <div class="print-header">
+    <h1>${activeTeamName} &bull; Game Day Wristband Cutouts</h1>
+    <p>Standard 4.5&quot; &times; 2.25&quot; Inserts &bull; Ready for Sleeve Lamination &bull; High Contrast Font</p>
+  </div>
+  <div class="cards-container">
+    ${cardsHtml}
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * Print wristband cards using dedicated isolated print engine.
+ * Never modifies main window DOM or causes state re-renders.
+ */
+export function printWristbandInserts(
+  wristbands: SingleWristband[],
+  activeTeamName: string = 'Mahopac 10U',
+  documentTitle?: string
+) {
+  const html = generateWristbandPrintHTML(wristbands, activeTeamName, documentTitle);
+  const title = documentTitle || `${activeTeamName}_Wristband_Inserts`;
+  printCleanHTML(html, title);
+}
+
 

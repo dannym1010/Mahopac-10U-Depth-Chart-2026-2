@@ -103,6 +103,7 @@ export interface ScheduleEvent {
   arrivalMinutesBefore?: number; // e.g. 60 min before game, 15 min before practice
   focusOrNotes?: string;
   linkedPracticePlanId?: string; // Links directly to a PracticePlan.id
+  preGamePlanId?: string; // Dedicated link to pre-game practice / warmup plan (for game events)
   isCancelled?: boolean;
   cancellationReason?: string;
   result?: {

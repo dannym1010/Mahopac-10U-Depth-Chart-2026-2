@@ -29,11 +29,12 @@ import {
   LayoutGrid,
   FileSpreadsheet,
   Zap,
+  ExternalLink,
 } from 'lucide-react';
 import { SingleWristband, WristbandColumn, WristbandData, WristbandPlay, UserRole } from '../types';
 import { PlayDatabaseEntry, CallSheetFullData, CallSheetPlay, PlayType } from '../types/callSheet';
 import { deepClone, safeJSONStringify, safeJSONSet, safeJSONParse } from '../services/storageService';
-import { triggerPrint } from '../utils/printUtils';
+import { printWristbandInserts, generateWristbandPrintHTML, openCleanPrintTab, triggerPrint } from '../utils/printUtils';
 import { extractPersonnel, getPersonnelSubTabs, normalizePlayName, syncCallSheetWithWristbands } from '../utils/wristbandLinking';
 import { PlayPickerModal } from './callSheet/PlayPickerModal';
 import { PlayBankSidebar } from './callSheet/PlayBankSidebar';
@@ -144,8 +145,8 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
   onUpdatePlayDatabase,
   onUpdateWristbandData,
 }) => {
-  // Normalize wristband data
-  const normalizedData: WristbandData = useMemo(() => {
+  // Internal state for resilient, instantaneous editing and printing
+  const [internalData, setInternalData] = useState<WristbandData>(() => {
     if (propWristbandData?.wristbands && propWristbandData.wristbands.length > 0) {
       return propWristbandData;
     }
@@ -154,7 +155,16 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
       return saved;
     }
     return INITIAL_TWO_WRISTBANDS_DATA;
+  });
+
+  // Synchronize internal state when prop changes from parent
+  useEffect(() => {
+    if (propWristbandData?.wristbands && propWristbandData.wristbands.length > 0) {
+      setInternalData(propWristbandData);
+    }
   }, [propWristbandData]);
+
+  const normalizedData: WristbandData = internalData;
 
   const wristbands = normalizedData.wristbands || [DEFAULT_WRISTBAND_1, DEFAULT_WRISTBAND_2];
 
@@ -199,8 +209,9 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
   // Drag-over visual feedback on slots
   const [dragOverSlot, setDragOverSlot] = useState<{ colIdx: number; rowIdx: number } | null>(null);
 
-  // Helper to commit changes to storage & parent
+  // Helper to commit changes to storage, internal state & parent
   const commitWristbandData = (updated: WristbandData) => {
+    setInternalData(updated);
     safeJSONSet('footballWristbandData', updated);
     if (onUpdateWristbandData) {
       onUpdateWristbandData(updated);
@@ -616,21 +627,19 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     });
   };
 
-  // Print Handlers
+  // Print Handlers - Uses isolated clean print engine to preserve DOM and state
   const handlePrint = (mode: 'active' | 'all') => {
     setPrintMode(mode);
-    setTimeout(() => {
-      triggerPrint({
-        beforePrint: () => {
-          document.body.classList.add('is-printing-wristbands');
-        },
-        afterPrint: () => {
-          document.body.classList.remove('is-printing-wristbands');
-        },
-        targetElementSelector: '#wristband-print-section',
-        documentTitle: mode === 'all' ? `${activeTeamName} Wristband Inserts` : `${currentWristband.title}`,
-      });
-    }, 100);
+    const targetWristbands = mode === 'all' ? wristbands : [currentWristband];
+    const docTitle = mode === 'all' ? `${activeTeamName} Wristband Inserts` : `${currentWristband.title}`;
+    printWristbandInserts(targetWristbands, activeTeamName, docTitle);
+  };
+
+  const handleOpenPrintTab = (mode: 'active' | 'all') => {
+    const targetWristbands = mode === 'all' ? wristbands : [currentWristband];
+    const docTitle = mode === 'all' ? `${activeTeamName} Wristband Inserts` : `${currentWristband.title}`;
+    const html = generateWristbandPrintHTML(targetWristbands, activeTeamName, docTitle);
+    openCleanPrintTab(html, docTitle);
   };
 
   // Current slot being picked via modal
@@ -759,7 +768,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
+    <div className="h-[calc(100vh-4.5rem)] bg-slate-900 text-slate-100 flex flex-col font-sans overflow-hidden">
       {/* 1. Main Navigation Toolbar (Hidden when printing - matching CallSheetMainView) */}
       <header className="bg-slate-850 border-b border-slate-750 px-3 sm:px-6 py-2.5 shrink-0 shadow-md print:hidden">
         <div className="max-w-[1500px] mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -927,6 +936,17 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
               </button>
             )}
 
+            {/* Open Standalone Printable View in New Tab / Save to PDF */}
+            <button
+              type="button"
+              onClick={() => handleOpenPrintTab('active')}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-750 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Open print view in new tab (PDF export / high-res review)"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden xl:inline">Print Tab</span>
+            </button>
+
             {/* Clear All Plays */}
             <button
               type="button"
@@ -940,10 +960,10 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
         </div>
       </header>
 
-      {/* 2. Main Content Area (`flex-1 flex overflow-hidden` matching Call Sheet Maker) */}
-      <div className="wristband-builder-screen flex-1 flex overflow-hidden print:hidden">
+      {/* 2. Main Content Area (`flex-1 flex overflow-hidden min-h-0` for independent scrolling) */}
+      <div className="wristband-builder-screen flex-1 flex overflow-hidden min-h-0 print:hidden">
         {/* Main interactive builder canvas */}
-        <main className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 print:p-0 print:overflow-visible">
+        <main className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-5 space-y-4 print:p-0 print:overflow-visible overscroll-contain">
           {/* Top Quick Settings Bar */}
           <div className="bg-slate-850 border border-slate-750 rounded-2xl p-3 shadow-md flex flex-wrap items-center justify-between gap-3 text-xs">
             {/* Title Editor */}
