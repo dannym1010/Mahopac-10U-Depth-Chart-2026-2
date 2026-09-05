@@ -125,6 +125,35 @@ body {
   }
 
 
+  /* Dedicated Wristband Cutouts Print Rules: ONLY cutouts spaced out */
+  body.is-printing-wristbands #wristband-print-section {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    padding: 0.4in 0 !important;
+    margin: 0 !important;
+  }
+
+  body.is-printing-wristbands #wristband-print-section * {
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  .wristband-cutout-item {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 0.75in !important;
+  }
+
+  .wristband-cutout-item:last-child {
+    margin-bottom: 0 !important;
+  }
+
   /* Printable formation cards: crisp white, clean borders, fits 2 per letter page cleanly */
   .formation-container {
     border: 2px solid #000000 !important;

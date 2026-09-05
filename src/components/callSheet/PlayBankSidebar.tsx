@@ -20,12 +20,21 @@ import {
   Check,
 } from 'lucide-react';
 import { PlayDatabaseEntry, PlayType, CallSheetPlay } from '../../types/callSheet';
-import { extractPersonnel, getPersonnelSubTabs } from '../../utils/wristbandLinking';
-import { safeJSONStringify } from '../../services/storageService';
+import { WristbandData } from '../../types';
+import {
+  extractPersonnel,
+  getPersonnelSubTabs,
+  buildWristbandIndex,
+  lookupWristbandPlay,
+  isDarkColor,
+} from '../../utils/wristbandLinking';
+import { safeJSONParse, safeJSONStringify } from '../../services/storageService';
+import { INITIAL_TWO_WRISTBANDS_DATA } from '../../data/userGameDayPlays';
 
 interface PlayBankSidebarProps {
   unit: 'offense' | 'defense';
   plays: PlayDatabaseEntry[];
+  wristbandData?: WristbandData;
   onAddCustomPlay: () => void;
   onOpenExcelImport?: () => void;
   onDeletePlay?: (playId: string) => void;
@@ -38,6 +47,7 @@ interface PlayBankSidebarProps {
 export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
   unit,
   plays,
+  wristbandData,
   onAddCustomPlay,
   onOpenExcelImport,
   onDeletePlay,
@@ -53,6 +63,22 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
   const [playToDelete, setPlayToDelete] = useState<PlayDatabaseEntry | null>(null);
   const [isConfirmResetOpen, setIsConfirmResetOpen] = useState(false);
   const [selectedPersonnel, setSelectedPersonnel] = useState<string>('all');
+
+  // Derive live wristband index so play bank only colors plays actively assigned to a wristband slot
+  const effectiveWristbandData = useMemo(() => {
+    if (wristbandData && wristbandData.wristbands && wristbandData.wristbands.length > 0) {
+      return wristbandData;
+    }
+    const saved = safeJSONParse<WristbandData | null>('footballWristbandData', null);
+    if (saved && saved.wristbands && saved.wristbands.length > 0) {
+      return saved;
+    }
+    return INITIAL_TWO_WRISTBANDS_DATA;
+  }, [wristbandData]);
+
+  const wristbandIndex = useMemo(() => {
+    return buildWristbandIndex(effectiveWristbandData);
+  }, [effectiveWristbandData]);
 
   const personnelTabs = useMemo(() => {
     return getPersonnelSubTabs(plays, unit);
@@ -73,14 +99,19 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
         const matchesFormation = p.formation.toLowerCase().includes(term);
         const matchesConcept = (p.concept || '').toLowerCase().includes(term);
         const matchesTags = (p.tags || []).some((t) => t.toLowerCase().includes(term));
-        const matchesWristband = p.wristbandNum ? `#${p.wristbandNum}`.includes(term) : false;
+        const match = lookupWristbandPlay(p.name, wristbandIndex);
+        const matchesWristband = match
+          ? `#${match.slotLabel}`.includes(term)
+          : p.wristbandNum
+          ? `#${p.wristbandNum}`.includes(term)
+          : false;
         if (!matchesName && !matchesFormation && !matchesConcept && !matchesTags && !matchesWristband) {
           return false;
         }
       }
       return true;
     });
-  }, [plays, unit, selectedType, selectedPersonnel, searchTerm]);
+  }, [plays, unit, selectedType, selectedPersonnel, searchTerm, wristbandIndex]);
 
   const selectedCount = useMemo(() => {
     return Object.values(selectedPlayIds).filter(Boolean).length;
@@ -122,22 +153,38 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
   };
 
   const handleDragStart = (e: React.DragEvent, play: PlayDatabaseEntry) => {
+    const match = lookupWristbandPlay(play.name, wristbandIndex);
     const playData: CallSheetPlay = {
       id: `drag_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       name: play.name,
       formation: play.formation,
       type: play.type,
-      wristbandNum: play.wristbandNum,
-      wristbandLabel: play.wristbandLabel,
-      wristbandColor: play.wristbandColor,
-      wristbandNumberColor: play.wristbandNumberColor,
-      wristbandHighlightTarget: play.wristbandHighlightTarget,
-      wristbandSlotMatch: play.wristbandSlotMatch,
+      wristbandNum: match ? match.wristbandNum : play.wristbandNum,
+      wristbandLabel: match ? match.slotLabel : (play.wristbandLabel || (play.wristbandNum ? String(play.wristbandNum) : undefined)),
+      wristbandColor: match ? match.numberBgColor : undefined,
+      wristbandNumberColor: match ? match.numberBgColor : undefined,
+      wristbandRowColor: match ? match.rowBgColor : undefined,
+      wristbandHighlightTarget: match ? match.highlightTarget : undefined,
+      wristbandTitle: match ? match.wristbandTitle : undefined,
+      wristbandSlotMatch: match
+        ? {
+            wristbandId: match.wristbandId,
+            wristbandTitle: match.wristbandTitle,
+            cardLabel: match.wristbandShort,
+            slotNumber: match.slotLabel,
+            numberBgColor: match.numberBgColor,
+            rowHighlightColor: match.rowBgColor,
+            highlightTarget: match.highlightTarget,
+          }
+        : undefined,
       personnel: play.personnel || extractPersonnel(play),
       notes: play.concept,
     };
+    const jsonStr = safeJSONStringify(playData);
     try {
-      e.dataTransfer.setData('application/json', safeJSONStringify(playData));
+      e.dataTransfer.setData('application/json', jsonStr);
+      e.dataTransfer.setData('callSheetPlayTransfer', jsonStr);
+      e.dataTransfer.setData('text/plain', play.name || jsonStr);
     } catch {}
     e.dataTransfer.effectAllowed = 'copy';
   };
@@ -432,18 +479,42 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                       )}
                     </div>
                   )}
-                  {play.wristbandNum && (
-                    <span
-                      style={{
-                        backgroundColor: play.wristbandNumberColor || play.wristbandColor || '#facc15',
-                        color: '#000000',
-                      }}
-                      className="px-1 py-0.2 rounded font-black text-[9px] font-mono shrink-0 shadow-2xs"
-                      title={play.wristbandLabel ? `Wristband: ${play.wristbandLabel}` : `Wristband #${play.wristbandNum}`}
-                    >
-                      #{play.wristbandNum}
-                    </span>
-                  )}
+                  {(() => {
+                    const match = lookupWristbandPlay(play.name, wristbandIndex);
+                    if (match) {
+                      // Play HAS a spot on the active wristband -> render with wristband color
+                      const bg = match.numberBgColor || '#facc15';
+                      const fg = isDarkColor(bg) ? '#ffffff' : '#000000';
+                      return (
+                        <span
+                          style={{
+                            backgroundColor: bg,
+                            color: fg,
+                          }}
+                          className="px-1 py-0.2 rounded font-black text-[9px] font-mono shrink-0 shadow-2xs border border-black/20"
+                          title={`${match.wristbandTitle} • Slot #${match.slotLabel}`}
+                        >
+                          #{match.slotLabel}
+                        </span>
+                      );
+                    }
+
+                    // Play DOES NOT have a spot on the wristband:
+                    // "If a play doesnt have a spot on the wristband it shouldnt have a color in the play bank"
+                    // If the entry has a custom wristbandNum, show uncolored (transparent bg, neutral slate border/text)
+                    if (play.wristbandNum) {
+                      return (
+                        <span
+                          className="px-1 py-0.2 rounded font-mono text-[9px] font-semibold text-slate-400 bg-transparent border border-slate-700/70 shrink-0"
+                          title="No spot on active wristband"
+                        >
+                          #{play.wristbandNum}
+                        </span>
+                      );
+                    }
+
+                    return null;
+                  })()}
                   <span className="font-bold text-xs text-slate-100 group-hover:text-white uppercase truncate">
                     {play.name}
                   </span>

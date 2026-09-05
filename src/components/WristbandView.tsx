@@ -196,6 +196,9 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
   // Print mode state: 'active' | 'all'
   const [printMode, setPrintMode] = useState<'active' | 'all'>('active');
 
+  // Drag-over visual feedback on slots
+  const [dragOverSlot, setDragOverSlot] = useState<{ colIdx: number; rowIdx: number } | null>(null);
+
   // Helper to commit changes to storage & parent
   const commitWristbandData = (updated: WristbandData) => {
     safeJSONSet('footballWristbandData', updated);
@@ -337,18 +340,24 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     wbId: string,
     colIdx: number,
     rowIdx: number,
-    playInput: string | CallSheetPlay | PlayDatabaseEntry
+    playInput: string | CallSheetPlay | PlayDatabaseEntry | WristbandPlay | any
   ) => {
     let playName = '';
     let formation = '';
     let type: PlayType | undefined = undefined;
+    let rowHighlight: string | undefined = undefined;
 
     if (typeof playInput === 'string') {
       playName = playInput.trim().toUpperCase();
-    } else {
-      playName = playInput.name.trim().toUpperCase();
+    } else if (playInput && typeof playInput === 'object') {
+      playName = ((playInput.name || playInput.text || '') as string).trim().toUpperCase();
       formation = playInput.formation || '';
       type = playInput.type;
+      rowHighlight =
+        playInput.rowHighlightColor ||
+        playInput.highlightColor ||
+        playInput.wristbandRowColor ||
+        (playInput.isHighlighted ? playInput.highlightColor : undefined);
     }
 
     const rows = currentWristband.rowsCount || 13;
@@ -375,6 +384,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
         wristbandNum: slotNumber,
         numberHighlightColor: colColor,
         numberTextColor: colTextColor,
+        rowHighlightColor: rowHighlight || nextPlays[rowIdx]?.rowHighlightColor,
       };
 
       targetCol.plays = nextPlays;
@@ -402,7 +412,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
       const targetCol = { ...nextCols[colIdx] };
       const nextPlays = [...(targetCol.plays || [])];
       if (nextPlays[rowIdx]) {
-        nextPlays[rowIdx] = { text: '' };
+        nextPlays[rowIdx] = { text: '', rowHighlightColor: undefined };
       }
       targetCol.plays = nextPlays;
       nextCols[colIdx] = targetCol;
@@ -418,16 +428,44 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     rowIdx: number
   ) => {
     e.preventDefault();
+    setDragOverSlot(null);
     try {
+      // 1. Try application/json (standard from PlayBankSidebar and Call Sheet)
+      const appJson = e.dataTransfer.getData('application/json');
+      if (appJson) {
+        try {
+          const parsed = JSON.parse(appJson);
+          if (parsed && (parsed.name || parsed.text)) {
+            handleAssignPlayToSlot(wbId, colIdx, rowIdx, parsed);
+            return;
+          }
+        } catch {}
+      }
+
+      // 2. Try callSheetPlayTransfer
       const customTransfer = e.dataTransfer.getData('callSheetPlayTransfer');
       if (customTransfer) {
-        const parsed = JSON.parse(customTransfer);
-        handleAssignPlayToSlot(wbId, colIdx, rowIdx, parsed);
-        return;
+        try {
+          const parsed = JSON.parse(customTransfer);
+          if (parsed && (parsed.name || parsed.text)) {
+            handleAssignPlayToSlot(wbId, colIdx, rowIdx, parsed);
+            return;
+          }
+        } catch {}
       }
+
+      // 3. Try text/plain
       const text = e.dataTransfer.getData('text/plain');
       if (text) {
+        try {
+          const parsed = JSON.parse(text);
+          if (parsed && (parsed.name || parsed.text)) {
+            handleAssignPlayToSlot(wbId, colIdx, rowIdx, parsed);
+            return;
+          }
+        } catch {}
         handleAssignPlayToSlot(wbId, colIdx, rowIdx, text);
+        return;
       }
     } catch (err) {
       console.error('Error handling drop on slot:', err);
@@ -583,10 +621,16 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     setPrintMode(mode);
     setTimeout(() => {
       triggerPrint({
+        beforePrint: () => {
+          document.body.classList.add('is-printing-wristbands');
+        },
+        afterPrint: () => {
+          document.body.classList.remove('is-printing-wristbands');
+        },
         targetElementSelector: '#wristband-print-section',
-        documentTitle: `${activeTeamName} Wristband Inserts`,
+        documentTitle: mode === 'all' ? `${activeTeamName} Wristband Inserts` : `${currentWristband.title}`,
       });
-    }, 80);
+    }, 100);
   };
 
   // Current slot being picked via modal
@@ -612,7 +656,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     return (
       <div
         key={`print_${wb.id}`}
-        className="wristband-insert-print-box bg-white text-black border-[2px] border-black rounded-none shadow-md overflow-hidden flex flex-col select-none relative mx-auto my-2 print:my-4 print:shadow-none print:break-inside-avoid"
+        className="wristband-insert-print-box bg-white text-black border-[2px] border-black rounded-none shadow-md overflow-hidden flex flex-col select-none relative mx-auto my-2 print:my-0 print:shadow-none print:break-inside-avoid"
         style={{
           width: '4.5in',
           minWidth: '4.5in',
@@ -627,12 +671,14 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
       >
         {/* Top Header Strip */}
         <div className="bg-black text-white text-center font-black py-0.5 px-2 flex items-center justify-between border-b-[1.5px] border-black shrink-0">
-          <span className="text-[10px] tracking-wider truncate uppercase font-mono font-bold">
+          <span className={`text-[10px] tracking-wider truncate uppercase font-mono font-bold ${isForPrint ? 'w-full text-center' : ''}`}>
             {wb.title}
           </span>
-          <span className="text-[8px] bg-yellow-400 text-black px-1 rounded font-mono font-bold tracking-tight">
-            4.5&quot; &times; 2.25&quot;
-          </span>
+          {!isForPrint && (
+            <span className="text-[8px] bg-yellow-400 text-black px-1 rounded font-mono font-bold tracking-tight shrink-0 ml-2">
+              4.5&quot; &times; 2.25&quot;
+            </span>
+          )}
         </div>
 
         {/* Column Headers */}
@@ -679,7 +725,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                       key={rIdx}
                       className="flex items-stretch text-[10px] h-[calc(100%/${rows})] leading-none"
                       style={{
-                        backgroundColor: '#ffffff',
+                        backgroundColor: play.rowHighlightColor || '#ffffff',
                         WebkitPrintColorAdjust: 'exact',
                         printColorAdjust: 'exact',
                       }}
@@ -895,7 +941,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
       </header>
 
       {/* 2. Main Content Area (`flex-1 flex overflow-hidden` matching Call Sheet Maker) */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="wristband-builder-screen flex-1 flex overflow-hidden print:hidden">
         {/* Main interactive builder canvas */}
         <main className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 print:p-0 print:overflow-visible">
           {/* Top Quick Settings Bar */}
@@ -1196,14 +1242,48 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                         play.numberTextColor || col.numberTextColor || getContrastTextColor(numberBg);
                       const isFilled = Boolean(play.text && play.text.trim());
 
+                      const isDragOver = dragOverSlot?.colIdx === cIdx && dragOverSlot?.rowIdx === rIdx;
+
                       return (
                         <div
                           key={rIdx}
+                          draggable={!isInline && isFilled}
+                          onDragStart={(e) => {
+                            const playData: CallSheetPlay = {
+                              id: `wb_slot_${cIdx}_${rIdx}_${Date.now()}`,
+                              name: play.text,
+                              formation: play.formation,
+                              type: play.type as PlayType,
+                              wristbandNum: slotLabel,
+                              wristbandColor: numberBg,
+                              wristbandNumberColor: numberBg,
+                              wristbandTextColor: numberTextColor,
+                              wristbandRowColor: play.rowHighlightColor,
+                            };
+                            const jsonStr = safeJSONStringify(playData);
+                            try {
+                              e.dataTransfer.setData('application/json', jsonStr);
+                              e.dataTransfer.setData('callSheetPlayTransfer', jsonStr);
+                              e.dataTransfer.setData('text/plain', play.text);
+                            } catch {}
+                            e.dataTransfer.effectAllowed = 'copyMove';
+                          }}
                           onDragOver={(e) => {
                             e.preventDefault();
                             e.dataTransfer.dropEffect = 'copy';
+                            if (dragOverSlot?.colIdx !== cIdx || dragOverSlot?.rowIdx !== rIdx) {
+                              setDragOverSlot({ colIdx: cIdx, rowIdx: rIdx });
+                            }
                           }}
-                          onDrop={(e) => handleDropOnSlot(e, currentWristband.id, cIdx, rIdx)}
+                          onDragLeave={() => {
+                            if (dragOverSlot?.colIdx === cIdx && dragOverSlot?.rowIdx === rIdx) {
+                              setDragOverSlot(null);
+                            }
+                          }}
+                          onDrop={(e) => {
+                            setDragOverSlot(null);
+                            handleDropOnSlot(e, currentWristband.id, cIdx, rIdx);
+                          }}
                           onClick={() => {
                             if (isInline) return;
                             // Single click opens PlayPickerModal (same as Call Sheet!)
@@ -1215,14 +1295,21 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                             setInlineEditingSlot({ wbId: currentWristband.id, colIdx: cIdx, rowIdx: rIdx });
                             setInlineTextValue(play.text || '');
                           }}
-                          className={`flex items-center min-h-[38px] px-2.5 py-1.5 text-xs transition-colors group cursor-pointer select-none ${
-                            rIdx % 2 === 0
-                              ? 'bg-slate-50/50 dark:bg-slate-900/50'
-                              : 'bg-white dark:bg-slate-900'
-                          } hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30 ${
-                            isInline ? 'ring-2 ring-amber-500 z-10' : ''
-                          }`}
-                          title={`Slot #${slotLabel}: Click to open Play Picker modal, or double-click to type`}
+                          style={{
+                            backgroundColor: play.rowHighlightColor ? play.rowHighlightColor : undefined,
+                          }}
+                          className={`flex items-center min-h-[38px] px-2.5 py-1.5 text-xs transition-all group select-none relative ${
+                            isDragOver
+                              ? 'bg-indigo-100 dark:bg-indigo-950/70 ring-2 ring-indigo-500 border-indigo-400 z-10 scale-[1.01]'
+                              : isInline
+                              ? 'ring-2 ring-amber-500 z-10 bg-amber-50/20'
+                              : play.rowHighlightColor
+                              ? ''
+                              : rIdx % 2 === 0
+                              ? 'bg-slate-50/50 dark:bg-slate-900/50 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30'
+                              : 'bg-white dark:bg-slate-900 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30'
+                          } ${isFilled ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+                          title={`Slot #${slotLabel}: Click to open Play Picker, drag from Play Bank, or double-click to type`}
                         >
                           {/* Large, Crisp Slot Number Badge */}
                           <span
@@ -1420,6 +1507,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
         <PlayBankSidebar
           unit={playBankUnit}
           plays={playDatabase}
+          wristbandData={normalizedData}
           isOpen={isPlayBankOpen}
           onToggleOpen={() => setIsPlayBankOpen(!isPlayBankOpen)}
           onAddCustomPlay={() => {
@@ -1458,6 +1546,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
           slotIndex={pickingSlot.rowIdx}
           currentPlay={activePickerSlotPlay}
           databasePlays={playDatabase}
+          wristbandData={normalizedData}
           onSelectPlay={(selectedPlay) => {
             if (pickingSlot) {
               handleAssignPlayToSlot(
@@ -1513,42 +1602,36 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
       )}
 
       {/* =========================================================================
-          8. DEDICATED PRINT CONTAINER (Exact 4.5" x 2.25" Standard Output)
+          8. DEDICATED PRINT CONTAINER - ONLY CUTOUTS SPACED OUT
           ========================================================================= */}
       <div
         id="wristband-print-section"
         className="hidden print:block print:w-full print:m-0 print:p-0 bg-white text-black"
       >
-        <div className="wristband-print-page p-4">
-          <div className="mb-4 border-b pb-2">
-            <h1 className="text-lg font-black uppercase">
-              {activeTeamName} &bull; QUARTERBACK WRIST COACH INSERTS
-            </h1>
-            <p className="text-xs font-mono text-slate-600">
-              Standard 4.5&quot; &times; 2.25&quot; dimensions &bull; Cut along dashed borders &bull; Insert into wrist sleeve
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-6 items-start">
-            {printMode === 'all'
-              ? wristbands.map((wb) => (
-                  <div key={wb.id} className="wristband-cutout-wrapper border border-dashed border-black p-2 mb-4">
-                    <div className="text-[9px] font-mono font-bold mb-1 flex items-center gap-1 text-black">
-                      <Scissors className="w-3 h-3" />
-                      <span>&mdash;&mdash; ✂ Cut Guide (4.5&quot; x 2.25&quot;) &bull; {wb.title} &mdash;&mdash;</span>
-                    </div>
-                    {renderPhysicalPrintCard(wb, true)}
-                  </div>
-                ))
-              : (
-                  <div className="wristband-cutout-wrapper border border-dashed border-black p-2">
-                    <div className="text-[9px] font-mono font-bold mb-1 flex items-center gap-1 text-black">
-                      <Scissors className="w-3 h-3" />
-                      <span>&mdash;&mdash; ✂ Cut Guide (4.5&quot; x 2.25&quot;) &bull; {currentWristband.title} &mdash;&mdash;</span>
-                    </div>
-                    {renderPhysicalPrintCard(currentWristband, true)}
-                  </div>
-                )}
+        <div className="wristband-print-page w-full bg-white flex flex-col items-center">
+          <div className="flex flex-col items-center gap-12 print:gap-14 w-full">
+            {(printMode === 'all' ? wristbands : [currentWristband]).map((wb) => (
+              <div
+                key={`cutout_${wb.id}`}
+                className="wristband-cutout-item print:break-inside-avoid mx-auto relative"
+                style={{
+                  width: '4.5in',
+                  pageBreakInside: 'avoid',
+                  breakInside: 'avoid',
+                  boxSizing: 'content-box',
+                }}
+              >
+                {/* Thin dashed cut guideline marking the exact 4.5" x 2.25" wrist sleeve insert */}
+                <div
+                  className="border-[1.5px] border-dashed border-black bg-white"
+                  style={{
+                    boxSizing: 'content-box',
+                  }}
+                >
+                  {renderPhysicalPrintCard(wb, true)}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

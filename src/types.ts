@@ -271,6 +271,7 @@ export interface WristbandPlay {
   numberHighlightColor?: string; // highlight just the play number badge
   numberTextColor?: string; // text/font color for the play number (e.g. black, white, red, etc.)
   wristbandNum?: number | string;
+  rowHighlightColor?: string;
 }
 
 export interface WristbandColumn {

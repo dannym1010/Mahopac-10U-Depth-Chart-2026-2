@@ -169,6 +169,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
     isOpen: boolean;
     group: 'top_situations' | 'red_zone' | 'tempo_game_mgmt' | 'custom';
     initialTab?: 'wristband' | 'custom';
+    targetRowIndex?: number;
   }>({
     isOpen: false,
     group: 'top_situations',
@@ -339,12 +340,14 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   // Handle adding a new section table via modal
   const handleAddSection = (
     group: 'top_situations' | 'red_zone' | 'tempo_game_mgmt' | 'custom' = 'top_situations',
-    initialTab: 'wristband' | 'custom' = 'wristband'
+    initialTab: 'wristband' | 'custom' = 'wristband',
+    targetRowIndex?: number
   ) => {
     setAddTableModalState({
       isOpen: true,
       group,
       initialTab,
+      targetRowIndex,
     });
   };
 
@@ -352,13 +355,28 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
     setCallSheetData((prev) => {
       const next = { ...prev };
       const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
-      next[sectionsKey] = [...next[sectionsKey], ...newSections];
+      const targetRow = addTableModalState.targetRowIndex;
+      const preparedSections = newSections.map((s) => ({
+        ...s,
+        rowIndex: targetRow !== undefined ? targetRow : s.rowIndex,
+      }));
+      next[sectionsKey] = [...next[sectionsKey], ...preparedSections];
       return next;
     });
   };
 
   const handleConfirmAddSection = (newSection: CallSheetSection) => {
     handleConfirmAddSections([newSection]);
+  };
+
+  // Handle reordering entire sections list (drag and drop situational rearranging)
+  const handleReorderSections = (reorderedSections: CallSheetSection[]) => {
+    setCallSheetData((prev) => {
+      const next = { ...prev };
+      const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
+      next[sectionsKey] = reorderedSections;
+      return next;
+    });
   };
 
   // Grid layout columns changer
@@ -894,6 +912,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
               onUpdateSection={handleUpdateSection}
               onDeleteSection={handleDeleteSection}
               onAddSection={handleAddSection}
+              onReorderSections={handleReorderSections}
               onChangeTimeouts={(timeouts) =>
                 setCallSheetData((prev) => ({ ...prev, timeouts }))
               }
@@ -930,6 +949,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
         <PlayBankSidebar
           unit={activeUnit}
           plays={playDatabase}
+          wristbandData={normalizedWristbandData}
           onAddCustomPlay={() => {
             const firstSec =
               activeUnit === 'offense'
@@ -961,6 +981,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
         slotIndex={pickerState.slotIndex}
         currentPlay={pickerState.currentPlay}
         databasePlays={playDatabase}
+        wristbandData={normalizedWristbandData}
         onSelectPlay={(play) => {
           handleAssignPlayToSlot(pickerState.sectionId, pickerState.slotIndex, play);
           setPickerState((prev) => ({ ...prev, isOpen: false }));

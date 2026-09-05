@@ -59,6 +59,8 @@ export interface CallSheetSection {
   highlightEnabled?: boolean; // toggle highlight tint on or off
   highlightColor?: string; // e.g. 'rose' | 'yellow' | 'emerald' | 'cyan' | 'purple' or hex
   plays: (CallSheetPlay | null)[];
+  rowIndex?: number; // Row index tier in call sheet (e.g. Row 1, Row 2, Row 3)
+  order?: number; // Ordering index within the row
 }
 
 export interface TwoPointRule {

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Star, Trash2, Edit2, Check, X } from 'lucide-react';
 import { CallSheetPlay } from '../../types/callSheet';
-import { WristbandSlotMatch } from '../../utils/wristbandLinking';
+import { WristbandSlotMatch, isDarkColor } from '../../utils/wristbandLinking';
 
 interface CallSheetCellViewProps {
   sectionId: string;
@@ -198,24 +198,15 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
     (play.wristbandNum ? String(play.wristbandNum) : '') ||
     (match ? String(match.slotNumber) : '');
 
-  const numberBgColor =
-    play.wristbandNumberColor ||
-    match?.numberBgColor ||
-    play.wristbandColor ||
-    '#facc15';
+  const hasWristbandSpot = Boolean(match || play.wristbandNumberColor || play.wristbandColor);
 
-  const isDarkNumberBadge = [
-    '#dc2626',
-    '#ef4444',
-    '#2563eb',
-    '#3b82f6',
-    '#7e22ce',
-    '#a855f7',
-    '#09090b',
-    '#334155',
-  ].includes(numberBgColor);
+  const numberBgColor = hasWristbandSpot
+    ? (play.wristbandNumberColor || match?.numberBgColor || play.wristbandColor)
+    : undefined;
 
-  const numberTextColor = isDarkNumberBadge ? '#ffffff' : '#000000';
+  const numberTextColor = numberBgColor
+    ? (isDarkColor(numberBgColor) ? '#ffffff' : '#000000')
+    : undefined;
 
   const rowHighlightColor =
     (play.wristbandHighlightTarget === 'full_row' && play.wristbandRowColor) ||
@@ -247,15 +238,25 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
         {displayNum && (
           <span
             data-wristband-badge="true"
-            className="wristband-number-badge px-1.5 py-0.5 rounded font-black text-[9.5px] font-mono shrink-0 shadow-xs border border-black/20 flex items-center gap-0.5 leading-tight select-none"
-            style={{
-              backgroundColor: numberBgColor,
-              color: numberTextColor,
-            }}
+            className={`wristband-number-badge px-1.5 py-0.5 rounded font-black text-[9.5px] font-mono shrink-0 shadow-xs flex items-center gap-0.5 leading-tight select-none ${
+              hasWristbandSpot
+                ? 'border border-black/20'
+                : 'bg-slate-200 dark:bg-slate-700/80 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-600'
+            }`}
+            style={
+              hasWristbandSpot && numberBgColor
+                ? {
+                    backgroundColor: numberBgColor,
+                    color: numberTextColor,
+                  }
+                : undefined
+            }
             title={
-              play.wristbandTitle || match?.wristbandTitle
-                ? `${play.wristbandTitle || match?.wristbandTitle} #${displayNum}`
-                : `Wristband #${displayNum}`
+              hasWristbandSpot
+                ? (play.wristbandTitle || match?.wristbandTitle
+                  ? `${play.wristbandTitle || match?.wristbandTitle} #${displayNum}`
+                  : `Wristband #${displayNum}`)
+                : `No spot on wristband (#${displayNum})`
             }
           >
             #{displayNum}

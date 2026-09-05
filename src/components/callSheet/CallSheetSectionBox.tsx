@@ -10,6 +10,11 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  GripVertical,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import { CallSheetSection, CallSheetPlay } from '../../types/callSheet';
 import { CallSheetCellView } from './CallSheetCellView';
@@ -22,6 +27,23 @@ interface CallSheetSectionBoxProps {
   onDropPlay: (slotIndex: number, play: CallSheetPlay) => void;
   onUpdateSection?: (updated: CallSheetSection) => void;
   onDeleteSection?: (sectionId: string) => void;
+  // Drag & Reorder props for the table itself:
+  isDraggable?: boolean;
+  onDragStartTable?: (e: React.DragEvent, sectionId: string) => void;
+  onDragEndTable?: (e: React.DragEvent) => void;
+  onDragOverTable?: (e: React.DragEvent, sectionId: string) => void;
+  onDropOnTable?: (e: React.DragEvent, targetSectionId: string) => void;
+  onMoveTableLeft?: (sectionId: string) => void;
+  onMoveTableRight?: (sectionId: string) => void;
+  onMoveTableUpRow?: (sectionId: string) => void;
+  onMoveTableDownRow?: (sectionId: string) => void;
+  canMoveLeft?: boolean;
+  canMoveRight?: boolean;
+  canMoveUpRow?: boolean;
+  canMoveDownRow?: boolean;
+  isDragTarget?: boolean;
+  isDragging?: boolean;
+  rowIndex?: number;
 }
 
 const COLOR_SWATCHES = [
@@ -83,6 +105,22 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
   onDropPlay,
   onUpdateSection,
   onDeleteSection,
+  isDraggable = false,
+  onDragStartTable,
+  onDragEndTable,
+  onDragOverTable,
+  onDropOnTable,
+  onMoveTableLeft,
+  onMoveTableRight,
+  onMoveTableUpRow,
+  onMoveTableDownRow,
+  canMoveLeft = false,
+  canMoveRight = false,
+  canMoveUpRow = false,
+  canMoveDownRow = false,
+  isDragTarget = false,
+  isDragging = false,
+  rowIndex,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(section.title);
@@ -190,11 +228,38 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
 
   return (
     <div
-      className={`border shadow-xs rounded-none overflow-hidden print:border-black flex flex-col transition-all group ${containerClasses}`}
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes('application/callsheet-table-drag')) {
+          e.preventDefault();
+          e.stopPropagation();
+          onDragOverTable?.(e, section.id);
+        }
+      }}
+      onDrop={(e) => {
+        const tableId = e.dataTransfer.getData('application/callsheet-table-drag');
+        if (tableId) {
+          e.preventDefault();
+          e.stopPropagation();
+          onDropOnTable?.(e, section.id);
+        }
+      }}
+      className={`border shadow-xs rounded-none overflow-hidden print:border-black flex flex-col transition-all group ${containerClasses} ${
+        isDragging ? 'opacity-35 ring-2 ring-indigo-500 scale-[0.98]' : ''
+      } ${
+        isDragTarget ? 'ring-2 ring-indigo-500 shadow-lg scale-[1.01] border-indigo-500' : ''
+      }`}
     >
       {/* 1. Header Bar */}
       <div
-        className="py-1 px-2 flex items-center justify-between font-black text-xs uppercase tracking-wider select-none relative transition-colors"
+        draggable={isDraggable && !isEditing}
+        onDragStart={(e) => {
+          if (isEditing) return;
+          onDragStartTable?.(e, section.id);
+        }}
+        onDragEnd={onDragEndTable}
+        className={`py-1 px-2 flex items-center justify-between font-black text-xs uppercase tracking-wider select-none relative transition-colors ${
+          isDraggable && !isEditing ? 'cursor-grab active:cursor-grabbing' : ''
+        }`}
         style={{
           backgroundColor: section.headerBgColor,
           color: section.headerTextColor,
@@ -202,17 +267,82 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
       >
         {!isEditing ? (
           <div className="flex items-center justify-between w-full min-w-0">
-            <span
-              className="truncate cursor-pointer hover:underline text-[11.5px] sm:text-xs"
-              onClick={() => setIsEditing(true)}
-              title="Click to edit table settings (title, rows, columns, highlight, colors)"
-            >
-              {section.title}
-            </span>
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              {isDraggable && (
+                <div
+                  title="Drag table to rearrange or move across rows"
+                  className="cursor-grab active:cursor-grabbing p-0.5 -ml-1 text-inherit opacity-70 hover:opacity-100 hover:bg-black/20 rounded transition-opacity print:hidden shrink-0 flex items-center"
+                >
+                  <GripVertical className="w-3.5 h-3.5" />
+                </div>
+              )}
+              <span
+                className="truncate cursor-pointer hover:underline text-[11.5px] sm:text-xs"
+                onClick={() => setIsEditing(true)}
+                title="Click to edit table settings (title, rows, columns, highlight, colors)"
+              >
+                {section.title}
+              </span>
+            </div>
             <div className="flex items-center gap-1 shrink-0 ml-1">
               <span className="text-[10px] opacity-90 font-mono font-bold">
                 ({filledCount}/{section.slotsCount})
               </span>
+              {/* Quick Move Buttons on hover */}
+              <div className="hidden group-hover:flex items-center gap-0.5 print:hidden">
+                {canMoveLeft && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMoveTableLeft?.(section.id);
+                    }}
+                    className="p-0.5 rounded hover:bg-black/25 text-inherit transition-colors cursor-pointer"
+                    title="Move table left"
+                  >
+                    <ArrowLeft className="w-3 h-3" />
+                  </button>
+                )}
+                {canMoveRight && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMoveTableRight?.(section.id);
+                    }}
+                    className="p-0.5 rounded hover:bg-black/25 text-inherit transition-colors cursor-pointer"
+                    title="Move table right"
+                  >
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                )}
+                {canMoveUpRow && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMoveTableUpRow?.(section.id);
+                    }}
+                    className="p-0.5 rounded hover:bg-black/25 text-inherit transition-colors cursor-pointer"
+                    title="Move table to row above"
+                  >
+                    <ArrowUp className="w-3 h-3" />
+                  </button>
+                )}
+                {canMoveDownRow && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMoveTableDownRow?.(section.id);
+                    }}
+                    className="p-0.5 rounded hover:bg-black/25 text-inherit transition-colors cursor-pointer"
+                    title="Move table to row below"
+                  >
+                    <ArrowDown className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
               {/* Quick edit button */}
               <button
                 type="button"
@@ -248,7 +378,7 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
         )}
       </div>
 
-      {/* 2. Interactive Editing Drawer (Rows, Columns, Highlight, Color, Delete) */}
+      {/* 2. Interactive Editing Drawer (Rows, Columns, Highlight, Color, Delete, Row Position) */}
       {isEditing && (
         <div className="p-2 bg-slate-850 dark:bg-slate-950 border-b border-slate-700 text-slate-200 text-xs space-y-2 print:hidden animate-in fade-in duration-150">
           {/* Top Row: Rows, Columns, Highlight, and Delete */}
@@ -327,6 +457,54 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
               </button>
             )}
           </div>
+
+          {/* Row Placement quick controls */}
+          {(canMoveLeft || canMoveRight || canMoveUpRow || canMoveDownRow || rowIndex !== undefined) && (
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800 flex-wrap">
+              <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                <GripVertical className="w-3 h-3" />
+                Row {rowIndex !== undefined ? rowIndex + 1 : 1} Position:
+              </span>
+              <div className="flex items-center gap-1">
+                {canMoveLeft && (
+                  <button
+                    type="button"
+                    onClick={() => onMoveTableLeft?.(section.id)}
+                    className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold flex items-center gap-0.5 cursor-pointer"
+                  >
+                    <ArrowLeft className="w-3 h-3" /> Left
+                  </button>
+                )}
+                {canMoveRight && (
+                  <button
+                    type="button"
+                    onClick={() => onMoveTableRight?.(section.id)}
+                    className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold flex items-center gap-0.5 cursor-pointer"
+                  >
+                    Right <ArrowRight className="w-3 h-3" />
+                  </button>
+                )}
+                {canMoveUpRow && (
+                  <button
+                    type="button"
+                    onClick={() => onMoveTableUpRow?.(section.id)}
+                    className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-indigo-300 text-[10px] font-bold flex items-center gap-0.5 cursor-pointer"
+                  >
+                    <ArrowUp className="w-3 h-3" /> Row Above
+                  </button>
+                )}
+                {canMoveDownRow && (
+                  <button
+                    type="button"
+                    onClick={() => onMoveTableDownRow?.(section.id)}
+                    className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-indigo-300 text-[10px] font-bold flex items-center gap-0.5 cursor-pointer"
+                  >
+                    <ArrowDown className="w-3 h-3" /> Row Below
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Highlight Color Palette (when highlight is on) */}
           {isHighlighted && (

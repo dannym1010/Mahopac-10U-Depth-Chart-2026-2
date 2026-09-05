@@ -14,7 +14,16 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import { CallSheetPlay, PlayDatabaseEntry, PlayType } from '../../types/callSheet';
-import { extractPersonnel, getPersonnelSubTabs } from '../../utils/wristbandLinking';
+import { WristbandData } from '../../types';
+import {
+  extractPersonnel,
+  getPersonnelSubTabs,
+  buildWristbandIndex,
+  lookupWristbandPlay,
+  isDarkColor,
+} from '../../utils/wristbandLinking';
+import { safeJSONParse } from '../../services/storageService';
+import { INITIAL_TWO_WRISTBANDS_DATA } from '../../data/userGameDayPlays';
 
 interface PlayPickerModalProps {
   isOpen: boolean;
@@ -24,6 +33,7 @@ interface PlayPickerModalProps {
   slotIndex: number;
   currentPlay: CallSheetPlay | null;
   databasePlays: PlayDatabaseEntry[];
+  wristbandData?: WristbandData;
   onSelectPlay: (play: CallSheetPlay) => void;
   onClearSlot: () => void;
   onAddCustomToDatabase?: (entry: PlayDatabaseEntry) => void;
@@ -52,6 +62,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
   slotIndex,
   currentPlay,
   databasePlays,
+  wristbandData,
   onSelectPlay,
   onClearSlot,
   onAddCustomToDatabase,
@@ -64,6 +75,22 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
   const [filterSituationOnly, setFilterSituationOnly] = useState(true);
   const [isCreatingCustom, setIsCreatingCustom] = useState(false);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+
+  // Derive live wristband index so plays only show color if they have a spot on the wristband
+  const effectiveWristbandData = useMemo(() => {
+    if (wristbandData && wristbandData.wristbands && wristbandData.wristbands.length > 0) {
+      return wristbandData;
+    }
+    const saved = safeJSONParse<WristbandData | null>('footballWristbandData', null);
+    if (saved && saved.wristbands && saved.wristbands.length > 0) {
+      return saved;
+    }
+    return INITIAL_TWO_WRISTBANDS_DATA;
+  }, [wristbandData]);
+
+  const wristbandIndex = useMemo(() => {
+    return buildWristbandIndex(effectiveWristbandData);
+  }, [effectiveWristbandData]);
 
   const personnelTabs = useMemo(() => {
     return getPersonnelSubTabs(databasePlays, unit);
@@ -131,7 +158,12 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
         const matchesFormation = p.formation.toLowerCase().includes(term);
         const matchesConcept = (p.concept || '').toLowerCase().includes(term);
         const matchesTags = (p.tags || []).some((t) => t.toLowerCase().includes(term));
-        const matchesWristband = p.wristbandNum ? `#${p.wristbandNum}`.includes(term) : false;
+        const match = lookupWristbandPlay(p.name, wristbandIndex);
+        const matchesWristband = match
+          ? `#${match.slotLabel}`.includes(term)
+          : p.wristbandNum
+          ? `#${p.wristbandNum}`.includes(term)
+          : false;
         if (!matchesName && !matchesFormation && !matchesConcept && !matchesTags && !matchesWristband) {
           return false;
         }
@@ -139,22 +171,35 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
 
       return true;
     });
-  }, [databasePlays, unit, selectedType, selectedPersonnel, filterSituationOnly, situationKeywords, searchTerm]);
+  }, [databasePlays, unit, selectedType, selectedPersonnel, filterSituationOnly, situationKeywords, searchTerm, wristbandIndex]);
 
   if (!isOpen) return null;
 
   const handlePick = (dbPlay: PlayDatabaseEntry) => {
+    const match = lookupWristbandPlay(dbPlay.name, wristbandIndex);
     const playItem: CallSheetPlay = {
       id: `call_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       name: dbPlay.name,
       formation: dbPlay.formation,
       type: dbPlay.type,
-      wristbandNum: dbPlay.wristbandNum,
-      wristbandLabel: dbPlay.wristbandLabel,
-      wristbandColor: dbPlay.wristbandColor,
-      wristbandNumberColor: dbPlay.wristbandNumberColor,
-      wristbandHighlightTarget: dbPlay.wristbandHighlightTarget,
-      wristbandSlotMatch: dbPlay.wristbandSlotMatch,
+      wristbandNum: match ? match.wristbandNum : dbPlay.wristbandNum,
+      wristbandLabel: match ? match.slotLabel : (dbPlay.wristbandLabel || (dbPlay.wristbandNum ? String(dbPlay.wristbandNum) : undefined)),
+      wristbandColor: match ? match.numberBgColor : undefined,
+      wristbandNumberColor: match ? match.numberBgColor : undefined,
+      wristbandRowColor: match ? match.rowBgColor : undefined,
+      wristbandHighlightTarget: match ? match.highlightTarget : undefined,
+      wristbandTitle: match ? match.wristbandTitle : undefined,
+      wristbandSlotMatch: match
+        ? {
+            wristbandId: match.wristbandId,
+            wristbandTitle: match.wristbandTitle,
+            cardLabel: match.wristbandShort,
+            slotNumber: match.slotLabel,
+            numberBgColor: match.numberBgColor,
+            rowHighlightColor: match.rowBgColor,
+            highlightTarget: match.highlightTarget,
+          }
+        : undefined,
       personnel: dbPlay.personnel || extractPersonnel(dbPlay),
       notes: dbPlay.concept,
     };
@@ -393,18 +438,38 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                   >
                     <div className="space-y-1 min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        {play.wristbandNum && (
-                          <span
-                            style={{
-                              backgroundColor: play.wristbandNumberColor || play.wristbandColor || '#facc15',
-                              color: '#000000',
-                            }}
-                            className="px-1.5 py-0.5 rounded-md font-black text-[10px] font-mono shadow-xs"
-                            title={play.wristbandLabel ? `Wristband: ${play.wristbandLabel}` : `Wristband #${play.wristbandNum}`}
-                          >
-                            #{play.wristbandNum}
-                          </span>
-                        )}
+                        {(() => {
+                          const match = lookupWristbandPlay(play.name, wristbandIndex);
+                          if (match) {
+                            const bg = match.numberBgColor || '#facc15';
+                            const fg = isDarkColor(bg) ? '#ffffff' : '#000000';
+                            return (
+                              <span
+                                style={{
+                                  backgroundColor: bg,
+                                  color: fg,
+                                }}
+                                className="px-1.5 py-0.5 rounded-md font-black text-[10px] font-mono shadow-xs border border-black/20"
+                                title={`${match.wristbandTitle} • Slot #${match.slotLabel}`}
+                              >
+                                #{match.slotLabel}
+                              </span>
+                            );
+                          }
+
+                          if (play.wristbandNum) {
+                            return (
+                              <span
+                                className="px-1.5 py-0.5 rounded-md font-mono text-[10px] font-semibold text-slate-400 bg-transparent border border-slate-700/70"
+                                title="No spot on active wristband"
+                              >
+                                #{play.wristbandNum}
+                              </span>
+                            );
+                          }
+
+                          return null;
+                        })()}
                         <h4 className="text-sm font-black text-slate-100 group-hover:text-white truncate">
                           {play.name}
                         </h4>
