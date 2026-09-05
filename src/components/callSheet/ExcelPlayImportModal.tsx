@@ -898,7 +898,7 @@ export const ExcelPlayImportModal: React.FC<ExcelPlayImportModalProps> = ({
                       <div className="flex items-center gap-2.5 min-w-0">
                         {p.wristbandNum ? (
                           <span className="px-1.5 py-0.5 rounded bg-amber-400 text-black font-black text-[10px] font-mono shrink-0">
-                            #{p.wristbandNum}
+                            {String(p.wristbandNum).replace(/^#\s*/, '')}
                           </span>
                         ) : (
                           <span className="w-5 text-center font-mono text-[10px] text-slate-500">

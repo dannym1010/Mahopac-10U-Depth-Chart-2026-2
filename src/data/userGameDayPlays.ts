@@ -12,8 +12,8 @@ export const USER_IMPORTED_GAME_DAY_PLAYS: PlayDatabaseEntry[] = [
   { id: 'usr_play_7', name: '21 R 19 BOOT', unit: 'offense', formation: '21 R', type: 'play_action', wristbandNum: 7, situations: ['1-10', '2nd & short (SHOT)', 'RED ZONE'], tags: ['Bootleg', 'Play Action'] },
   { id: 'usr_play_8', name: '21 L 38 POWER', unit: 'offense', formation: '21 L', type: 'run', wristbandNum: 8, situations: ['1-10', '2nd med', '3rd short', '3rd & 1', 'Goal Line'], tags: ['Power', 'Kickout'] },
   { id: 'usr_play_9', name: '21 R 38 COUNTER', unit: 'offense', formation: '21 R', type: 'run', wristbandNum: 9, situations: ['1-10', '2nd med', '2nd long'], tags: ['Counter', 'Misdirection'] },
-  { id: 'usr_play_10', name: '21 R TWINS L Z BUBBLE', unit: 'offense', formation: '21 R Twins L', type: 'screen', wristbandNum: 10, situations: ['1-10', '2nd & short (SHOT)', '2 MIN O'], tags: ['Bubble Screen', 'Quick'] },
-  { id: 'usr_play_11', name: '21 R TWINS L Z SMOKE', unit: 'offense', formation: '21 R Twins L', type: 'pass', wristbandNum: 11, situations: ['1-10', '2nd med', '3rd med'], tags: ['Quick Pass', 'Smoke'] },
+  { id: 'usr_play_10', name: '21 R TWINS L Z BUBBLE', unit: 'offense', formation: '21 R', type: 'screen', wristbandNum: 10, situations: ['1-10', '2nd & short (SHOT)', '2 MIN O'], tags: ['Bubble Screen', 'Quick'] },
+  { id: 'usr_play_11', name: '21 R TWINS L Z SMOKE', unit: 'offense', formation: '21 R', type: 'pass', wristbandNum: 11, situations: ['1-10', '2nd med', '3rd med'], tags: ['Quick Pass', 'Smoke'] },
   { id: 'usr_play_12', name: '21 L 38 POWER PASS', unit: 'offense', formation: '21 L', type: 'play_action', wristbandNum: 12, situations: ['1-10', '2nd & short (SHOT)', 'RED ZONE', 'TRICKS'], tags: ['Power Pass', 'Shot Play'] },
   // Play 13: open slot
   { id: 'usr_play_14', name: '21 R 24 DIVE', unit: 'offense', formation: '21 R', type: 'run', wristbandNum: 14, situations: ['1-10', '2nd med', '3rd short', '3rd & 1', '4 Min O'], tags: ['Dive', 'Base Run'] },
@@ -25,10 +25,10 @@ export const USER_IMPORTED_GAME_DAY_PLAYS: PlayDatabaseEntry[] = [
   { id: 'usr_play_20', name: '21 L 11 BOOT', unit: 'offense', formation: '21 L', type: 'play_action', wristbandNum: 20, situations: ['1-10', '2nd & short (SHOT)', 'RED ZONE'], tags: ['Bootleg', 'Play Action'] },
   { id: 'usr_play_21', name: '21 R 32 POWER', unit: 'offense', formation: '21 R', type: 'run', wristbandNum: 21, situations: ['1-10', '2nd med', '3rd short', '3rd & 1', 'Goal Line'], tags: ['Power', 'Kickout'] },
   { id: 'usr_play_22', name: '21 L 32 COUNTER', unit: 'offense', formation: '21 L', type: 'run', wristbandNum: 22, situations: ['1-10', '2nd med', '2nd long'], tags: ['Counter', 'Misdirection'] },
-  { id: 'usr_play_23', name: '21 L TWINS R Z BUBBLE', unit: 'offense', formation: '21 L Twins R', type: 'screen', wristbandNum: 23, situations: ['1-10', '2nd & short (SHOT)', '2 MIN O'], tags: ['Bubble Screen', 'Perimeter'] },
-  { id: 'usr_play_24', name: '21 L TWINS R Z SMOKE', unit: 'offense', formation: '21 L Twins R', type: 'pass', wristbandNum: 24, situations: ['1-10', '2nd med', '3rd med'], tags: ['Quick Pass', 'Smoke'] },
+  { id: 'usr_play_23', name: '21 L TWINS R Z BUBBLE', unit: 'offense', formation: '21 L', type: 'screen', wristbandNum: 23, situations: ['1-10', '2nd & short (SHOT)', '2 MIN O'], tags: ['Bubble Screen', 'Perimeter'] },
+  { id: 'usr_play_24', name: '21 L TWINS R Z SMOKE', unit: 'offense', formation: '21 L', type: 'pass', wristbandNum: 24, situations: ['1-10', '2nd med', '3rd med'], tags: ['Quick Pass', 'Smoke'] },
   { id: 'usr_play_25', name: '21 R 32 POWER PASS', unit: 'offense', formation: '21 R', type: 'play_action', wristbandNum: 25, situations: ['1-10', '2nd & short (SHOT)', 'RED ZONE', 'TRICKS'], tags: ['Power Pass', 'Shot Play'] },
-  { id: 'usr_play_26', name: '21 L TWINS R GO-OUT', unit: 'offense', formation: '21 L Twins R', type: 'pass', wristbandNum: 26, situations: ['1-10', '3rd long', '3rd med', '2 MIN O'], tags: ['Go Route', 'Deep Pass'] },
+  { id: 'usr_play_26', name: '21 L TWINS R GO-OUT', unit: 'offense', formation: '21 L', type: 'pass', wristbandNum: 26, situations: ['1-10', '3rd long', '3rd med', '2 MIN O'], tags: ['Go Route', 'Deep Pass'] },
 
   // --- WRISTBAND 2 (Plays 27-52) ---
   { id: 'usr_play_27', name: '32 L 26 DIVE', unit: 'offense', formation: '32 L', type: 'run', wristbandNum: 27, situations: ['1-10', '2nd med', '3rd short', '3rd & 1'], tags: ['Dive', 'Heavy Package'] },

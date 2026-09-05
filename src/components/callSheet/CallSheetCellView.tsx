@@ -304,7 +304,8 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
   const hasRealName = Boolean(play.name && play.name.trim());
   const match = play.wristbandSlotMatch;
   const hasWristbandSpot = Boolean(match || play.wristbandNum);
-  const displayNum = match?.slotNumber ? String(match.slotNumber) : (play.wristbandNum ? String(play.wristbandNum) : '');
+  const rawNum = match?.slotNumber ? String(match.slotNumber) : (play.wristbandNum ? String(play.wristbandNum) : '');
+  const cleanDisplayNum = rawNum.replace(/^#\s*/, '').trim();
 
   // Exact number badge color matching wristband
   const numberBgColor =
@@ -326,6 +327,16 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
   const isStarred = Boolean(play.isStarred);
   const isLongName = play.name.length > 20;
 
+  // Clean play name to strip any leading hash symbol or index prefix
+  const cleanPlayName = useMemo(() => {
+    if (!play.name) return '';
+    return play.name
+      .replace(/^#\s*\d*\s*[-.:]?\s*/i, '')
+      .replace(/^\d+[\.\)]\s+/, '')
+      .replace(/^#\s*/, '')
+      .trim();
+  }, [play.name]);
+
   const effectiveBgStyle: React.CSSProperties | undefined = rowHighlightColor
     ? {
         backgroundColor: rowHighlightColor,
@@ -334,11 +345,30 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
     : undefined;
 
   const displayFormation = useMemo(() => {
-    if (play.formation && play.formation.trim()) {
-      return play.formation;
+    const rawForm = (play.formation || '').trim();
+    const nameToCheck = (play.name || '').toUpperCase();
+    // Strictly enforce 21 L or 21 R for any 21 play (never Spread)
+    if (
+      /\b21\b/.test(nameToCheck) ||
+      nameToCheck.startsWith('21') ||
+      nameToCheck.includes('21 R') ||
+      nameToCheck.includes('21 L') ||
+      rawForm.includes('21')
+    ) {
+      if (
+        /\b21\s*L\b/i.test(nameToCheck) ||
+        nameToCheck.includes('21 L') ||
+        nameToCheck.includes('21L') ||
+        /\b21\s*L\b/i.test(rawForm) ||
+        rawForm.includes('21 L') ||
+        /\bLEFT\b/i.test(nameToCheck)
+      ) {
+        return '21 L';
+      }
+      return '21 R';
     }
-    return '';
-  }, [play.formation]);
+    return rawForm;
+  }, [play.formation, play.name]);
 
   return (
     <div
@@ -373,7 +403,7 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
     >
       <div className="flex items-center gap-1.5 min-w-0 flex-1 print:overflow-visible">
         {/* Exact Wristband Number Badge - cleanly displays slot number without hash sign */}
-        {displayNum && (
+        {cleanDisplayNum && (
           <span
             data-wristband-badge="true"
             className={`wristband-number-badge px-1.5 py-0.5 rounded font-black text-[9.5px] font-mono shrink-0 shadow-xs flex items-center gap-0.5 leading-tight select-none print:text-[9px] print:px-1 ${
@@ -394,12 +424,12 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
             title={
               hasWristbandSpot
                 ? (play.wristbandTitle || match?.wristbandTitle
-                  ? `${play.wristbandTitle || match?.wristbandTitle} Slot ${displayNum}`
-                  : `Wristband Slot ${displayNum}`)
-                : `No spot on wristband (${displayNum})`
+                  ? `${play.wristbandTitle || match?.wristbandTitle} Slot ${cleanDisplayNum}`
+                  : `Wristband Slot ${cleanDisplayNum}`)
+                : `No spot on wristband (${cleanDisplayNum})`
             }
           >
-            {displayNum}
+            {cleanDisplayNum}
           </span>
         )}
 
@@ -416,7 +446,7 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
           }`}
         >
           {hasRealName ? (
-            play.name
+            cleanPlayName
           ) : (
             <span className="print:hidden">(Open Slot)</span>
           )}

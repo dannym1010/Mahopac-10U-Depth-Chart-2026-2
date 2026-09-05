@@ -290,14 +290,14 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base sm:text-lg font-black text-slate-100 tracking-tight">
-                  {isMultiSelect ? 'Select Multiple Plays in Order' : `Pick Play for Slot #${slotIndex + 1}`}
+                  {isMultiSelect ? 'Select Multiple Plays in Order' : `Pick Play for Slot ${slotIndex + 1}`}
                 </h2>
                 <span className="text-[11px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
                   {sectionTitle}
                 </span>
                 {isMultiSelect && (
                   <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
-                    Starting at Slot #{slotIndex + 1}
+                    Starting at Slot {slotIndex + 1}
                   </span>
                 )}
               </div>
@@ -515,7 +515,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                       <div className="shrink-0 pt-0.5">
                         {isSelectedInQueue ? (
                           <span className="w-6 h-6 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center shadow-md ring-2 ring-indigo-400 font-mono">
-                            #{orderNum}
+                            {orderNum}
                           </span>
                         ) : (
                           <span className="w-6 h-6 rounded-full bg-slate-800/90 text-slate-500 border border-slate-700 group-hover:border-indigo-500/50 group-hover:text-indigo-400 text-xs flex items-center justify-center font-bold">
@@ -646,7 +646,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                               className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center gap-1 cursor-pointer"
                             >
                               <Check className="w-3.5 h-3.5" />
-                              <span>#{orderNum}</span>
+                              <span>{orderNum}</span>
                             </button>
                           ) : (
                             <button
@@ -733,7 +733,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                           key={`${item.id}_${idx}`}
                           className="px-2 py-1 rounded-lg bg-indigo-900/50 border border-indigo-500/50 text-indigo-200 text-xs font-bold flex items-center gap-1.5 shrink-0"
                         >
-                          <span className="text-amber-400 font-mono font-black">#{idx + 1}</span>
+                          <span className="text-amber-400 font-mono font-black">{idx + 1}</span>
                           <span className="max-w-[130px] truncate">{item.name}</span>
                           <button
                             type="button"
@@ -829,7 +829,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
               </div>
 
               <div className="space-y-1 col-span-2 sm:col-span-1">
-                <label className="text-xs font-bold text-slate-300">Wristband # (Optional)</label>
+                <label className="text-xs font-bold text-slate-300">Wristband Slot (Optional)</label>
                 <input
                   type="number"
                   value={customWristbandNum}

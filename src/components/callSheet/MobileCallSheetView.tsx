@@ -232,16 +232,20 @@ export const MobileCallSheetView: React.FC<MobileCallSheetViewProps> = ({
                 className="p-3 rounded-xl border flex items-center justify-between gap-2 cursor-pointer transition-all active:scale-[0.99] bg-slate-800/90 border-slate-700 text-slate-100 shadow-sm hover:border-purple-500"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="w-6 h-6 rounded-lg bg-purple-950 text-purple-300 border border-purple-500/30 flex items-center justify-center font-mono font-black text-xs shrink-0">
-                    {idx + 1}
-                  </span>
+                  {play?.wristbandNum && (
+                    <span className="px-1.5 py-0.5 rounded bg-amber-400 text-black font-black text-[10px] font-mono shrink-0 shadow-xs">
+                      {String(play.wristbandNum).replace(/^#\s*/, '')}
+                    </span>
+                  )}
                   <div className="min-w-0">
                     <h4 className="text-xs font-black uppercase truncate text-slate-100">
-                      {play ? play.name : '(Empty Slot - Tap to Pick)'}
+                      {play ? (play.name || '').replace(/^#\s*\d*\s*[-.:]?\s*/i, '').replace(/^\d+[\.\)]\s+/, '').replace(/^#\s*/, '').trim() : '(Empty Slot - Tap to Pick)'}
                     </h4>
                     {play?.formation && (
                       <span className="text-[10px] text-slate-400 font-mono">
-                        {play.formation}
+                        {play.name && (play.name.startsWith('21') || play.name.includes('21 R') || play.name.includes('21 L') || /\b21\b/.test(play.name))
+                          ? (/21\s*L/i.test(play.name) || /LEFT/i.test(play.name) || /21\s*L/i.test(play.formation) ? '21 L' : '21 R')
+                          : play.formation}
                       </span>
                     )}
                   </div>

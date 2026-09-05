@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Printer,
   Sparkles,
@@ -32,7 +32,7 @@ import {
 import { WristbandData } from '../types';
 import { INITIAL_TWO_WRISTBANDS_DATA } from '../data/userGameDayPlays';
 import { safeJSONParse, safeJSONSet, safeJSONStringify } from '../services/storageService';
-import { syncWristbandToCallSheet } from '../utils/wristbandLinking';
+import { syncWristbandToCallSheet, inferFormation } from '../utils/wristbandLinking';
 import { ComputerCallSheetView } from './callSheet/ComputerCallSheetView';
 import { MobileCallSheetView } from './callSheet/MobileCallSheetView';
 import { PlayPickerModal } from './callSheet/PlayPickerModal';
@@ -109,6 +109,22 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   // Safeguard refs to prevent infinite render loops between prop sync and state updates
   const lastEmittedCallSheetJson = useRef<string>('');
   const lastEmittedPlayDbJson = useRef<string>('');
+  const isLocalEditRef = useRef<number>(0);
+
+  // Centralized safe updater that immediately updates local state, localStorage, and parent App state
+  const applyCallSheetUpdate = useCallback((updater: CallSheetFullData | ((prev: CallSheetFullData) => CallSheetFullData)) => {
+    setCallSheetData((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      const nextJson = safeJSONStringify(next);
+      lastEmittedCallSheetJson.current = nextJson;
+      isLocalEditRef.current = Date.now();
+      safeJSONSet('footballCallSheetData', next);
+      if (onUpdateCallSheetData) {
+        onUpdateCallSheetData(next);
+      }
+      return next;
+    });
+  }, [onUpdateCallSheetData]);
 
   // Sync state if parent props update from server or Firestore
   useEffect(() => {
@@ -125,6 +141,10 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
   useEffect(() => {
     if (propCallSheetData && propCallSheetData.offenseSections) {
+      // Prevent stale parent prop re-renders from overwriting recent local user edits
+      if (Date.now() - isLocalEditRef.current < 5000) {
+        return;
+      }
       const incomingJson = safeJSONStringify(propCallSheetData);
       if (incomingJson !== lastEmittedCallSheetJson.current) {
         lastEmittedCallSheetJson.current = incomingJson;
@@ -283,26 +303,31 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
     slotIndex: number,
     play: CallSheetPlay
   ) => {
-    setCallSheetData((prev) => {
+    applyCallSheetUpdate((prev) => {
       const next = { ...prev };
+      // Sanitize 21 formation strictly to 21 L or 21 R
+      const playToAssign = { ...play };
+      if (playToAssign.name && (playToAssign.name.startsWith('21') || playToAssign.name.includes('21 R') || playToAssign.name.includes('21 L') || /\b21\b/.test(playToAssign.name))) {
+        playToAssign.formation = inferFormation(playToAssign.name, activeUnit, playToAssign.formation);
+      }
       if (sectionId === 'script') {
         if (activeUnit === 'offense') {
-          const arr = [...next.offenseScript];
-          arr[slotIndex] = play;
+          const arr = [...(next.offenseScript || [])];
+          arr[slotIndex] = playToAssign;
           next.offenseScript = arr;
         } else {
-          const arr = [...next.defenseScript];
-          arr[slotIndex] = play;
+          const arr = [...(next.defenseScript || [])];
+          arr[slotIndex] = playToAssign;
           next.defenseScript = arr;
         }
       } else {
         const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
-        const sections = [...next[sectionsKey]];
+        const sections = [...(next[sectionsKey] || [])];
         const secIndex = sections.findIndex((s) => s.id === sectionId);
         if (secIndex >= 0) {
           const sec = { ...sections[secIndex] };
           const plays = [...sec.plays];
-          plays[slotIndex] = play;
+          plays[slotIndex] = playToAssign;
           sec.plays = plays;
           sections[secIndex] = sec;
           next[sectionsKey] = sections;
@@ -314,7 +339,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
   // Handle clearing a slot
   const handleClearSlot = (sectionId: string, slotIndex: number) => {
-    setCallSheetData((prev) => {
+    applyCallSheetUpdate((prev) => {
       const next = { ...prev };
       if (sectionId === 'script') {
         if (activeUnit === 'offense') {
@@ -345,7 +370,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
   // Handle section update (renaming, changing color, slot counts, column count, highlight)
   const handleUpdateSection = (updatedSection: CallSheetSection) => {
-    setCallSheetData((prev) => {
+    applyCallSheetUpdate((prev) => {
       const next = { ...prev };
       const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
       const sections = [...next[sectionsKey]];
@@ -360,7 +385,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
   // Handle deleting ANY section
   const handleDeleteSection = (sectionId: string) => {
-    setCallSheetData((prev) => {
+    applyCallSheetUpdate((prev) => {
       const next = { ...prev };
       const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
       next[sectionsKey] = next[sectionsKey].filter((s) => s.id !== sectionId);
@@ -383,7 +408,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   };
 
   const handleConfirmAddSections = (newSections: CallSheetSection[]) => {
-    setCallSheetData((prev) => {
+    applyCallSheetUpdate((prev) => {
       const next = { ...prev };
       const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
       const targetRow = addTableModalState.targetRowIndex;
@@ -402,7 +427,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
   // Handle reordering entire sections list (drag and drop situational rearranging)
   const handleReorderSections = (reorderedSections: CallSheetSection[]) => {
-    setCallSheetData((prev) => {
+    applyCallSheetUpdate((prev) => {
       const next = { ...prev };
       const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
       next[sectionsKey] = reorderedSections;
@@ -413,7 +438,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   // Grid layout columns changer
   const handleChangeGridColumns = (cols: number) => {
     setGridColumns(cols);
-    setCallSheetData((prev) => ({
+    applyCallSheetUpdate((prev) => ({
       ...prev,
       desktopGridColumns: cols,
     }));
@@ -421,14 +446,14 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
   // Scripts Table Handlers
   const handleAddScriptRow = () => {
-    setCallSheetData((prev) => {
+    applyCallSheetUpdate((prev) => {
       const key = activeUnit === 'offense' ? 'offenseScript' : 'defenseScript';
       return { ...prev, [key]: [...prev[key], null] };
     });
   };
 
   const handleRemoveScriptRow = () => {
-    setCallSheetData((prev) => {
+    applyCallSheetUpdate((prev) => {
       const key = activeUnit === 'offense' ? 'offenseScript' : 'defenseScript';
       if (prev[key].length <= 1) return prev;
       return { ...prev, [key]: prev[key].slice(0, prev[key].length - 1) };
@@ -436,14 +461,14 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   };
 
   const handleToggleScriptColumns = (cols: number) => {
-    setCallSheetData((prev) => ({
+    applyCallSheetUpdate((prev) => ({
       ...prev,
       scriptColumnsCount: cols,
     }));
   };
 
   const handleToggleScriptHighlight = () => {
-    setCallSheetData((prev) => ({
+    applyCallSheetUpdate((prev) => ({
       ...prev,
       scriptHighlightEnabled: !prev.scriptHighlightEnabled,
     }));
@@ -451,14 +476,14 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
   // 2-Point Table Handlers
   const handleUpdateTwoPointRules = (rules: TwoPointRule[]) => {
-    setCallSheetData((prev) => ({
+    applyCallSheetUpdate((prev) => ({
       ...prev,
       twoPointRules: rules,
     }));
   };
 
   const handleToggleTwoPointHighlight = () => {
-    setCallSheetData((prev) => ({
+    applyCallSheetUpdate((prev) => ({
       ...prev,
       twoPointHighlightEnabled: !(prev.twoPointHighlightEnabled ?? true),
     }));
@@ -466,14 +491,14 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
   // Timeouts Table Handlers
   const handleToggleTimeoutsHighlight = () => {
-    setCallSheetData((prev) => ({
+    applyCallSheetUpdate((prev) => ({
       ...prev,
       timeoutsHighlightEnabled: !prev.timeoutsHighlightEnabled,
     }));
   };
 
   const handleChangeTimeoutsCount = (cnt: number) => {
-    setCallSheetData((prev) => ({
+    applyCallSheetUpdate((prev) => ({
       ...prev,
       timeoutsCount: cnt,
     }));

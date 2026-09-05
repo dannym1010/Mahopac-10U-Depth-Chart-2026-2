@@ -313,7 +313,7 @@ export const InsertWristbandModal: React.FC<InsertWristbandModalProps> = ({
                 Generate a Dedicated Call Sheet Section from Wristband
               </span>
               <p className="text-slate-400 text-[11px] leading-relaxed">
-                This adds a new table directly to your Call Sheet with every single play from the wristband insert, maintaining its exact play number (#1 to #26), column color, and highlight tint.
+                This adds a new table directly to your Call Sheet with every single play from the wristband insert, maintaining its exact play number (1 to 26), column color, and highlight tint.
               </p>
             </div>
 
@@ -487,7 +487,7 @@ export const InsertWristbandModal: React.FC<InsertWristbandModalProps> = ({
                           color: '#000000',
                         }}
                       >
-                        #{wbPlay.slotLabel}
+                        {String(wbPlay.slotLabel).replace(/^#\s*/, '')}
                       </span>
                       <span className="font-bold text-xs uppercase truncate">{wbPlay.playText}</span>
                     </div>

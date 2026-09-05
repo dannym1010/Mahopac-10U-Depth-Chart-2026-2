@@ -928,7 +928,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                           ? 'Click to select for deletion'
                           : isOrderSelectMode
                           ? isQueued
-                            ? `Selected #${orderNum} - click to remove`
+                            ? `Selected ${orderNum} - click to remove`
                             : 'Click to select in order'
                           : 'Drag onto any slot in the call sheet or wristband'
                       }

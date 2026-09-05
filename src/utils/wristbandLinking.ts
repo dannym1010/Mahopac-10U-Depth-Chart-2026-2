@@ -178,26 +178,41 @@ export function inferFormation(
   const cleanName = (name || '').trim().toUpperCase();
   const cleanRaw = (rawFormation || '').trim();
 
-  // If offense and play contains 21 Series / 21 Personnel indicators, NEVER allow Spread
+  // If offense and play contains 21 Series / 21 Personnel indicators, tag strictly as 21 L or 21 R (NEVER Spread, Twins, or I-Form)
   const is21 =
     /\b21\b/.test(cleanName) ||
     cleanName.startsWith('21') ||
     cleanName.includes('21 R') ||
     cleanName.includes('21 L') ||
-    cleanName.includes('21-');
+    cleanName.includes('21-') ||
+    cleanName.includes('21_') ||
+    cleanRaw.includes('21');
 
   if (is21) {
-    if (/TWINS/i.test(cleanName) || /TWINS/i.test(cleanRaw)) {
-      if (/21\s*R\s*TWINS/i.test(cleanName) || /21\s*R\s*TWINS/i.test(cleanRaw)) return '21 R Twins';
-      if (/21\s*L\s*TWINS/i.test(cleanName) || /21\s*L\s*TWINS/i.test(cleanRaw)) return '21 L Twins';
-      return '21 Twins';
+    // Check for explicit 21 L or Left in name or raw formation
+    if (
+      /\b21\s*L\b/i.test(cleanName) ||
+      cleanName.includes('21 L') ||
+      cleanName.includes('21L') ||
+      /\b21\s*L\b/i.test(cleanRaw) ||
+      cleanRaw.includes('21 L') ||
+      /\bLEFT\b/i.test(cleanName)
+    ) {
+      return '21 L';
     }
-    if (/21\s*R\b/i.test(cleanName) || cleanName.includes('21 R ') || /21\s*R\b/i.test(cleanRaw)) return '21 R';
-    if (/21\s*L\b/i.test(cleanName) || cleanName.includes('21 L ') || /21\s*L\b/i.test(cleanRaw)) return '21 L';
-    if (cleanRaw && !cleanRaw.toLowerCase().includes('spread')) {
-      return cleanRaw;
+    // Check for explicit 21 R or Right in name or raw formation
+    if (
+      /\b21\s*R\b/i.test(cleanName) ||
+      cleanName.includes('21 R') ||
+      cleanName.includes('21R') ||
+      /\b21\s*R\b/i.test(cleanRaw) ||
+      cleanRaw.includes('21 R') ||
+      /\bRIGHT\b/i.test(cleanName)
+    ) {
+      return '21 R';
     }
-    return '21 I-Form';
+    // Default 21 play tag is 21 R
+    return '21 R';
   }
 
   // 32 Series / Heavy
@@ -613,77 +628,96 @@ export function syncWristbandToCallSheet(
   const syncPlay = (play: CallSheetPlay | null): CallSheetPlay | null => {
     if (!play) return null;
 
-    // Check if play has a wristbandSlotMatch
+    // Check if play has a wristbandSlotMatch or matching wristband slot
+    let matchedSlot: {
+      text: string;
+      slotLabel: string;
+      num: number;
+      colColor: string;
+      textColor: string;
+      rowHighlight?: string;
+      wbTitle: string;
+      formation?: string;
+      type?: string;
+    } | undefined;
+
     if (play.wristbandSlotMatch?.wristbandId) {
       const wbId = play.wristbandSlotMatch.wristbandId;
       const colIdx = play.wristbandSlotMatch.colIdx ?? 0;
       const rowIdx = play.wristbandSlotMatch.rowIdx ?? 0;
-      const match = slotByWbColRow.get(`${wbId}_${colIdx}_${rowIdx}`);
-      if (match) {
-        return {
-          ...play,
-          name: match.text || play.name,
-          formation: inferFormation(match.text || play.name, 'offense', play.formation || match.formation),
-          type: (match.type as any) || play.type,
-          wristbandNum: match.num,
-          wristbandLabel: match.slotLabel,
-          wristbandColor: match.colColor,
-          wristbandNumberColor: match.colColor,
-          wristbandTextColor: match.textColor,
-          wristbandRowColor: match.rowHighlight || play.wristbandRowColor,
-          wristbandSlotMatch: {
-            ...play.wristbandSlotMatch,
-            color: match.colColor,
-            numberBgColor: match.colColor,
-            numberTextColor: match.textColor,
-            slotNumber: match.slotLabel,
-            rowHighlightColor: match.rowHighlight,
-          },
-        };
-      }
-    }
-
-    // Check by ID containing wb_sec_ or cs_wb_
-    if (play.id.includes('wb_sec_') || play.id.includes('cs_wb_')) {
+      matchedSlot = slotByWbColRow.get(`${wbId}_${colIdx}_${rowIdx}`);
+    } else if (play.id.includes('wb_sec_') || play.id.includes('cs_wb_')) {
       const parts = play.id.split('_');
-      // Format: wb_sec_{wbId}_{colIdx}_{rowIdx}_... or cs_{wbId}_{colIdx}_{rowIdx}_...
       const wbId = parts[2];
       const colIdx = parseInt(parts[3], 10);
       const rowIdx = parseInt(parts[4], 10);
       if (wbId && !isNaN(colIdx) && !isNaN(rowIdx)) {
-        const match = slotByWbColRow.get(`${wbId}_${colIdx}_${rowIdx}`);
-        if (match) {
-          return {
-            ...play,
-            name: match.text || play.name,
-            formation: inferFormation(match.text || play.name, 'offense', play.formation || match.formation),
-            type: (match.type as any) || play.type,
-            wristbandNum: match.num,
-            wristbandLabel: match.slotLabel,
-            wristbandColor: match.colColor,
-            wristbandNumberColor: match.colColor,
-            wristbandTextColor: match.textColor,
-            wristbandRowColor: match.rowHighlight,
-          };
-        }
+        matchedSlot = slotByWbColRow.get(`${wbId}_${colIdx}_${rowIdx}`);
       }
     }
 
-    // Sanitize formation: if name starts with 21, never allow Spread
-    if (play.name && (play.name.startsWith('21') || play.name.includes('21 R') || play.name.includes('21 L'))) {
-      if (!play.formation || play.formation.toLowerCase() === 'spread') {
-        return {
-          ...play,
-          formation: inferFormation(play.name, 'offense', play.formation),
-        };
-      }
+    // Determine normalized formation
+    let formation = play.formation;
+    const playNameUpper = (play.name || '').toUpperCase();
+    const is21 =
+      playNameUpper.startsWith('21') ||
+      playNameUpper.includes('21 R') ||
+      playNameUpper.includes('21 L') ||
+      /\b21\b/.test(playNameUpper) ||
+      (formation && (formation.includes('21') || formation.toLowerCase().includes('spread')));
+
+    if (is21) {
+      formation = inferFormation(play.name, 'offense', formation);
+    }
+
+    if (matchedSlot) {
+      // PRESERVE user manual edits (play.name, play.customNotes, etc.)
+      // ONLY sync the wristband slot styling/labeling!
+      return {
+        ...play,
+        formation: formation || inferFormation(play.name || matchedSlot.text, 'offense', matchedSlot.formation),
+        wristbandNum: matchedSlot.num,
+        wristbandLabel: matchedSlot.slotLabel,
+        wristbandColor: matchedSlot.colColor,
+        wristbandNumberColor: matchedSlot.colColor,
+        wristbandTextColor: matchedSlot.textColor,
+        wristbandRowColor: matchedSlot.rowHighlight || play.wristbandRowColor,
+        wristbandSlotMatch: {
+          ...play.wristbandSlotMatch,
+          wristbandId: play.wristbandSlotMatch?.wristbandId || 'wb_1',
+          wristbandTitle: play.wristbandSlotMatch?.wristbandTitle || matchedSlot.wbTitle,
+          colIdx: play.wristbandSlotMatch?.colIdx ?? 0,
+          rowIdx: play.wristbandSlotMatch?.rowIdx ?? 0,
+          color: matchedSlot.colColor,
+          slotNumber: matchedSlot.slotLabel,
+          numberBgColor: matchedSlot.colColor,
+          numberTextColor: matchedSlot.textColor,
+          rowHighlightColor: matchedSlot.rowHighlight,
+        },
+      };
+    }
+
+    if (formation !== play.formation) {
+      return {
+        ...play,
+        formation,
+      };
     }
 
     return play;
   };
 
   const syncSection = (sec: CallSheetSection): CallSheetSection => {
-    // Check if section is a wristband preset section
+    // CRITICAL: If the section already has plays (user-populated, customized, or edited),
+    // NEVER destroy or reconstruct them! Preserving coach edits is the absolute top priority.
+    if (sec.plays && sec.plays.length > 0) {
+      return {
+        ...sec,
+        plays: sec.plays.map(syncPlay),
+      };
+    }
+
+    // Only if sec.plays is completely empty (e.g. brand new empty section) and is a wristband preset, initialize it once
     const isWbPreset =
       sec.wristbandId ||
       sec.id.startsWith('wb_table_') ||

@@ -582,7 +582,7 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
                           <div>
                             <div className="flex items-center gap-1.5">
                               <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700 text-slate-300">
-                                WB #{idx + 1}
+                                WB {idx + 1}
                               </span>
                               <span className="font-black text-xs text-slate-100 tracking-tight line-clamp-1">
                                 {wb.title || `Wristband ${idx + 1}`}
@@ -895,7 +895,7 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
                                     className="px-1 py-0.2 rounded font-black font-mono text-[9px] border border-black/20"
                                     style={{ backgroundColor: numBg, color: numText }}
                                   >
-                                    #{play.wristbandLabel}
+                                    {String(play.wristbandLabel).replace(/^#\s*/, '')}
                                   </span>
                                 )}
                                 <span
