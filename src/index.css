@@ -201,24 +201,42 @@ body {
     color: inherit;
   }
 
-  /* Force all callsheet play cells, text, and labels to print crisp black, regardless of mouse hover */
+  /* Force play name text and standard labels to print crisp black */
   .callsheet-cell-slot,
-  .callsheet-cell-slot span,
-  .callsheet-cell-slot div,
   .callsheet-cell-slot p,
-  .callsheet-cell-slot:hover,
-  .callsheet-cell-slot:hover *,
-  .group:hover .callsheet-cell-slot,
-  .group:hover .callsheet-cell-slot * {
+  .callsheet-cell-slot > span:not(.wristband-number-badge),
+  .callsheet-cell-slot:hover > span:not(.wristband-number-badge),
+  .group:hover .callsheet-cell-slot > span:not(.wristband-number-badge) {
     color: #000000 !important;
   }
 
-  /* Keep badge and colored section header text crisp and intact */
+  /* Wristband number badges MUST retain their exact background and text colors (e.g. white text on blue/dark background) */
+  .callsheet-cell-slot .wristband-number-badge,
   .wristband-number-badge,
   [data-wristband-badge="true"],
+  .wrist-badge {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .callsheet-cell-slot .wristband-number-badge.badge-text-white,
+  .wristband-number-badge.badge-text-white,
+  [data-wristband-badge="true"].badge-text-white,
+  [data-wristband-badge="true"][data-text-color="white"] {
+    color: #ffffff !important;
+  }
+
+  .callsheet-cell-slot .wristband-number-badge.badge-text-black,
+  .wristband-number-badge.badge-text-black,
+  [data-wristband-badge="true"].badge-text-black,
+  [data-wristband-badge="true"][data-text-color="black"] {
+    color: #000000 !important;
+  }
+
   .callsheet-section-header,
   .callsheet-section-header * {
-    color: inherit !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   /* Hide navigation, toolbars, buttons, inputs, and modals in print */

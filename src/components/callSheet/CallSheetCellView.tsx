@@ -332,6 +332,14 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
     match?.numberTextColor ||
     (numberBgColor ? (isDarkColor(numberBgColor) ? '#ffffff' : '#000000') : '#000000');
 
+  const isWhiteText =
+    numberTextColor.toLowerCase() === '#ffffff' ||
+    numberTextColor.toLowerCase() === '#fff' ||
+    numberTextColor.toLowerCase() === 'white' ||
+    (numberBgColor ? isDarkColor(numberBgColor) : false);
+
+  const finalBadgeTextColor = isWhiteText ? '#ffffff' : numberTextColor;
+
   // Row highlight color
   const rowHighlightColor =
     play.wristbandRowColor ||
@@ -417,7 +425,10 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
         {cleanDisplayNum && (
           <span
             data-wristband-badge="true"
+            data-text-color={isWhiteText ? 'white' : 'black'}
             className={`wristband-number-badge px-1.5 py-0.5 rounded font-black text-[9.5px] font-mono shrink-0 shadow-xs flex items-center gap-0.5 leading-tight select-none print:text-[9px] print:px-1 ${
+              isWhiteText ? 'badge-text-white print:!text-white' : 'badge-text-black print:!text-black'
+            } ${
               !hasRealName ? 'print:hidden' : ''
             } ${
               hasWristbandSpot
@@ -428,7 +439,7 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
               hasWristbandSpot && numberBgColor
                 ? {
                     backgroundColor: numberBgColor,
-                    color: numberTextColor,
+                    color: finalBadgeTextColor,
                   }
                 : undefined
             }

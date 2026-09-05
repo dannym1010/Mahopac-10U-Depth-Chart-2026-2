@@ -2248,7 +2248,13 @@ export function generateWristbandPrintHTML(
           </div>
           <div class="card-box">
             <div class="card-header">
-              ${wb.title || 'WRISTBAND INSERT'} &bull; ${activeTeamName.toUpperCase()}
+              ${
+                wb.title &&
+                (wb.title.toUpperCase().includes('10U') ||
+                  wb.title.toUpperCase().includes(activeTeamName.toUpperCase()))
+                  ? wb.title
+                  : `${wb.title || 'WRISTBAND INSERT'} &bull; ${activeTeamName.toUpperCase()}`
+              }
             </div>
             <div class="cols-header">
               ${colHeadersHtml}
@@ -2521,15 +2527,18 @@ export function generateCallSheetPrintHTML(
   const gameDate = callSheetData.gameDate || '';
   const opponent = callSheetData.opponent ? `vs ${callSheetData.opponent}` : '';
 
-  const getContrastColor = (hexColor?: string): string => {
+  const getContrastColor = (hexColor?: string, defaultColor?: string): string => {
+    if (defaultColor) return defaultColor;
     if (!hexColor) return '#000000';
-    let hex = hexColor.replace('#', '');
+    let hex = hexColor.replace('#', '').trim();
     if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
     const r = parseInt(hex.substring(0, 2), 16) || 0;
     const g = parseInt(hex.substring(2, 4), 16) || 0;
     const b = parseInt(hex.substring(4, 6), 16) || 0;
+    // Blue shades (including #2563eb, #38bdf8, #0284c7, #0ea5e9, #3b82f6) always keep crisp white text like on wristbands
+    if (b > r + 25 && b > 130) return '#ffffff';
     const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-    return yiq >= 128 ? '#000000' : '#ffffff';
+    return yiq >= 140 ? '#000000' : '#ffffff';
   };
 
   const cleanNum = (val?: string | number): string => {
@@ -2594,12 +2603,26 @@ export function generateCallSheetPrintHTML(
         const numBg = inkFriendly
           ? '#e2e8f0'
           : match?.numberBgColor || match?.color || play.wristbandColor || '#38bdf8';
-        const numText = inkFriendly ? '#000000' : match?.numberTextColor || getContrastColor(numBg);
+        const numText = inkFriendly
+          ? '#000000'
+          : play.wristbandTextColor || match?.numberTextColor || getContrastColor(numBg);
 
-        // Formation check
-        let formation = play.formation || '';
-        if (formation === '21') {
-          formation = /\bLEFT\b|21\s*L/i.test(play.name) ? '21 L' : '21 R';
+        // Formation check - suppress 21 formation and personnel tag to give play name maximum space
+        let formation = (play.formation || '').trim();
+        const upperForm = formation.toUpperCase();
+        const upperName = (play.name || '').toUpperCase();
+        if (
+          upperForm === '21' ||
+          upperForm === '21 L' ||
+          upperForm === '21 R' ||
+          upperForm.includes('21') ||
+          upperName.includes(upperForm) ||
+          upperName.startsWith('21') ||
+          upperName.includes('21 L') ||
+          upperName.includes('21 R') ||
+          /\b21\b/.test(upperName)
+        ) {
+          formation = '';
         }
 
         return `
@@ -2607,15 +2630,12 @@ export function generateCallSheetPrintHTML(
             <div class="cell-main">
               ${
                 numVal
-                  ? `<span class="wrist-badge" style="background: ${numBg}; color: ${numText}; font-size: ${badgeFontSize};">${numVal}</span>`
+                  ? `<span class="wrist-badge" style="background: ${numBg} !important; color: ${numText} !important; font-size: ${badgeFontSize}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${numVal}</span>`
                   : ''
               }
               <span class="play-name">${play.name}</span>
             </div>
-            <div class="cell-meta">
-              ${formation ? `<span class="formation-tag">(${formation})</span>` : ''}
-              ${play.personnel ? `<span class="personnel-tag">${play.personnel}</span>` : ''}
-            </div>
+            ${formation ? `<div class="cell-meta"><span class="formation-tag">(${formation})</span></div>` : ''}
           </div>
         `;
       })
@@ -2705,12 +2725,14 @@ export function generateCallSheetPrintHTML(
         const match = play.wristbandSlotMatch;
         const numVal = cleanNum(play.wristbandNum || match?.slotNumber);
         const numBg = inkFriendly ? '#e2e8f0' : match?.numberBgColor || play.wristbandColor || '#e2e8f0';
-        const numText = inkFriendly ? '#000' : match?.numberTextColor || getContrastColor(numBg);
+        const numText = inkFriendly
+          ? '#000'
+          : play.wristbandTextColor || match?.numberTextColor || getContrastColor(numBg);
 
         return `
           <div class="script-row">
             <span class="script-num">${num}.</span>
-            ${numVal ? `<span class="wrist-badge" style="background: ${numBg}; color: ${numText}; font-size: ${badgeFontSize};">${numVal}</span>` : ''}
+            ${numVal ? `<span class="wrist-badge" style="background: ${numBg} !important; color: ${numText} !important; font-size: ${badgeFontSize}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${numVal}</span>` : ''}
             <span class="script-name">${play.name}</span>
             ${play.formation ? `<span class="formation-tag">(${play.formation})</span>` : ''}
           </div>
@@ -3004,12 +3026,16 @@ export function generateCallSheetPrintHTML(
       border: 1px solid rgba(0,0,0,0.25);
       flex-shrink: 0;
       line-height: 1.3;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
     .play-name {
       font-weight: 900;
       text-transform: uppercase;
       word-break: break-word;
       line-height: 1.15;
+      font-size: 8.5pt;
+      flex: 1;
     }
     .cell-meta {
       display: flex;
