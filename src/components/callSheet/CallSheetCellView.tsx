@@ -216,6 +216,30 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
 
   const effectiveBgStyle = rowHighlightColor ? { backgroundColor: rowHighlightColor } : undefined;
 
+  const hasRealName = Boolean(
+    play.name &&
+      play.name.trim().length > 0 &&
+      play.name.trim().toLowerCase() !== '(open slot)' &&
+      play.name.trim().toLowerCase() !== 'open slot'
+  );
+
+  const isLongName = Boolean(hasRealName && play.name && play.name.length > 18);
+
+  const displayFormation = useMemo(() => {
+    if (!play.formation) return undefined;
+    if (
+      play.name &&
+      (play.name.startsWith('21') || play.name.includes('21 R') || play.name.includes('21 L')) &&
+      play.formation.toLowerCase().includes('spread')
+    ) {
+      if (/TWINS/i.test(play.name)) return '21 Twins';
+      if (/21\s*R/i.test(play.name)) return '21 R';
+      if (/21\s*L/i.test(play.name)) return '21 L';
+      return '21 I-Form';
+    }
+    return play.formation;
+  }, [play.name, play.formation]);
+
   return (
     <div
       onClick={onSlotClick}
@@ -223,14 +247,14 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       style={effectiveBgStyle}
-      className={`h-7 sm:h-7.5 px-2 border-b flex items-center justify-between gap-1.5 text-xs select-none transition-all cursor-pointer group ${
+      className={`min-h-[28px] sm:min-h-[30px] py-1 px-1.5 sm:px-2 border-b flex items-center justify-between gap-1 text-xs select-none transition-all cursor-pointer group print:py-0.5 print:min-h-0 ${
         rowHighlightColor ? 'text-slate-900 border-slate-300' : baseBgClass
       }`}
       title="Click to pick from library, double-click to edit directly"
     >
-      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+      <div className="flex items-center gap-1.5 min-w-0 flex-1 print:overflow-visible">
         {/* Slot Number */}
-        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono shrink-0 w-3.5 text-right">
+        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono shrink-0 w-3.5 text-right print:text-[9px]">
           {slotIndex + 1}.
         </span>
 
@@ -238,7 +262,9 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
         {displayNum && (
           <span
             data-wristband-badge="true"
-            className={`wristband-number-badge px-1.5 py-0.5 rounded font-black text-[9.5px] font-mono shrink-0 shadow-xs flex items-center gap-0.5 leading-tight select-none ${
+            className={`wristband-number-badge px-1.5 py-0.5 rounded font-black text-[9.5px] font-mono shrink-0 shadow-xs flex items-center gap-0.5 leading-tight select-none print:text-[9px] print:px-1 ${
+              !hasRealName ? 'print:hidden' : ''
+            } ${
               hasWristbandSpot
                 ? 'border border-black/20'
                 : 'bg-slate-200 dark:bg-slate-700/80 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-600'
@@ -263,27 +289,35 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
           </span>
         )}
 
-        {/* Play Name */}
+        {/* Play Name - Full play visible without truncation */}
         <span
-          className={`font-black text-[11px] sm:text-[11.5px] uppercase tracking-tight truncate ${
-            !play.name
-              ? 'text-slate-400 dark:text-slate-500 italic font-normal'
-              : 'text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-300'
+          className={`font-black uppercase tracking-tight break-words min-w-0 flex-1 print:overflow-visible print:break-words ${
+            isLongName
+              ? 'text-[10px] sm:text-[10.5px] leading-tight print:text-[9.5px]'
+              : 'text-[11px] sm:text-[11.5px] leading-tight print:text-[10.5px]'
+          } ${
+            !hasRealName
+              ? 'text-slate-400 dark:text-slate-500 italic font-normal print:hidden'
+              : 'text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 print:text-black'
           }`}
         >
-          {play.name || '(Open Slot)'}
+          {hasRealName ? (
+            play.name
+          ) : (
+            <span className="print:hidden">(Open Slot)</span>
+          )}
         </span>
 
         {/* Formation or Type tag */}
-        {play.formation && (
-          <span className="text-[9px] text-slate-500 dark:text-slate-400 font-mono shrink-0 hidden sm:inline-block">
-            ({play.formation})
+        {displayFormation && (
+          <span className="text-[9px] text-slate-500 dark:text-slate-400 font-mono shrink-0 hidden sm:inline-block print:text-[8px] print:inline-block">
+            ({displayFormation})
           </span>
         )}
 
         {/* Personnel badge */}
         {play.personnel && (
-          <span className="text-[8.5px] px-1 py-0.2 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono shrink-0 hidden md:inline-block">
+          <span className="text-[8.5px] px-1 py-0.2 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono shrink-0 hidden md:inline-block print:text-[8px]">
             {play.personnel}
           </span>
         )}

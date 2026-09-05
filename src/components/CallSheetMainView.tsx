@@ -32,6 +32,7 @@ import {
 import { WristbandData } from '../types';
 import { INITIAL_TWO_WRISTBANDS_DATA } from '../data/userGameDayPlays';
 import { safeJSONParse, safeJSONSet, safeJSONStringify } from '../services/storageService';
+import { syncWristbandToCallSheet } from '../utils/wristbandLinking';
 import { ComputerCallSheetView } from './callSheet/ComputerCallSheetView';
 import { MobileCallSheetView } from './callSheet/MobileCallSheetView';
 import { PlayPickerModal } from './callSheet/PlayPickerModal';
@@ -127,10 +128,40 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
       const incomingJson = safeJSONStringify(propCallSheetData);
       if (incomingJson !== lastEmittedCallSheetJson.current) {
         lastEmittedCallSheetJson.current = incomingJson;
-        setCallSheetData(propCallSheetData);
+        setCallSheetData((prev) => {
+          // If local state has newly added sections that incoming is missing, preserve local sections
+          if (
+            prev.offenseSections &&
+            propCallSheetData.offenseSections &&
+            prev.offenseSections.length > propCallSheetData.offenseSections.length
+          ) {
+            return prev;
+          }
+          return propCallSheetData;
+        });
       }
     }
   }, [propCallSheetData]);
+
+  // Re-sync call sheet tables whenever wristband data changes
+  useEffect(() => {
+    if (propWristbandData) {
+      setCallSheetData((prev) => {
+        const synced = syncWristbandToCallSheet(propWristbandData, prev, playDatabase);
+        const syncedJson = safeJSONStringify(synced);
+        const prevJson = safeJSONStringify(prev);
+        if (syncedJson !== prevJson) {
+          lastEmittedCallSheetJson.current = syncedJson;
+          safeJSONSet('footballCallSheetData', synced);
+          if (onUpdateCallSheetData) {
+            onUpdateCallSheetData(synced);
+          }
+          return synced;
+        }
+        return prev;
+      });
+    }
+  }, [propWristbandData, playDatabase, onUpdateCallSheetData]);
 
   useEffect(() => {
     if (propDeletedPlayIds && Array.isArray(propDeletedPlayIds)) {

@@ -388,6 +388,41 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
     setDragOverTarget(null);
   };
 
+  // Helper to determine responsive grid classes and template style based on table count and multi-column spans in a row
+  const getRowGridConfig = (sections: CallSheetSection[]) => {
+    const count = sections.length;
+    const hasMultiCol = sections.some(
+      (s) => (s.colSpan && s.colSpan > 1) || (s.columnsCount && s.columnsCount > 1)
+    );
+
+    if (!hasMultiCol) {
+      return {
+        className: getRowGridClass(
+          draggingSectionId && !sections.some((s) => s.id === draggingSectionId)
+            ? count + 1
+            : count
+        ),
+        style: undefined as React.CSSProperties | undefined,
+      };
+    }
+
+    // When multi-column tables are present (e.g. 2-column wristband table), dynamically size columns so that 2-column tables get double width
+    const template = sections
+      .map((s) => {
+        const span = s.colSpan || (s.columnsCount && s.columnsCount > 1 ? s.columnsCount : 1);
+        return `minmax(0, ${span}fr)`;
+      })
+      .join(' ');
+
+    return {
+      className: 'grid w-full gap-2.5 items-start',
+      style: {
+        display: 'grid',
+        gridTemplateColumns: template,
+      } as React.CSSProperties,
+    };
+  };
+
   // Helper to determine responsive grid classes based on table count in a row
   const getRowGridClass = (count: number) => {
     switch (count) {
@@ -593,11 +628,8 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
                   </div>
                 ) : (
                   <div
-                    className={getRowGridClass(
-                      draggingSectionId && !row.sections.some((s) => s.id === draggingSectionId)
-                        ? tableCount + 1
-                        : tableCount
-                    )}
+                    className={getRowGridConfig(row.sections).className}
+                    style={getRowGridConfig(row.sections).style}
                     onDragOver={(e) => {
                       if (e.dataTransfer.types.includes('application/callsheet-table-drag')) {
                         e.preventDefault();
@@ -612,6 +644,11 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
                         <div
                           key={sec.id}
                           className="relative flex flex-col min-w-0"
+                          style={
+                            sec.colSpan && sec.colSpan > 1
+                              ? { gridColumn: `span ${sec.colSpan} / span ${sec.colSpan}` }
+                              : undefined
+                          }
                           onDragOver={(e) => handleDragOverTable(e, sec.id, row.rowIndex)}
                           onDrop={(e) => handleDropOnTable(e, sec.id, row.rowIndex)}
                         >

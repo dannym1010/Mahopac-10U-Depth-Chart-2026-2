@@ -193,6 +193,7 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
       onUpdateSection({
         ...section,
         columnsCount: newCols,
+        colSpan: newCols >= 2 ? Math.min(newCols, 3) : 1,
       });
     }
   };

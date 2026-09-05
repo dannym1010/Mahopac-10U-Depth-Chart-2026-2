@@ -15,6 +15,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { PlayDatabaseEntry, PlayType } from '../../types/callSheet';
+import { inferFormation, extractPersonnel } from '../../utils/wristbandLinking';
 
 interface ExcelPlayImportModalProps {
   isOpen: boolean;
@@ -314,15 +315,14 @@ export const ExcelPlayImportModal: React.FC<ExcelPlayImportModalProps> = ({
       const name = mapping.nameCol >= 0 && row[mapping.nameCol] ? row[mapping.nameCol].trim() : '';
       if (!name) return; // Skip empty rows
 
-      const formation =
-        mapping.formationCol >= 0 && row[mapping.formationCol]
-          ? row[mapping.formationCol].trim()
-          : defaultUnit === 'offense'
-          ? 'Spread'
-          : '4-3 Base';
-
       const unitRaw = mapping.unitCol >= 0 && row[mapping.unitCol] ? row[mapping.unitCol].trim() : '';
       const unit = inferUnit(unitRaw, unitOverride);
+
+      const rawFormation =
+        mapping.formationCol >= 0 && row[mapping.formationCol]
+          ? row[mapping.formationCol].trim()
+          : undefined;
+      const formation = inferFormation(name, unit, rawFormation);
 
       const typeRaw = mapping.typeCol >= 0 && row[mapping.typeCol] ? row[mapping.typeCol].trim() : '';
       const playType = inferPlayType(typeRaw, name, unit);
@@ -332,8 +332,14 @@ export const ExcelPlayImportModal: React.FC<ExcelPlayImportModalProps> = ({
       const parsedNum = wristbandRaw ? parseInt(wristbandRaw.replace(/[^0-9]/g, ''), 10) : undefined;
       const wristbandNum = !isNaN(Number(parsedNum)) && parsedNum !== undefined ? parsedNum : undefined;
 
-      const personnel =
+      const rawPersonnel =
         mapping.personnelCol >= 0 && row[mapping.personnelCol] ? row[mapping.personnelCol].trim() : undefined;
+      const personnel = extractPersonnel({
+        name,
+        formation,
+        unit,
+        personnel: rawPersonnel,
+      });
 
       const concept =
         mapping.conceptCol >= 0 && row[mapping.conceptCol] ? row[mapping.conceptCol].trim() : undefined;
@@ -347,14 +353,14 @@ export const ExcelPlayImportModal: React.FC<ExcelPlayImportModalProps> = ({
       results.push({
         id: `import_${Date.now()}_${rowIdx}_${Math.random().toString(36).substring(2, 6)}`,
         name,
-        formation: formation || (unit === 'offense' ? 'I-Right' : '4-3 Base'),
+        formation,
         type: playType,
         personnel,
         wristbandNum,
         concept,
         situations,
         unit,
-        tags: [playType, unit, formation].filter(Boolean),
+        tags: [playType, unit, formation, personnel].filter(Boolean) as string[],
       });
     });
 

@@ -35,7 +35,7 @@ import { SingleWristband, WristbandColumn, WristbandData, WristbandPlay, UserRol
 import { PlayDatabaseEntry, CallSheetFullData, CallSheetPlay, PlayType } from '../types/callSheet';
 import { deepClone, safeJSONStringify, safeJSONSet, safeJSONParse } from '../services/storageService';
 import { printWristbandInserts, generateWristbandPrintHTML, openCleanPrintTab, triggerPrint } from '../utils/printUtils';
-import { extractPersonnel, getPersonnelSubTabs, normalizePlayName, syncCallSheetWithWristbands } from '../utils/wristbandLinking';
+import { extractPersonnel, getPersonnelSubTabs, normalizePlayName, syncCallSheetWithWristbands, syncWristbandToCallSheet } from '../utils/wristbandLinking';
 import { PlayPickerModal } from './callSheet/PlayPickerModal';
 import { PlayBankSidebar } from './callSheet/PlayBankSidebar';
 import { ExcelPlayImportModal } from './callSheet/ExcelPlayImportModal';
@@ -216,6 +216,19 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     if (onUpdateWristbandData) {
       onUpdateWristbandData(updated);
     }
+    // Automatically keep Call Sheet wristband tables & linked plays synchronized
+    if (onUpdateCallSheetData) {
+      const currentCs: CallSheetFullData =
+        callSheetData || safeJSONParse<CallSheetFullData | null>('footballCallSheetData', null) || {
+          offenseSections: [],
+          defenseSections: [],
+          offenseScript: [],
+          defenseScript: [],
+        };
+      const syncedCs = syncWristbandToCallSheet(updated, currentCs, playDatabase);
+      safeJSONSet('footballCallSheetData', syncedCs);
+      onUpdateCallSheetData(syncedCs);
+    }
   };
 
   const updateCurrentWristband = (updater: (wb: SingleWristband) => SingleWristband) => {
@@ -313,36 +326,17 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     }
 
     // 2. Synchronize across Call Sheet
-    if (callSheetData && onUpdateCallSheetData) {
-      const syncPlayItem = (item: CallSheetPlay | null): CallSheetPlay | null => {
-        if (!item || !item.name) return item;
-        if (normalizePlayName(item.name) === norm) {
-          return {
-            ...item,
-            wristbandNum: slotNumber,
-            wristbandColor: colHighlightColor,
-            wristbandNumberColor: colHighlightColor,
-            wristbandTextColor: colTextColor,
-            wristbandLabel: colHeaderName,
-          };
-        }
-        return item;
-      };
-
-      const updatedCs: CallSheetFullData = {
-        ...callSheetData,
-        offenseSections: (callSheetData.offenseSections || []).map((sec) => ({
-          ...sec,
-          plays: sec.plays.map(syncPlayItem),
-        })),
-        defenseSections: (callSheetData.defenseSections || []).map((sec) => ({
-          ...sec,
-          plays: sec.plays.map(syncPlayItem),
-        })),
-        offenseScript: (callSheetData.offenseScript || []).map(syncPlayItem),
-        defenseScript: (callSheetData.defenseScript || []).map(syncPlayItem),
-      };
-      onUpdateCallSheetData(updatedCs);
+    if (onUpdateCallSheetData) {
+      const currentCs: CallSheetFullData =
+        callSheetData || safeJSONParse<CallSheetFullData | null>('footballCallSheetData', null) || {
+          offenseSections: [],
+          defenseSections: [],
+          offenseScript: [],
+          defenseScript: [],
+        };
+      const syncedCs = syncWristbandToCallSheet(nextData, currentCs, updatedDb || playDatabase);
+      safeJSONSet('footballCallSheetData', syncedCs);
+      onUpdateCallSheetData(syncedCs);
     }
   };
 

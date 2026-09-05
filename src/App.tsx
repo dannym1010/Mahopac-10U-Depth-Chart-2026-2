@@ -99,6 +99,7 @@ import { USER_IMPORTED_GAME_DAY_PLAYS, INITIAL_TWO_WRISTBANDS_DATA } from './dat
 import { ExcelPlayImportModal } from './components/callSheet/ExcelPlayImportModal';
 import { PlayDatabaseEntry, CallSheetData } from './types/callSheet';
 import { MASTER_PLAY_DATABASE, DEFAULT_CALL_SHEET_DATA } from './data/callSheetData';
+import { syncWristbandToCallSheet } from './utils/wristbandLinking';
 import { ScoutingView } from './components/ScoutingView';
 import { PlaybookGuidesView } from './components/PlaybookGuidesView';
 import { DrillLibraryView } from './components/DrillLibraryView';
@@ -5400,6 +5401,42 @@ function mergeRemoteWeeklyData(
     if (unit) {
       setActiveUnit(unit);
     }
+  };
+
+  const handleUpdateWristbandData = (updatedWb: WristbandData) => {
+    lastLocalEditTimeRef.current = Date.now();
+    safeJSONSet('footballWristbandData', updatedWb);
+    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+    setWeeklyData((prev) => {
+      const existingWeek = prev[scopedKey] || prev[currentWeek] || {
+        formations: defaultFormations,
+        depthChart: {},
+        scrimmageChart: {},
+        opponent: '',
+      };
+      const updatedWeek = {
+        ...existingWeek,
+        wristbandData: updatedWb,
+      };
+      const nextWeekly = {
+        ...prev,
+        [scopedKey]: updatedWeek,
+        [currentWeek]: updatedWeek,
+      };
+      latestStateRef.current.weeklyData = nextWeekly;
+      safeJSONSet('footballWeeklyData', nextWeekly);
+      return nextWeekly;
+    });
+
+    // Automatically synchronize call sheet tables whenever wristband is updated
+    const currentCs = latestStateRef.current.callSheetData || callSheetData;
+    const currentDb = latestStateRef.current.playDatabase || playDatabase;
+    const syncedCs = syncWristbandToCallSheet(updatedWb, currentCs, currentDb);
+    setCallSheetData(syncedCs);
+    latestStateRef.current.callSheetData = syncedCs;
+    safeJSONSet('footballCallSheetData', syncedCs);
+
+    debouncedSave('all');
   };
 
   const handleSetAdminPasscode = async (newPasscode: string) => {

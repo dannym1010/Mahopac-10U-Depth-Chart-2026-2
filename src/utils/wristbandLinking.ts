@@ -57,6 +57,7 @@ export function normalizePlayName(name: string): string {
 /**
  * Determines or normalizes the personnel group of a play.
  * Uses play.personnel if present, or parses standard football nomenclature from the name/formation.
+ * Strictest priority: '21' plays are ALWAYS 21 Personnel, never Spread.
  */
 export function extractPersonnel(play: {
   personnel?: string;
@@ -64,6 +65,22 @@ export function extractPersonnel(play: {
   formation?: string;
   unit?: string;
 }): string {
+  const nameUpper = (play.name || '').toUpperCase();
+  const formUpper = (play.formation || '').toUpperCase();
+  const combined = `${nameUpper} ${formUpper}`;
+
+  // Priority check for 21 series/personnel (even if raw has Spread mislabel)
+  if (
+    /\b21\b/.test(combined) ||
+    combined.startsWith('21') ||
+    combined.includes('21 L') ||
+    combined.includes('21 R') ||
+    combined.includes('21-') ||
+    combined.includes('21 PERSONNEL')
+  ) {
+    return '21 Personnel';
+  }
+
   if (play.personnel && play.personnel.trim()) {
     const raw = play.personnel.trim();
     // Normalize variants
@@ -83,18 +100,11 @@ export function extractPersonnel(play: {
     return raw;
   }
 
-  const nameUpper = (play.name || '').toUpperCase();
-  const formUpper = (play.formation || '').toUpperCase();
-  const combined = `${nameUpper} ${formUpper}`;
-
   // Offense standard prefixes
-  if (combined.startsWith('21 ') || combined.includes('21 L') || combined.includes('21 R')) {
-    return '21 Personnel';
-  }
-  if (combined.startsWith('32 ') || combined.includes('32 L') || combined.includes('32 R')) {
+  if (combined.startsWith('32 ') || combined.includes('32 L') || combined.includes('32 R') || combined.startsWith('32')) {
     return '32 Personnel';
   }
-  if (combined.startsWith('11 ') || combined.includes('11 L') || combined.includes('11 R')) {
+  if (combined.startsWith('11 ') || combined.includes('11 L') || combined.includes('11 R') || combined.startsWith('11')) {
     return '11 Personnel';
   }
   if (combined.startsWith('12 ') || combined.includes('12 L') || combined.includes('12 R')) {
@@ -123,6 +133,95 @@ export function extractPersonnel(play: {
   if (combined.includes('PREVENT')) return 'Prevent';
 
   return play.unit === 'defense' ? 'Base Defense' : 'Standard / Base';
+}
+
+/**
+ * Infers formation from play name and optional raw formation string.
+ * Strictly prevents any "21" plays from being mislabeled as "Spread".
+ */
+export function inferFormation(
+  name: string,
+  unit: 'offense' | 'defense' = 'offense',
+  rawFormation?: string
+): string {
+  const cleanName = (name || '').trim().toUpperCase();
+  const cleanRaw = (rawFormation || '').trim();
+
+  // If offense and play contains 21 Series / 21 Personnel indicators, NEVER allow Spread
+  const is21 =
+    /\b21\b/.test(cleanName) ||
+    cleanName.startsWith('21') ||
+    cleanName.includes('21 R') ||
+    cleanName.includes('21 L') ||
+    cleanName.includes('21-');
+
+  if (is21) {
+    if (/TWINS/i.test(cleanName) || /TWINS/i.test(cleanRaw)) {
+      if (/21\s*R\s*TWINS/i.test(cleanName) || /21\s*R\s*TWINS/i.test(cleanRaw)) return '21 R Twins';
+      if (/21\s*L\s*TWINS/i.test(cleanName) || /21\s*L\s*TWINS/i.test(cleanRaw)) return '21 L Twins';
+      return '21 Twins';
+    }
+    if (/21\s*R\b/i.test(cleanName) || cleanName.includes('21 R ') || /21\s*R\b/i.test(cleanRaw)) return '21 R';
+    if (/21\s*L\b/i.test(cleanName) || cleanName.includes('21 L ') || /21\s*L\b/i.test(cleanRaw)) return '21 L';
+    if (cleanRaw && !cleanRaw.toLowerCase().includes('spread')) {
+      return cleanRaw;
+    }
+    return '21 I-Form';
+  }
+
+  // 32 Series / Heavy
+  const is32 =
+    /\b32\b/.test(cleanName) ||
+    cleanName.startsWith('32') ||
+    cleanName.includes('32 R') ||
+    cleanName.includes('32 L');
+
+  if (is32) {
+    if (/32\s*R\b/i.test(cleanName) || cleanName.includes('32 R ')) return '32 R';
+    if (/32\s*L\b/i.test(cleanName) || cleanName.includes('32 L ')) return '32 L';
+    if (cleanRaw && !cleanRaw.toLowerCase().includes('spread')) return cleanRaw;
+    return '32 Heavy';
+  }
+
+  // 11 Series
+  const is11 =
+    /\b11\b/.test(cleanName) ||
+    cleanName.startsWith('11') ||
+    cleanName.includes('11 R') ||
+    cleanName.includes('11 L');
+
+  if (is11) {
+    if (/11\s*R\b/i.test(cleanName) || cleanName.includes('11 R ')) return '11 R';
+    if (/11\s*L\b/i.test(cleanName) || cleanName.includes('11 L ')) return '11 L';
+    if (cleanRaw) return cleanRaw;
+    return '11 Personnel';
+  }
+
+  // If user provided an explicit formation (and it's not a mislabeled Spread for a 21 play)
+  if (cleanRaw && cleanRaw.toLowerCase() !== 'spread') {
+    return cleanRaw;
+  }
+
+  if (unit === 'defense') {
+    if (cleanName.includes('4-3')) return '4-3 Base';
+    if (cleanName.includes('3-4')) return '3-4 Base';
+    if (cleanName.includes('5-3') || cleanName.includes('BEAR')) return '5-3 Bear';
+    if (cleanName.includes('NICKEL')) return 'Nickel';
+    if (cleanName.includes('DIME')) return 'Dime';
+    if (cleanName.includes('GOAL LINE') || cleanName.includes('6-2')) return 'Goal Line';
+    return cleanRaw || '4-3 Base';
+  }
+
+  // Offense keywords
+  if (cleanName.includes('PISTOL')) return 'Pistol';
+  if (cleanName.includes('GUN') || cleanName.includes('SHOTGUN')) return 'Shotgun';
+  if (cleanName.includes('TRIPS')) return 'Trips';
+  if (cleanName.includes('EMPTY')) return 'Empty';
+  if (cleanName.includes('I-FORM') || cleanName.includes('I FORM')) return 'I-Form';
+  if (cleanName.includes('SINGLEBACK')) return 'Singleback';
+  if (cleanName.includes('SPREAD') || cleanRaw.toLowerCase() === 'spread') return 'Spread 2x2';
+
+  return 'I-Right';
 }
 
 export interface PersonnelSubTab {
@@ -417,8 +516,328 @@ export function createSectionFromWristband(
     group,
     slotsCount: playsList.length,
     columnsCount: cols.length > 1 ? 2 : 1,
+    colSpan: cols.length > 1 ? 2 : 1,
+    wristbandId: wb.id,
+    wristbandPresetMode: cols.length > 1 ? 'full_two_col' : 'col_1',
     highlightEnabled: true,
     highlightColor: 'yellow',
     plays: playsList,
   };
 }
+
+/**
+ * Synchronizes wristband updates into CallSheetFullData.
+ * Whenever a wristband is updated (names, numbers, colors, rows),
+ * all wristband-linked sections and individual plays in the Call Sheet are updated.
+ */
+export function syncWristbandToCallSheet(
+  wbData: WristbandData,
+  callSheetData: CallSheetFullData
+): CallSheetFullData {
+  if (!wbData?.wristbands || !callSheetData) return callSheetData;
+
+  const wristbands = wbData.wristbands;
+  const wbMap = new Map<string, SingleWristband>();
+  wristbands.forEach((wb) => wbMap.set(wb.id, wb));
+
+  // Build lookup maps for fast matching
+  const slotByWbColRow = new Map<string, {
+    text: string;
+    slotLabel: string;
+    num: number;
+    colColor: string;
+    textColor: string;
+    rowHighlight?: string;
+    wbTitle: string;
+    formation?: string;
+    type?: string;
+  }>();
+
+  wristbands.forEach((wb) => {
+    const rows = wb.rowsCount || 13;
+    (wb.columns || []).forEach((col, colIdx) => {
+      const colColor = col.numberBgColor || col.color || (colIdx === 0 ? '#facc15' : '#38bdf8');
+      const textColor = col.numberTextColor || (isDarkColor(colColor) ? '#ffffff' : '#000000');
+      (col.plays || []).forEach((p, rowIdx) => {
+        const slotNumber = colIdx * rows + rowIdx + 1;
+        const slotLabel = p.customLabel || `${slotNumber}`;
+        const key = `${wb.id}_${colIdx}_${rowIdx}`;
+        const formation = inferFormation(p.text || '', 'offense', p.formation);
+        slotByWbColRow.set(key, {
+          text: (p.text || '').trim(),
+          slotLabel,
+          num: slotNumber,
+          colColor,
+          textColor,
+          rowHighlight: p.rowHighlightColor,
+          wbTitle: wb.title || 'Wristband',
+          formation,
+          type: p.type || 'run',
+        });
+      });
+    });
+  });
+
+  const syncPlay = (play: CallSheetPlay | null): CallSheetPlay | null => {
+    if (!play) return null;
+
+    // Check if play has a wristbandSlotMatch
+    if (play.wristbandSlotMatch?.wristbandId) {
+      const wbId = play.wristbandSlotMatch.wristbandId;
+      const colIdx = play.wristbandSlotMatch.colIdx ?? 0;
+      const rowIdx = play.wristbandSlotMatch.rowIdx ?? 0;
+      const match = slotByWbColRow.get(`${wbId}_${colIdx}_${rowIdx}`);
+      if (match) {
+        return {
+          ...play,
+          name: match.text || play.name,
+          formation: inferFormation(match.text || play.name, 'offense', play.formation || match.formation),
+          type: (match.type as any) || play.type,
+          wristbandNum: match.num,
+          wristbandLabel: match.slotLabel,
+          wristbandColor: match.colColor,
+          wristbandNumberColor: match.colColor,
+          wristbandTextColor: match.textColor,
+          wristbandRowColor: match.rowHighlight || play.wristbandRowColor,
+          wristbandSlotMatch: {
+            ...play.wristbandSlotMatch,
+            color: match.colColor,
+            numberBgColor: match.colColor,
+            numberTextColor: match.textColor,
+            slotNumber: match.slotLabel,
+            rowHighlightColor: match.rowHighlight,
+          },
+        };
+      }
+    }
+
+    // Check by ID containing wb_sec_ or cs_wb_
+    if (play.id.includes('wb_sec_') || play.id.includes('cs_wb_')) {
+      const parts = play.id.split('_');
+      // Format: wb_sec_{wbId}_{colIdx}_{rowIdx}_... or cs_{wbId}_{colIdx}_{rowIdx}_...
+      const wbId = parts[2];
+      const colIdx = parseInt(parts[3], 10);
+      const rowIdx = parseInt(parts[4], 10);
+      if (wbId && !isNaN(colIdx) && !isNaN(rowIdx)) {
+        const match = slotByWbColRow.get(`${wbId}_${colIdx}_${rowIdx}`);
+        if (match) {
+          return {
+            ...play,
+            name: match.text || play.name,
+            formation: inferFormation(match.text || play.name, 'offense', play.formation || match.formation),
+            type: (match.type as any) || play.type,
+            wristbandNum: match.num,
+            wristbandLabel: match.slotLabel,
+            wristbandColor: match.colColor,
+            wristbandNumberColor: match.colColor,
+            wristbandTextColor: match.textColor,
+            wristbandRowColor: match.rowHighlight,
+          };
+        }
+      }
+    }
+
+    // Sanitize formation: if name starts with 21, never allow Spread
+    if (play.name && (play.name.startsWith('21') || play.name.includes('21 R') || play.name.includes('21 L'))) {
+      if (!play.formation || play.formation.toLowerCase() === 'spread') {
+        return {
+          ...play,
+          formation: inferFormation(play.name, 'offense', play.formation),
+        };
+      }
+    }
+
+    return play;
+  };
+
+  const syncSection = (sec: CallSheetSection): CallSheetSection => {
+    // Check if section is a wristband preset section
+    const isWbPreset =
+      sec.wristbandId ||
+      sec.id.startsWith('wb_table_') ||
+      sec.id.startsWith('sec_wb_') ||
+      sec.title.toLowerCase().includes('wristband');
+
+    let wb: SingleWristband | undefined;
+    if (sec.wristbandId) {
+      wb = wbMap.get(sec.wristbandId);
+    } else if (sec.id.startsWith('wb_table_') || sec.id.startsWith('sec_wb_')) {
+      const match = sec.id.match(/(?:wb_table_|sec_wb_)([^_]+)/);
+      if (match && match[1]) {
+        wb = wbMap.get(match[1]);
+      }
+    }
+    // Fallback to first wristband if available
+    if (!wb && wristbandList.length > 0) {
+      wb = wristbandList[0];
+    }
+
+    if (isWbPreset && wb) {
+      const mode = sec.wristbandPresetMode || (sec.columnsCount === 2 ? 'full_two_col' : 'col_1');
+      const col1 = wb.columns[0] || { name: 'Left Column', color: '#facc15', textColor: '#000000', plays: [] };
+      const col2 = wb.columns[1] || { name: 'Right Column', color: '#38bdf8', textColor: '#000000', plays: [] };
+      const rows = wb.rowsCount || 13;
+
+      if (mode === 'full_two_col' || sec.columnsCount === 2) {
+        const maxRows = Math.max(col1.plays?.length || 0, col2.plays?.length || 0, rows);
+        const interleaved: (CallSheetPlay | null)[] = [];
+
+        for (let r = 0; r < maxRows; r++) {
+          // Col 1 play
+          const p1 = col1.plays?.[r];
+          const slotNum1 = r + 1;
+          const slotLabel1 = p1?.customLabel || `${slotNum1}`;
+          const color1 = col1.numberBgColor || col1.color || '#facc15';
+          const textCol1 = col1.numberTextColor || (isDarkColor(color1) ? '#ffffff' : '#000000');
+          const name1 = (p1?.text || '').trim();
+          const form1 = inferFormation(name1, 'offense', p1?.formation);
+          const pers1 = extractPersonnel({ name: name1, formation: form1, unit: 'offense' });
+
+          const play1: CallSheetPlay | null = name1
+            ? {
+                id: `wb_sec_${wb.id}_0_${r}`,
+                name: name1,
+                formation: form1,
+                personnel: pers1,
+                type: (p1?.type as any) || 'run',
+                wristbandNum: slotNum1,
+                wristbandLabel: slotLabel1,
+                wristbandColor: color1,
+                wristbandNumberColor: color1,
+                wristbandTextColor: textCol1,
+                wristbandRowColor: p1?.rowHighlightColor,
+                wristbandSlotMatch: {
+                  wristbandId: wb.id,
+                  wristbandTitle: wb.title,
+                  colIdx: 0,
+                  rowIdx: r,
+                  color: color1,
+                  slotNumber: slotLabel1,
+                  numberBgColor: color1,
+                  numberTextColor: textCol1,
+                  rowHighlightColor: p1?.rowHighlightColor,
+                },
+              }
+            : null;
+
+          // Col 2 play
+          const p2 = col2.plays?.[r];
+          const slotNum2 = rows + r + 1;
+          const slotLabel2 = p2?.customLabel || `${slotNum2}`;
+          const color2 = col2.numberBgColor || col2.color || '#38bdf8';
+          const textCol2 = col2.numberTextColor || (isDarkColor(color2) ? '#ffffff' : '#000000');
+          const name2 = (p2?.text || '').trim();
+          const form2 = inferFormation(name2, 'offense', p2?.formation);
+          const pers2 = extractPersonnel({ name: name2, formation: form2, unit: 'offense' });
+
+          const play2: CallSheetPlay | null = name2
+            ? {
+                id: `wb_sec_${wb.id}_1_${r}`,
+                name: name2,
+                formation: form2,
+                personnel: pers2,
+                type: (p2?.type as any) || 'run',
+                wristbandNum: slotNum2,
+                wristbandLabel: slotLabel2,
+                wristbandColor: color2,
+                wristbandNumberColor: color2,
+                wristbandTextColor: textCol2,
+                wristbandRowColor: p2?.rowHighlightColor,
+                wristbandSlotMatch: {
+                  wristbandId: wb.id,
+                  wristbandTitle: wb.title,
+                  colIdx: 1,
+                  rowIdx: r,
+                  color: color2,
+                  slotNumber: slotLabel2,
+                  numberBgColor: color2,
+                  numberTextColor: textCol2,
+                  rowHighlightColor: p2?.rowHighlightColor,
+                },
+              }
+            : null;
+
+          interleaved.push(play1);
+          interleaved.push(play2);
+        }
+
+        return {
+          ...sec,
+          wristbandId: wb.id,
+          wristbandPresetMode: 'full_two_col',
+          columnsCount: 2,
+          colSpan: sec.colSpan || 2,
+          slotsCount: interleaved.length,
+          plays: interleaved,
+        };
+      } else {
+        const colIdx =
+          sec.wristbandColIdx !== undefined
+            ? sec.wristbandColIdx
+            : mode === 'col_2' || sec.id.includes('_c2_') || sec.title.includes('Column 2')
+            ? 1
+            : 0;
+        const targetCol = colIdx === 1 ? col2 : col1;
+        const targetPlays = targetCol.plays || [];
+        const plays: (CallSheetPlay | null)[] = targetPlays.map((p, r) => {
+          const slotNum = colIdx * rows + r + 1;
+          const slotLabel = p.customLabel || `${slotNum}`;
+          const color = targetCol.numberBgColor || targetCol.color || (colIdx === 1 ? '#38bdf8' : '#facc15');
+          const textCol = targetCol.numberTextColor || (isDarkColor(color) ? '#ffffff' : '#000000');
+          const name = (p.text || '').trim();
+          if (!name) return null;
+          const form = inferFormation(name, 'offense', p.formation);
+          const pers = extractPersonnel({ name, formation: form, unit: 'offense' });
+          return {
+            id: `wb_sec_${wb!.id}_${colIdx}_${r}`,
+            name,
+            formation: form,
+            personnel: pers,
+            type: (p.type as any) || 'run',
+            wristbandNum: slotNum,
+            wristbandLabel: slotLabel,
+            wristbandColor: color,
+            wristbandNumberColor: color,
+            wristbandTextColor: textCol,
+            wristbandRowColor: p.rowHighlightColor,
+            wristbandSlotMatch: {
+              wristbandId: wb!.id,
+              wristbandTitle: wb!.title,
+              colIdx,
+              rowIdx: r,
+              color,
+              slotNumber: slotLabel,
+              numberBgColor: color,
+              numberTextColor: textCol,
+              rowHighlightColor: p.rowHighlightColor,
+            },
+          };
+        });
+
+        return {
+          ...sec,
+          wristbandId: wb.id,
+          wristbandPresetMode: mode,
+          wristbandColIdx: colIdx,
+          slotsCount: plays.length,
+          plays,
+        };
+      }
+    }
+
+    // Default: sync individual plays in the section
+    return {
+      ...sec,
+      plays: sec.plays.map(syncPlay),
+    };
+  };
+
+  return {
+    ...callSheetData,
+    offenseSections: (callSheetData.offenseSections || []).map(syncSection),
+    defenseSections: (callSheetData.defenseSections || []).map(syncSection),
+    offenseScript: (callSheetData.offenseScript || []).map(syncPlay),
+    defenseScript: (callSheetData.defenseScript || []).map(syncPlay),
+  };
+}
+

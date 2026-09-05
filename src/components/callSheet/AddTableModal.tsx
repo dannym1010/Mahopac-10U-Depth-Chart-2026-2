@@ -17,6 +17,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { CallSheetSection, CallSheetPlay, PlayDatabaseEntry } from '../../types/callSheet';
+import { inferFormation, extractPersonnel } from '../../utils/wristbandLinking';
 import { SingleWristband, WristbandColumn, WristbandData, WristbandPlay } from '../../types';
 import {
   DEFAULT_WRISTBAND_1,
@@ -248,11 +249,19 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
 
     const playText = wbPlay.text || '';
     const dbMatch = playText ? dbPlayLookup.get(playText.toLowerCase().trim()) : undefined;
+    const formation = inferFormation(playText, targetUnit, wbPlay.formation || dbMatch?.formation);
+    const personnel = extractPersonnel({
+      name: playText,
+      formation,
+      unit: targetUnit,
+      personnel: dbMatch?.personnel,
+    });
 
     return {
       id: `cs_wb_${wb.id}_c${colIdx}_r${rowIdx}_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
       name: playText,
-      formation: wbPlay.formation || dbMatch?.formation || '',
+      formation,
+      personnel,
       type: (wbPlay.type as any) || dbMatch?.type || 'run',
       wristbandNum: slotNum,
       wristbandLabel: label,
@@ -319,6 +328,9 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
           group,
           slotsCount: interleavedPlays.length,
           columnsCount: 2,
+          colSpan: 2, // 2 columns wide so full play name is visible!
+          wristbandId: selectedWb.id,
+          wristbandPresetMode: 'full_two_col',
           highlightEnabled: group === 'red_zone',
           highlightColor: group === 'red_zone' ? 'rose' : undefined,
           plays: interleavedPlays,
@@ -338,6 +350,10 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
           group,
           slotsCount: plays.length,
           columnsCount: 1,
+          colSpan: 1,
+          wristbandId: selectedWb.id,
+          wristbandPresetMode: 'col_1',
+          wristbandColIdx: 0,
           highlightEnabled: group === 'red_zone',
           highlightColor: group === 'red_zone' ? 'rose' : undefined,
           plays,
@@ -357,6 +373,10 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
           group,
           slotsCount: plays.length,
           columnsCount: 1,
+          colSpan: 1,
+          wristbandId: selectedWb.id,
+          wristbandPresetMode: 'col_2',
+          wristbandColIdx: 1,
           highlightEnabled: group === 'red_zone',
           highlightColor: group === 'red_zone' ? 'rose' : undefined,
           plays,
@@ -377,6 +397,10 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
       group,
       slotsCount: table1Plays.length,
       columnsCount: 1,
+      colSpan: 1,
+      wristbandId: selectedWb.id,
+      wristbandPresetMode: 'col_1',
+      wristbandColIdx: 0,
       highlightEnabled: group === 'red_zone',
       highlightColor: group === 'red_zone' ? 'rose' : undefined,
       plays: table1Plays,
@@ -391,6 +415,10 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
       group,
       slotsCount: table2Plays.length,
       columnsCount: 1,
+      colSpan: 1,
+      wristbandId: selectedWb.id,
+      wristbandPresetMode: 'col_2',
+      wristbandColIdx: 1,
       highlightEnabled: group === 'red_zone',
       highlightColor: group === 'red_zone' ? 'rose' : undefined,
       plays: table2Plays,
@@ -429,6 +457,7 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
       group,
       slotsCount: customRowsCount,
       columnsCount: customColumnsCount,
+      colSpan: customColumnsCount >= 2 ? 2 : 1,
       highlightEnabled: customHighlightEnabled,
       highlightColor: customHighlightColor,
       plays: Array(customRowsCount).fill(null),
