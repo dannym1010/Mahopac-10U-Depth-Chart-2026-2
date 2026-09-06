@@ -80,27 +80,19 @@ export const WristbandPrintModal: React.FC<WristbandPrintModalProps> = ({
     }
   }, [isOpen, initialMode, activeWristbandId, wristbands]);
 
-  if (!isOpen) return null;
-
-  // Selected wristbands objects
-  const selectedWristbands = useMemo(() => {
-    return wristbands.filter((w) => selectedIds.includes(w.id));
-  }, [wristbands, selectedIds]);
+  // Selected wristbands objects (computed unconditionally)
+  const selectedWristbands = wristbands.filter((w) => selectedIds.includes(w.id));
 
   // Total copies calculated
-  const totalInsertCount = useMemo(() => {
-    return selectedWristbands.reduce((sum, w) => {
-      const copies = copiesMap[w.id] ?? globalCopies;
-      return sum + copies;
-    }, 0);
-  }, [selectedWristbands, copiesMap, globalCopies]);
+  const totalInsertCount = selectedWristbands.reduce((sum, w) => {
+    const copies = copiesMap[w.id] ?? globalCopies;
+    return sum + copies;
+  }, 0);
 
   // Calculate estimated sheets of paper
   // Grid 2-Up Landscape fits up to 6 per sheet; Single Column Portrait fits up to 3 per sheet
-  const estimatedSheets = useMemo(() => {
-    const perSheet = layout === 'grid_2up' ? 6 : 3;
-    return Math.ceil(totalInsertCount / perSheet) || 1;
-  }, [totalInsertCount, layout]);
+  const perSheet = layout === 'grid_2up' ? 6 : 3;
+  const estimatedSheets = Math.ceil(totalInsertCount / perSheet) || 1;
 
   const isAllSelected = selectedIds.length === wristbands.length && wristbands.length > 0;
 
@@ -168,6 +160,8 @@ export const WristbandPrintModal: React.FC<WristbandPrintModalProps> = ({
     );
     openCleanPrintTab(html, opts.documentTitle || 'Wristband_Inserts_Print');
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">

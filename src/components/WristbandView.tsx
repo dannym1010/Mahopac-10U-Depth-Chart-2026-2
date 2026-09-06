@@ -2485,14 +2485,16 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
       {/* =========================================================================
           8. WRISTBAND PRINT & MULTIPLE COPIES CONFIGURATION MODAL
           ========================================================================= */}
-      <WristbandPrintModal
-        isOpen={isPrintModalOpen}
-        onClose={() => setIsPrintModalOpen(false)}
-        wristbands={wristbands}
-        activeWristbandId={activeWristbandId}
-        activeTeamName={activeTeamName}
-        initialMode={printModalMode}
-      />
+      {isPrintModalOpen && (
+        <WristbandPrintModal
+          isOpen={isPrintModalOpen}
+          onClose={() => setIsPrintModalOpen(false)}
+          wristbands={wristbands}
+          activeWristbandId={activeWristbandId}
+          activeTeamName={activeTeamName}
+          initialMode={printModalMode}
+        />
+      )}
 
       {/* =========================================================================
           9. DEDICATED PRINT CONTAINER - ONLY CUTOUTS SPACED OUT
