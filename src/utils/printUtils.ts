@@ -3310,6 +3310,7 @@ export interface PocketDepthChartPrintOptions {
   unitFilter?: 'offense' | 'defense' | 'st' | 'groups' | 'both_off_def' | 'all';
   teamName?: string;
   seasonLabel?: string;
+  highlightedCells?: Record<string, 'black' | 'gold' | 'blue' | string>;
 }
 
 /**
@@ -3383,15 +3384,60 @@ export function generatePocketDepthChartPrintHTML(
         const p3 = players[2];
         const extraBackups = players.slice(3);
 
-        const renderPlayer = (p?: PlacedPlayer, stringTier: 1 | 2 | 3 = 1) => {
-          if (!p) return '<span style="color: #94a3b8; font-weight: 600;">&mdash;</span>';
+        const posKey = `${form.id}__${pos.id}__pos`;
+        const blackKey = `${form.id}__${pos.id}__black`;
+        const goldKey = `${form.id}__${pos.id}__gold`;
+        const blueKey = `${form.id}__${pos.id}__blue`;
+        const backupsKey = `${form.id}__${pos.id}__backups`;
+
+        const getHighlightStyle = (cellKey: string, defaultColor: 'black' | 'gold' | 'blue') => {
+          const raw = options?.highlightedCells?.[cellKey];
+          if (!raw) return null;
+          const color = raw === 'black' || raw === 'gold' || raw === 'blue' ? raw : defaultColor;
+          if (color === 'black') {
+            return {
+              bg: '#cbd5e1', // Lighter shade of Black (Slate-300)
+              border: '#0f172a',
+              text: '#000000',
+            };
+          } else if (color === 'gold') {
+            return {
+              bg: '#fef08a', // Lighter shade of Gold (Yellow-200)
+              border: '#d97706',
+              text: '#000000',
+            };
+          } else {
+            return {
+              bg: '#bfdbfe', // Lighter shade of Blue (Blue-200)
+              border: '#2563eb',
+              text: '#000000',
+            };
+          }
+        };
+
+        const hlPos = getHighlightStyle(posKey, 'black');
+        const hlBlack = getHighlightStyle(blackKey, 'black');
+        const hlGold = getHighlightStyle(goldKey, 'gold');
+        const hlBlue = getHighlightStyle(blueKey, 'blue');
+        const hlBackups = getHighlightStyle(backupsKey, 'blue');
+
+        const renderPlayer = (p?: PlacedPlayer, stringTier: 1 | 2 | 3 = 1, isHighlighted = false) => {
+          if (!p) {
+            return isHighlighted
+              ? `<span style="color: #475569; font-weight: 700; font-size: ${subFs}px;">&mdash;</span>`
+              : '<span style="color: #94a3b8; font-weight: 600;">&mdash;</span>';
+          }
 
           if (inkFriendly) {
-            const badgeBorder = stringTier === 1 ? 'background: #000; color: #fff;' : stringTier === 2 ? 'border: 1.2px solid #000; color: #000; background: #fff;' : 'border: 1px dashed #475569; color: #1e293b; background: #f8fafc;';
+            const badgeBorder = stringTier === 1
+              ? 'background: #000; color: #fff;'
+              : stringTier === 2
+              ? 'border: 1.2px solid #000; color: #000; background: #fff;'
+              : 'border: 1px dashed #475569; color: #1e293b; background: #f8fafc;';
             return `
-              <div style="display: flex; items-center: center; gap: 4px; min-width: 0; line-height: 1.2;">
+              <div style="display: flex; align-items: center; gap: 4px; min-width: 0; line-height: 1.2;">
                 <span style="display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 16px; padding: 0 3px; font-weight: 900; font-size: ${subFs + 1}px; font-family: monospace; border-radius: 2px; ${badgeBorder} shrink: 0;">#${p.num}</span>
-                <span style="font-weight: 800; text-transform: uppercase; font-size: ${baseFs}px; color: #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name}</span>
+                <span style="font-weight: 900; text-transform: uppercase; font-size: ${baseFs}px; color: #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name}</span>
               </div>
             `;
           }
@@ -3407,7 +3453,7 @@ export function generatePocketDepthChartPrintHTML(
           return `
             <div style="display: flex; align-items: center; gap: 4px; min-width: 0; line-height: 1.2;">
               <span style="display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 16px; padding: 0 3px; font-weight: 900; font-size: ${subFs + 1}px; font-family: monospace; border-radius: 3px; ${badgeStyle} shrink: 0;">#${p.num}</span>
-              <span style="font-weight: 800; text-transform: uppercase; font-size: ${baseFs}px; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name}</span>
+              <span style="font-weight: 900; text-transform: uppercase; font-size: ${baseFs}px; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name}</span>
             </div>
           `;
         };
@@ -3418,13 +3464,13 @@ export function generatePocketDepthChartPrintHTML(
 
         return `
           <tr style="border-bottom: 1px solid #cbd5e1;">
-            <td style="padding: 3px 6px; font-weight: 900; font-size: ${baseFs}px; background: ${inkFriendly ? '#f8fafc' : '#f1f5f9'}; border-right: 1.5px solid #000; text-align: center; vertical-align: middle; white-space: nowrap;">
-              <div style="display: inline-flex; align-items: center; justify-content: center; background: #1e293b; color: #fff; font-size: ${baseFs}px; font-weight: 900; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.5px;">${pos.name}</div>
+            <td style="padding: 3px 6px; font-weight: 900; font-size: ${baseFs}px; background: ${hlPos ? hlPos.bg : (inkFriendly ? '#f8fafc' : '#f1f5f9')} !important; border-right: 1.5px solid #000; text-align: center; vertical-align: middle; white-space: nowrap; ${hlPos ? `outline: 1.5px solid ${hlPos.border}; outline-offset: -1.5px; box-shadow: inset 0 0 0 1.5px ${hlPos.border};` : ''}">
+              <div style="display: inline-flex; align-items: center; justify-content: center; background: ${hlPos ? hlPos.border : '#1e293b'}; color: #fff; font-size: ${baseFs}px; font-weight: 900; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.5px;">${pos.name}</div>
             </td>
-            ${showStarter ? `<td style="padding: 3px 6px; vertical-align: middle; background: #fff; border-right: 1px solid #e2e8f0;">${renderPlayer(p1, 1)}</td>` : ''}
-            ${show2nd ? `<td style="padding: 3px 6px; vertical-align: middle; background: ${inkFriendly ? '#fff' : '#fffbeb'}; border-right: 1px solid #e2e8f0;">${renderPlayer(p2, 2)}</td>` : ''}
-            ${show3rd ? `<td style="padding: 3px 6px; vertical-align: middle; background: ${inkFriendly ? '#fff' : '#f0f9ff'}; border-right: 1px solid #e2e8f0;">${renderPlayer(p3, 3)}</td>` : ''}
-            ${showBackups ? `<td style="padding: 3px 6px; vertical-align: middle; background: #fff;">${backupsHtml}</td>` : ''}
+            ${showStarter ? `<td style="padding: 3px 6px; vertical-align: middle; background: ${hlBlack ? hlBlack.bg : '#fff'} !important; border-right: 1px solid #e2e8f0; ${hlBlack ? `outline: 1.5px solid ${hlBlack.border}; outline-offset: -1.5px; box-shadow: inset 0 0 0 1.5px ${hlBlack.border};` : ''}">${renderPlayer(p1, 1, Boolean(hlBlack))}</td>` : ''}
+            ${show2nd ? `<td style="padding: 3px 6px; vertical-align: middle; background: ${hlGold ? hlGold.bg : (inkFriendly ? '#fff' : '#fffbeb')} !important; border-right: 1px solid #e2e8f0; ${hlGold ? `outline: 1.5px solid ${hlGold.border}; outline-offset: -1.5px; box-shadow: inset 0 0 0 1.5px ${hlGold.border};` : ''}">${renderPlayer(p2, 2, Boolean(hlGold))}</td>` : ''}
+            ${show3rd ? `<td style="padding: 3px 6px; vertical-align: middle; background: ${hlBlue ? hlBlue.bg : (inkFriendly ? '#fff' : '#f0f9ff')} !important; border-right: 1px solid #e2e8f0; ${hlBlue ? `outline: 1.5px solid ${hlBlue.border}; outline-offset: -1.5px; box-shadow: inset 0 0 0 1.5px ${hlBlue.border};` : ''}">${renderPlayer(p3, 3, Boolean(hlBlue))}</td>` : ''}
+            ${showBackups ? `<td style="padding: 3px 6px; vertical-align: middle; background: ${hlBackups ? hlBackups.bg : '#fff'} !important; ${hlBackups ? `outline: 1.5px solid ${hlBackups.border}; outline-offset: -1.5px; box-shadow: inset 0 0 0 1.5px ${hlBackups.border};` : ''}">${backupsHtml}</td>` : ''}
           </tr>
         `;
       })
@@ -3604,6 +3650,17 @@ export function generatePocketDepthChartPrintHTML(
         <span class="legend-box" style="background: #3b82f6; border: 1px solid #1d4ed8;"></span>
         <span>Blue</span>
       </div>
+      ${options?.highlightedCells && Object.keys(options.highlightedCells).length > 0 ? `
+        <div class="legend-item" style="border-left: 1.5px solid #cbd5e1; padding-left: 8px; margin-left: 4px; display: flex; align-items: center; gap: 4px;">
+          <span style="font-weight: 900; text-transform: uppercase; font-size: ${subFs}px; color: #475569;">Highlights:</span>
+          <span class="legend-box" style="background: #cbd5e1; border: 1px solid #0f172a;"></span>
+          <span>Black</span>
+          <span class="legend-box" style="background: #fef08a; border: 1px solid #d97706;"></span>
+          <span>Gold</span>
+          <span class="legend-box" style="background: #bfdbfe; border: 1px solid #2563eb;"></span>
+          <span>Blue</span>
+        </div>
+      ` : ''}
     </div>
   </div>
 

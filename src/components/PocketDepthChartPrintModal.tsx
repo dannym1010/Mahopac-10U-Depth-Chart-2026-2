@@ -20,6 +20,7 @@ import {
   Star,
   ArrowUpDown,
   ListOrdered,
+  Highlighter,
 } from 'lucide-react';
 import { FormationBoard, PlacedPlayer } from '../types';
 import {
@@ -63,6 +64,12 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
   const [inkFriendly, setInkFriendly] = useState<boolean>(true);
   const [showCutLines, setShowCutLines] = useState<boolean>(true);
   const [fontSize, setFontSize] = useState<'compact' | 'standard' | 'large'>('compact');
+
+  // Cell Highlighting State (Interactive Print Emphasis)
+  // Key format: `${formationId}__${posId}__${tier}` or `${formationId}__${posId}__pos`
+  // Value: 'black' | 'gold' | 'blue'
+  const [highlightedCells, setHighlightedCells] = useState<Record<string, 'black' | 'gold' | 'blue'>>({});
+  const [highlightBrushMode, setHighlightBrushMode] = useState<'auto' | 'black' | 'gold' | 'blue'>('auto');
 
   // Specific formation selection
   const [selectedFormationIds, setSelectedFormationIds] = useState<string[]>(() =>
@@ -232,6 +239,48 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
     }
   };
 
+  const highlightCount = useMemo(() => Object.keys(highlightedCells).length, [highlightedCells]);
+
+  const toggleCellHighlight = (cellKey: string, defaultColor: 'black' | 'gold' | 'blue') => {
+    setHighlightedCells((prev) => {
+      const next = { ...prev };
+      const currentColor = next[cellKey];
+      const targetColor = highlightBrushMode === 'auto' ? defaultColor : highlightBrushMode;
+
+      if (currentColor) {
+        if (currentColor === targetColor || highlightBrushMode === 'auto') {
+          delete next[cellKey];
+        } else {
+          next[cellKey] = targetColor;
+        }
+      } else {
+        next[cellKey] = targetColor;
+      }
+      return next;
+    });
+  };
+
+  const highlightAllTier = (tier: 'black' | 'gold' | 'blue') => {
+    setHighlightedCells((prev) => {
+      const next = { ...prev };
+      targetFormations.forEach((form) => {
+        form.rows.forEach((r) => {
+          r.positions.forEach((p) => {
+            if (p) {
+              const key = `${form.id}__${p.id}__${tier}`;
+              next[key] = tier;
+            }
+          });
+        });
+      });
+      return next;
+    });
+  };
+
+  const clearAllHighlights = () => {
+    setHighlightedCells({});
+  };
+
   const printOptions: PocketDepthChartPrintOptions = {
     orientation,
     layout: oneChartPerColumn ? 'single_column' : (unitMode === 'both_off_def' ? 'side_by_side' : layout),
@@ -246,6 +295,7 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
     unitFilter: oneChartPerColumn ? 'all' : (unitMode === 'both_off_def' ? 'both_off_def' : unitMode === 'current' ? activeUnit : unitMode),
     teamName: activeTeamName,
     seasonLabel,
+    highlightedCells,
   };
 
   // Direct print
@@ -790,6 +840,139 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                 />
               </label>
             </div>
+
+            {/* 7. Cell Highlighting (Printout Emphasis) */}
+            <div className="space-y-2.5 pt-2 border-t border-slate-750">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-300">
+                  <Highlighter className="w-3.5 h-3.5 text-amber-400" />
+                  <span>7. Cell Highlighting</span>
+                </div>
+                {highlightCount > 0 ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                      {highlightCount} Highlighted
+                    </span>
+                    <button
+                      type="button"
+                      onClick={clearAllHighlights}
+                      className="text-[10px] text-rose-400 hover:text-rose-300 font-bold underline cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-[10px] text-slate-500">0 highlighted</span>
+                )}
+              </div>
+
+              <div className="text-[11px] text-slate-400 bg-slate-800/50 p-2.5 rounded-xl border border-slate-750 space-y-1.5">
+                <p>
+                  Click <strong className="text-slate-200">any cell</strong> in the live preview to highlight it.
+                  Cells highlight using a lighter shade of their respective team color:
+                </p>
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[10px] font-bold">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-300 text-slate-950 border border-slate-900">
+                    <span className="w-2 h-2 rounded-xs bg-slate-900 inline-block"></span>
+                    Black (Light Slate)
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-200 text-amber-950 border border-amber-600">
+                    <span className="w-2 h-2 rounded-xs bg-amber-500 inline-block"></span>
+                    Gold (Light Gold)
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-200 text-blue-950 border border-blue-600">
+                    <span className="w-2 h-2 rounded-xs bg-blue-600 inline-block"></span>
+                    Blue (Light Blue)
+                  </span>
+                </div>
+              </div>
+
+              {/* Brush Mode Picker */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-slate-400">Highlight Brush Color:</label>
+                <div className="grid grid-cols-4 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setHighlightBrushMode('auto')}
+                    className={`px-1.5 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer text-center ${
+                      highlightBrushMode === 'auto'
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm'
+                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-750 hover:text-slate-300'
+                    }`}
+                    title="Auto assigns lighter shade based on column team color"
+                  >
+                    Auto (Team)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHighlightBrushMode('black')}
+                    className={`px-1.5 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer text-center ${
+                      highlightBrushMode === 'black'
+                        ? 'bg-slate-300 text-slate-950 border-slate-950 ring-1 ring-white'
+                        : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-750'
+                    }`}
+                    title="Forces Light Slate Black shade"
+                  >
+                    Black
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHighlightBrushMode('gold')}
+                    className={`px-1.5 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer text-center ${
+                      highlightBrushMode === 'gold'
+                        ? 'bg-amber-200 text-amber-950 border-amber-600 ring-1 ring-amber-400'
+                        : 'bg-slate-800 text-amber-300 border-slate-700 hover:bg-slate-750'
+                    }`}
+                    title="Forces Light Athletic Gold shade"
+                  >
+                    Gold
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHighlightBrushMode('blue')}
+                    className={`px-1.5 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer text-center ${
+                      highlightBrushMode === 'blue'
+                        ? 'bg-blue-200 text-blue-950 border-blue-600 ring-1 ring-blue-400'
+                        : 'bg-slate-800 text-blue-300 border-slate-700 hover:bg-slate-750'
+                    }`}
+                    title="Forces Light Royal Blue shade"
+                  >
+                    Blue
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Batch Toggles */}
+              <div className="space-y-1 pt-1">
+                <label className="text-[11px] font-bold text-slate-400">Quick Highlighting Shortcuts:</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => highlightAllTier('black')}
+                    className="px-2 py-1 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-slate-600 rounded-lg text-[10px] font-bold text-slate-300 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <span className="w-2 h-2 rounded-xs bg-slate-400 inline-block"></span>
+                    <span>All Black</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => highlightAllTier('gold')}
+                    className="px-2 py-1 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-slate-600 rounded-lg text-[10px] font-bold text-amber-300 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <span className="w-2 h-2 rounded-xs bg-amber-400 inline-block"></span>
+                    <span>All Gold</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => highlightAllTier('blue')}
+                    className="px-2 py-1 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-slate-600 rounded-lg text-[10px] font-bold text-blue-300 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <span className="w-2 h-2 rounded-xs bg-blue-400 inline-block"></span>
+                    <span>All Blue</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Live Print Preview Column (7 cols) */}
@@ -812,6 +995,34 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                     <span>&bull;</span>
                     <span className="text-amber-300 font-mono">1st: {firstFormation.name}</span>
                   </>
+                )}
+              </div>
+            </div>
+
+            {/* Interactive Cell Highlighter banner */}
+            <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl mb-2 text-xs shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <Highlighter className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="text-slate-300 font-bold text-[11px] truncate">
+                  Click any cell below to toggle highlight (lighter shade of Black, Gold, Blue)
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {highlightCount > 0 ? (
+                  <>
+                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                      {highlightCount} Highlighted
+                    </span>
+                    <button
+                      type="button"
+                      onClick={clearAllHighlights}
+                      className="text-[10px] text-rose-400 hover:text-rose-300 font-bold underline cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-[10px] text-slate-500">Ready to highlight</span>
                 )}
               </div>
             </div>
@@ -850,6 +1061,23 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                       <span className="w-2.5 h-2.5 rounded-xs bg-blue-500 border border-blue-700 inline-block"></span>
                       <span>Blue</span>
                     </span>
+                    {highlightCount > 0 && (
+                      <div className="flex items-center gap-1.5 ml-1.5 pl-1.5 border-l border-slate-300">
+                        <span className="text-[8px] font-black uppercase text-slate-600">Highlights:</span>
+                        <span className="inline-flex items-center gap-0.5 text-[8px] font-bold">
+                          <span className="w-2 h-2 rounded-xs bg-slate-300 border border-slate-900 inline-block"></span>
+                          <span>Black</span>
+                        </span>
+                        <span className="inline-flex items-center gap-0.5 text-[8px] font-bold">
+                          <span className="w-2 h-2 rounded-xs bg-amber-200 border border-amber-600 inline-block"></span>
+                          <span>Gold</span>
+                        </span>
+                        <span className="inline-flex items-center gap-0.5 text-[8px] font-bold">
+                          <span className="w-2 h-2 rounded-xs bg-blue-200 border border-blue-600 inline-block"></span>
+                          <span>Blue</span>
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -874,6 +1102,8 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                           depthLevels={depthLevels}
                           inkFriendly={inkFriendly}
                           isFirst={idx === 0}
+                          highlightedCells={highlightedCells}
+                          onToggleCellHighlight={toggleCellHighlight}
                         />
                       </div>
                     ))}
@@ -902,6 +1132,8 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                             depthLevels={depthLevels}
                             inkFriendly={inkFriendly}
                             isFirst={idx === 0 && targetFormations[0]?.id === f.id}
+                            highlightedCells={highlightedCells}
+                            onToggleCellHighlight={toggleCellHighlight}
                           />
                         ))}
                     </div>
@@ -921,6 +1153,8 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                             depthLevels={depthLevels}
                             inkFriendly={inkFriendly}
                             isFirst={idx === 0 && targetFormations[0]?.id === f.id}
+                            highlightedCells={highlightedCells}
+                            onToggleCellHighlight={toggleCellHighlight}
                           />
                         ))}
                     </div>
@@ -943,6 +1177,8 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                         depthLevels={depthLevels}
                         inkFriendly={inkFriendly}
                         isFirst={idx === 0}
+                        highlightedCells={highlightedCells}
+                        onToggleCellHighlight={toggleCellHighlight}
                       />
                     ))}
                   </div>
@@ -1006,7 +1242,17 @@ const PreviewFormationCard: React.FC<{
   depthLevels: 'starters_only' | '2_deep' | '3_deep' | 'all';
   inkFriendly: boolean;
   isFirst?: boolean;
-}> = ({ formation, depthChart, depthLevels, inkFriendly, isFirst }) => {
+  highlightedCells?: Record<string, 'black' | 'gold' | 'blue' | string>;
+  onToggleCellHighlight?: (cellKey: string, defaultColor: 'black' | 'gold' | 'blue') => void;
+}> = ({
+  formation,
+  depthChart,
+  depthLevels,
+  inkFriendly,
+  isFirst,
+  highlightedCells = {},
+  onToggleCellHighlight,
+}) => {
   // Collect slots - position descriptions removed
   const slots: Array<{ pos: { id: string; name: string } }> = [];
   formation.rows.forEach((r) => {
@@ -1021,7 +1267,7 @@ const PreviewFormationCard: React.FC<{
   const showBackups = depthLevels === 'all';
 
   return (
-    <div className="border border-slate-950 rounded overflow-hidden text-[10px] bg-white">
+    <div className="border border-slate-950 rounded overflow-hidden text-[10px] bg-white shadow-xs">
       <div className="bg-slate-950 text-white px-2 py-0.5 font-black uppercase text-[9.5px] flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <span className="px-1 py-0.2 bg-amber-400 text-slate-950 rounded text-[8px] font-black">
@@ -1055,35 +1301,94 @@ const PreviewFormationCard: React.FC<{
             const p3 = players[2];
             const extra = players.slice(3);
 
+            const posKey = `${formation.id}__${pos.id}__pos`;
+            const blackKey = `${formation.id}__${pos.id}__black`;
+            const goldKey = `${formation.id}__${pos.id}__gold`;
+            const blueKey = `${formation.id}__${pos.id}__blue`;
+            const backupsKey = `${formation.id}__${pos.id}__backups`;
+
+            const hlPos = highlightedCells[posKey];
+            const hlBlack = highlightedCells[blackKey];
+            const hlGold = highlightedCells[goldKey];
+            const hlBlue = highlightedCells[blueKey];
+            const hlBackups = highlightedCells[backupsKey];
+
             return (
               <tr key={pos.id} className="border-b border-slate-200">
-                <td className="py-0.5 px-1.5 font-black bg-slate-100 border-r border-slate-950 whitespace-nowrap text-center text-[9px]">
+                <td
+                  onClick={() => onToggleCellHighlight?.(posKey, 'black')}
+                  title="Click to toggle highlight position"
+                  className={`py-0.5 px-1.5 font-black border-r border-slate-950 whitespace-nowrap text-center text-[9px] cursor-pointer transition-all relative select-none ${
+                    hlPos === 'black'
+                      ? 'bg-slate-300 ring-2 ring-inset ring-slate-900'
+                      : hlPos === 'gold'
+                      ? 'bg-amber-200 ring-2 ring-inset ring-amber-600'
+                      : hlPos === 'blue'
+                      ? 'bg-blue-200 ring-2 ring-inset ring-blue-600'
+                      : 'bg-slate-100 hover:bg-slate-200'
+                  }`}
+                >
                   <span className="px-1.5 py-0.5 bg-slate-900 text-white rounded font-mono font-black text-[8.5px] inline-block">
                     {pos.name}
                   </span>
+                  {hlPos && (
+                    <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-slate-950 ring-1 ring-white" />
+                  )}
                 </td>
 
                 {showStarter && (
-                  <td className="py-0.5 px-1 border-r border-slate-200 text-[8.5px]">
+                  <td
+                    onClick={() => onToggleCellHighlight?.(blackKey, 'black')}
+                    title="Click to toggle highlight (Black team - light slate)"
+                    className={`py-0.5 px-1 border-r border-slate-200 text-[8.5px] cursor-pointer transition-all relative select-none ${
+                      hlBlack === 'black' || (hlBlack && hlBlack !== 'gold' && hlBlack !== 'blue')
+                        ? 'bg-slate-300 ring-2 ring-inset ring-slate-900 text-slate-950 font-black'
+                        : hlBlack === 'gold'
+                        ? 'bg-amber-200 ring-2 ring-inset ring-amber-600 text-amber-950 font-black'
+                        : hlBlack === 'blue'
+                        ? 'bg-blue-200 ring-2 ring-inset ring-blue-600 text-blue-950 font-black'
+                        : 'hover:bg-slate-100 hover:ring-1 hover:ring-slate-400'
+                    }`}
+                  >
+                    {hlBlack && (
+                      <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-slate-900 ring-1 ring-white pointer-events-none" />
+                    )}
                     {p1 ? (
-                      <span className="font-black text-black">
-                        <span className="bg-black text-white px-1 py-0.2 rounded font-mono mr-1 text-[8px]">
+                      <span className="font-black text-black flex items-center">
+                        <span className="bg-black text-white px-1 py-0.2 rounded font-mono mr-1 text-[8px] shrink-0">
                           #{p1.num}
                         </span>
-                        {p1.name}
+                        <span className="truncate">{p1.name}</span>
                       </span>
                     ) : (
-                      <span className="text-slate-400">&mdash;</span>
+                      <span className={hlBlack ? 'text-slate-800 font-bold' : 'text-slate-400'}>&mdash;</span>
                     )}
                   </td>
                 )}
 
                 {show2nd && (
-                  <td className="py-0.5 px-1 border-r border-slate-200 text-[8.5px]">
+                  <td
+                    onClick={() => onToggleCellHighlight?.(goldKey, 'gold')}
+                    title="Click to toggle highlight (Gold team - light gold)"
+                    className={`py-0.5 px-1 border-r border-slate-200 text-[8.5px] cursor-pointer transition-all relative select-none ${
+                      hlGold === 'gold' || (hlGold && hlGold !== 'black' && hlGold !== 'blue')
+                        ? 'bg-amber-200 ring-2 ring-inset ring-amber-600 text-amber-950 font-black'
+                        : hlGold === 'black'
+                        ? 'bg-slate-300 ring-2 ring-inset ring-slate-900 text-slate-950 font-black'
+                        : hlGold === 'blue'
+                        ? 'bg-blue-200 ring-2 ring-inset ring-blue-600 text-blue-950 font-black'
+                        : inkFriendly
+                        ? 'bg-white hover:bg-amber-50 hover:ring-1 hover:ring-amber-400'
+                        : 'bg-amber-50/50 hover:bg-amber-100/70 hover:ring-1 hover:ring-amber-400'
+                    }`}
+                  >
+                    {hlGold && (
+                      <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-600 ring-1 ring-white pointer-events-none" />
+                    )}
                     {p2 ? (
-                      <span className="font-bold text-slate-800">
+                      <span className="font-bold text-slate-900 flex items-center">
                         <span
-                          className={`px-1 py-0.2 rounded font-mono mr-1 text-[8px] font-black ${
+                          className={`px-1 py-0.2 rounded font-mono mr-1 text-[8px] font-black shrink-0 ${
                             inkFriendly
                               ? 'border border-black text-black bg-white'
                               : 'bg-amber-100 text-amber-900 border border-amber-400'
@@ -1091,20 +1396,37 @@ const PreviewFormationCard: React.FC<{
                         >
                           #{p2.num}
                         </span>
-                        {p2.name}
+                        <span className="truncate">{p2.name}</span>
                       </span>
                     ) : (
-                      <span className="text-slate-400">&mdash;</span>
+                      <span className={hlGold ? 'text-amber-900 font-bold' : 'text-slate-400'}>&mdash;</span>
                     )}
                   </td>
                 )}
 
                 {show3rd && (
-                  <td className="py-0.5 px-1 border-r border-slate-200 text-[8.5px]">
+                  <td
+                    onClick={() => onToggleCellHighlight?.(blueKey, 'blue')}
+                    title="Click to toggle highlight (Blue team - light blue)"
+                    className={`py-0.5 px-1 border-r border-slate-200 text-[8.5px] cursor-pointer transition-all relative select-none ${
+                      hlBlue === 'blue' || (hlBlue && hlBlue !== 'black' && hlBlue !== 'gold')
+                        ? 'bg-blue-200 ring-2 ring-inset ring-blue-600 text-blue-950 font-black'
+                        : hlBlue === 'black'
+                        ? 'bg-slate-300 ring-2 ring-inset ring-slate-900 text-slate-950 font-black'
+                        : hlBlue === 'gold'
+                        ? 'bg-amber-200 ring-2 ring-inset ring-amber-600 text-amber-950 font-black'
+                        : inkFriendly
+                        ? 'bg-white hover:bg-blue-50 hover:ring-1 hover:ring-blue-400'
+                        : 'bg-blue-50/50 hover:bg-blue-100/70 hover:ring-1 hover:ring-blue-400'
+                    }`}
+                  >
+                    {hlBlue && (
+                      <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-blue-600 ring-1 ring-white pointer-events-none" />
+                    )}
                     {p3 ? (
-                      <span className="font-medium text-slate-700">
+                      <span className="font-medium text-slate-900 flex items-center">
                         <span
-                          className={`px-1 py-0.2 rounded font-mono mr-1 text-[8px] font-black ${
+                          className={`px-1 py-0.2 rounded font-mono mr-1 text-[8px] font-black shrink-0 ${
                             inkFriendly
                               ? 'border border-dashed border-slate-600 text-slate-800'
                               : 'bg-blue-100 text-blue-900 border border-blue-400'
@@ -1112,16 +1434,31 @@ const PreviewFormationCard: React.FC<{
                         >
                           #{p3.num}
                         </span>
-                        {p3.name}
+                        <span className="truncate">{p3.name}</span>
                       </span>
                     ) : (
-                      <span className="text-slate-400">&mdash;</span>
+                      <span className={hlBlue ? 'text-blue-900 font-bold' : 'text-slate-400'}>&mdash;</span>
                     )}
                   </td>
                 )}
 
                 {showBackups && (
-                  <td className="py-0.5 px-1 text-[8px] text-slate-600">
+                  <td
+                    onClick={() => onToggleCellHighlight?.(backupsKey, 'blue')}
+                    title="Click to toggle highlight backups"
+                    className={`py-0.5 px-1 text-[8px] cursor-pointer transition-all relative select-none ${
+                      hlBackups === 'black'
+                        ? 'bg-slate-300 ring-2 ring-inset ring-slate-900 text-slate-950 font-black'
+                        : hlBackups === 'gold'
+                        ? 'bg-amber-200 ring-2 ring-inset ring-amber-600 text-amber-950 font-black'
+                        : hlBackups === 'blue'
+                        ? 'bg-blue-200 ring-2 ring-inset ring-blue-600 text-blue-950 font-black'
+                        : 'text-slate-600 hover:bg-slate-100 hover:ring-1 hover:ring-slate-400'
+                    }`}
+                  >
+                    {hlBackups && (
+                      <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-blue-600 ring-1 ring-white pointer-events-none" />
+                    )}
                     {extra.length > 0
                       ? extra.map((b) => `#${b.num} ${b.name}`).join(', ')
                       : <span className="text-slate-400">&mdash;</span>}
