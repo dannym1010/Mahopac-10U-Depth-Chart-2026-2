@@ -927,8 +927,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
           Formation Sheets
         </h1>
         <p className="text-[10px] font-bold text-black mt-0.5">
-          High-Visibility Sideline Depth Chart &bull; Starters / 1st String (Black) &bull; 2nd String (Gold)
-          &bull; 3rd String (Blue) &bull; 4th+ String (White)
+          High-Visibility Sideline Depth Chart &bull; Black &bull; Gold &bull; Blue &bull; Backups (White)
         </p>
       </div>
 
@@ -1219,17 +1218,14 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                               key={pos.id}
                               className="min-w-[490px] grid grid-cols-[48px_repeat(4,minmax(0,1fr))] px-2 py-2 items-center gap-1.5 hover:bg-slate-800/40 transition-colors"
                             >
-                              {/* Position Badge & Level */}
-                              <div className="flex flex-col items-start gap-0.5 min-w-0">
-                                <span className="px-1.5 py-0.5 bg-indigo-600/90 text-white font-black text-[11px] rounded-md border border-indigo-400/40 shadow-xs leading-none">
+                              {/* Position Badge (Clean without position description) */}
+                              <div className="flex items-center justify-center min-w-0">
+                                <span className="px-2 py-0.5 bg-indigo-600/90 text-white font-black text-[11px] rounded-md border border-indigo-400/40 shadow-xs leading-none">
                                   {pos.name}
-                                </span>
-                                <span className="text-[8.5px] font-bold text-slate-500 truncate max-w-[44px]">
-                                  {rowLabel}
                                 </span>
                               </div>
 
-                              {/* BLACK (1st String / Starter) */}
+                              {/* BLACK */}
                               <div className="min-w-0">
                                 {blackPlayer ? (
                                   <div
@@ -1289,7 +1285,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                 )}
                               </div>
 
-                              {/* GOLD (2nd String) */}
+                              {/* GOLD */}
                               <div className="min-w-0">
                                 {goldPlayer ? (
                                   <div
@@ -1349,7 +1345,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                 )}
                               </div>
 
-                              {/* BLUE (3rd String) */}
+                              {/* BLUE */}
                               <div className="min-w-0">
                                 {bluePlayer ? (
                                   <div
@@ -3132,11 +3128,11 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                       <span className="font-bold text-amber-400">
                         Slot:{' '}
                         {assignPlayerModalTarget.targetIndex === 0
-                          ? 'BLACK (1st String)'
+                          ? 'BLACK'
                           : assignPlayerModalTarget.targetIndex === 1
-                          ? 'GOLD (2nd String)'
+                          ? 'GOLD'
                           : assignPlayerModalTarget.targetIndex === 2
-                          ? 'BLUE (3rd String)'
+                          ? 'BLUE'
                           : `BACKUP (D${assignPlayerModalTarget.targetIndex + 1})`}
                       </span>
                     </>
@@ -3366,11 +3362,11 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                     }`}
                   >
                     {quickSwapTarget.currentIndex === 0
-                      ? 'BLACK (1st String / Starter)'
+                      ? 'BLACK'
                       : quickSwapTarget.currentIndex === 1
-                      ? 'GOLD (2nd String)'
+                      ? 'GOLD'
                       : quickSwapTarget.currentIndex === 2
-                      ? 'BLUE (3rd String)'
+                      ? 'BLUE'
                       : `BACKUP (D${quickSwapTarget.currentIndex + 1})`}
                   </span>
                 </div>
@@ -3406,7 +3402,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                     onClick={() => {
                       if (onReorderDepthPlayer) {
                         onReorderDepthPlayer(
-                          quickSwapTarget.posId,
+                           quickSwapTarget.posId,
                           quickSwapTarget.currentIndex,
                           quickSwapTarget.currentIndex - 1
                         );
@@ -3420,7 +3416,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                   </button>
                 ) : (
                   <div className="py-2 px-3 bg-slate-900 text-slate-600 font-bold text-xs rounded-xl border border-slate-800 flex items-center justify-center gap-1.5">
-                    <span className="text-[11px]">Already 1st String</span>
+                    <span className="text-[11px]">Already Black</span>
                   </div>
                 )}
 
@@ -3444,7 +3440,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                   </button>
                 ) : (
                   <div className="py-2 px-3 bg-slate-900 text-slate-600 font-bold text-xs rounded-xl border border-slate-800 flex items-center justify-center gap-1.5">
-                    <span className="text-[11px]">Lowest String</span>
+                    <span className="text-[11px]">Lowest Tier</span>
                   </div>
                 )}
               </div>

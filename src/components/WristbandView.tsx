@@ -39,6 +39,7 @@ import { extractPersonnel, getPersonnelSubTabs, normalizePlayName, syncCallSheet
 import { PlayPickerModal } from './callSheet/PlayPickerModal';
 import { PlayBankSidebar } from './callSheet/PlayBankSidebar';
 import { ExcelPlayImportModal } from './callSheet/ExcelPlayImportModal';
+import { WristbandPrintModal } from './WristbandPrintModal';
 import { DEFAULT_CALL_SHEET_DATA } from '../data/callSheetData';
 import {
   DEFAULT_WRISTBAND_1,
@@ -451,6 +452,15 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
 
   // Print mode state: 'active' | 'all'
   const [printMode, setPrintMode] = useState<'active' | 'all'>('active');
+
+  // Wristband print & multiple copies configuration modal
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
+  const [printModalMode, setPrintModalMode] = useState<'all' | 'active'>('all');
+
+  const handleOpenPrintModal = (mode: 'all' | 'active' = 'all') => {
+    setPrintModalMode(mode);
+    setIsPrintModalOpen(true);
+  };
 
   // Drag-over visual feedback on slots
   const [dragOverSlot, setDragOverSlot] = useState<{ colIdx: number; rowIdx: number } | null>(null);
@@ -1581,27 +1591,41 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
               <span className="hidden lg:inline">Auto-Fill</span>
             </button>
 
-            {/* Print Active Insert (Exact 4.5" x 2.25") */}
+            {/* Primary Print / Multiple Copies Selection Modal Button */}
             <button
               type="button"
-              onClick={() => handlePrint('active')}
-              className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+              onClick={() => handleOpenPrintModal('all')}
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black shadow-md shadow-amber-500/20 transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+              title="Print multiple copies for players/coaches & choose all made wristbands"
+            >
+              <Printer className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
+              <span>Print / Copies</span>
+              <span className="bg-slate-950/20 text-slate-950 text-[10px] px-1.5 py-0.2 rounded-full font-black">
+                {wristbands.length} Made
+              </span>
+            </button>
+
+            {/* Quick Print Active Insert (Exact 4.5" x 2.25") */}
+            <button
+              type="button"
+              onClick={() => handleOpenPrintModal('active')}
+              className="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5"
               title="Print active 4.5 x 2.25 insert card"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print Insert</span>
+              <span className="hidden sm:inline">Active Card</span>
             </button>
 
-            {/* Print All Inserts */}
+            {/* Print All Made Wristbands */}
             {wristbands.length > 1 && (
               <button
                 type="button"
-                onClick={() => handlePrint('all')}
+                onClick={() => handleOpenPrintModal('all')}
                 className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-750 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                title="Print all wristband inserts on one sheet"
+                title="Select and print all made wristbands"
               >
-                <Printer className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden sm:inline">Print All ({wristbands.length})</span>
+                <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden sm:inline">All ({wristbands.length})</span>
               </button>
             )}
 
@@ -2459,7 +2483,19 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
       )}
 
       {/* =========================================================================
-          8. DEDICATED PRINT CONTAINER - ONLY CUTOUTS SPACED OUT
+          8. WRISTBAND PRINT & MULTIPLE COPIES CONFIGURATION MODAL
+          ========================================================================= */}
+      <WristbandPrintModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        wristbands={wristbands}
+        activeWristbandId={activeWristbandId}
+        activeTeamName={activeTeamName}
+        initialMode={printModalMode}
+      />
+
+      {/* =========================================================================
+          9. DEDICATED PRINT CONTAINER - ONLY CUTOUTS SPACED OUT
           ========================================================================= */}
       <div
         id="wristband-print-section"

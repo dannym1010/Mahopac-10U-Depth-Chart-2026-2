@@ -1585,9 +1585,9 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
               </button>
             </div>
 
-            {/* Team / String Breakdown Selector (Black, Blue, Gold, Sub Section, All Matrix) */}
+            {/* Team / Tier Breakdown Selector (Black, Blue, Gold, Sub Section, All Matrix) */}
             <div className="grid grid-cols-5 gap-1 p-1 bg-slate-900/90 rounded-2xl border border-slate-800">
-              {/* 1. Black Team (1st String) */}
+              {/* 1. Black Team */}
               <button
                 type="button"
                 onClick={() => setStarterString('black')}
@@ -1598,7 +1598,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                 }`}
               >
                 <span className="text-[11px] font-black leading-none">⬛ Black</span>
-                <span className="text-[9px] font-bold opacity-80">1st ({stringCounts.blackCount})</span>
+                <span className="text-[9px] font-bold opacity-80">Black ({stringCounts.blackCount})</span>
               </button>
 
               {/* 2. Blue Team (3rd / Blue String) */}
@@ -1715,11 +1715,11 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                           }`}
                         >
                           {starterString === 'black'
-                            ? '1st String'
+                            ? 'Black'
                             : starterString === 'gold'
-                            ? '2nd String'
+                            ? 'Gold'
                             : starterString === 'blue'
-                            ? '3rd String'
+                            ? 'Blue'
                             : 'Sub / Backup'}
                         </span>
                       </div>

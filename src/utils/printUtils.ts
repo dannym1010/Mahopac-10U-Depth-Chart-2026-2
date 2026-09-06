@@ -2132,17 +2132,35 @@ export function printSinglePlayerHourReport(options: SinglePlayerHourReportOptio
   printCleanHTML(html, title);
 }
 
+export interface WristbandPrintOptions {
+  copies?: number;
+  wristbandCopies?: Record<string, number>;
+  layout?: 'single_column' | 'grid_2up';
+  orientation?: 'portrait' | 'landscape';
+  inkFriendly?: boolean;
+  showCutLines?: boolean;
+  showCopyLabels?: boolean;
+  documentTitle?: string;
+}
+
 /**
  * Generates clean, standalone printable HTML for physical 4.5" x 2.25" wristband inserts.
  * Renders exact dimensions, dashed cut guides, team branding, colored column badges,
  * and high-contrast play typography.
+ * Supports printing all made wristbands and multiple copies per wristband.
  */
 export function generateWristbandPrintHTML(
   wristbands: SingleWristband[],
   activeTeamName: string = 'Mahopac 10U',
-  documentTitle?: string
+  documentTitle?: string,
+  options?: WristbandPrintOptions
 ): string {
-  const title = documentTitle || `${activeTeamName} Wristband Inserts`;
+  const title = options?.documentTitle || documentTitle || `${activeTeamName} Wristband Inserts`;
+  const layout = options?.layout || 'grid_2up';
+  const orientation = options?.orientation || (layout === 'grid_2up' ? 'landscape' : 'portrait');
+  const inkFriendly = options?.inkFriendly || false;
+  const showCutLines = options?.showCutLines !== false;
+  const showCopyLabels = options?.showCopyLabels !== false;
 
   const getContrastColor = (hexColor: string, defaultColor?: string): string => {
     if (defaultColor) return defaultColor;
@@ -2181,18 +2199,58 @@ export function generateWristbandPrintHTML(
     return String(wbStart + colIdx * rows + rowIdx);
   };
 
-  const cardsHtml = wristbands
-    .map((wb, wbIdx) => {
+  // Expand wristbands according to copy count requested
+  const itemsToPrint: Array<{
+    wb: SingleWristband;
+    wbIdx: number;
+    copyIdx: number;
+    totalCopiesForWb: number;
+  }> = [];
+
+  wristbands.forEach((wb, wbIdx) => {
+    const copiesForWb = Math.max(
+      1,
+      Math.min(50, options?.wristbandCopies?.[wb.id] ?? options?.copies ?? 1)
+    );
+    for (let c = 0; c < copiesForWb; c++) {
+      itemsToPrint.push({
+        wb,
+        wbIdx,
+        copyIdx: c,
+        totalCopiesForWb: copiesForWb,
+      });
+    }
+  });
+
+  if (itemsToPrint.length === 0 && wristbands.length > 0) {
+    itemsToPrint.push({
+      wb: wristbands[0],
+      wbIdx: 0,
+      copyIdx: 0,
+      totalCopiesForWb: 1,
+    });
+  }
+
+  const cardsHtml = itemsToPrint
+    .map((item) => {
+      const { wb, wbIdx, copyIdx, totalCopiesForWb } = item;
       const rows = wb.rowsCount || 13;
-      const cols = wb.columns && wb.columns.length > 0 ? wb.columns : [
-        { color: '#facc15', plays: [] },
-        { color: '#38bdf8', plays: [] },
-      ];
+      const cols =
+        wb.columns && wb.columns.length > 0
+          ? wb.columns
+          : [
+              { color: '#facc15', plays: [] },
+              { color: '#38bdf8', plays: [] },
+            ];
 
       const colHeadersHtml = cols
         .map((col, cIdx) => {
-          const colBg = col.numberBgColor || col.color || (cIdx === 0 ? '#facc15' : '#38bdf8');
-          const colText = col.headerTextColor || getContrastColor(colBg, col.numberTextColor);
+          let colBg = col.numberBgColor || col.color || (cIdx === 0 ? '#facc15' : '#38bdf8');
+          let colText = col.headerTextColor || getContrastColor(colBg, col.numberTextColor);
+          if (inkFriendly) {
+            colBg = '#f1f5f9';
+            colText = '#000000';
+          }
           const colName =
             col.name ||
             (cIdx === 0 ? `COL 1 (1 - ${rows})` : `COL 2 (${rows + 1} - ${rows * 2})`);
@@ -2208,15 +2266,26 @@ export function generateWristbandPrintHTML(
       const colsBodyHtml = cols
         .map((col, cIdx) => {
           const plays = col.plays || [];
-          const colBg = col.numberBgColor || col.color || (cIdx === 0 ? '#facc15' : '#38bdf8');
+          let colBg = col.numberBgColor || col.color || (cIdx === 0 ? '#facc15' : '#38bdf8');
+          if (inkFriendly) {
+            colBg = '#ffffff';
+          }
 
           const rowsHtml = Array.from({ length: rows })
             .map((_, rIdx) => {
               const play = plays[rIdx] || { text: '' };
               const slotLabel = getSlotLabel(wb, wbIdx, cIdx, rIdx, play);
-              const numberBg = play.numberHighlightColor || colBg;
-              const numberTextColor = play.numberTextColor || col.numberTextColor || getContrastColor(numberBg);
-              const rowBg = play.rowHighlightColor || '#ffffff';
+              let numberBg = play.numberHighlightColor || colBg;
+              let numberTextColor =
+                play.numberTextColor || col.numberTextColor || getContrastColor(numberBg);
+              let rowBg = play.rowHighlightColor || '#ffffff';
+
+              if (inkFriendly) {
+                numberBg = '#ffffff';
+                numberTextColor = '#000000';
+                rowBg = '#ffffff';
+              }
+
               const playText = (play.text || '—').trim() || '—';
 
               return `
@@ -2240,20 +2309,32 @@ export function generateWristbandPrintHTML(
         })
         .join('');
 
+      const copyBadgeHeader =
+        totalCopiesForWb > 1 && showCopyLabels
+          ? ` &bull; COPY ${copyIdx + 1}/${totalCopiesForWb}`
+          : '';
+
+      const cutGuideRight =
+        totalCopiesForWb > 1 && showCopyLabels
+          ? `COPY ${copyIdx + 1} OF ${totalCopiesForWb} &bull; 4.5&quot; &times; 2.25&quot;`
+          : `STANDARD 4.5&quot; &times; 2.25&quot; WRIST COACH INSERT`;
+
+      const cardBoxBorder = showCutLines ? '1.5px dashed #000000' : '1.5px solid #000000';
+
       return `
         <div class="card-wrapper">
           <div class="cut-guide">
-            <span>✂ CUT ALONG DASHED LINE</span>
-            <span>STANDARD 4.5&quot; &times; 2.25&quot; WRIST COACH INSERT</span>
+            <span>✂ CUT ALONG GUIDE</span>
+            <span>${cutGuideRight}</span>
           </div>
-          <div class="card-box">
+          <div class="card-box" style="border: ${cardBoxBorder};">
             <div class="card-header">
               ${
                 wb.title &&
                 (wb.title.toUpperCase().includes('10U') ||
                   wb.title.toUpperCase().includes(activeTeamName.toUpperCase()))
-                  ? wb.title
-                  : `${wb.title || 'WRISTBAND INSERT'} &bull; ${activeTeamName.toUpperCase()}`
+                  ? `${wb.title}${copyBadgeHeader}`
+                  : `${wb.title || 'WRISTBAND INSERT'} &bull; ${activeTeamName.toUpperCase()}${copyBadgeHeader}`
               }
             </div>
             <div class="cols-header">
@@ -2268,6 +2349,8 @@ export function generateWristbandPrintHTML(
     })
     .join('');
 
+  const isLandscape = orientation === 'landscape';
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -2275,7 +2358,7 @@ export function generateWristbandPrintHTML(
   <title>${title}</title>
   <style>
     @page {
-      size: letter portrait;
+      size: letter ${isLandscape ? 'landscape' : 'portrait'};
       margin: 0.35in;
     }
     * {
@@ -2292,29 +2375,29 @@ export function generateWristbandPrintHTML(
     }
     .print-header {
       text-align: center;
-      margin-bottom: 20px;
-      padding-bottom: 8px;
+      margin-bottom: 16px;
+      padding-bottom: 6px;
       border-bottom: 1.5px solid #0f172a;
     }
     .print-header h1 {
-      font-size: 14pt;
+      font-size: 13pt;
       font-weight: 900;
       text-transform: uppercase;
       margin: 0;
       letter-spacing: 0.04em;
     }
     .print-header p {
-      font-size: 8.5pt;
+      font-size: 8pt;
       color: #475569;
-      margin: 3px 0 0 0;
+      margin: 2px 0 0 0;
       font-weight: 700;
     }
     .cards-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 26px;
-      margin: 0 auto;
+      ${
+        isLandscape
+          ? `display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 20px; max-width: 10.3in; margin: 0 auto;`
+          : `display: flex; flex-direction: column; align-items: center; gap: 20px; margin: 0 auto;`
+      }
     }
     .card-wrapper {
       page-break-inside: avoid;
@@ -2329,12 +2412,12 @@ export function generateWristbandPrintHTML(
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 7.5pt;
+      font-size: 7pt;
       font-family: monospace;
       font-weight: bold;
       color: #334155;
-      margin-bottom: 4px;
-      letter-spacing: 0.05em;
+      margin-bottom: 3px;
+      letter-spacing: 0.04em;
     }
     .card-box {
       width: 4.5in;
@@ -2343,7 +2426,6 @@ export function generateWristbandPrintHTML(
       max-width: 4.5in;
       min-height: 2.25in;
       max-height: 2.25in;
-      border: 1.5px dashed #000000;
       background: #ffffff;
       display: flex;
       flex-direction: column;
@@ -2355,7 +2437,7 @@ export function generateWristbandPrintHTML(
       color: #ffffff;
       text-align: center;
       font-family: monospace, sans-serif;
-      font-size: 9pt;
+      font-size: 8.5pt;
       font-weight: 900;
       text-transform: uppercase;
       padding: 2px 4px;
@@ -2470,10 +2552,11 @@ export function generateWristbandPrintHTML(
 export function printWristbandInserts(
   wristbands: SingleWristband[],
   activeTeamName: string = 'Mahopac 10U',
-  documentTitle?: string
+  documentTitle?: string,
+  options?: WristbandPrintOptions
 ) {
-  const html = generateWristbandPrintHTML(wristbands, activeTeamName, documentTitle);
-  const title = documentTitle || `${activeTeamName}_Wristband_Inserts`;
+  const html = generateWristbandPrintHTML(wristbands, activeTeamName, documentTitle, options);
+  const title = options?.documentTitle || documentTitle || `${activeTeamName}_Wristband_Inserts`;
   printCleanHTML(html, title);
 }
 
@@ -3215,11 +3298,13 @@ export function printCallSheet(
 
 export interface PocketDepthChartPrintOptions {
   orientation?: 'portrait' | 'landscape';
-  layout?: 'pocket_grid' | 'side_by_side' | 'full_table';
+  layout?: 'pocket_grid' | 'side_by_side' | 'full_table' | 'single_column';
   depthLevels?: '2_deep' | '3_deep' | 'all' | 'starters_only';
   fontSize?: 'compact' | 'standard' | 'large';
   inkFriendly?: boolean;
   columnsCount?: 1 | 2 | 3;
+  oneChartPerColumn?: boolean;
+  oneChartPerPage?: boolean;
   showCutLines?: boolean;
   selectedFormationIds?: string[];
   unitFilter?: 'offense' | 'defense' | 'st' | 'groups' | 'both_off_def' | 'all';
@@ -3237,7 +3322,13 @@ export function generatePocketDepthChartPrintHTML(
   options?: PocketDepthChartPrintOptions
 ): string {
   const orientation = options?.orientation || 'landscape';
-  const layout = options?.layout || (options?.unitFilter === 'both_off_def' ? 'side_by_side' : 'pocket_grid');
+  const isOneChartPerCol = Boolean(
+    options?.oneChartPerColumn ||
+    options?.columnsCount === 1 ||
+    options?.layout === 'single_column' ||
+    options?.layout === 'full_table'
+  );
+  const layout = isOneChartPerCol ? 'single_column' : (options?.layout || (options?.unitFilter === 'both_off_def' ? 'side_by_side' : 'pocket_grid'));
   const depthLevels = options?.depthLevels || '2_deep';
   const fontSizeMode = options?.fontSize || 'compact';
   const inkFriendly = options?.inkFriendly ?? true;
@@ -3250,10 +3341,13 @@ export function generatePocketDepthChartPrintHTML(
   const headerFs = baseFs + 1;
   const subFs = Math.max(8, baseFs - 2);
 
-  // Filter formations
+  // Filter formations and preserve exact user-defined ordering if selectedFormationIds is provided
   let targetFormations = formations;
   if (options?.selectedFormationIds && options.selectedFormationIds.length > 0) {
-    targetFormations = targetFormations.filter((f) => options.selectedFormationIds!.includes(f.id));
+    const idMap = new Map(formations.map((f) => [f.id, f]));
+    targetFormations = options.selectedFormationIds
+      .map((id) => idMap.get(id))
+      .filter((f): f is FormationBoard => Boolean(f));
   }
 
   // Filter by unit
@@ -3261,12 +3355,14 @@ export function generatePocketDepthChartPrintHTML(
     targetFormations = targetFormations.filter((f) => f.unit === options.unitFilter);
   }
 
+  const pageBreakRule = options?.oneChartPerPage ? 'break-after: page; page-break-after: always;' : 'break-inside: avoid; page-break-inside: avoid;';
+
   const renderSingleFormationCard = (form: FormationBoard, unitLabel?: string) => {
-    // Collect slots
-    const slots: Array<{ pos: { id: string; name: string }; rowLabel: string }> = [];
-    form.rows.forEach((r, rIdx) => {
+    // Collect slots - position descriptions removed for ultra-clean pocket card readability
+    const slots: Array<{ pos: { id: string; name: string } }> = [];
+    form.rows.forEach((r) => {
       r.positions.forEach((p) => {
-        if (p) slots.push({ pos: p, rowLabel: r.label || `Lvl ${rIdx + 1}` });
+        if (p) slots.push({ pos: p });
       });
     });
 
@@ -3279,10 +3375,8 @@ export function generatePocketDepthChartPrintHTML(
     const show3rd = depthLevels === '3_deep' || depthLevels === 'all';
     const showBackups = depthLevels === 'all';
 
-    const colCount = 1 + (showStarter ? 1 : 0) + (show2nd ? 1 : 0) + (show3rd ? 1 : 0) + (showBackups ? 1 : 0);
-
     const rowsHtml = slots
-      .map(({ pos, rowLabel }) => {
+      .map(({ pos }) => {
         const players = depthChart[pos.id] || [];
         const p1 = players[0];
         const p2 = players[1];
@@ -3324,9 +3418,8 @@ export function generatePocketDepthChartPrintHTML(
 
         return `
           <tr style="border-bottom: 1px solid #cbd5e1;">
-            <td style="padding: 3px 5px; font-weight: 900; font-size: ${baseFs}px; background: ${inkFriendly ? '#f8fafc' : '#f1f5f9'}; border-right: 1.5px solid #000; text-align: left; vertical-align: middle; white-space: nowrap;">
-              <div style="display: inline-block; background: #1e293b; color: #fff; font-size: ${baseFs}px; font-weight: 900; padding: 1px 4px; border-radius: 3px; margin-right: 2px;">${pos.name}</div>
-              <span style="font-size: ${subFs - 1}px; font-weight: 700; color: #64748b; margin-left: 2px;">${rowLabel}</span>
+            <td style="padding: 3px 6px; font-weight: 900; font-size: ${baseFs}px; background: ${inkFriendly ? '#f8fafc' : '#f1f5f9'}; border-right: 1.5px solid #000; text-align: center; vertical-align: middle; white-space: nowrap;">
+              <div style="display: inline-flex; align-items: center; justify-content: center; background: #1e293b; color: #fff; font-size: ${baseFs}px; font-weight: 900; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.5px;">${pos.name}</div>
             </td>
             ${showStarter ? `<td style="padding: 3px 6px; vertical-align: middle; background: #fff; border-right: 1px solid #e2e8f0;">${renderPlayer(p1, 1)}</td>` : ''}
             ${show2nd ? `<td style="padding: 3px 6px; vertical-align: middle; background: ${inkFriendly ? '#fff' : '#fffbeb'}; border-right: 1px solid #e2e8f0;">${renderPlayer(p2, 2)}</td>` : ''}
@@ -3338,7 +3431,7 @@ export function generatePocketDepthChartPrintHTML(
       .join('');
 
     return `
-      <div class="pocket-formation-card" style="border: 1.8px solid #000; border-radius: 5px; overflow: hidden; background: #fff; break-inside: avoid; page-break-inside: avoid; margin-bottom: 8px;">
+      <div class="pocket-formation-card" style="border: 1.8px solid #000; border-radius: 5px; overflow: hidden; background: #fff; ${pageBreakRule} margin-bottom: 10px; width: 100%;">
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; background: ${inkFriendly ? '#000' : '#0f172a'}; color: #fff; border-bottom: 1.5px solid #000;">
           <div style="display: flex; align-items: center; gap: 6px;">
             <span style="display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: ${subFs + 1}px; background: #f59e0b; color: #000; padding: 1px 5px; border-radius: 3px; text-transform: uppercase;">${unitTag}</span>
@@ -3349,10 +3442,10 @@ export function generatePocketDepthChartPrintHTML(
         <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: ${baseFs}px;">
           <thead>
             <tr style="background: ${inkFriendly ? '#e2e8f0' : '#1e293b'}; color: ${inkFriendly ? '#000' : '#fff'}; border-bottom: 1.5px solid #000; font-weight: 900; font-size: ${subFs}px; text-transform: uppercase; letter-spacing: 0.5px;">
-              <th style="padding: 3px 5px; width: 22%; border-right: 1.5px solid #000;">POS</th>
-              ${showStarter ? `<th style="padding: 3px 6px; width: ${show3rd || showBackups ? '26%' : '39%'}; border-right: 1px solid #94a3b8;">1ST (STARTER)</th>` : ''}
-              ${show2nd ? `<th style="padding: 3px 6px; width: ${show3rd || showBackups ? '26%' : '39%'}; border-right: 1px solid #94a3b8;">2ND STRING</th>` : ''}
-              ${show3rd ? `<th style="padding: 3px 6px; width: 26%; border-right: 1px solid #94a3b8;">3RD STRING</th>` : ''}
+              <th style="padding: 3px 5px; width: 18%; border-right: 1.5px solid #000; text-align: center;">POS</th>
+              ${showStarter ? `<th style="padding: 3px 6px; width: ${show3rd || showBackups ? '27%' : '41%'}; border-right: 1px solid #94a3b8;">BLACK</th>` : ''}
+              ${show2nd ? `<th style="padding: 3px 6px; width: ${show3rd || showBackups ? '27%' : '41%'}; border-right: 1px solid #94a3b8;">GOLD</th>` : ''}
+              ${show3rd ? `<th style="padding: 3px 6px; width: 28%; border-right: 1px solid #94a3b8;">BLUE</th>` : ''}
               ${showBackups ? `<th style="padding: 3px 6px;">BACKUPS</th>` : ''}
             </tr>
           </thead>
@@ -3366,9 +3459,17 @@ export function generatePocketDepthChartPrintHTML(
 
   let contentHtml = '';
 
-  if (layout === 'side_by_side' || options?.unitFilter === 'both_off_def') {
-    const offForms = formations.filter((f) => f.unit === 'offense');
-    const defForms = formations.filter((f) => f.unit === 'defense');
+  if (isOneChartPerCol) {
+    // 1 chart per column: each formation card occupies full width in a clean single-column stack
+    const cards = targetFormations.map((f) => renderSingleFormationCard(f)).join('');
+    contentHtml = `
+      <div class="single-column-pocket-layout" style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+        ${cards || '<div style="padding: 20px; font-weight: 700; color: #64748b; text-align: center;">No formations found to print.</div>'}
+      </div>
+    `;
+  } else if (layout === 'side_by_side' || options?.unitFilter === 'both_off_def') {
+    const offForms = targetFormations.filter((f) => f.unit === 'offense');
+    const defForms = targetFormations.filter((f) => f.unit === 'defense');
 
     const offCards = offForms.map((f) => renderSingleFormationCard(f, 'OFF')).join('');
     const defCards = defForms.map((f) => renderSingleFormationCard(f, 'DEF')).join('');
@@ -3493,15 +3594,15 @@ export function generatePocketDepthChartPrintHTML(
     <div class="pocket-legend">
       <div class="legend-item">
         <span class="legend-box" style="background: #000;"></span>
-        <span>1st String (Black)</span>
+        <span>Black</span>
       </div>
       <div class="legend-item">
         <span class="legend-box" style="background: #f59e0b; border: 1px solid #b45309;"></span>
-        <span>2nd String (Gold)</span>
+        <span>Gold</span>
       </div>
       <div class="legend-item">
         <span class="legend-box" style="background: #3b82f6; border: 1px solid #1d4ed8;"></span>
-        <span>3rd String (Blue)</span>
+        <span>Blue</span>
       </div>
     </div>
   </div>

@@ -84,13 +84,13 @@ export const THEME_SCHEMES: ThemeScheme[] = [
       bg: 'bg-cyan-500/20 text-cyan-300',
       border: 'border-cyan-400/40',
       text: 'text-cyan-300',
-      label: '2ND STRING • CYAN',
+      label: 'GOLD • CYAN',
     },
     reserveBadge: {
       bg: 'bg-zinc-800 text-zinc-300',
       border: 'border-zinc-700',
       text: 'text-zinc-300',
-      label: '3RD STRING',
+      label: 'BLUE',
     },
     launchpadCard: {
       gradient: 'from-zinc-900 via-zinc-900 to-lime-950/40',
@@ -111,7 +111,7 @@ export const THEME_SCHEMES: ThemeScheme[] = [
     swatches: [
       { name: 'Carbon Jet', hex: '#0B0F17', desc: 'Base canvas' },
       { name: 'Volt Neon', hex: '#CCFF00', desc: 'Starters & key calls' },
-      { name: 'Electric Cyan', hex: '#06B6D4', desc: '2nd string & motions' },
+      { name: 'Electric Cyan', hex: '#06B6D4', desc: 'Gold tier & motions' },
       { name: 'Smoked Zinc', hex: '#27272A', desc: 'Card background' },
     ],
     sidelineAdvantage: 'High-luminance volt cuts through midday sun glare and bright stadium lights instantly.',
@@ -135,13 +135,13 @@ export const THEME_SCHEMES: ThemeScheme[] = [
       bg: 'bg-neutral-800 text-amber-300',
       border: 'border-amber-500/40',
       text: 'text-amber-300',
-      label: '2ND STRING • SILVER/GOLD',
+      label: 'GOLD • SILVER/GOLD',
     },
     reserveBadge: {
       bg: 'bg-neutral-850 text-neutral-400',
       border: 'border-neutral-700',
       text: 'text-neutral-300',
-      label: '3RD STRING',
+      label: 'BLUE',
     },
     launchpadCard: {
       gradient: 'from-neutral-900 via-neutral-900 to-amber-950/40',
@@ -186,13 +186,13 @@ export const THEME_SCHEMES: ThemeScheme[] = [
       bg: 'bg-rose-500/20 text-rose-300',
       border: 'border-rose-400/40',
       text: 'text-rose-300',
-      label: '2ND STRING • CORAL',
+      label: 'GOLD • CORAL',
     },
     reserveBadge: {
       bg: 'bg-slate-800 text-slate-300',
-      border: 'border-slate-700',
+      border: 'border-slate-750',
       text: 'text-slate-300',
-      label: '3RD STRING',
+      label: 'BLUE',
     },
     launchpadCard: {
       gradient: 'from-slate-900 via-slate-900 to-indigo-950/50',
@@ -237,13 +237,13 @@ export const THEME_SCHEMES: ThemeScheme[] = [
       bg: 'bg-lime-950/60 text-lime-300',
       border: 'border-lime-500/40',
       text: 'text-lime-300',
-      label: '2ND STRING • OLIVE',
+      label: 'GOLD • OLIVE',
     },
     reserveBadge: {
       bg: 'bg-stone-850 text-stone-300',
       border: 'border-stone-700',
       text: 'text-stone-300',
-      label: '3RD STRING',
+      label: 'BLUE',
     },
     launchpadCard: {
       gradient: 'from-zinc-900 via-zinc-900 to-orange-950/30',
@@ -288,13 +288,13 @@ export const THEME_SCHEMES: ThemeScheme[] = [
       bg: 'bg-amber-950/50 text-amber-200',
       border: 'border-amber-500/40',
       text: 'text-amber-200',
-      label: '2ND STRING • ATHLETIC GOLD',
+      label: 'GOLD • ATHLETIC GOLD',
     },
     reserveBadge: {
       bg: 'bg-neutral-800 text-stone-300',
       border: 'border-neutral-700',
       text: 'text-stone-300',
-      label: '3RD STRING',
+      label: 'BLUE',
     },
     launchpadCard: {
       gradient: 'from-neutral-900 via-neutral-900 to-rose-950/40',
@@ -481,7 +481,7 @@ export const ThemeGalleryModal: React.FC<ThemeGalleryModalProps> = ({
                   <span className="text-[9px] font-bold text-slate-400">I-Formation • QB</span>
                 </div>
 
-                {/* 1st String (Starter) */}
+                {/* Black */}
                 <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-2 flex items-center justify-between gap-2 shadow-xs">
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-8 h-8 rounded-lg bg-black text-amber-300 font-mono font-black text-xs flex items-center justify-center border border-zinc-700">
@@ -492,7 +492,7 @@ export const ThemeGalleryModal: React.FC<ThemeGalleryModalProps> = ({
                         Jaxson Dart
                       </div>
                       <div className="text-[10px] font-bold text-slate-400">
-                        Starter • 1st String
+                        Black Tier
                       </div>
                     </div>
                   </div>
@@ -501,7 +501,7 @@ export const ThemeGalleryModal: React.FC<ThemeGalleryModalProps> = ({
                   </span>
                 </div>
 
-                {/* 2nd String (Backup) */}
+                {/* Gold */}
                 <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-2 flex items-center justify-between gap-2 opacity-90">
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-8 h-8 rounded-lg bg-zinc-800 text-slate-300 font-mono font-black text-xs flex items-center justify-center border border-zinc-700">
@@ -512,12 +512,12 @@ export const ThemeGalleryModal: React.FC<ThemeGalleryModalProps> = ({
                         C. Williams
                       </div>
                       <div className="text-[10px] font-bold text-slate-400">
-                        2nd String Backup
+                        Gold Tier
                       </div>
                     </div>
                   </div>
                   <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${currentTheme.backupBadge.bg} ${currentTheme.backupBadge.text} border ${currentTheme.backupBadge.border}`}>
-                    2nd
+                    Gold
                   </span>
                 </div>
               </div>
