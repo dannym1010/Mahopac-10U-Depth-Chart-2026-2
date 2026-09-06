@@ -625,6 +625,20 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
         const currentList = [...(next[sectionsKey] || [])];
         const group = rawSec.group || 'top_situations';
 
+        const perRow = prev.desktopGridColumns || 4;
+        const topSecs = currentList.filter(
+          (s) => (s.group || 'top_situations') === 'top_situations'
+        );
+
+        // Ensure all existing top sections have an explicit rowIndex and order before calculating new position
+        const hasAnyRowIndex = topSecs.some((s) => typeof s.rowIndex === 'number');
+        if (!hasAnyRowIndex && topSecs.length > 0) {
+          topSecs.forEach((s, idx) => {
+            s.rowIndex = Math.floor(idx / perRow);
+            s.order = idx % perRow;
+          });
+        }
+
         let assignedRowIndex = 0;
         let assignedOrder = 0;
 
@@ -638,16 +652,12 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
             );
             assignedOrder = inRow.length;
           } else {
-            const topSecs = currentList.filter(
-              (s) => (s.group || 'top_situations') === 'top_situations'
-            );
             if (topSecs.length === 0) {
               assignedRowIndex = 0;
               assignedOrder = 0;
             } else {
               const maxRow = Math.max(0, ...topSecs.map((s) => s.rowIndex ?? 0));
               const inMaxRow = topSecs.filter((s) => (s.rowIndex ?? 0) === maxRow);
-              const perRow = prev.desktopGridColumns || 4;
               if (inMaxRow.length < perRow) {
                 assignedRowIndex = maxRow;
                 assignedOrder = inMaxRow.length;
@@ -1391,17 +1401,19 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
       />
 
       {/* 5. Add Table / Section Modal */}
-      <AddTableModal
-        isOpen={addTableModalState.isOpen}
-        activeUnit={activeUnit}
-        initialGroup={addTableModalState.group}
-        initialTab={addTableModalState.initialTab || 'wristband'}
-        wristbandData={normalizedWristbandData}
-        playDatabase={playDatabase}
-        onClose={() => setAddTableModalState((prev) => ({ ...prev, isOpen: false }))}
-        onAddSection={handleConfirmAddSection}
-        onAddSections={handleConfirmAddSections}
-      />
+      {addTableModalState.isOpen && (
+        <AddTableModal
+          isOpen={addTableModalState.isOpen}
+          activeUnit={activeUnit}
+          initialGroup={addTableModalState.group}
+          initialTab={addTableModalState.initialTab || 'wristband'}
+          wristbandData={normalizedWristbandData}
+          playDatabase={playDatabase}
+          onClose={() => setAddTableModalState((prev) => ({ ...prev, isOpen: false }))}
+          onAddSection={handleConfirmAddSection}
+          onAddSections={handleConfirmAddSections}
+        />
+      )}
 
       {/* 6. Dedicated Call Sheet Print & Lamination Modal */}
       <CallSheetPrintModal

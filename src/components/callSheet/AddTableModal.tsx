@@ -122,13 +122,14 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
   // Modal active tab: 'wristband' (Preset Table) vs 'custom' (Manual Table)
   const [activeTab, setActiveTab] = useState<'wristband' | 'custom'>(initialTab);
 
-  // When modal reopens with different initialTab or initialGroup
+  // When modal reopens with different initialTab, initialGroup, or activeUnit
   useEffect(() => {
     if (isOpen) {
       setActiveTab(initialTab);
       setGroup(initialGroup);
+      setTargetUnit(activeUnit);
     }
-  }, [isOpen, initialTab, initialGroup]);
+  }, [isOpen, initialTab, initialGroup, activeUnit]);
 
   // Resolve available wristbands
   const availableWristbands: SingleWristband[] = useMemo(() => {
@@ -967,41 +968,77 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
                 </div>
               </div>
 
-              {/* Group Category */}
-              <div className="space-y-1.5">
-                <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wide">
-                  Section Category (Auto-Formats Placement)
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    { id: 'top_situations', label: 'Situations' },
-                    { id: 'red_zone', label: 'Red Zone' },
-                    { id: 'tempo_game_mgmt', label: 'Tempo / Clock' },
-                    { id: 'custom', label: 'Custom' },
-                  ].map((cat) => (
+              {/* Sheet Unit & Group Category */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Target Unit Switcher */}
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wide">
+                    Sheet Unit
+                  </label>
+                  <div className="flex items-center bg-slate-800 p-0.5 rounded-xl border border-slate-700">
                     <button
-                      key={cat.id}
                       type="button"
-                      onClick={() => {
-                        const nextGroup = cat.id as any;
-                        setGroup(nextGroup);
-                        if (nextGroup === 'red_zone') {
-                          setHeaderColor('#dc2626');
-                          setCustomHighlightEnabled(true);
-                          setCustomHighlightColor('rose');
-                        } else if (nextGroup === 'tempo_game_mgmt') {
-                          setHeaderColor('#09090b');
-                        }
-                      }}
-                      className={`py-2 px-2 rounded-xl border text-center font-bold text-[11px] transition-all cursor-pointer ${
-                        group === cat.id
-                          ? 'bg-indigo-600 text-white border-indigo-500 shadow-md'
-                          : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                      onClick={() => setTargetUnit('offense')}
+                      className={`flex-1 py-1.5 rounded-lg font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-1 ${
+                        targetUnit === 'offense'
+                          ? 'bg-red-600 text-white shadow-xs'
+                          : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      {cat.label}
+                      <Swords className="w-3 h-3" />
+                      <span>Offense</span>
                     </button>
-                  ))}
+                    <button
+                      type="button"
+                      onClick={() => setTargetUnit('defense')}
+                      className={`flex-1 py-1.5 rounded-lg font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-1 ${
+                        targetUnit === 'defense'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Shield className="w-3 h-3" />
+                      <span>Defense</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Section Category */}
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wide">
+                    Category Placement
+                  </label>
+                  <div className="grid grid-cols-2 gap-1 bg-slate-800 p-0.5 rounded-xl border border-slate-700">
+                    {[
+                      { id: 'top_situations', label: 'Situations' },
+                      { id: 'red_zone', label: 'Red Zone' },
+                      { id: 'tempo_game_mgmt', label: 'Tempo' },
+                      { id: 'custom', label: 'Custom' },
+                    ].map((cat) => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          const nextGroup = cat.id as any;
+                          setGroup(nextGroup);
+                          if (nextGroup === 'red_zone') {
+                            setHeaderColor('#dc2626');
+                            setCustomHighlightEnabled(true);
+                            setCustomHighlightColor('rose');
+                          } else if (nextGroup === 'tempo_game_mgmt') {
+                            setHeaderColor('#09090b');
+                          }
+                        }}
+                        className={`py-1.5 px-1.5 rounded-lg text-center font-bold text-[10px] transition-all cursor-pointer ${
+                          group === cat.id
+                            ? 'bg-indigo-600 text-white shadow-xs'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 

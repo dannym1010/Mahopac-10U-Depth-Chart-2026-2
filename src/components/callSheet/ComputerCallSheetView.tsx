@@ -103,37 +103,20 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
   // Compute normalized situational sections with rowIndex and order
   const normalizedTopSections = useMemo(() => {
     const perRow = gridColumns || 4;
-    const hasAnyRowIndex = topSections.some((s) => typeof s.rowIndex === 'number');
-    if (!hasAnyRowIndex) {
+    const allHaveRowIndex = topSections.length > 0 && topSections.every((s) => typeof s.rowIndex === 'number');
+    if (allHaveRowIndex) {
       return topSections.map((sec, idx) => ({
         ...sec,
-        rowIndex: Math.floor(idx / perRow),
-        order: idx % perRow,
+        rowIndex: sec.rowIndex ?? 0,
+        order: typeof sec.order === 'number' ? sec.order : idx,
       }));
     }
 
-    let maxAssignedRow = 0;
-    topSections.forEach((s) => {
-      if (typeof s.rowIndex === 'number' && s.rowIndex > maxAssignedRow) {
-        maxAssignedRow = s.rowIndex;
-      }
-    });
-
-    let unassignedCounter = 0;
-    return topSections.map((sec, idx) => {
-      if (typeof sec.rowIndex === 'number') {
-        return {
-          ...sec,
-          order: typeof sec.order === 'number' ? sec.order : idx,
-        };
-      }
-      unassignedCounter++;
-      return {
-        ...sec,
-        rowIndex: maxAssignedRow,
-        order: 900 + unassignedCounter,
-      };
-    });
+    return topSections.map((sec, idx) => ({
+      ...sec,
+      rowIndex: typeof sec.rowIndex === 'number' ? sec.rowIndex : Math.floor(idx / perRow),
+      order: typeof sec.order === 'number' ? sec.order : idx % perRow,
+    }));
   }, [topSections, gridColumns]);
 
   // Compute distinct rows of situational tables
