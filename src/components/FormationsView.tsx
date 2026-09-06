@@ -3505,18 +3505,20 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
         </div>
       )}
       {/* Dedicated Pocket Depth Chart Print Modal */}
-      <PocketDepthChartPrintModal
-        isOpen={isPocketPrintModalOpen}
-        onClose={() => {
-          setIsPocketPrintModalOpen(false);
-          setSelectedPocketPrintFormId(null);
-        }}
-        formations={formations}
-        depthChart={depthChart}
-        activeUnit={unit}
-        activeTeamName={activeTeam?.name || 'Football Manager'}
-        initialSelectedFormationId={selectedPocketPrintFormId}
-      />
+      {isPocketPrintModalOpen && (
+        <PocketDepthChartPrintModal
+          isOpen={isPocketPrintModalOpen}
+          onClose={() => {
+            setIsPocketPrintModalOpen(false);
+            setSelectedPocketPrintFormId(null);
+          }}
+          formations={formations}
+          depthChart={depthChart}
+          activeUnit={unit}
+          activeTeamName={activeTeam?.name || 'Football Manager'}
+          initialSelectedFormationId={selectedPocketPrintFormId}
+        />
+      )}
     </div>
   );
 };

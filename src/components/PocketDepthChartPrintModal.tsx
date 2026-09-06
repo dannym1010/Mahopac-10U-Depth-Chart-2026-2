@@ -150,8 +150,6 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
   // First formation designated
   const firstFormation = targetFormations[0] || null;
 
-  if (!isOpen) return null;
-
   // Set a specific formation as 1st
   const handleSetFirstFormation = (formId: string) => {
     setOrderedFormationIds((prev) => {
@@ -239,7 +237,7 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
     }
   };
 
-  const highlightCount = useMemo(() => Object.keys(highlightedCells).length, [highlightedCells]);
+  const highlightCount = Object.keys(highlightedCells).length;
 
   const toggleCellHighlight = (cellKey: string, defaultColor: 'black' | 'gold' | 'blue') => {
     setHighlightedCells((prev) => {
@@ -310,6 +308,8 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
     const html = generatePocketDepthChartPrintHTML(formations, depthChart, printOptions);
     openCleanPrintTab(html, `${activeTeamName}_Pocket_Depth_Chart`);
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-hidden animate-in fade-in duration-200">
