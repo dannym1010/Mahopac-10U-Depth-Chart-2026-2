@@ -450,6 +450,7 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
     // Custom Tab submission
     const finalTitle = tableTitle.trim() || 'New Situation Table';
     const isLight = !isDarkColor(headerColor);
+    const totalSlots = customRowsCount * customColumnsCount;
     const newSection: CallSheetSection = {
       id: `${targetUnit.slice(0, 3)}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       title: finalTitle,
@@ -457,12 +458,12 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
       headerTextColor: isLight ? '#000000' : '#ffffff',
       targetUnit,
       group,
-      slotsCount: customRowsCount,
+      slotsCount: totalSlots,
       columnsCount: customColumnsCount,
       colSpan: customColumnsCount >= 2 ? 2 : 1,
       highlightEnabled: customHighlightEnabled,
-      highlightColor: customHighlightColor,
-      plays: Array(customRowsCount).fill(null),
+      highlightColor: customHighlightEnabled ? customHighlightColor : undefined,
+      plays: Array(totalSlots).fill(null),
     };
 
     onAddSection(newSection);

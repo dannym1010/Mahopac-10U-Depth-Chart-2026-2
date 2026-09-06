@@ -33,7 +33,7 @@ import {
 } from '../data/callSheetData';
 import { WristbandData } from '../types';
 import { INITIAL_TWO_WRISTBANDS_DATA } from '../data/userGameDayPlays';
-import { safeJSONParse, safeJSONSet, safeJSONStringify } from '../services/storageService';
+import { safeJSONParse, safeJSONSet, safeJSONStringify, cleanFirestoreData } from '../services/storageService';
 import { syncWristbandToCallSheet, inferFormation } from '../utils/wristbandLinking';
 import {
   CallSheetSnapshot,
@@ -425,18 +425,19 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
       playToAssign.id = `play_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
       delete (playToAssign as any).sourceSectionId;
       delete (playToAssign as any).sourceSlotIndex;
+      const sanitizedPlay = cleanFirestoreData(playToAssign);
 
       // Assign to destination slot (leaving source intact as a COPY)
       if (sectionId === 'script') {
         if (activeUnit === 'offense') {
           const arr = [...(next.offenseScript || [])];
           while (arr.length <= slotIndex) arr.push(null);
-          arr[slotIndex] = playToAssign;
+          arr[slotIndex] = sanitizedPlay;
           next.offenseScript = arr;
         } else {
           const arr = [...(next.defenseScript || [])];
           while (arr.length <= slotIndex) arr.push(null);
-          arr[slotIndex] = playToAssign;
+          arr[slotIndex] = sanitizedPlay;
           next.defenseScript = arr;
         }
       } else {
@@ -447,7 +448,76 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
           const sec = { ...sections[secIndex] };
           const plays = [...(sec.plays || [])];
           while (plays.length <= slotIndex) plays.push(null);
-          plays[slotIndex] = playToAssign;
+          plays[slotIndex] = sanitizedPlay;
+          sec.plays = plays;
+          sections[secIndex] = sec;
+          next[sectionsKey] = sections;
+        }
+      }
+      return next;
+    });
+  };
+
+  // Handle assigning multiple plays sequentially into consecutive slots
+  const handleAssignMultiplePlaysToSlots = (
+    sectionId: string,
+    startSlotIndex: number,
+    playsToAssign: CallSheetPlay[]
+  ) => {
+    if (!playsToAssign || playsToAssign.length === 0) return;
+    applyCallSheetUpdate((prev) => {
+      const next = { ...prev };
+      if (sectionId === 'script') {
+        const isOffense = activeUnit === 'offense';
+        const scriptKey = isOffense ? 'offenseScript' : 'defenseScript';
+        const arr = [...(next[scriptKey] || [])];
+        playsToAssign.forEach((p, offset) => {
+          const slot = startSlotIndex + offset;
+          while (arr.length <= slot) arr.push(null);
+          const playCopy = {
+            ...p,
+            id: `play_${Date.now()}_${offset}_${Math.random().toString(36).substring(2, 6)}`,
+          };
+          if (
+            playCopy.name &&
+            (playCopy.name.startsWith('21') ||
+              playCopy.name.includes('21 R') ||
+              playCopy.name.includes('21 L') ||
+              /\b21\b/.test(playCopy.name))
+          ) {
+            playCopy.formation = inferFormation(playCopy.name, activeUnit, playCopy.formation);
+          }
+          arr[slot] = cleanFirestoreData(playCopy);
+        });
+        next[scriptKey] = arr;
+      } else {
+        const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
+        const sections = [...(next[sectionsKey] || [])];
+        const secIndex = sections.findIndex((s) => s.id === sectionId);
+        if (secIndex >= 0) {
+          const sec = { ...sections[secIndex] };
+          const plays = [...(sec.plays || [])];
+          playsToAssign.forEach((p, offset) => {
+            const slot = startSlotIndex + offset;
+            while (plays.length <= slot) plays.push(null);
+            const playCopy = {
+              ...p,
+              id: `play_${Date.now()}_${offset}_${Math.random().toString(36).substring(2, 6)}`,
+            };
+            if (
+              playCopy.name &&
+              (playCopy.name.startsWith('21') ||
+                playCopy.name.includes('21 R') ||
+                playCopy.name.includes('21 L') ||
+                /\b21\b/.test(playCopy.name))
+            ) {
+              playCopy.formation = inferFormation(playCopy.name, activeUnit, playCopy.formation);
+            }
+            plays[slot] = cleanFirestoreData(playCopy);
+          });
+          if (plays.length > sec.slotsCount) {
+            sec.slotsCount = plays.length;
+          }
           sec.plays = plays;
           sections[secIndex] = sec;
           next[sectionsKey] = sections;
@@ -494,12 +564,26 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   const handleUpdateSection = (updatedSection: CallSheetSection) => {
     applyCallSheetUpdate((prev) => {
       const next = { ...prev };
-      const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
-      const sections = [...next[sectionsKey]];
-      const secIndex = sections.findIndex((s) => s.id === updatedSection.id);
-      if (secIndex >= 0) {
-        sections[secIndex] = updatedSection;
-        next[sectionsKey] = sections;
+      const cleaned = cleanFirestoreData(updatedSection);
+      // Update in whichever unit's section array contains this section ID
+      let found = false;
+      const offSections = [...(next.offenseSections || [])];
+      const offIdx = offSections.findIndex((s) => s.id === cleaned.id);
+      if (offIdx >= 0) {
+        offSections[offIdx] = cleaned;
+        next.offenseSections = offSections;
+        found = true;
+      }
+      const defSections = [...(next.defenseSections || [])];
+      const defIdx = defSections.findIndex((s) => s.id === cleaned.id);
+      if (defIdx >= 0) {
+        defSections[defIdx] = cleaned;
+        next.defenseSections = defSections;
+        found = true;
+      }
+      if (!found) {
+        const key = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
+        next[key] = [...(next[key] || []), cleaned];
       }
       return next;
     });
@@ -509,8 +593,8 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   const handleDeleteSection = (sectionId: string) => {
     applyCallSheetUpdate((prev) => {
       const next = { ...prev };
-      const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
-      next[sectionsKey] = next[sectionsKey].filter((s) => s.id !== sectionId);
+      next.offenseSections = (next.offenseSections || []).filter((s) => s.id !== sectionId);
+      next.defenseSections = (next.defenseSections || []).filter((s) => s.id !== sectionId);
       return next;
     });
   };
@@ -530,15 +614,85 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   };
 
   const handleConfirmAddSections = (newSections: CallSheetSection[]) => {
+    if (!newSections || newSections.length === 0) return;
     applyCallSheetUpdate((prev) => {
       const next = { ...prev };
-      const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
       const targetRow = addTableModalState.targetRowIndex;
-      const preparedSections = newSections.map((s) => ({
-        ...s,
-        rowIndex: targetRow !== undefined ? targetRow : s.rowIndex,
-      }));
-      next[sectionsKey] = [...next[sectionsKey], ...preparedSections];
+
+      newSections.forEach((rawSec) => {
+        const unit = rawSec.targetUnit || activeUnit;
+        const sectionsKey = unit === 'offense' ? 'offenseSections' : 'defenseSections';
+        const currentList = [...(next[sectionsKey] || [])];
+        const group = rawSec.group || 'top_situations';
+
+        let assignedRowIndex = 0;
+        let assignedOrder = 0;
+
+        if (group === 'top_situations') {
+          if (targetRow !== undefined) {
+            assignedRowIndex = targetRow;
+            const inRow = currentList.filter(
+              (s) =>
+                (s.group || 'top_situations') === 'top_situations' &&
+                (s.rowIndex ?? 0) === targetRow
+            );
+            assignedOrder = inRow.length;
+          } else {
+            const topSecs = currentList.filter(
+              (s) => (s.group || 'top_situations') === 'top_situations'
+            );
+            if (topSecs.length === 0) {
+              assignedRowIndex = 0;
+              assignedOrder = 0;
+            } else {
+              const maxRow = Math.max(0, ...topSecs.map((s) => s.rowIndex ?? 0));
+              const inMaxRow = topSecs.filter((s) => (s.rowIndex ?? 0) === maxRow);
+              const perRow = prev.desktopGridColumns || 4;
+              if (inMaxRow.length < perRow) {
+                assignedRowIndex = maxRow;
+                assignedOrder = inMaxRow.length;
+              } else {
+                assignedRowIndex = maxRow + 1;
+                assignedOrder = 0;
+              }
+            }
+          }
+        } else {
+          const inGroup = currentList.filter((s) => s.group === group);
+          assignedRowIndex = 0;
+          assignedOrder = inGroup.length;
+        }
+
+        const totalSlots = rawSec.slotsCount || rawSec.plays?.length || 4;
+        const rawPlays = Array.isArray(rawSec.plays)
+          ? rawSec.plays.map((p) => (p ? { ...p } : null))
+          : Array(totalSlots).fill(null);
+
+        while (rawPlays.length < totalSlots) {
+          rawPlays.push(null);
+        }
+
+        const prepared: CallSheetSection = {
+          ...rawSec,
+          id: rawSec.id || `table_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          title: rawSec.title || 'New Section Table',
+          headerBgColor: rawSec.headerBgColor || '#1e293b',
+          headerTextColor: rawSec.headerTextColor || '#ffffff',
+          targetUnit: unit,
+          group,
+          rowIndex: assignedRowIndex,
+          order: assignedOrder,
+          slotsCount: totalSlots,
+          columnsCount: rawSec.columnsCount || 1,
+          colSpan: rawSec.colSpan || (rawSec.columnsCount && rawSec.columnsCount >= 2 ? 2 : 1),
+          plays: rawPlays,
+        };
+
+        const sanitized = cleanFirestoreData(prepared);
+        currentList.push(sanitized);
+        next[sectionsKey] = currentList;
+      });
+
       return next;
     });
   };
@@ -1212,6 +1366,10 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
         wristbandData={normalizedWristbandData}
         onSelectPlay={(play) => {
           handleAssignPlayToSlot(pickerState.sectionId, pickerState.slotIndex, play);
+          setPickerState((prev) => ({ ...prev, isOpen: false }));
+        }}
+        onSelectMultiplePlays={(plays) => {
+          handleAssignMultiplePlaysToSlots(pickerState.sectionId, pickerState.slotIndex, plays);
           setPickerState((prev) => ({ ...prev, isOpen: false }));
         }}
         onClearSlot={() => {

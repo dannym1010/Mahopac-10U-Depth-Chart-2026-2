@@ -407,6 +407,47 @@ export const FIREBASE_CONFIG = {
   appId: "1:707897728538:web:5b35e49df4b81d85eb7ba3"
 };
 
+/**
+ * Recursively cleans any object/array payload bound for Firestore.
+ * Strips any `undefined` values from objects, converts `undefined` in arrays to `null`,
+ * and drops non-serializable objects (DOM nodes, Window, functions).
+ */
+export function cleanFirestoreData(data: any): any {
+  if (data === undefined) return null;
+  if (data === null || typeof data !== 'object') return data;
+
+  // Guard against DOM nodes, Window, functions
+  if (
+    (typeof window !== 'undefined' && (data === window || data === window.top || data === window.parent)) ||
+    (typeof Node !== 'undefined' && data instanceof Node) ||
+    typeof data === 'function'
+  ) {
+    return null;
+  }
+
+  // Preserve Firestore FieldValues (serverTimestamp, delete, increment, etc.)
+  if (data.constructor && data.constructor.name && (data.constructor.name === 'FieldValue' || data._methodName)) {
+    return data;
+  }
+
+  // Preserve Date objects
+  if (data instanceof Date) {
+    return data;
+  }
+
+  if (Array.isArray(data)) {
+    return data.map((item) => (item === undefined ? null : cleanFirestoreData(item)));
+  }
+
+  const cleaned: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined) {
+      cleaned[key] = cleanFirestoreData(value);
+    }
+  }
+  return cleaned;
+}
+
 let db: any = null;
 let auth: any = null;
 let storage: any = null;
@@ -418,7 +459,32 @@ export function getFirebaseServices() {
       if (!window.firebase.apps || window.firebase.apps.length === 0) {
         window.firebase.initializeApp(FIREBASE_CONFIG);
       }
-      db = window.firebase.firestore();
+      const rawDb = window.firebase.firestore();
+      if (!db && rawDb) {
+        const originalCollection = rawDb.collection.bind(rawDb);
+        rawDb.collection = (collectionPath: string) => {
+          const col = originalCollection(collectionPath);
+          const originalDoc = col.doc.bind(col);
+          col.doc = (docPath?: string) => {
+            const docRef = originalDoc(docPath);
+            const originalSet = docRef.set.bind(docRef);
+            docRef.set = (data: any, options?: any) => {
+              const cleaned = cleanFirestoreData(data);
+              return originalSet(cleaned, options);
+            };
+            const originalUpdate = docRef.update.bind(docRef);
+            docRef.update = (...args: any[]) => {
+              if (typeof args[0] === 'object' && args[0] !== null) {
+                args[0] = cleanFirestoreData(args[0]);
+              }
+              return originalUpdate(...args);
+            };
+            return docRef;
+          };
+          return col;
+        };
+        db = rawDb;
+      }
       auth = window.firebase.auth();
       storage = window.firebase.storage();
       if (storage?.setMaxUploadRetryTime) {

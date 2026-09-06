@@ -4,7 +4,7 @@
  * Supports direct window printing, clean standalone iframe printing, and new tab printable view.
  */
 
-import { PracticePlan, PracticePeriod, RosterPlayer, AttendanceRecord, SeasonConfig, calculatePlayerCompliance, SingleWristband, WristbandPlay } from '../types';
+import { PracticePlan, PracticePeriod, RosterPlayer, AttendanceRecord, SeasonConfig, calculatePlayerCompliance, SingleWristband, WristbandPlay, FormationBoard, PlacedPlayer } from '../types';
 import { calculatePlayerHours, getPlayerHoursBreakdown } from './hoursCalculation';
 import { formatWeekLabel } from './seasonWeekUtils';
 import { getWristbandStartNumber } from './wristbandLinking';
@@ -3206,6 +3206,326 @@ export function printCallSheet(
 ) {
   const html = generateCallSheetPrintHTML(callSheetData, activeUnit, activeTeamName, documentTitle, options);
   const title = documentTitle || `${activeTeamName}_${activeUnit.toUpperCase()}_Call_Sheet`;
+  printCleanHTML(html, title);
+}
+
+/* =========================================================================
+   POCKET DEPTH CHART BULLETPROOF PRINT ENGINE
+   ========================================================================= */
+
+export interface PocketDepthChartPrintOptions {
+  orientation?: 'portrait' | 'landscape';
+  layout?: 'pocket_grid' | 'side_by_side' | 'full_table';
+  depthLevels?: '2_deep' | '3_deep' | 'all' | 'starters_only';
+  fontSize?: 'compact' | 'standard' | 'large';
+  inkFriendly?: boolean;
+  columnsCount?: 1 | 2 | 3;
+  showCutLines?: boolean;
+  selectedFormationIds?: string[];
+  unitFilter?: 'offense' | 'defense' | 'st' | 'groups' | 'both_off_def' | 'all';
+  teamName?: string;
+  seasonLabel?: string;
+}
+
+/**
+ * Generate isolated, crisp, print-ready HTML for the Pocket Depth Chart.
+ * Engineered for pocket-sized laminated cards, half-sheet cards, and clipboard quick-reference.
+ */
+export function generatePocketDepthChartPrintHTML(
+  formations: FormationBoard[],
+  depthChart: Record<string, PlacedPlayer[]>,
+  options?: PocketDepthChartPrintOptions
+): string {
+  const orientation = options?.orientation || 'landscape';
+  const layout = options?.layout || (options?.unitFilter === 'both_off_def' ? 'side_by_side' : 'pocket_grid');
+  const depthLevels = options?.depthLevels || '2_deep';
+  const fontSizeMode = options?.fontSize || 'compact';
+  const inkFriendly = options?.inkFriendly ?? true;
+  const showCutLines = options?.showCutLines ?? true;
+  const teamName = options?.teamName || 'Football Manager';
+  const seasonLabel = options?.seasonLabel || 'Game Day Depth Chart';
+
+  // Base font sizing
+  const baseFs = fontSizeMode === 'compact' ? 10 : fontSizeMode === 'large' ? 12 : 11;
+  const headerFs = baseFs + 1;
+  const subFs = Math.max(8, baseFs - 2);
+
+  // Filter formations
+  let targetFormations = formations;
+  if (options?.selectedFormationIds && options.selectedFormationIds.length > 0) {
+    targetFormations = targetFormations.filter((f) => options.selectedFormationIds!.includes(f.id));
+  }
+
+  // Filter by unit
+  if (options?.unitFilter && options.unitFilter !== 'all' && options.unitFilter !== 'both_off_def') {
+    targetFormations = targetFormations.filter((f) => f.unit === options.unitFilter);
+  }
+
+  const renderSingleFormationCard = (form: FormationBoard, unitLabel?: string) => {
+    // Collect slots
+    const slots: Array<{ pos: { id: string; name: string }; rowLabel: string }> = [];
+    form.rows.forEach((r, rIdx) => {
+      r.positions.forEach((p) => {
+        if (p) slots.push({ pos: p, rowLabel: r.label || `Lvl ${rIdx + 1}` });
+      });
+    });
+
+    if (slots.length === 0) return '';
+
+    const unitTag = unitLabel || (form.unit === 'offense' ? 'OFF' : form.unit === 'defense' ? 'DEF' : form.unit === 'st' ? 'ST' : 'GRP');
+
+    const showStarter = true;
+    const show2nd = depthLevels !== 'starters_only';
+    const show3rd = depthLevels === '3_deep' || depthLevels === 'all';
+    const showBackups = depthLevels === 'all';
+
+    const colCount = 1 + (showStarter ? 1 : 0) + (show2nd ? 1 : 0) + (show3rd ? 1 : 0) + (showBackups ? 1 : 0);
+
+    const rowsHtml = slots
+      .map(({ pos, rowLabel }) => {
+        const players = depthChart[pos.id] || [];
+        const p1 = players[0];
+        const p2 = players[1];
+        const p3 = players[2];
+        const extraBackups = players.slice(3);
+
+        const renderPlayer = (p?: PlacedPlayer, stringTier: 1 | 2 | 3 = 1) => {
+          if (!p) return '<span style="color: #94a3b8; font-weight: 600;">&mdash;</span>';
+
+          if (inkFriendly) {
+            const badgeBorder = stringTier === 1 ? 'background: #000; color: #fff;' : stringTier === 2 ? 'border: 1.2px solid #000; color: #000; background: #fff;' : 'border: 1px dashed #475569; color: #1e293b; background: #f8fafc;';
+            return `
+              <div style="display: flex; items-center: center; gap: 4px; min-width: 0; line-height: 1.2;">
+                <span style="display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 16px; padding: 0 3px; font-weight: 900; font-size: ${subFs + 1}px; font-family: monospace; border-radius: 2px; ${badgeBorder} shrink: 0;">#${p.num}</span>
+                <span style="font-weight: 800; text-transform: uppercase; font-size: ${baseFs}px; color: #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name}</span>
+              </div>
+            `;
+          }
+
+          // High visibility color
+          const badgeStyle =
+            stringTier === 1
+              ? 'background: #09090b; color: #fef08a; border: 1px solid #713f12;'
+              : stringTier === 2
+              ? 'background: #fef08a; color: #713f12; border: 1px solid #eab308;'
+              : 'background: #dbeafe; color: #1e40af; border: 1px solid #3b82f6;';
+
+          return `
+            <div style="display: flex; align-items: center; gap: 4px; min-width: 0; line-height: 1.2;">
+              <span style="display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 16px; padding: 0 3px; font-weight: 900; font-size: ${subFs + 1}px; font-family: monospace; border-radius: 3px; ${badgeStyle} shrink: 0;">#${p.num}</span>
+              <span style="font-weight: 800; text-transform: uppercase; font-size: ${baseFs}px; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name}</span>
+            </div>
+          `;
+        };
+
+        const backupsHtml = extraBackups.length > 0
+          ? extraBackups.map((b) => `<span style="font-size: ${subFs}px; font-weight: 700; color: #334155; white-space: nowrap;">#${b.num} ${b.name}</span>`).join(', ')
+          : `<span style="color: #94a3b8; font-size: ${subFs}px;">&mdash;</span>`;
+
+        return `
+          <tr style="border-bottom: 1px solid #cbd5e1;">
+            <td style="padding: 3px 5px; font-weight: 900; font-size: ${baseFs}px; background: ${inkFriendly ? '#f8fafc' : '#f1f5f9'}; border-right: 1.5px solid #000; text-align: left; vertical-align: middle; white-space: nowrap;">
+              <div style="display: inline-block; background: #1e293b; color: #fff; font-size: ${baseFs}px; font-weight: 900; padding: 1px 4px; border-radius: 3px; margin-right: 2px;">${pos.name}</div>
+              <span style="font-size: ${subFs - 1}px; font-weight: 700; color: #64748b; margin-left: 2px;">${rowLabel}</span>
+            </td>
+            ${showStarter ? `<td style="padding: 3px 6px; vertical-align: middle; background: #fff; border-right: 1px solid #e2e8f0;">${renderPlayer(p1, 1)}</td>` : ''}
+            ${show2nd ? `<td style="padding: 3px 6px; vertical-align: middle; background: ${inkFriendly ? '#fff' : '#fffbeb'}; border-right: 1px solid #e2e8f0;">${renderPlayer(p2, 2)}</td>` : ''}
+            ${show3rd ? `<td style="padding: 3px 6px; vertical-align: middle; background: ${inkFriendly ? '#fff' : '#f0f9ff'}; border-right: 1px solid #e2e8f0;">${renderPlayer(p3, 3)}</td>` : ''}
+            ${showBackups ? `<td style="padding: 3px 6px; vertical-align: middle; background: #fff;">${backupsHtml}</td>` : ''}
+          </tr>
+        `;
+      })
+      .join('');
+
+    return `
+      <div class="pocket-formation-card" style="border: 1.8px solid #000; border-radius: 5px; overflow: hidden; background: #fff; break-inside: avoid; page-break-inside: avoid; margin-bottom: 8px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; background: ${inkFriendly ? '#000' : '#0f172a'}; color: #fff; border-bottom: 1.5px solid #000;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: ${subFs + 1}px; background: #f59e0b; color: #000; padding: 1px 5px; border-radius: 3px; text-transform: uppercase;">${unitTag}</span>
+            <span style="font-weight: 900; font-size: ${headerFs}px; text-transform: uppercase; letter-spacing: 0.5px; color: #fff;">${form.name}</span>
+          </div>
+          <span style="font-size: ${subFs}px; font-weight: 700; color: #cbd5e1;">${slots.length} Positions</span>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: ${baseFs}px;">
+          <thead>
+            <tr style="background: ${inkFriendly ? '#e2e8f0' : '#1e293b'}; color: ${inkFriendly ? '#000' : '#fff'}; border-bottom: 1.5px solid #000; font-weight: 900; font-size: ${subFs}px; text-transform: uppercase; letter-spacing: 0.5px;">
+              <th style="padding: 3px 5px; width: 22%; border-right: 1.5px solid #000;">POS</th>
+              ${showStarter ? `<th style="padding: 3px 6px; width: ${show3rd || showBackups ? '26%' : '39%'}; border-right: 1px solid #94a3b8;">1ST (STARTER)</th>` : ''}
+              ${show2nd ? `<th style="padding: 3px 6px; width: ${show3rd || showBackups ? '26%' : '39%'}; border-right: 1px solid #94a3b8;">2ND STRING</th>` : ''}
+              ${show3rd ? `<th style="padding: 3px 6px; width: 26%; border-right: 1px solid #94a3b8;">3RD STRING</th>` : ''}
+              ${showBackups ? `<th style="padding: 3px 6px;">BACKUPS</th>` : ''}
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      </div>
+    `;
+  };
+
+  let contentHtml = '';
+
+  if (layout === 'side_by_side' || options?.unitFilter === 'both_off_def') {
+    const offForms = formations.filter((f) => f.unit === 'offense');
+    const defForms = formations.filter((f) => f.unit === 'defense');
+
+    const offCards = offForms.map((f) => renderSingleFormationCard(f, 'OFF')).join('');
+    const defCards = defForms.map((f) => renderSingleFormationCard(f, 'DEF')).join('');
+
+    contentHtml = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; position: relative;">
+        ${showCutLines ? `
+          <div class="fold-guide-line" style="position: absolute; top: 0; bottom: 0; left: 50%; width: 0; border-left: 1.5px dashed #64748b; transform: translateX(-50%); pointer-events: none;">
+            <div style="position: absolute; top: 50%; left: -60px; width: 120px; text-align: center; font-size: 8.5px; font-weight: 800; color: #64748b; background: #fff; padding: 2px 4px; border: 1px solid #cbd5e1; border-radius: 3px; transform: rotate(-90deg);">
+              &#9986; FOLD / CUT LINE
+            </div>
+          </div>
+        ` : ''}
+        <div class="offense-column">
+          <div style="font-weight: 900; font-size: ${headerFs + 1}px; text-transform: uppercase; color: #000; border-bottom: 2px solid #000; padding-bottom: 2px; margin-bottom: 6px; display: flex; justify-content: space-between;">
+            <span>OFFENSIVE DEPTH</span>
+            <span style="font-size: ${subFs}px; color: #475569;">${offForms.length} Formations</span>
+          </div>
+          ${offCards || '<div style="padding: 12px; font-weight: 700; color: #64748b;">No offensive formations found.</div>'}
+        </div>
+        <div class="defense-column">
+          <div style="font-weight: 900; font-size: ${headerFs + 1}px; text-transform: uppercase; color: #000; border-bottom: 2px solid #000; padding-bottom: 2px; margin-bottom: 6px; display: flex; justify-content: space-between;">
+            <span>DEFENSIVE DEPTH</span>
+            <span style="font-size: ${subFs}px; color: #475569;">${defForms.length} Formations</span>
+          </div>
+          ${defCards || '<div style="padding: 12px; font-weight: 700; color: #64748b;">No defensive formations found.</div>'}
+        </div>
+      </div>
+    `;
+  } else {
+    const cols = options?.columnsCount || (orientation === 'landscape' ? 2 : 1);
+    const cards = targetFormations.map((f) => renderSingleFormationCard(f)).join('');
+
+    contentHtml = `
+      <div style="display: grid; grid-template-columns: repeat(${cols}, 1fr); gap: 10px;">
+        ${cards || '<div style="padding: 20px; font-weight: 700; color: #64748b; text-align: center;">No formations found to print.</div>'}
+      </div>
+    `;
+  }
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${teamName} - Pocket Depth Chart</title>
+  <style>
+    @page {
+      size: letter ${orientation};
+      margin: 0.25in;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #fff;
+      color: #000;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      padding: 0;
+      line-height: 1.25;
+    }
+    .pocket-sheet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2.5px solid #000;
+      padding-bottom: 4px;
+      margin-bottom: 8px;
+    }
+    .pocket-title {
+      font-size: ${headerFs + 3}px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #000;
+    }
+    .pocket-subtitle {
+      font-size: ${subFs + 1}px;
+      font-weight: 800;
+      color: #475569;
+      text-transform: uppercase;
+      margin-top: 1px;
+    }
+    .pocket-legend {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: ${subFs}px;
+      font-weight: 800;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .legend-box {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+    @media print {
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="pocket-sheet-header">
+    <div>
+      <h1 class="pocket-title">${teamName} &bull; POCKET DEPTH CHART</h1>
+      <p class="pocket-subtitle">${seasonLabel} &bull; Laminated Pocket Sideline Reference</p>
+    </div>
+    <div class="pocket-legend">
+      <div class="legend-item">
+        <span class="legend-box" style="background: #000;"></span>
+        <span>1st String (Black)</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-box" style="background: #f59e0b; border: 1px solid #b45309;"></span>
+        <span>2nd String (Gold)</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-box" style="background: #3b82f6; border: 1px solid #1d4ed8;"></span>
+        <span>3rd String (Blue)</span>
+      </div>
+    </div>
+  </div>
+
+  ${contentHtml}
+
+  <div style="margin-top: 6px; padding-top: 4px; border-top: 1px solid #cbd5e1; display: flex; justify-content: space-between; font-size: ${subFs}px; color: #64748b; font-weight: 700;">
+    <span>Fold along center line or cut for 5.5" x 8.5" coach pocket card.</span>
+    <span>Generated by Football Manager &bull; ${new Date().toLocaleDateString()}</span>
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * Direct print trigger for Pocket Depth Chart using clean HTML engine.
+ */
+export function printPocketDepthChart(
+  formations: FormationBoard[],
+  depthChart: Record<string, PlacedPlayer[]>,
+  options?: PocketDepthChartPrintOptions
+) {
+  const html = generatePocketDepthChartPrintHTML(formations, depthChart, options);
+  const title = `${options?.teamName || 'Football'}_Pocket_Depth_Chart`;
   printCleanHTML(html, title);
 }
 

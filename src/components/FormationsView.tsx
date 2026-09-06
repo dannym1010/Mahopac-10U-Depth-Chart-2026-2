@@ -51,6 +51,7 @@ import {
   RosterPlayer,
 } from '../types';
 import { triggerPrint } from '../utils/printUtils';
+import { PocketDepthChartPrintModal } from './PocketDepthChartPrintModal';
 
 interface FormationsViewProps {
   unit: 'offense' | 'defense' | 'st' | 'groups';
@@ -278,6 +279,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
 
   const [dragOverPosId, setDragOverPosId] = useState<string | null>(null);
   const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null);
+  const [isPocketPrintModalOpen, setIsPocketPrintModalOpen] = useState(false);
+  const [selectedPocketPrintFormId, setSelectedPocketPrintFormId] = useState<string | null>(null);
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [copySourceTeamId, setCopySourceTeamId] = useState(
     teams.find((t) => t.id !== activeTeam?.id)?.id || teams[0]?.id || ''
@@ -806,6 +809,22 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                       <button
                         onClick={() => {
                           setIsPlaybookActionsDropdownOpen(false);
+                          setIsPocketPrintModalOpen(true);
+                        }}
+                        className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-200 hover:text-amber-300 hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-amber-400/15 border border-amber-400/30 flex items-center justify-center shrink-0">
+                          <Printer className="w-3.5 h-3.5 text-amber-400" />
+                        </div>
+                        <div>
+                          <div>Print Pocket Depth Chart</div>
+                          <div className="text-[10px] text-slate-400 font-normal">Laminated pocket card layout &amp; 2-deep</div>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setIsPlaybookActionsDropdownOpen(false);
                           onOpenSelectivePrintModal(unit);
                         }}
                         className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-200 hover:text-amber-300 hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
@@ -861,8 +880,30 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
             </>
           )}
 
+          {/* Pocket Depth Chart Print Button */}
           <button
-            onClick={() => triggerPrint()}
+            type="button"
+            onClick={() => {
+              setSelectedPocketPrintFormId(null);
+              setIsPocketPrintModalOpen(true);
+            }}
+            className="px-3 py-2 bg-gradient-to-r from-amber-500/20 to-amber-600/20 hover:from-amber-500/30 hover:to-amber-600/30 text-amber-300 hover:text-amber-200 font-bold text-xs rounded-xl border border-amber-500/40 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
+            title="Print Pocket Depth Chart in Laminated Card Format"
+          >
+            <Printer className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Pocket Card</span>
+            <span className="sm:hidden">Pocket</span>
+          </button>
+
+          <button
+            onClick={() => {
+              if (viewMode === 'mobile_cards' && mobileSubTab === 'pocket_chart') {
+                setSelectedPocketPrintFormId(null);
+                setIsPocketPrintModalOpen(true);
+              } else {
+                triggerPrint();
+              }
+            }}
             className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-xs rounded-xl border border-slate-750 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
             title="Print Depth Chart Formations"
           >
@@ -921,7 +962,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
          MERGED MOBILE DEPTH VIEW (Pocket Laminated Table #5 + Player Assignment Matrix #3)
          ========================================================================= */}
       {viewMode === 'mobile_cards' && (
-        <div className="space-y-4 print:hidden">
+        <div className={`space-y-4 ${mobileSubTab === 'pocket_chart' ? '' : 'print:hidden'}`}>
           {/* Sub-View Switcher: Pocket Table vs Player Matrix */}
           <div className="flex items-center justify-between gap-2 bg-slate-900/95 border border-slate-700/80 p-1.5 rounded-2xl shadow-xl">
             <button
@@ -980,33 +1021,50 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
              ===================================================================== */}
           {mobileSubTab === 'pocket_chart' && (
             <div className="space-y-4">
-              {/* Formation Tab Selector Pills */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-                <button
-                  type="button"
-                  onClick={() => setActiveMobileFormationTab('ALL')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all cursor-pointer ${
-                    activeMobileFormationTab === 'ALL'
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
-                      : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700'
-                  }`}
-                >
-                  All Formations ({unitFormations.length})
-                </button>
-                {unitFormations.map((f) => (
+              {/* Formation Tab Selector Pills & Print Pocket Card Action */}
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none flex-1 min-w-0">
                   <button
-                    key={f.id}
                     type="button"
-                    onClick={() => setActiveMobileFormationTab(f.id)}
+                    onClick={() => setActiveMobileFormationTab('ALL')}
                     className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all cursor-pointer ${
-                      activeMobileFormationTab === f.id
+                      activeMobileFormationTab === 'ALL'
                         ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
                         : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700'
                     }`}
                   >
-                    {f.name}
+                    All Formations ({unitFormations.length})
                   </button>
-                ))}
+                  {unitFormations.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setActiveMobileFormationTab(f.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all cursor-pointer ${
+                        activeMobileFormationTab === f.id
+                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
+                          : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700'
+                      }`}
+                    >
+                      {f.name}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedPocketPrintFormId(
+                      activeMobileFormationTab !== 'ALL' ? activeMobileFormationTab : null
+                    );
+                    setIsPocketPrintModalOpen(true);
+                  }}
+                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all shrink-0 cursor-pointer print:hidden"
+                  title="Print Pocket Depth Chart in Laminated Pocket Format"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Pocket Card</span>
+                </button>
               </div>
 
               {/* Formations List in Pocket Grid Format */}
@@ -1057,27 +1115,41 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                           </div>
                         </div>
 
-                        {userRole === 'admin' && (
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (isLockedByOther) {
-                                  if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Take over editing?`)) {
-                                    if (onTakeOverLock) onTakeOverLock();
+                        {/* Laminated Card Header Controls */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedPocketPrintFormId(form.id);
+                              setIsPocketPrintModalOpen(true);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-amber-300 bg-slate-800 hover:bg-slate-750 rounded-lg border border-slate-700 cursor-pointer transition-all shrink-0 print:hidden"
+                            title={`Print ${form.name} Pocket Depth Card`}
+                          >
+                            <Printer className="w-3.5 h-3.5 text-amber-400" />
+                          </button>
+
+                          {userRole === 'admin' && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isLockedByOther) {
+                                    if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Take over editing?`)) {
+                                      if (onTakeOverLock) onTakeOverLock();
+                                    }
+                                    return;
                                   }
-                                  return;
-                                }
-                                setRowLabelInput('');
-                                setRowLabelModalTarget({ formId: form.id, isNew: true });
-                              }}
-                              className="px-2.5 py-1 text-xs font-bold bg-indigo-600/30 hover:bg-indigo-600/60 text-indigo-200 hover:text-white rounded-lg border border-indigo-500/40 flex items-center gap-1 cursor-pointer transition-all shrink-0"
-                              title="Add Level to Formation"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                              <span>Level</span>
-                            </button>
-                            <button
+                                  setRowLabelInput('');
+                                  setRowLabelModalTarget({ formId: form.id, isNew: true });
+                                }}
+                                className="px-2.5 py-1 text-xs font-bold bg-indigo-600/30 hover:bg-indigo-600/60 text-indigo-200 hover:text-white rounded-lg border border-indigo-500/40 flex items-center gap-1 cursor-pointer transition-all shrink-0"
+                                title="Add Level to Formation"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Level</span>
+                              </button>
+                              <button
                               type="button"
                               onClick={() => {
                                 setFormationNameInput(form.name);
@@ -1106,9 +1178,10 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
-                          </div>
+                          </>
                         )}
                       </div>
+                    </div>
 
                       {/* Pocket Table Grid */}
                       <div className="overflow-x-auto divide-y divide-slate-800/80">
@@ -1610,7 +1683,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
       {/* =========================================================================
          TACTICAL FIELD DIAGRAM VIEW (Grid Layout for Wide Screens & Printing)
          ========================================================================= */}
-      <div className={`space-y-6 print:space-y-3 ${viewMode === 'mobile_cards' ? 'hidden print:block' : 'block'}`}>
+      <div className={`space-y-6 print:space-y-3 ${viewMode === 'mobile_cards' ? (mobileSubTab === 'pocket_chart' ? 'hidden print:hidden' : 'hidden print:block') : 'block'}`}>
         {/* Mobile Swipe Tip when in field view */}
         <div className="md:hidden flex items-center justify-between gap-2 p-3 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl text-xs font-bold text-indigo-200 print:hidden">
           <div className="flex items-center gap-2 min-w-0">
@@ -3435,6 +3508,19 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
           </div>
         </div>
       )}
+      {/* Dedicated Pocket Depth Chart Print Modal */}
+      <PocketDepthChartPrintModal
+        isOpen={isPocketPrintModalOpen}
+        onClose={() => {
+          setIsPocketPrintModalOpen(false);
+          setSelectedPocketPrintFormId(null);
+        }}
+        formations={formations}
+        depthChart={depthChart}
+        activeUnit={unit}
+        activeTeamName={activeTeam?.name || 'Football Manager'}
+        initialSelectedFormationId={selectedPocketPrintFormId}
+      />
     </div>
   );
 };
