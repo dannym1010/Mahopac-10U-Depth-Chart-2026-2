@@ -11,6 +11,7 @@ export type UnitType =
   | 'call_sheet'
   | 'schedule'
   | 'scouting' 
+  | 'tendencies'
   | 'html_tendencies'
   | 'practice'
   | 'drills' 
@@ -371,6 +372,8 @@ export interface ScoutingData {
   coachNotes?: CoachScoutingNote[];
   attachments?: ScoutingAttachment[];
   customHtmlReport?: string;
+  tendenciesTree?: PlaybookGuideTree;
+  tendenciesOrder?: PlaybookGuideOrder;
 }
 
 export interface WeekState {

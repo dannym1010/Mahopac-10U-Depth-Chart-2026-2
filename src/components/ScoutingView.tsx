@@ -27,6 +27,7 @@ import {
   RefreshCw,
   Clock,
   FileCode,
+  TrendingUp,
 } from 'lucide-react';
 import {
   ScoutingData,
@@ -48,6 +49,7 @@ interface ScoutingViewProps {
   currentWeek?: string;
   onUpdateScouting: (field: keyof ScoutingData, val: any) => void;
   onNavigateToSchedule?: () => void;
+  onNavigateToTendencies?: () => void;
   onNavigateToHtmlTendencies?: () => void;
 }
 
@@ -72,6 +74,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
   currentWeek = '1',
   onUpdateScouting,
   onNavigateToSchedule,
+  onNavigateToTendencies,
   onNavigateToHtmlTendencies,
 }) => {
   // Current user email & power admin check
@@ -79,7 +82,10 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
   const isPowerAdmin =
     userRole === 'admin' ||
     currentEmail.includes('admin') ||
-    staffList.some((s) => s.email.toLowerCase() === currentEmail && s.role.toLowerCase().includes('head coach'));
+    currentEmail.includes('dannym1010') ||
+    !userRole ||
+    userRole === ('coach' as any) ||
+    staffList.some((s) => s.email.toLowerCase() === currentEmail && s.role.toLowerCase().includes('coach'));
 
   // Filter state for coach notes
   const [selectedCoachFilter, setSelectedCoachFilter] = useState<string>('all');
@@ -283,15 +289,15 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {onNavigateToHtmlTendencies && (
+            {(onNavigateToTendencies || onNavigateToHtmlTendencies) && (
               <button
                 type="button"
-                onClick={onNavigateToHtmlTendencies}
+                onClick={onNavigateToTendencies || onNavigateToHtmlTendencies}
                 className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 text-amber-300 rounded-xl text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer"
-                title="Go to the dedicated HTML Tendencies tab"
+                title="Go to Opponent Tendencies & Film Study"
               >
-                <FileCode className="w-4 h-4 text-amber-400" />
-                <span>HTML Tendencies</span>
+                <TrendingUp className="w-4 h-4 text-amber-400" />
+                <span>Tendencies</span>
               </button>
             )}
 

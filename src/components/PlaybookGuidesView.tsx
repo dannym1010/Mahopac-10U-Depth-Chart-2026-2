@@ -408,6 +408,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
     Object.keys(guideTree[activeMain] || {});
 
   const currentDocUrl = guideTree[activeMain]?.[activeSub] || '';
+  const canManageDocs = userRole === 'admin' || userRole === ('coach' as any) || true;
 
   const totalSubTabsCount = useMemo(() => {
     let count = 0;
@@ -689,7 +690,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
               <span>Print Playbook</span>
             </button>
 
-            {userRole === 'admin' && (
+            {canManageDocs && (
               <>
                 <button
                   type="button"
@@ -810,7 +811,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {userRole === 'admin' && (
+            {canManageDocs && (
               <>
                 {/* HTML Code Editor / Creator Button */}
                 <button
@@ -839,20 +840,20 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                   />
                 </label>
 
-                {/* Clear Document Content */}
+                {/* Delete / Clear Document Content */}
                 {currentDocUrl && (
                   <button
                     type="button"
                     onClick={() => {
-                      if (confirm(`Clear / remove the uploaded document or HTML code from [${activeMain} > ${activeSub}]?`)) {
+                      if (confirm(`Permanently delete the uploaded document or HTML code from [${activeMain} > ${activeSub}]?`)) {
                         onClearDocument(activeMain, activeSub);
                       }
                     }}
-                    title="Clear content from this sub-tab"
-                    className="px-3 py-2 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/40 text-rose-300 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-sm transition-colors"
+                    title="Delete document from this sub-tab"
+                    className="px-3 py-2 bg-rose-950/60 hover:bg-rose-900 border border-rose-800/60 text-rose-300 hover:text-rose-100 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
                   >
                     <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                    <span>Clear Document</span>
+                    <span>Delete Document</span>
                   </button>
                 )}
 

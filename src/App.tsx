@@ -103,7 +103,7 @@ import { MASTER_PLAY_DATABASE, DEFAULT_CALL_SHEET_DATA } from './data/callSheetD
 import { syncWristbandToCallSheet } from './utils/wristbandLinking';
 import { saveCallSheetSnapshot } from './utils/callSheetStorage';
 import { ScoutingView } from './components/ScoutingView';
-import { HtmlTendenciesView } from './components/scouting/HtmlTendenciesView';
+import { TendenciesView } from './components/scouting/TendenciesView';
 import { PlaybookGuidesView } from './components/PlaybookGuidesView';
 import { DrillLibraryView } from './components/DrillLibraryView';
 import { PracticePlanView } from './components/PracticePlanView';
@@ -6398,13 +6398,14 @@ function mergeRemoteWeeklyData(
                   });
                 }}
                 onNavigateToSchedule={() => setActiveUnit('schedule')}
-                onNavigateToHtmlTendencies={() => setActiveUnit('html_tendencies')}
+                onNavigateToTendencies={() => setActiveUnit('tendencies')}
+                onNavigateToHtmlTendencies={() => setActiveUnit('tendencies')}
               />
             )}
 
-            {/* HTML Tendencies View */}
-            {activeUnit === 'html_tendencies' && (
-              <HtmlTendenciesView
+            {/* Tendencies View (Same layout and functionality as Playbooks & Guides) */}
+            {(activeUnit === 'tendencies' || activeUnit === 'html_tendencies') && (
+              <TendenciesView
                 scouting={currentWeekState.scouting || {}}
                 onUpdateScouting={(field, val) => {
                   setWeeklyData((prev) => {
@@ -6433,7 +6434,8 @@ function mergeRemoteWeeklyData(
                 }}
                 opponentName={currentWeekState.opponent || currentWeekState.scouting?.opponent || 'Opponent'}
                 weekName={currentWeek.startsWith('Week') ? currentWeek : `Week ${currentWeek}`}
-                isPowerAdmin={userRole === 'admin'}
+                userRole={userRole}
+                activeTeam={currentActiveTeam}
                 onNavigateToScouting={() => setActiveUnit('scouting')}
               />
             )}
