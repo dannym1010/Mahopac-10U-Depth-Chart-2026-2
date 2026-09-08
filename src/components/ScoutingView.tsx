@@ -575,6 +575,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
       {(activeSectionTab === 'all' || activeSectionTab === 'html_report') && (
         <div className="print:hidden">
           <HtmlScoutingReportViewer
+            scouting={scouting}
             attachments={attachments}
             isPowerAdmin={isPowerAdmin}
             onUpdateAttachments={handleUpdateAttachments}

@@ -17,7 +17,6 @@ import {
   RefreshCw,
   Sparkles,
   MessageSquare,
-  AlertTriangle,
   Printer,
   Columns,
   Search,
@@ -30,11 +29,14 @@ import {
   Clock,
   User,
   X,
+  Layers,
+  ArrowRight,
 } from 'lucide-react';
-import { ScoutingAttachment, CoachScoutingNote } from '../../types';
+import { ScoutingData, ScoutingAttachment, CoachScoutingNote, OpponentKeyPlayer } from '../../types';
 
 interface HtmlScoutingReportViewerProps {
-  attachments: ScoutingAttachment[];
+  scouting: ScoutingData;
+  attachments?: ScoutingAttachment[];
   isPowerAdmin?: boolean;
   onUpdateAttachments: (updated: ScoutingAttachment[]) => void;
   opponentName: string;
@@ -44,43 +46,133 @@ interface HtmlScoutingReportViewerProps {
   onSyncToStaffNotes?: (note: CoachScoutingNote) => void;
 }
 
-export const RICH_SAMPLE_SCOUTING_HTML = (opponent: string, week: string) => `<!DOCTYPE html>
+/**
+ * Generates an executive, NFL/Hudl-grade standalone HTML Scouting Dossier
+ * compiled directly from the live ScoutingView data.
+ */
+export const generateComprehensiveScoutingHtml = (
+  scouting: ScoutingData,
+  opponent: string,
+  week: string
+): string => {
+  const oppTitle = opponent || scouting.opponent || 'Upcoming Opponent';
+  const weekTitle = week || scouting.week || 'Game Week';
+  const gameDate = scouting.gameDate || 'Date TBD';
+  const gameLocation = scouting.gameLocation || 'Location TBD';
+
+  const keys: string[] =
+    scouting.keysToVictory && scouting.keysToVictory.length > 0
+      ? scouting.keysToVictory
+      : [
+          'Win the line of scrimmage with aggressive, disciplined pad level',
+          'Eliminate pre-snap alignment mistakes and assignment bust penalties',
+          'Pursue with gang-tackle swarm and maintain sound cutback contain',
+        ];
+
+  const players: OpponentKeyPlayer[] =
+    (scouting.keyPlayers as OpponentKeyPlayer[]) || [];
+
+  const notes: CoachScoutingNote[] = scouting.coachNotes || [];
+
+  const defFront = scouting.defenseFront || scouting.defensiveFronts || '4-4 Base / 5-3 Under';
+  const defCoverage = scouting.defenseCoverage || 'Cover 3 Sky / Cover 1 Man-Free';
+  const defTendencies =
+    scouting.defenseTendencies ||
+    'Heavy A-gap blitz pressure on passing downs. Outside linebackers flow fast to perimeter flow; vulnerable to misdirection, counter trays, and backside cutbacks.';
+
+  const offFormations = scouting.offenseFormations || 'Shotgun Spread 11 / Pistol Heavy 20';
+  const runPass = scouting.runPassRatio || '65% Run / 35% Pass';
+  const offTendencies =
+    scouting.offenseTendencies ||
+    scouting.offensiveTendencies ||
+    'Run-heavy on 1st & 2nd downs. Heavy reliance on off-tackle sweep and jet motion. When behind the chains, sets up quick screens and shallow mesh crossers.';
+
+  // Parse run/pass ratio for visual gauge
+  let runPct = 65;
+  let passPct = 35;
+  const match = runPass.match(/(\d+)[^\d]+(\d+)/);
+  if (match) {
+    const r = parseInt(match[1], 10);
+    const p = parseInt(match[2], 10);
+    if (!isNaN(r) && !isNaN(p) && r + p > 0) {
+      runPct = Math.round((r / (r + p)) * 100);
+      passPct = 100 - runPct;
+    }
+  }
+
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${oppTitle} - Scouting Report Dossier (${weekTitle})</title>
   <style>
     :root {
+      --bg: #0b1120;
+      --card-bg: #ffffff;
+      --header-bg: #0f172a;
       --primary: #1e3a8a;
-      --primary-light: #3b82f6;
-      --secondary: #d97706;
-      --dark: #0f172a;
-      --light: #f8fafc;
-      --border: #cbd5e1;
-      --alert-bg: #fef2f2;
-      --alert-border: #ef4444;
+      --accent: #f59e0b;
+      --accent-hover: #d97706;
+      --text-dark: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --danger-bg: #fef2f2;
+      --danger-border: #ef4444;
+      --danger-text: #991b1b;
+      --warn-bg: #fffbeb;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
       --success-bg: #ecfdf5;
       --success-border: #10b981;
+      --success-text: #065f46;
     }
     * { box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       margin: 0;
       padding: 24px;
-      color: #1e293b;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background: #f8fafc;
+      color: #1e293b;
       line-height: 1.5;
     }
+    .container {
+      max-width: 1040px;
+      margin: 0 auto;
+    }
+    /* Executive Header */
     .header {
       background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
       color: #ffffff;
-      padding: 24px 28px;
-      border-radius: 16px;
-      margin-bottom: 24px;
-      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2);
+      padding: 26px 30px;
+      border-radius: 18px;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25);
+      margin-bottom: 22px;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::after {
+      content: "";
+      position: absolute;
+      top: -30px;
+      right: -30px;
+      width: 160px;
+      height: 160px;
+      background: rgba(245, 158, 11, 0.12);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .header-tagline {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #fbbf24;
+      margin-bottom: 6px;
     }
     .header h1 {
-      margin: 0 0 6px 0;
-      font-size: 22px;
+      margin: 0 0 10px 0;
+      font-size: 26px;
       font-weight: 900;
       letter-spacing: -0.5px;
       text-transform: uppercase;
@@ -89,10 +181,10 @@ export const RICH_SAMPLE_SCOUTING_HTML = (opponent: string, week: string) => `<!
     .header-meta {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
       align-items: center;
+      gap: 12px;
       font-size: 12px;
-      color: #93c5fd;
+      color: #cbd5e1;
       font-weight: 600;
     }
     .badge {
@@ -105,61 +197,139 @@ export const RICH_SAMPLE_SCOUTING_HTML = (opponent: string, week: string) => `<!
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    .badge-gold { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+    .badge-amber { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
     .badge-blue { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
     .badge-red { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
 
+    /* Alert Banner */
+    .alert-banner {
+      background: #fef2f2;
+      border-left: 5px solid #ef4444;
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 22px;
+      box-shadow: 0 2px 5px rgba(239, 68, 68, 0.08);
+    }
+    .alert-title {
+      font-size: 12px;
+      font-weight: 900;
+      color: #991b1b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .alert-desc {
+      font-size: 13px;
+      color: #7f1d1d;
+      margin: 0;
+      font-weight: 500;
+    }
+
+    /* Grid Layout */
     .grid-2 {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 20px;
-      margin-bottom: 24px;
+      margin-bottom: 22px;
     }
 
+    /* Cards */
     .card {
       background: #ffffff;
       border: 1px solid #e2e8f0;
-      border-radius: 14px;
+      border-radius: 16px;
       padding: 20px;
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
     .card-title {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 800;
       text-transform: uppercase;
       color: #0f172a;
-      margin-top: 0;
-      margin-bottom: 14px;
+      margin: 0 0 14px 0;
       padding-bottom: 8px;
       border-bottom: 2px solid #e2e8f0;
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      justify-content: space-between;
     }
 
-    .callout {
-      border-left: 4px solid var(--alert-border);
-      background: var(--alert-bg);
-      padding: 14px 16px;
-      border-radius: 8px;
-      margin: 16px 0;
+    /* Keys List */
+    .keys-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .key-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px 14px;
       font-size: 13px;
-      color: #991b1b;
+      font-weight: 600;
+      color: #1e293b;
     }
-    .callout-title { font-weight: 800; margin-bottom: 4px; display: block; }
-
-    .callout-success {
-      border-left: 4px solid var(--success-border);
-      background: var(--success-bg);
-      color: #065f46;
+    .key-num {
+      background: #f59e0b;
+      color: #0f172a;
+      font-weight: 900;
+      font-size: 11px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
     }
 
+    /* Ratio Bar */
+    .ratio-wrap {
+      margin: 12px 0 16px 0;
+    }
+    .ratio-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .ratio-bar {
+      height: 14px;
+      border-radius: 9999px;
+      display: flex;
+      overflow: hidden;
+      background: #e2e8f0;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .ratio-run {
+      background: #10b981;
+      height: 100%;
+      transition: width 0.3s;
+    }
+    .ratio-pass {
+      background: #3b82f6;
+      height: 100%;
+      transition: width 0.3s;
+    }
+
+    /* Tables */
     table {
       width: 100%;
       border-collapse: collapse;
       font-size: 12px;
-      margin: 14px 0;
-      border-radius: 8px;
+      border-radius: 10px;
       overflow: hidden;
       border: 1px solid #e2e8f0;
     }
@@ -168,10 +338,10 @@ export const RICH_SAMPLE_SCOUTING_HTML = (opponent: string, week: string) => `<!
       color: #ffffff;
       text-align: left;
       padding: 10px 12px;
-      font-weight: 700;
+      font-weight: 800;
       text-transform: uppercase;
+      font-size: 10.5px;
       letter-spacing: 0.5px;
-      font-size: 11px;
     }
     td {
       padding: 10px 12px;
@@ -179,158 +349,350 @@ export const RICH_SAMPLE_SCOUTING_HTML = (opponent: string, week: string) => `<!
       background: #ffffff;
     }
     tr:nth-child(even) td { background: #f8fafc; }
-    tr:hover td { background: #f1f5f9; }
+    tr:last-child td { border-bottom: none; }
 
-    .stat-pill {
-      font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 4px;
+    /* Threat Pills */
+    .threat-pill {
+      font-weight: 800;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      display: inline-block;
+      text-transform: uppercase;
+    }
+    .threat-high { background: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
+    .threat-med { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+    .threat-low { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+
+    /* Scheme Specs */
+    .spec-item {
+      margin-bottom: 12px;
+    }
+    .spec-label {
       font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 2px;
     }
-    .run-heavy { background: #dcfce7; color: #166534; }
-    .pass-heavy { background: #e0e7ff; color: #3730a3; }
-
-    .keys-list {
-      margin: 0;
-      padding-left: 20px;
+    .spec-val {
       font-size: 13px;
-      color: #334155;
+      font-weight: 700;
+      color: #0f172a;
     }
-    .keys-list li { margin-bottom: 8px; }
+    .spec-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 12px;
+      color: #334155;
+      line-height: 1.6;
+    }
+
+    /* Staff Notes Section */
+    .notes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+    }
+    .note-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .note-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .note-cat {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #3b82f6;
+    }
+    .note-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+    .note-body {
+      font-size: 12px;
+      color: #475569;
+      line-height: 1.5;
+    }
+    .note-footer {
+      font-size: 10px;
+      color: #94a3b8;
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    /* Print Formatting */
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+        color: #000000;
+      }
+      .container { max-width: 100%; }
+      .header {
+        background: #1e293b !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        padding: 18px 20px;
+      }
+      .card {
+        box-shadow: none;
+        border: 1px solid #94a3b8;
+        page-break-inside: avoid;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>🏈 ${opponent.toUpperCase()} &bull; FILM SCOUT &amp; TENDENCY REPORT</h1>
-    <div class="header-meta">
-      <span>Matchup: ${week} Prep</span>
-      <span>&bull;</span>
-      <span class="badge badge-gold">CATAPULT / HUDL DATA</span>
-      <span class="badge badge-blue">OFFENSIVE &amp; DEFENSIVE MATRIX</span>
-      <span class="badge badge-red">CONFIDENTIAL STAFF SCOUT</span>
-    </div>
-  </div>
-
-  <div class="callout">
-    <span class="callout-title">🚨 CRITICAL GAME ALERT: 3RD DOWN &amp; SHORT TELL</span>
-    Opponent shifts to <strong>Heavy Pistol 20 Personnel</strong> on 3rd & short (under 3 yds). When TE aligns strong-side off the tackle, they run off-tackle power <strong>86% of the time</strong>. Fill the C-gap immediately.
-  </div>
-
-  <div class="grid-2">
-    <div class="card">
-      <div class="card-title">
-        <span>⚡ Offense: Down &amp; Distance Tendencies</span>
-        <span class="badge badge-blue">142 SNAPS ANALYZED</span>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Situation</th>
-            <th>Primary Formation</th>
-            <th>Run %</th>
-            <th>Pass %</th>
-            <th>Favored Concept</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>1st &amp; 10</strong></td>
-            <td>Shotgun 11 Pro</td>
-            <td><span class="stat-pill run-heavy">58% Run</span></td>
-            <td><span class="stat-pill pass-heavy">42% Pass</span></td>
-            <td>Inside Zone Split / Bubble RPO</td>
-          </tr>
-          <tr>
-            <td><strong>2nd &amp; Short (1-3)</strong></td>
-            <td>Pistol 20 Heavy</td>
-            <td><span class="stat-pill run-heavy">84% Run</span></td>
-            <td><span class="stat-pill pass-heavy">16% Pass</span></td>
-            <td>Power O / Guard Counter</td>
-          </tr>
-          <tr>
-            <td><strong>2nd &amp; Long (7+)</strong></td>
-            <td>Shotgun Trips 10</td>
-            <td><span class="stat-pill run-heavy">22% Run</span></td>
-            <td><span class="stat-pill pass-heavy">78% Pass</span></td>
-            <td>Mesh Cross / Stick Route</td>
-          </tr>
-          <tr>
-            <td><strong>3rd &amp; Long (6+)</strong></td>
-            <td>Empty 00 Spread</td>
-            <td><span class="stat-pill run-heavy">7% Run</span></td>
-            <td><span class="stat-pill pass-heavy">93% Pass</span></td>
-            <td>Sprint-out Right / Dagger Dig</td>
-          </tr>
-          <tr>
-            <td><strong>Red Zone (&lt; 20)</strong></td>
-            <td>I-Form Tight Twins</td>
-            <td><span class="stat-pill run-heavy">71% Run</span></td>
-            <td><span class="stat-pill pass-heavy">29% Pass</span></td>
-            <td>Toss Sweep / PA Boot to TE</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="card">
-      <div class="card-title">
-        <span>🛡️ Defense: Fronts &amp; Blitz Packages</span>
-        <span class="badge badge-blue">BASE: 4-4 STACK</span>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Down / Field Zone</th>
-            <th>Front</th>
-            <th>Secondary Shell</th>
-            <th>Pressure Rate</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Normal Down (1st / 2nd)</td>
-            <td>4-4 Stack</td>
-            <td>Cover 3 Sky (SS in box)</td>
-            <td>18% Blitz (Mike LB A-Gap)</td>
-          </tr>
-          <tr>
-            <td>Passing Downs (3rd &amp; 5+)</td>
-            <td>3-3-5 Penny</td>
-            <td>Cover 1 Man-Free</td>
-            <td>64% Blitz (Overload Boundary)</td>
-          </tr>
-          <tr>
-            <td>Red Zone (Inside 10)</td>
-            <td>Goal Line 5-3</td>
-            <td>Cover 0 Man (No Safety)</td>
-            <td>85% Run Pinch</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div class="callout callout-success" style="margin-top: 14px;">
-        <span class="callout-title">🎯 EXPLOITABLE WEAKNESS IN COVERAGE:</span>
-        Their boundary corner gives an 8-yard cushion in Cover 3 on 1st down. Fast quick slants and outside hitches are open all day until they adjust.
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-tagline">🏈 MAHOPAC 10U COACHING STAFF &bull; CONFIDENTIAL GAME DOSSIER</div>
+      <h1>${oppTitle} &bull; FILM SCOUT &amp; GAME PLAN</h1>
+      <div class="header-meta">
+        <span>📅 ${gameDate}</span>
+        <span>&bull;</span>
+        <span>📍 ${gameLocation}</span>
+        <span>&bull;</span>
+        <span class="badge badge-amber">${weekTitle}</span>
+        <span class="badge badge-blue">LIVE SCOUT MATRIX</span>
       </div>
     </div>
-  </div>
 
-  <div class="card">
-    <div class="card-title">
-      <span>🔑 Game Plan Must-Wins vs. ${opponent}</span>
-      <span class="badge badge-gold">STAFF FOCUS</span>
+    <!-- Alert / Critical Key -->
+    <div class="alert-banner">
+      <div class="alert-title">🚨 PRIMARY GAME FOCUS &amp; KEYS TO VICTORY</div>
+      <p class="alert-desc">${keys[0] || 'Execute base assignments cleanly and control the line of scrimmage.'}</p>
     </div>
-    <ol class="keys-list">
-      <li><strong>Win Edge Containment:</strong> #22 will bounce outside if C-gap is sealed. Defensive ends must keep outside shoulder free and set a firm anchor.</li>
-      <li><strong>Reroute Slot Receiver in Mesh:</strong> Mike and Will linebackers must jam crossing routes at 4 yards to disrupt timing for their QB.</li>
-      <li><strong>Protect the A-Gap on 3rd Down:</strong> Center and Guards must slide protect inside against their delayed double-A gap blitz package.</li>
-      <li><strong>Capitalize on Soft Boundary Corner:</strong> Throw hitches and quick bubble screens early to force their secondary to press up.</li>
-    </ol>
+
+    <!-- Grid 1: Keys to Victory + Defensive Scheme -->
+    <div class="grid-2">
+      <!-- Keys to Victory -->
+      <div class="card">
+        <div class="card-title">
+          <span>🎯 Keys to Victory</span>
+          <span class="badge badge-amber">${keys.length} Goals</span>
+        </div>
+        <ul class="keys-list">
+          ${keys
+            .map(
+              (k, idx) => `
+            <li class="key-item">
+              <span class="key-num">${idx + 1}</span>
+              <span>${k}</span>
+            </li>
+          `
+            )
+            .join('')}
+        </ul>
+      </div>
+
+      <!-- Defensive Front & Coverage -->
+      <div class="card">
+        <div class="card-title">
+          <span>🛡️ Opponent Defense Breakdown</span>
+          <span class="badge badge-blue">SCHEME ANALYSIS</span>
+        </div>
+        <div class="spec-item">
+          <div class="spec-label">Base Front Alignment</div>
+          <div class="spec-val">${defFront}</div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-label">Coverage Shell</div>
+          <div class="spec-val">${defCoverage}</div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-label">Tendencies &amp; Blitz Packages</div>
+          <div class="spec-box">${defTendencies}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid 2: Offensive Tendencies & Ratio + Key Personnel -->
+    <div class="grid-2">
+      <!-- Offensive Tendencies -->
+      <div class="card">
+        <div class="card-title">
+          <span>⚡ Opponent Offense Breakdown</span>
+          <span class="badge badge-blue">ATTACK TENDENCIES</span>
+        </div>
+        <div class="spec-item">
+          <div class="spec-label">Primary Formations</div>
+          <div class="spec-val">${offFormations}</div>
+        </div>
+
+        <div class="ratio-wrap">
+          <div class="ratio-header">
+            <span style="color:#059669;">Run ${runPct}%</span>
+            <span style="color:#2563eb;">Pass ${passPct}%</span>
+          </div>
+          <div class="ratio-bar">
+            <div class="ratio-run" style="width: ${runPct}%;"></div>
+            <div class="ratio-pass" style="width: ${passPct}%;"></div>
+          </div>
+        </div>
+
+        <div class="spec-item">
+          <div class="spec-label">Playcalling Tendencies &amp; Tells</div>
+          <div class="spec-box">${offTendencies}</div>
+        </div>
+      </div>
+
+      <!-- Key Players to Watch -->
+      <div class="card">
+        <div class="card-title">
+          <span>⭐ Key Opponent Players</span>
+          <span class="badge badge-amber">${players.length} Impact Players</span>
+        </div>
+        ${
+          players.length > 0
+            ? `
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Player</th>
+                <th>Pos</th>
+                <th>Threat</th>
+                <th>Matchup Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${players
+                .map(
+                  (p) => `
+                <tr>
+                  <td><strong>${p.jersey || p.num || '-'}</strong></td>
+                  <td><strong>${p.name}</strong></td>
+                  <td>${p.position || p.pos || '-'}</td>
+                  <td>
+                    <span class="threat-pill ${
+                      p.threatLevel === 'High'
+                        ? 'threat-high'
+                        : p.threatLevel === 'Medium'
+                        ? 'threat-med'
+                        : 'threat-low'
+                    }">
+                      ${p.threatLevel}
+                    </span>
+                  </td>
+                  <td>${p.notes || 'Monitor closely on all snaps.'}</td>
+                </tr>
+              `
+                )
+                .join('')}
+            </tbody>
+          </table>
+        `
+            : `
+          <div class="spec-box" style="text-align: center; color: #64748b;">
+            No opponent key players entered yet. Add key players in the Scouting View or Report Notes tab.
+          </div>
+        `
+        }
+      </div>
+    </div>
+
+    <!-- Staff Film Notes -->
+    ${
+      notes.length > 0
+        ? `
+      <div class="card">
+        <div class="card-title">
+          <span>📝 Coaching Staff Film Observations</span>
+          <span class="badge badge-blue">${notes.length} Notes Logged</span>
+        </div>
+        <div class="notes-grid">
+          ${notes
+            .map(
+              (n) => `
+            <div class="note-card">
+              <div class="note-header">
+                <span class="note-cat">${n.category}</span>
+              </div>
+              <div class="note-title">${n.title}</div>
+              <div class="note-body">${n.content}</div>
+              <div class="note-footer">Coach: ${n.author || 'Staff'} &bull; ${new Date(
+                n.timestamp || n.createdAt || Date.now()
+              ).toLocaleDateString()}</div>
+            </div>
+          `
+            )
+            .join('')}
+        </div>
+      </div>
+    `
+        : ''
+    }
+
+    <!-- Dossier Footer -->
+    <div style="margin-top: 24px; padding-top: 14px; border-top: 1px solid #cbd5e1; text-align: center; font-size: 11px; color: #94a3b8;">
+      Generated for Mahopac 10U Football Operations &bull; ${weekTitle} vs ${oppTitle} &bull; All Rights Reserved
+    </div>
   </div>
 </body>
 </html>`;
+};
+
+/**
+ * Isolated Shadow DOM HTML Container
+ * Guarantees that CSS is encapsulated and NEVER crashes or is blocked by parent iframe sandbox!
+ */
+const ShadowHtmlView: React.FC<{
+  html: string;
+  zoomScale: number;
+  canvasBg: 'paper' | 'dark' | 'slate';
+  isFullscreen?: boolean;
+}> = ({ html, zoomScale, canvasBg, isFullscreen }) => {
+  const hostRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!hostRef.current) return;
+    let shadow = hostRef.current.shadowRoot;
+    if (!shadow) {
+      shadow = hostRef.current.attachShadow({ mode: 'open' });
+    }
+    shadow.innerHTML =
+      html ||
+      '<div style="padding: 40px; text-align: center; color: #64748b; font-family: sans-serif;"><h3>No HTML report content available</h3><p>Click "Sync from Live View" to generate your dossier.</p></div>';
+  }, [html]);
+
+  const bgClass =
+    canvasBg === 'paper' ? 'bg-slate-100' : canvasBg === 'dark' ? 'bg-slate-950' : 'bg-slate-900';
+
+  return (
+    <div
+      className={`w-full overflow-auto flex justify-center p-3 sm:p-5 ${bgClass} transition-colors ${
+        isFullscreen ? 'h-[calc(100vh-140px)]' : 'min-h-[620px] max-h-[760px]'
+      }`}
+    >
+      <div
+        style={{
+          width: `${zoomScale}%`,
+          maxWidth: zoomScale > 100 ? `${zoomScale}%` : '100%',
+          transition: 'width 0.15s ease-out',
+        }}
+        className="rounded-2xl overflow-hidden shadow-2xl border border-slate-700/80 bg-white"
+      >
+        <div ref={hostRef} className="w-full min-h-[580px]" />
+      </div>
+    </div>
+  );
+};
 
 export const HtmlScoutingReportViewer: React.FC<HtmlScoutingReportViewerProps> = ({
+  scouting,
   attachments = [],
   isPowerAdmin = true,
   onUpdateAttachments,
@@ -340,57 +702,58 @@ export const HtmlScoutingReportViewer: React.FC<HtmlScoutingReportViewerProps> =
   onAddKeyToVictory,
   onSyncToStaffNotes,
 }) => {
-  // All HTML reports
-  const htmlAttachments = useMemo(() => {
+  // Generate the live HTML report from the current working scouting view
+  const liveGeneratedHtml = useMemo(() => {
+    return generateComprehensiveScoutingHtml(scouting, opponentName, weekName);
+  }, [scouting, opponentName, weekName]);
+
+  // All HTML reports in attachments
+  const customHtmlAttachments = useMemo(() => {
     return attachments.filter((a) => a.type === 'html');
   }, [attachments]);
 
-  // Selected HTML report ID
-  const [selectedReportId, setSelectedReportId] = useState<string>(() => {
-    return htmlAttachments.length > 0 ? htmlAttachments[0].id : '';
-  });
+  // Selected report ID: 'live_view_dossier' OR custom attachment id
+  const [selectedReportId, setSelectedReportId] = useState<string>('live_view_dossier');
 
-  // Keep selectedReportId updated if list changes
-  useEffect(() => {
-    if (htmlAttachments.length > 0) {
-      const exists = htmlAttachments.some((a) => a.id === selectedReportId);
-      if (!exists) {
-        setSelectedReportId(htmlAttachments[0].id);
-      }
-    } else {
-      setSelectedReportId('');
+  // Currently active HTML report
+  const currentAttachment = useMemo(() => {
+    if (selectedReportId === 'live_view_dossier') return null;
+    return customHtmlAttachments.find((a) => a.id === selectedReportId) || null;
+  }, [customHtmlAttachments, selectedReportId]);
+
+  // The active HTML code to display
+  const activeHtmlCode = useMemo(() => {
+    if (currentAttachment && currentAttachment.htmlCode) {
+      return currentAttachment.htmlCode;
     }
-  }, [htmlAttachments, selectedReportId]);
+    return liveGeneratedHtml;
+  }, [currentAttachment, liveGeneratedHtml]);
 
-  const currentReport = useMemo(() => {
-    return htmlAttachments.find((a) => a.id === selectedReportId) || htmlAttachments[0] || null;
-  }, [htmlAttachments, selectedReportId]);
-
-  // Primary Viewer Tab: 'viewer' (Report Viewer) | 'notes' (Report Notes & Annotations)
+  // Primary Viewer Tab: 'viewer' (Report Dossier) | 'notes' (Report Notes & Annotations)
   const [activeTab, setActiveTab] = useState<'viewer' | 'notes'>('viewer');
+
+  // Viewer rendering mode: 'shadow' (clean native) | 'iframe' (raw frame)
+  const [renderMode, setRenderMode] = useState<'shadow' | 'iframe'>('shadow');
 
   // Split-view mode: Show Viewer + Notes side-by-side
   const [isSplitView, setIsSplitView] = useState(false);
 
-  // Fullscreen expanded mode
+  // Fullscreen mode
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Zoom scale: 80% to 125%
+  // Zoom scale: 80% to 130%
   const [zoomScale, setZoomScale] = useState<number>(100);
 
-  // Iframe refresh key
-  const [iframeKey, setIframeKey] = useState(0);
-
-  // Background appearance for iframe canvas
+  // Canvas background
   const [canvasBg, setCanvasBg] = useState<'paper' | 'dark' | 'slate'>('paper');
 
-  // HTML Source Code Editor Modal
+  // Code editor modal state
   const [isCodeEditorOpen, setIsCodeEditorOpen] = useState(false);
   const [editCodeTitle, setEditCodeTitle] = useState('');
   const [editCodeHtml, setEditCodeHtml] = useState('');
-  const [editorCopied, setEditorCopied] = useState(false);
+  const [syncToast, setSyncToast] = useState<string | null>(null);
 
-  // Note-taking form state on the "notes" tab
+  // Notes state
   const [noteTitle, setNoteTitle] = useState('');
   const [noteContent, setNoteContent] = useState('');
   const [noteCategory, setNoteCategory] = useState('Opponent Tendency');
@@ -404,11 +767,13 @@ export const HtmlScoutingReportViewer: React.FC<HtmlScoutingReportViewerProps> =
   // File input ref for uploading HTML files
   const htmlFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Extract notes for currently selected report
+  // Get notes for current report or master staff notes
   const reportNotes: CoachScoutingNote[] = useMemo(() => {
-    if (!currentReport || !currentReport.notes) return [];
-    return currentReport.notes;
-  }, [currentReport]);
+    if (currentAttachment && currentAttachment.notes) {
+      return currentAttachment.notes;
+    }
+    return scouting.coachNotes || [];
+  }, [currentAttachment, scouting.coachNotes]);
 
   // Filtered notes
   const filteredNotes = useMemo(() => {
@@ -424,93 +789,125 @@ export const HtmlScoutingReportViewer: React.FC<HtmlScoutingReportViewerProps> =
     });
   }, [reportNotes, notesCategoryFilter, notesSearch]);
 
-  // Handle Load Sample Hudl Report
-  const handleLoadSampleReport = () => {
-    const sampleHtml = RICH_SAMPLE_SCOUTING_HTML(opponentName || 'Upcoming Opponent', weekName || 'Week 1');
-    const newReport: ScoutingAttachment = {
-      id: `html_${Date.now()}_sample`,
-      name: `${opponentName || 'Opponent'} Hudl Film Breakdown`,
+  // Sync / Save Live Dossier into attachments as a permanent HTML report
+  const handleSaveLiveDossierToAttachments = () => {
+    const opp = opponentName || scouting.opponent || 'Opponent';
+    const wk = weekName || scouting.week || 'Game Week';
+    const reportName = `${opp} Live Scouting Dossier (${wk})`;
+
+    const existingIdx = attachments.findIndex(
+      (a) => a.type === 'html' && a.id === 'live_scouting_dossier'
+    );
+
+    const dossierAttachment: ScoutingAttachment = {
+      id: 'live_scouting_dossier',
+      name: reportName,
       type: 'html',
-      htmlCode: sampleHtml,
-      fileSize: '14.2 KB',
-      caption: `Interactive opponent film & tendency report for ${weekName}`,
+      htmlCode: liveGeneratedHtml,
+      fileSize: `${(new Blob([liveGeneratedHtml]).size / 1024).toFixed(1)} KB`,
+      caption: `Auto-generated interactive scouting dossier from game plan view`,
       createdAt: Date.now(),
-      notes: [
-        {
-          id: `note_${Date.now()}_1`,
-          title: 'Exploit Soft Cushion on Boundary Corner',
-          category: 'Offense vs Defense',
-          content: 'Boundary CB is giving an 8-yard cushion in Cover 3 on 1st down. Run quick hitches, outs, and RPO bubble screens until they bring safeties down.',
-          author: currentUserEmail || 'Coach',
-          authorRole: 'Offensive Staff',
-          timestamp: Date.now(),
-          createdAt: Date.now(),
-        },
-        {
-          id: `note_${Date.now()}_2`,
-          title: '3rd & Short: Alert Heavy Pistol Run',
-          category: 'Defense vs Offense',
-          content: '84% run rate in Pistol 20. When TE is off-tackle, force them back into inside traffic with edge anchor.',
-          author: currentUserEmail || 'Coach',
-          authorRole: 'Defensive Staff',
-          timestamp: Date.now() - 3600000,
-          createdAt: Date.now() - 3600000,
-        },
-      ],
+      notes: currentAttachment?.notes || [],
     };
 
-    const updated = [newReport, ...attachments];
-    onUpdateAttachments(updated);
-    setSelectedReportId(newReport.id);
+    let updatedList: ScoutingAttachment[];
+    if (existingIdx >= 0) {
+      updatedList = attachments.map((a, idx) => (idx === existingIdx ? dossierAttachment : a));
+    } else {
+      updatedList = [dossierAttachment, ...attachments];
+    }
+
+    onUpdateAttachments(updatedList);
+    setSelectedReportId('live_scouting_dossier');
+    setSyncToast('Dossier successfully synced from current Scouting View!');
+    setTimeout(() => setSyncToast(null), 3500);
   };
 
-  // Upload custom .html file
-  const handleUploadHtmlFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Open HTML in standalone browser tab
+  const handleOpenInNewTab = () => {
+    const blob = new Blob([activeHtmlCode], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  };
+
+  // Download HTML file
+  const handleDownloadHtml = () => {
+    const blob = new Blob([activeHtmlCode], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const cleanName = (
+      currentAttachment?.name || `${opponentName || 'opponent'}_scouting_report`
+    ).replace(/\s+/g, '_');
+    link.download = `${cleanName}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Direct print report
+  const handlePrintReport = () => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(activeHtmlCode);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 400);
+    }
+  };
+
+  // Upload external .html file
+  const handleUploadHtmlFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    try {
-      const text = await file.text();
-      const newReport: ScoutingAttachment = {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (!content) return;
+
+      const newAttachment: ScoutingAttachment = {
         id: `html_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-        name: file.name.replace(/\.html?$/i, ''),
+        name: file.name.replace(/\.[^/.]+$/, ''),
         type: 'html',
-        htmlCode: text,
+        htmlCode: content,
         fileSize: `${(file.size / 1024).toFixed(1)} KB`,
-        caption: `Uploaded HTML scouting report: ${file.name}`,
+        caption: `Uploaded HTML scouting file on ${new Date().toLocaleDateString()}`,
         createdAt: Date.now(),
         notes: [],
       };
 
-      const updated = [newReport, ...attachments];
-      onUpdateAttachments(updated);
-      setSelectedReportId(newReport.id);
-    } catch (err) {
-      console.error('Failed to read HTML file:', err);
-    }
+      onUpdateAttachments([newAttachment, ...attachments]);
+      setSelectedReportId(newAttachment.id);
+      setSyncToast(`Uploaded "${file.name}" successfully!`);
+      setTimeout(() => setSyncToast(null), 3000);
+    };
+    reader.readAsText(file);
     e.target.value = '';
   };
 
-  // Open HTML code editor for editing or new report
-  const handleOpenCodeEditor = (report?: ScoutingAttachment) => {
-    if (report) {
-      setEditCodeTitle(report.name);
-      setEditCodeHtml(report.htmlCode || '');
+  // Open HTML source code editor modal
+  const handleOpenCodeEditor = () => {
+    if (currentAttachment) {
+      setEditCodeTitle(currentAttachment.name);
+      setEditCodeHtml(currentAttachment.htmlCode || '');
     } else {
-      setEditCodeTitle(`${opponentName || 'Opponent'} New HTML Report`);
-      setEditCodeHtml(RICH_SAMPLE_SCOUTING_HTML(opponentName || 'Opponent', weekName || 'Week 1'));
+      setEditCodeTitle(`${opponentName || 'Opponent'} Custom HTML Report`);
+      setEditCodeHtml(liveGeneratedHtml);
     }
     setIsCodeEditorOpen(true);
   };
 
-  // Save changes from code editor
+  // Save changes from source editor
   const handleSaveCodeEditor = () => {
     if (!editCodeHtml.trim()) return;
 
-    if (currentReport && isCodeEditorOpen) {
-      // Update existing report
+    if (currentAttachment) {
       const updated = attachments.map((a) => {
-        if (a.id === currentReport.id) {
+        if (a.id === currentAttachment.id) {
           return {
             ...a,
             name: editCodeTitle.trim() || a.name,
@@ -522,14 +919,13 @@ export const HtmlScoutingReportViewer: React.FC<HtmlScoutingReportViewerProps> =
       });
       onUpdateAttachments(updated);
     } else {
-      // Create new report
       const newReport: ScoutingAttachment = {
-        id: `html_${Date.now()}_new`,
-        name: editCodeTitle.trim() || `${opponentName} Scouting Code Report`,
+        id: `html_${Date.now()}_custom`,
+        name: editCodeTitle.trim() || `${opponentName} Custom HTML Report`,
         type: 'html',
         htmlCode: editCodeHtml,
         fileSize: `${(new Blob([editCodeHtml]).size / 1024).toFixed(1)} KB`,
-        caption: `Custom HTML scouting report for ${weekName}`,
+        caption: `Custom modified HTML report for ${weekName}`,
         createdAt: Date.now(),
         notes: [],
       };
@@ -538,61 +934,19 @@ export const HtmlScoutingReportViewer: React.FC<HtmlScoutingReportViewerProps> =
     }
 
     setIsCodeEditorOpen(false);
-  };
-
-  // Delete current HTML report
-  const handleDeleteCurrentReport = () => {
-    if (!currentReport) return;
-    const ok = window.confirm(`Delete HTML report "${currentReport.name}"?`);
-    if (!ok) return;
-
-    const updated = attachments.filter((a) => a.id !== currentReport.id);
-    onUpdateAttachments(updated);
-  };
-
-  // Open HTML in new browser window
-  const handleOpenInNewTab = () => {
-    if (!currentReport?.htmlCode) return;
-    const blob = new Blob([currentReport.htmlCode], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
-  };
-
-  // Download HTML file
-  const handleDownloadHtml = () => {
-    if (!currentReport?.htmlCode) return;
-    const blob = new Blob([currentReport.htmlCode], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${(currentReport.name || 'scouting-report').replace(/\s+/g, '_')}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  // Print HTML Report directly
-  const handlePrintReport = () => {
-    if (!currentReport?.htmlCode) return;
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(currentReport.htmlCode);
-      printWindow.document.close();
-      printWindow.focus();
-      setTimeout(() => {
-        printWindow.print();
-      }, 350);
-    }
+    setSyncToast('HTML report updated!');
+    setTimeout(() => setSyncToast(null), 3000);
   };
 
   // Add new note to current HTML report
   const handleAddNote = () => {
-    if (!noteTitle.trim() || !noteContent.trim() || !currentReport) return;
+    if (!noteTitle.trim() || !noteContent.trim()) return;
 
     const newNote: CoachScoutingNote = {
       id: `note_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-      title: `${notePriority === 'High' ? '🚨 ' : ''}${noteTitle.trim()}${noteDownDistance ? ` [${noteDownDistance}]` : ''}`,
+      title: `${notePriority === 'High' ? '🚨 ' : ''}${noteTitle.trim()}${
+        noteDownDistance ? ` [${noteDownDistance}]` : ''
+      }`,
       category: noteCategory,
       content: noteContent.trim(),
       author: currentUserEmail || 'Coach',
@@ -601,56 +955,61 @@ export const HtmlScoutingReportViewer: React.FC<HtmlScoutingReportViewerProps> =
       createdAt: Date.now(),
     };
 
-    // Update current attachment's notes
-    const updated = attachments.map((a) => {
-      if (a.id === currentReport.id) {
-        return {
-          ...a,
-          notes: [newNote, ...(a.notes || [])],
-        };
-      }
-      return a;
-    });
+    if (currentAttachment) {
+      const updated = attachments.map((a) => {
+        if (a.id === currentAttachment.id) {
+          return {
+            ...a,
+            notes: [newNote, ...(a.notes || [])],
+          };
+        }
+        return a;
+      });
+      onUpdateAttachments(updated);
+    }
 
-    onUpdateAttachments(updated);
-
-    // Optionally sync to staff notes
+    // Also sync to master staff notes if handler provided
     if (onSyncToStaffNotes) {
       onSyncToStaffNotes(newNote);
     }
 
-    // Reset form
+    // Reset fields
     setNoteTitle('');
     setNoteContent('');
     setNoteDownDistance('');
     setIsAddingNote(false);
+    setSyncToast('Note saved & synced to coaching observations!');
+    setTimeout(() => setSyncToast(null), 3000);
   };
 
-  // Delete note from report
+  // Delete note
   const handleDeleteNote = (noteId: string) => {
-    if (!currentReport) return;
-    const updated = attachments.map((a) => {
-      if (a.id === currentReport.id) {
-        return {
-          ...a,
-          notes: (a.notes || []).filter((n) => n.id !== noteId),
-        };
-      }
-      return a;
-    });
-    onUpdateAttachments(updated);
+    if (currentAttachment) {
+      const updated = attachments.map((a) => {
+        if (a.id === currentAttachment.id) {
+          return {
+            ...a,
+            notes: (a.notes || []).filter((n) => n.id !== noteId),
+          };
+        }
+        return a;
+      });
+      onUpdateAttachments(updated);
+    }
   };
 
-  // Copy all notes to clipboard
+  // Copy notes to clipboard
   const handleCopyAllNotes = () => {
     if (reportNotes.length === 0) return;
     const text =
-      `📋 REPORT NOTES: ${currentReport?.name || 'Scouting Report'}\n` +
+      `📋 REPORT NOTES: ${currentAttachment?.name || `${opponentName} Game Dossier`}\n` +
       `🏈 Opponent: ${opponentName} (${weekName})\n\n` +
       reportNotes
         .map(
           (n, idx) =>
-            `${idx + 1}. [${n.category.toUpperCase()}] ${n.title}\n   ${n.content}\n   — By: ${n.author || 'Staff'} (${new Date(n.timestamp || Date.now()).toLocaleDateString()})`
+            `${idx + 1}. [${n.category.toUpperCase()}] ${n.title}\n   ${n.content}\n   — By: ${
+              n.author || 'Staff'
+            }`
         )
         .join('\n\n');
 
@@ -662,7 +1021,9 @@ export const HtmlScoutingReportViewer: React.FC<HtmlScoutingReportViewerProps> =
   return (
     <div
       className={`bg-slate-850/95 backdrop-blur-md rounded-3xl border border-slate-700 shadow-2xl overflow-hidden transition-all duration-300 ${
-        isFullscreen ? 'fixed inset-3 z-50 flex flex-col bg-slate-900 border-indigo-500/80 shadow-2xl' : 'relative'
+        isFullscreen
+          ? 'fixed inset-2 z-50 flex flex-col bg-slate-900 border-amber-500/80 shadow-2xl'
+          : 'relative'
       }`}
     >
       {/* Hidden File Input */}
@@ -674,9 +1035,26 @@ export const HtmlScoutingReportViewer: React.FC<HtmlScoutingReportViewerProps> =
         onChange={handleUploadHtmlFile}
       />
 
-      {/* Top Main Command Bar */}
+      {/* Sync Toast Notification */}
+      {syncToast && (
+        <div className="bg-emerald-500/90 text-white text-xs font-black px-4 py-2 flex items-center justify-between shadow-md">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+            <span>{syncToast}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSyncToast(null)}
+            className="text-white hover:text-emerald-200"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Top Command Header */}
       <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border-b border-slate-700/80 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-        {/* Left: Branding & Report Selector */}
+        {/* Left: Branding & Report Picker */}
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500/20 to-indigo-600/30 border border-amber-500/40 text-amber-300 flex items-center justify-center shrink-0 shadow-inner">
             <FileCode className="w-5 h-5" />
@@ -684,435 +1062,373 @@ export const HtmlScoutingReportViewer: React.FC<HtmlScoutingReportViewerProps> =
 
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                Primary Film Scout
+              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-400" />
+                <span>Executive Film Dossier</span>
               </span>
               <span className="text-[10px] font-bold text-slate-400">
-                {opponentName ? `${opponentName} &bull; ` : ''}{weekName}
+                {opponentName ? `${opponentName} • ` : ''}
+                {weekName}
               </span>
             </div>
 
-            {/* Title / Report Dropdown */}
-            {htmlAttachments.length > 1 ? (
-              <div className="flex items-center gap-2 mt-0.5">
-                <select
-                  value={currentReport?.id || ''}
-                  onChange={(e) => setSelectedReportId(e.target.value)}
-                  className="bg-slate-900 border border-slate-700 text-slate-100 font-black text-sm sm:text-base rounded-xl px-2.5 py-1 focus:outline-none focus:border-amber-400 cursor-pointer"
-                >
-                  {htmlAttachments.map((rep) => (
-                    <option key={rep.id} value={rep.id}>
-                      {rep.name} {rep.fileSize ? `(${rep.fileSize})` : ''}
-                    </option>
-                  ))}
-                </select>
-                <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">
-                  ({htmlAttachments.length} Reports)
-                </span>
-              </div>
-            ) : currentReport ? (
-              <h3 className="font-black text-sm sm:text-base text-slate-100 truncate mt-0.5">
-                {currentReport.name}
-              </h3>
-            ) : (
-              <h3 className="font-black text-sm sm:text-base text-slate-200 mt-0.5">
-                Interactive HTML Scouting Report Viewer
-              </h3>
-            )}
+            {/* Report Source Selector */}
+            <div className="flex items-center gap-2 mt-1">
+              <select
+                value={selectedReportId}
+                onChange={(e) => setSelectedReportId(e.target.value)}
+                className="bg-slate-900 border border-slate-700 text-slate-100 font-black text-xs sm:text-sm rounded-xl px-2.5 py-1 focus:outline-none focus:border-amber-400 cursor-pointer max-w-[280px] sm:max-w-xs truncate"
+              >
+                <option value="live_view_dossier">
+                  ⚡ Live Game Dossier (Synced from Scouting View)
+                </option>
+                {customHtmlAttachments.map((rep) => (
+                  <option key={rep.id} value={rep.id}>
+                    📄 {rep.name} {rep.fileSize ? `(${rep.fileSize})` : ''}
+                  </option>
+                ))}
+              </select>
+
+              {/* Sync from Scouting View Button */}
+              <button
+                type="button"
+                onClick={handleSaveLiveDossierToAttachments}
+                className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                title="Sync and update this HTML report with the latest live data from your Scouting View"
+              >
+                <RefreshCw className="w-3 h-3 text-amber-400" />
+                <span className="hidden sm:inline">Sync from View</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Center: Primary View Tabs (Viewer vs Notes Tab) */}
-        {currentReport && (
-          <div className="flex items-center p-1 bg-slate-950/80 rounded-2xl border border-slate-800 text-xs font-bold self-start lg:self-center shadow-inner">
-            <button
-              type="button"
-              onClick={() => setActiveTab('viewer')}
-              className={`px-4 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
-                activeTab === 'viewer'
-                  ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Eye className="w-3.5 h-3.5 text-indigo-300" />
-              <span>Report Viewer</span>
-            </button>
+        {/* Center: Primary Tabs (Report Dossier vs Notes Tab) */}
+        <div className="flex items-center p-1 bg-slate-950/80 rounded-2xl border border-slate-800 text-xs font-bold self-start lg:self-center shadow-inner">
+          <button
+            type="button"
+            onClick={() => setActiveTab('viewer')}
+            className={`px-4 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'viewer'
+                ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Eye className="w-3.5 h-3.5 text-indigo-300" />
+            <span>Report Dossier</span>
+          </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('notes')}
-              className={`px-4 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-2 relative ${
-                activeTab === 'notes'
-                  ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <MessageSquare className="w-3.5 h-3.5 text-amber-300" />
-              <span>Report Notes &amp; Tells</span>
-              {reportNotes.length > 0 && (
-                <span
-                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                    activeTab === 'notes' ? 'bg-black/30 text-amber-200' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                  }`}
-                >
-                  {reportNotes.length}
-                </span>
-              )}
-            </button>
-          </div>
-        )}
+          <button
+            type="button"
+            onClick={() => setActiveTab('notes')}
+            className={`px-4 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-2 relative ${
+              activeTab === 'notes'
+                ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <MessageSquare className="w-3.5 h-3.5 text-amber-300" />
+            <span>Report Notes &amp; Tells</span>
+            {reportNotes.length > 0 && (
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  activeTab === 'notes'
+                    ? 'bg-black/30 text-amber-200'
+                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                }`}
+              >
+                {reportNotes.length}
+              </span>
+            )}
+          </button>
+        </div>
 
         {/* Right Toolbar Actions */}
         <div className="flex items-center gap-1.5 flex-wrap justify-end">
-          {currentReport ? (
-            <>
-              {/* Split View Toggle */}
-              <button
-                type="button"
-                onClick={() => setIsSplitView((s) => !s)}
-                className={`hidden md:flex px-3 py-1.5 rounded-xl text-xs font-bold border items-center gap-1.5 transition-all cursor-pointer ${
-                  isSplitView
-                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-xs'
-                    : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
-                }`}
-                title="View Report and Notes Side-by-Side"
-              >
-                <Columns className="w-3.5 h-3.5" />
-                <span>Split View</span>
-              </button>
+          {/* Split View Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsSplitView((s) => !s)}
+            className={`hidden md:flex px-3 py-1.5 rounded-xl text-xs font-bold border items-center gap-1.5 transition-all cursor-pointer ${
+              isSplitView
+                ? 'bg-indigo-600 text-white border-indigo-500 shadow-xs'
+                : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
+            }`}
+            title="View Report and Notes Side-by-Side"
+          >
+            <Columns className="w-3.5 h-3.5" />
+            <span>Split View</span>
+          </button>
 
-              {/* Edit Source Code (Power Admin) */}
-              {isPowerAdmin && (
-                <button
-                  type="button"
-                  onClick={() => handleOpenCodeEditor(currentReport)}
-                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-300 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-                  title="Edit HTML source code or update stats"
-                >
-                  <Edit3 className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="hidden sm:inline">Edit Source</span>
-                </button>
-              )}
-
-              {/* Open in New Tab */}
-              <button
-                type="button"
-                onClick={handleOpenInNewTab}
-                className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-xl transition-all cursor-pointer"
-                title="Open in full browser window"
-              >
-                <ExternalLink className="w-4 h-4" />
-              </button>
-
-              {/* Print */}
-              <button
-                type="button"
-                onClick={handlePrintReport}
-                className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-xl transition-all cursor-pointer"
-                title="Print report"
-              >
-                <Printer className="w-4 h-4" />
-              </button>
-
-              {/* Download */}
-              <button
-                type="button"
-                onClick={handleDownloadHtml}
-                className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-xl transition-all cursor-pointer"
-                title="Download .html file"
-              >
-                <Download className="w-4 h-4" />
-              </button>
-
-              {/* Fullscreen Toggle */}
-              <button
-                type="button"
-                onClick={() => setIsFullscreen((f) => !f)}
-                className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-xl transition-all cursor-pointer"
-                title={isFullscreen ? 'Exit Fullscreen' : 'Expand Fullscreen'}
-              >
-                {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-              </button>
-
-              {/* Delete */}
-              {isPowerAdmin && (
-                <button
-                  type="button"
-                  onClick={handleDeleteCurrentReport}
-                  className="p-2 bg-slate-900 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-700/60 rounded-xl transition-all cursor-pointer"
-                  title="Delete this HTML report"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={handleLoadSampleReport}
-                className="px-3.5 py-1.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 cursor-pointer active:scale-95 transition-all"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>⚡ Load Sample Hudl Report</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleOpenCodeEditor()}
-                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-indigo-600/30 cursor-pointer active:scale-95 transition-all"
-              >
-                <Code className="w-4 h-4" />
-                <span>Paste HTML</span>
-              </button>
-            </>
+          {/* Edit HTML Source Code */}
+          {isPowerAdmin && (
+            <button
+              type="button"
+              onClick={handleOpenCodeEditor}
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-300 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+              title="Edit raw HTML code or insert custom templates"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Edit HTML</span>
+            </button>
           )}
+
+          {/* Open in Standalone Tab */}
+          <button
+            type="button"
+            onClick={handleOpenInNewTab}
+            className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-xl text-xs font-bold cursor-pointer"
+            title="Open standalone in new browser tab"
+          >
+            <ExternalLink className="w-4 h-4 text-sky-400" />
+          </button>
+
+          {/* Print Dossier */}
+          <button
+            type="button"
+            onClick={handlePrintReport}
+            className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-xl text-xs font-bold cursor-pointer"
+            title="Print printable HTML scouting report"
+          >
+            <Printer className="w-4 h-4 text-amber-400" />
+          </button>
+
+          {/* Download .html file */}
+          <button
+            type="button"
+            onClick={handleDownloadHtml}
+            className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-xl text-xs font-bold cursor-pointer"
+            title="Download self-contained .html file"
+          >
+            <Download className="w-4 h-4 text-emerald-400" />
+          </button>
+
+          {/* Upload new .html file */}
+          <button
+            type="button"
+            onClick={() => htmlFileInputRef.current?.click()}
+            className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-xl text-xs font-bold cursor-pointer"
+            title="Upload custom .html report"
+          >
+            <UploadCloud className="w-4 h-4 text-indigo-400" />
+          </button>
+
+          {/* Fullscreen Expansion Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsFullscreen((f) => !f)}
+            className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-xl text-xs font-bold cursor-pointer"
+            title={isFullscreen ? 'Exit full screen' : 'Expand full screen'}
+          >
+            {isFullscreen ? (
+              <Minimize2 className="w-4 h-4 text-amber-400" />
+            ) : (
+              <Maximize2 className="w-4 h-4 text-slate-300" />
+            )}
+          </button>
         </div>
       </div>
 
       {/* Main Content Area */}
-      {currentReport ? (
-        <div className={`flex-1 ${isFullscreen ? 'h-full overflow-hidden' : ''}`}>
-          {/* Split Mode on Desktop */}
-          {isSplitView ? (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 min-h-[640px] border-b border-slate-800">
-              {/* Left Column: Report Viewer (7 cols) */}
-              <div className="lg:col-span-7 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-800 bg-slate-950">
-                <ReportViewerControls
-                  zoomScale={zoomScale}
-                  setZoomScale={setZoomScale}
-                  canvasBg={canvasBg}
-                  setCanvasBg={setCanvasBg}
-                  onRefresh={() => setIframeKey((k) => k + 1)}
-                />
-                <ReportIframe
-                  htmlCode={currentReport.htmlCode || ''}
-                  title={currentReport.name}
-                  zoomScale={zoomScale}
-                  canvasBg={canvasBg}
-                  iframeKey={iframeKey}
-                  isFullscreen={isFullscreen}
-                />
-              </div>
-
-              {/* Right Column: Report Notes & Annotations (5 cols) */}
-              <div className="lg:col-span-5 flex flex-col bg-slate-900/95 overflow-y-auto max-h-[750px] p-4 sm:p-5">
-                <ReportNotesWorkspace
-                  reportNotes={reportNotes}
-                  filteredNotes={filteredNotes}
-                  isAddingNote={isAddingNote}
-                  setIsAddingNote={setIsAddingNote}
-                  noteTitle={noteTitle}
-                  setNoteTitle={setNoteTitle}
-                  noteContent={noteContent}
-                  setNoteContent={setNoteContent}
-                  noteCategory={noteCategory}
-                  setNoteCategory={setNoteCategory}
-                  notePriority={notePriority}
-                  setNotePriority={setNotePriority}
-                  noteDownDistance={noteDownDistance}
-                  setNoteDownDistance={setNoteDownDistance}
-                  notesSearch={notesSearch}
-                  setNotesSearch={setNotesSearch}
-                  notesCategoryFilter={notesCategoryFilter}
-                  setNotesCategoryFilter={setNotesCategoryFilter}
-                  copiedNotes={copiedNotes}
-                  onAddNote={handleAddNote}
-                  onDeleteNote={handleDeleteNote}
-                  onCopyAllNotes={handleCopyAllNotes}
-                  onAddKeyToVictory={onAddKeyToVictory}
-                  currentUserEmail={currentUserEmail}
-                  isPowerAdmin={isPowerAdmin}
-                />
-              </div>
-            </div>
-          ) : activeTab === 'viewer' ? (
-            /* Tab 1: Full-Width Report Viewer */
-            <div className="flex flex-col bg-slate-950">
-              <ReportViewerControls
+      <div className={`flex-1 ${isFullscreen ? 'h-full overflow-hidden' : ''}`}>
+        {/* Split View Mode */}
+        {isSplitView ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 min-h-[640px] border-b border-slate-800">
+            {/* Left Column: Dossier Viewer (7 cols) */}
+            <div className="lg:col-span-7 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-800 bg-slate-950">
+              <ReportToolbar
                 zoomScale={zoomScale}
                 setZoomScale={setZoomScale}
                 canvasBg={canvasBg}
                 setCanvasBg={setCanvasBg}
-                onRefresh={() => setIframeKey((k) => k + 1)}
-                noteCount={reportNotes.length}
-                onSwitchToNotes={() => setActiveTab('notes')}
+                renderMode={renderMode}
+                setRenderMode={setRenderMode}
               />
-              <ReportIframe
-                htmlCode={currentReport.htmlCode || ''}
-                title={currentReport.name}
-                zoomScale={zoomScale}
-                canvasBg={canvasBg}
-                iframeKey={iframeKey}
-                isFullscreen={isFullscreen}
-              />
-            </div>
-          ) : (
-            /* Tab 2: Full-Width Report Notes & Annotations Workspace */
-            <div className="p-5 sm:p-6 bg-slate-900/95">
-              <div className="max-w-5xl mx-auto">
-                <ReportNotesWorkspace
-                  reportNotes={reportNotes}
-                  filteredNotes={filteredNotes}
-                  isAddingNote={isAddingNote}
-                  setIsAddingNote={setIsAddingNote}
-                  noteTitle={noteTitle}
-                  setNoteTitle={setNoteTitle}
-                  noteContent={noteContent}
-                  setNoteContent={setNoteContent}
-                  noteCategory={noteCategory}
-                  setNoteCategory={setNoteCategory}
-                  notePriority={notePriority}
-                  setNotePriority={setNotePriority}
-                  noteDownDistance={noteDownDistance}
-                  setNoteDownDistance={setNoteDownDistance}
-                  notesSearch={notesSearch}
-                  setNotesSearch={setNotesSearch}
-                  notesCategoryFilter={notesCategoryFilter}
-                  setNotesCategoryFilter={setNotesCategoryFilter}
-                  copiedNotes={copiedNotes}
-                  onAddNote={handleAddNote}
-                  onDeleteNote={handleDeleteNote}
-                  onCopyAllNotes={handleCopyAllNotes}
-                  onAddKeyToVictory={onAddKeyToVictory}
-                  currentUserEmail={currentUserEmail}
-                  isPowerAdmin={isPowerAdmin}
-                  isFullTab
+              {renderMode === 'shadow' ? (
+                <ShadowHtmlView
+                  html={activeHtmlCode}
+                  zoomScale={zoomScale}
+                  canvasBg={canvasBg}
+                  isFullscreen={isFullscreen}
                 />
-              </div>
-            </div>
-          )}
-
-          {/* Sub-Footer Meta Bar */}
-          <div className="px-5 py-3 bg-slate-950/90 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-400">
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="flex items-center gap-1.5 text-slate-300">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Ready for staff review &bull; Saved to {weekName}</span>
-              </span>
-              {currentReport.fileSize && (
-                <span className="font-mono text-[11px] text-slate-500">
-                  Size: {currentReport.fileSize}
-                </span>
+              ) : (
+                <div className="w-full h-[620px] bg-white">
+                  <iframe
+                    srcDoc={activeHtmlCode}
+                    title="Scouting Report"
+                    className="w-full h-full border-none"
+                  />
+                </div>
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => htmlFileInputRef.current?.click()}
-                className="text-[11px] text-slate-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
-              >
-                <UploadCloud className="w-3.5 h-3.5" />
-                <span>Upload Another .html</span>
-              </button>
-              <span className="text-slate-700">•</span>
-              <button
-                type="button"
-                onClick={() => handleOpenCodeEditor()}
-                className="text-[11px] text-slate-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>New HTML Report</span>
-              </button>
+            {/* Right Column: Report Notes (5 cols) */}
+            <div className="lg:col-span-5 flex flex-col bg-slate-900/95 overflow-y-auto max-h-[750px] p-4 sm:p-5">
+              <ReportNotesWorkspace
+                reportNotes={reportNotes}
+                filteredNotes={filteredNotes}
+                isAddingNote={isAddingNote}
+                setIsAddingNote={setIsAddingNote}
+                noteTitle={noteTitle}
+                setNoteTitle={setNoteTitle}
+                noteContent={noteContent}
+                setNoteContent={setNoteContent}
+                noteCategory={noteCategory}
+                setNoteCategory={setNoteCategory}
+                notePriority={notePriority}
+                setNotePriority={setNotePriority}
+                noteDownDistance={noteDownDistance}
+                setNoteDownDistance={setNoteDownDistance}
+                notesSearch={notesSearch}
+                setNotesSearch={setNotesSearch}
+                notesCategoryFilter={notesCategoryFilter}
+                setNotesCategoryFilter={setNotesCategoryFilter}
+                copiedNotes={copiedNotes}
+                onAddNote={handleAddNote}
+                onDeleteNote={handleDeleteNote}
+                onCopyAllNotes={handleCopyAllNotes}
+                onAddKeyToVictory={onAddKeyToVictory}
+                currentUserEmail={currentUserEmail}
+                isPowerAdmin={isPowerAdmin}
+              />
             </div>
           </div>
-        </div>
-      ) : (
-        /* Empty State: Prompt to create or load */
-        <div className="p-8 sm:p-12 text-center flex flex-col items-center justify-center space-y-4 bg-slate-900/60">
-          <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shadow-inner">
-            <Code className="w-8 h-8 text-amber-400" />
-          </div>
+        ) : activeTab === 'viewer' ? (
+          /* Tab 1: Full Report Dossier */
+          <div className="flex flex-col bg-slate-950">
+            <ReportToolbar
+              zoomScale={zoomScale}
+              setZoomScale={setZoomScale}
+              canvasBg={canvasBg}
+              setCanvasBg={setCanvasBg}
+              renderMode={renderMode}
+              setRenderMode={setRenderMode}
+              noteCount={reportNotes.length}
+              onSwitchToNotes={() => setActiveTab('notes')}
+            />
 
-          <div className="max-w-md space-y-1">
-            <h4 className="text-base font-black text-slate-100">
-              No HTML Scouting Report Added Yet
-            </h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Import opponent tendencies, Catapult/Hudl HTML exports, or generate our rich sample opponent breakdown to review formations, run/pass tendencies, and take annotated notes.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 flex-wrap justify-center pt-2">
-            <button
-              type="button"
-              onClick={handleLoadSampleReport}
-              className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer active:scale-95 transition-all"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>⚡ Load Sample Hudl Tendency Report</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleOpenCodeEditor()}
-              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer active:scale-95 transition-all"
-            >
-              <Code className="w-4 h-4 text-indigo-400" />
-              <span>Paste Custom HTML Code</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => htmlFileInputRef.current?.click()}
-              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer active:scale-95 transition-all"
-            >
-              <UploadCloud className="w-4 h-4 text-emerald-400" />
-              <span>Upload .html File</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL: HTML SOURCE CODE EDITOR */}
-      {/* ========================================================================= */}
-      {isCodeEditorOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 animate-fadeIn">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
-            {/* Header */}
-            <div className="p-4 sm:p-5 border-b border-slate-800 bg-slate-950 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
-                  <Code className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-black text-sm text-slate-100">
-                    HTML Scouting Report Source Editor
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    Paste export code from Hudl, Catapult, or custom HTML game breakdown
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(editCodeHtml);
-                    setEditorCopied(true);
-                    setTimeout(() => setEditorCopied(false), 2000);
+            {renderMode === 'shadow' ? (
+              <ShadowHtmlView
+                html={activeHtmlCode}
+                zoomScale={zoomScale}
+                canvasBg={canvasBg}
+                isFullscreen={isFullscreen}
+              />
+            ) : (
+              <div
+                className={`w-full overflow-auto flex justify-center p-3 sm:p-5 ${
+                  canvasBg === 'paper' ? 'bg-slate-100' : 'bg-slate-950'
+                } min-h-[620px]`}
+              >
+                <div
+                  style={{
+                    width: `${zoomScale}%`,
+                    maxWidth: zoomScale > 100 ? `${zoomScale}%` : '100%',
+                    height: '620px',
                   }}
-                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  className="rounded-2xl overflow-hidden shadow-2xl border border-slate-700 bg-white"
                 >
-                  {editorCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{editorCopied ? 'Copied' : 'Copy Code'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsCodeEditorOpen(false)}
-                  className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                  <iframe
+                    srcDoc={activeHtmlCode}
+                    title="Scouting Report"
+                    className="w-full h-full border-none"
+                  />
+                </div>
               </div>
+            )}
+          </div>
+        ) : (
+          /* Tab 2: Full Report Notes & Annotations */
+          <div className="p-5 sm:p-6 bg-slate-900/95">
+            <div className="max-w-5xl mx-auto">
+              <ReportNotesWorkspace
+                reportNotes={reportNotes}
+                filteredNotes={filteredNotes}
+                isAddingNote={isAddingNote}
+                setIsAddingNote={setIsAddingNote}
+                noteTitle={noteTitle}
+                setNoteTitle={setNoteTitle}
+                noteContent={noteContent}
+                setNoteContent={setNoteContent}
+                noteCategory={noteCategory}
+                setNoteCategory={setNoteCategory}
+                notePriority={notePriority}
+                setNotePriority={setNotePriority}
+                noteDownDistance={noteDownDistance}
+                setNoteDownDistance={setNoteDownDistance}
+                notesSearch={notesSearch}
+                setNotesSearch={setNotesSearch}
+                notesCategoryFilter={notesCategoryFilter}
+                setNotesCategoryFilter={setNotesCategoryFilter}
+                copiedNotes={copiedNotes}
+                onAddNote={handleAddNote}
+                onDeleteNote={handleDeleteNote}
+                onCopyAllNotes={handleCopyAllNotes}
+                onAddKeyToVictory={onAddKeyToVictory}
+                currentUserEmail={currentUserEmail}
+                isPowerAdmin={isPowerAdmin}
+                isFullTab
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Footer info bar */}
+        <div className="px-5 py-3 bg-slate-950/90 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-400">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="flex items-center gap-1.5 text-slate-300">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>
+                {selectedReportId === 'live_view_dossier'
+                  ? 'Live Dossier Engine Active (Auto-synced from Scouting View)'
+                  : `Viewing: ${currentAttachment?.name || 'HTML Document'}`}
+              </span>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSaveLiveDossierToAttachments}
+              className="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer font-bold"
+            >
+              <RefreshCw className="w-3 h-3" />
+              <span>Sync with View</span>
+            </button>
+            <span className="text-slate-700">•</span>
+            <button
+              type="button"
+              onClick={handleOpenCodeEditor}
+              className="text-[11px] text-slate-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
+            >
+              <Code className="w-3 h-3" />
+              <span>HTML Source</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* HTML Source Code Editor Modal */}
+      {isCodeEditorOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+              <div className="flex items-center gap-2 text-amber-400 font-black text-sm">
+                <Code className="w-4 h-4" />
+                <span>HTML Source Code &amp; Templates</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCodeEditorOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            {/* Body */}
-            <div className="p-4 sm:p-5 space-y-3 flex-1 overflow-y-auto">
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto space-y-4 flex-1">
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
                   Report Title
@@ -1121,7 +1437,7 @@ export const HtmlScoutingReportViewer: React.FC<HtmlScoutingReportViewerProps> =
                   type="text"
                   value={editCodeTitle}
                   onChange={(e) => setEditCodeTitle(e.target.value)}
-                  placeholder="e.g. Opponent Tendencies & Film Scout"
+                  placeholder="e.g. Somers Week 4 Complete Dossier"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-amber-300 focus:outline-none focus:border-amber-400"
                 />
               </div>
@@ -1133,11 +1449,15 @@ export const HtmlScoutingReportViewer: React.FC<HtmlScoutingReportViewerProps> =
                   </label>
                   <button
                     type="button"
-                    onClick={() => setEditCodeHtml(RICH_SAMPLE_SCOUTING_HTML(opponentName || 'Opponent', weekName || 'Week 1'))}
+                    onClick={() =>
+                      setEditCodeHtml(
+                        generateComprehensiveScoutingHtml(scouting, opponentName, weekName)
+                      )
+                    }
                     className="text-[10px] text-amber-400 hover:underline flex items-center gap-1 cursor-pointer font-bold"
                   >
                     <Sparkles className="w-3 h-3" />
-                    <span>Insert Rich Sample Template</span>
+                    <span>Reset to Live Game Plan Template</span>
                   </button>
                 </div>
                 <textarea
@@ -1150,7 +1470,7 @@ export const HtmlScoutingReportViewer: React.FC<HtmlScoutingReportViewerProps> =
               </div>
             </div>
 
-            {/* Footer */}
+            {/* Modal Footer */}
             <div className="p-4 border-t border-slate-800 bg-slate-950 flex items-center justify-end gap-2">
               <button
                 type="button"
@@ -1176,72 +1496,73 @@ export const HtmlScoutingReportViewer: React.FC<HtmlScoutingReportViewerProps> =
 };
 
 /* ========================================================================= */
-/* SUB-COMPONENT: REPORT VIEWER CONTROLS */
+/* SUB-COMPONENT: REPORT TOOLBAR */
 /* ========================================================================= */
-interface ReportViewerControlsProps {
+interface ReportToolbarProps {
   zoomScale: number;
   setZoomScale: React.Dispatch<React.SetStateAction<number>>;
   canvasBg: 'paper' | 'dark' | 'slate';
   setCanvasBg: React.Dispatch<React.SetStateAction<'paper' | 'dark' | 'slate'>>;
-  onRefresh: () => void;
+  renderMode: 'shadow' | 'iframe';
+  setRenderMode: React.Dispatch<React.SetStateAction<'shadow' | 'iframe'>>;
   noteCount?: number;
   onSwitchToNotes?: () => void;
 }
 
-const ReportViewerControls: React.FC<ReportViewerControlsProps> = ({
+const ReportToolbar: React.FC<ReportToolbarProps> = ({
   zoomScale,
   setZoomScale,
   canvasBg,
   setCanvasBg,
-  onRefresh,
+  renderMode,
+  setRenderMode,
   noteCount,
   onSwitchToNotes,
 }) => {
   return (
-    <div className="px-4 py-2 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-3 text-xs flex-wrap">
-      {/* Zoom Controls */}
-      <div className="flex items-center gap-1 bg-slate-950 rounded-xl p-1 border border-slate-800">
-        <button
-          type="button"
-          onClick={() => setZoomScale((z) => Math.max(70, z - 10))}
-          className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
-          title="Zoom Out"
-        >
-          <ZoomOut className="w-3.5 h-3.5" />
-        </button>
-        <span className="font-mono text-[11px] font-bold text-slate-300 px-1.5">
-          {zoomScale}%
-        </span>
-        <button
-          type="button"
-          onClick={() => setZoomScale((z) => Math.min(150, z + 10))}
-          className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
-          title="Zoom In"
-        >
-          <ZoomIn className="w-3.5 h-3.5" />
-        </button>
-        {zoomScale !== 100 && (
+    <div className="px-4 py-2.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-3 text-xs flex-wrap">
+      <div className="flex items-center gap-3">
+        {/* Zoom Controls */}
+        <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
           <button
             type="button"
-            onClick={() => setZoomScale(100)}
-            className="text-[10px] text-indigo-400 hover:underline px-1 font-bold cursor-pointer"
+            onClick={() => setZoomScale((z) => Math.max(70, z - 10))}
+            className="p-1 text-slate-400 hover:text-white rounded-lg cursor-pointer"
+            title="Zoom Out"
           >
-            Reset
+            <ZoomOut className="w-3.5 h-3.5" />
           </button>
-        )}
-      </div>
+          <span className="text-[11px] font-mono text-amber-300 font-bold px-1 min-w-[40px] text-center">
+            {zoomScale}%
+          </span>
+          <button
+            type="button"
+            onClick={() => setZoomScale((z) => Math.min(130, z + 10))}
+            className="p-1 text-slate-400 hover:text-white rounded-lg cursor-pointer"
+            title="Zoom In"
+          >
+            <ZoomIn className="w-3.5 h-3.5" />
+          </button>
+          {zoomScale !== 100 && (
+            <button
+              type="button"
+              onClick={() => setZoomScale(100)}
+              className="text-[10px] text-slate-400 hover:text-white px-1.5 py-0.5 rounded bg-slate-800 cursor-pointer"
+            >
+              100%
+            </button>
+          )}
+        </div>
 
-      {/* Canvas Paper Contrast */}
-      <div className="flex items-center gap-1.5">
-        <span className="text-[10px] uppercase font-black text-slate-500 hidden sm:inline">
-          Frame:
-        </span>
-        <div className="flex items-center bg-slate-950 rounded-xl p-1 border border-slate-800 text-[11px]">
+        {/* Canvas Background Options */}
+        <div className="flex items-center gap-1 text-[11px] bg-slate-950 p-1 rounded-xl border border-slate-800">
           <button
             type="button"
             onClick={() => setCanvasBg('paper')}
             className={`px-2.5 py-0.5 rounded-lg font-bold transition-all cursor-pointer ${
-              canvasBg === 'paper' ? 'bg-white text-slate-950 shadow-xs' : 'text-slate-400 hover:text-white'
+              canvasBg === 'paper'
+                ? 'bg-slate-800 text-amber-300 shadow-xs'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             Clean Paper
@@ -1250,21 +1571,42 @@ const ReportViewerControls: React.FC<ReportViewerControlsProps> = ({
             type="button"
             onClick={() => setCanvasBg('dark')}
             className={`px-2.5 py-0.5 rounded-lg font-bold transition-all cursor-pointer ${
-              canvasBg === 'dark' ? 'bg-slate-800 text-slate-100 shadow-xs' : 'text-slate-400 hover:text-white'
+              canvasBg === 'dark'
+                ? 'bg-slate-800 text-slate-100 shadow-xs'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             Dark Film
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={onRefresh}
-          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl cursor-pointer border border-slate-800"
-          title="Refresh iframe content"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-        </button>
+        {/* Rendering Engine Switcher */}
+        <div className="hidden sm:flex items-center gap-1 text-[11px] bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <button
+            type="button"
+            onClick={() => setRenderMode('shadow')}
+            className={`px-2.5 py-0.5 rounded-lg font-bold transition-all cursor-pointer ${
+              renderMode === 'shadow'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            title="Native Shadow DOM renderer (High performance, zero sandbox blocking)"
+          >
+            Native View
+          </button>
+          <button
+            type="button"
+            onClick={() => setRenderMode('iframe')}
+            className={`px-2.5 py-0.5 rounded-lg font-bold transition-all cursor-pointer ${
+              renderMode === 'iframe'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            title="Isolated Iframe mode"
+          >
+            Frame View
+          </button>
+        </div>
       </div>
 
       {/* Switch to Notes Shortcut */}
@@ -1278,56 +1620,6 @@ const ReportViewerControls: React.FC<ReportViewerControlsProps> = ({
           <span>Report Notes ({noteCount || 0}) &rarr;</span>
         </button>
       )}
-    </div>
-  );
-};
-
-/* ========================================================================= */
-/* SUB-COMPONENT: REPORT IFRAME CONTAINER */
-/* ========================================================================= */
-interface ReportIframeProps {
-  htmlCode: string;
-  title: string;
-  zoomScale: number;
-  canvasBg: 'paper' | 'dark' | 'slate';
-  iframeKey: number;
-  isFullscreen?: boolean;
-}
-
-const ReportIframe: React.FC<ReportIframeProps> = ({
-  htmlCode,
-  title,
-  zoomScale,
-  canvasBg,
-  iframeKey,
-  isFullscreen,
-}) => {
-  const bgClass =
-    canvasBg === 'paper' ? 'bg-white' : canvasBg === 'dark' ? 'bg-slate-950' : 'bg-slate-900';
-
-  return (
-    <div
-      className={`w-full overflow-auto flex items-start justify-center p-2 sm:p-4 ${bgClass} ${
-        isFullscreen ? 'h-[calc(100vh-140px)]' : 'h-[620px]'
-      }`}
-    >
-      <div
-        style={{
-          width: `${zoomScale}%`,
-          maxWidth: zoomScale > 100 ? `${zoomScale}%` : '100%',
-          height: '100%',
-          transition: 'width 0.15s ease-out',
-        }}
-        className="h-full rounded-2xl overflow-hidden shadow-xl border border-slate-700/60 bg-white"
-      >
-        <iframe
-          key={iframeKey}
-          srcDoc={htmlCode}
-          title={title}
-          sandbox="allow-same-origin allow-scripts allow-popups allow-modals"
-          className="w-full h-full border-none block"
-        />
-      </div>
     </div>
   );
 };
@@ -1356,7 +1648,7 @@ interface ReportNotesWorkspaceProps {
   setNotesCategoryFilter: React.Dispatch<React.SetStateAction<string>>;
   copiedNotes: boolean;
   onAddNote: () => void;
-  onDeleteNote: (noteId: string) => void;
+  onDeleteNote: (id: string) => void;
   onCopyAllNotes: () => void;
   onAddKeyToVictory?: (text: string) => void;
   currentUserEmail?: string;
@@ -1364,7 +1656,7 @@ interface ReportNotesWorkspaceProps {
   isFullTab?: boolean;
 }
 
-const NOTE_CATEGORIES = [
+const REPORT_NOTE_CATEGORIES = [
   'Opponent Tendency',
   'Defense vs Offense',
   'Offense vs Defense',
@@ -1405,75 +1697,65 @@ const ReportNotesWorkspace: React.FC<ReportNotesWorkspaceProps> = ({
 }) => {
   return (
     <div className="space-y-4">
-      {/* Header Bar with Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-700/80">
-        <div>
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-amber-400" />
+      {/* Header bar for Notes */}
+      <div className="flex items-center justify-between pb-3 border-b border-slate-800 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="w-4 h-4 text-amber-400" />
+          <div>
             <h4 className="font-black text-sm text-slate-100">
-              Scouting Report Notes &amp; Coach Observations
+              Report Notes, Film Tells &amp; Observations
             </h4>
-            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono text-[10px] font-bold">
-              {reportNotes.length} Saved
-            </span>
+            <p className="text-[11px] text-slate-400">
+              Log critical formation cues, blitz alarms, and counters linked to this opponent
+            </p>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">
-            Record specific film cues, down-and-distance tells, and game plan priorities from this report
-          </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2">
           {reportNotes.length > 0 && (
             <button
               type="button"
               onClick={onCopyAllNotes}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-              title="Copy formatted notes for coaching staff"
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              title="Copy formatted notes to clipboard"
             >
-              {copiedNotes ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copiedNotes ? 'Copied All' : 'Copy Notes'}</span>
+              {copiedNotes ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-emerald-300">Copied</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copy Notes</span>
+                </>
+              )}
             </button>
           )}
 
           <button
             type="button"
-            onClick={() => setIsAddingNote((v) => !v)}
-            className="px-3.5 py-1.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 cursor-pointer active:scale-95 transition-all"
+            onClick={() => setIsAddingNote(!isAddingNote)}
+            className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 cursor-pointer active:scale-95 transition-all"
           >
-            <Plus className="w-4 h-4" />
-            <span>{isAddingNote ? 'Close Form' : 'Add Note'}</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>{isAddingNote ? 'Cancel' : 'Add Note'}</span>
           </button>
         </div>
       </div>
 
-      {/* Note Composer Card */}
+      {/* Note Composer Drawer */}
       {isAddingNote && (
-        <div className="bg-slate-950/90 border border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-3 animate-fadeIn">
+        <div className="bg-slate-950/90 border border-amber-500/40 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xl">
           <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-            <span className="text-xs font-black uppercase text-amber-300 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Record New Report Observation</span>
+            <span className="text-xs font-black uppercase text-amber-300 tracking-wider flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span>Log Film Tell / Observation</span>
             </span>
-            <span className="text-[10px] text-slate-400 font-mono">
-              By: {currentUserEmail || 'Staff'}
-            </span>
+            <span className="text-[10px] text-slate-400 font-mono">By: {currentUserEmail}</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <div className="sm:col-span-2">
-              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-                Note Headline / Tell Summary
-              </label>
-              <input
-                type="text"
-                value={noteTitle}
-                onChange={(e) => setNoteTitle(e.target.value)}
-                placeholder="e.g. 3rd & Short Heavy Pistol Tell / Soft Corner Cushion"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-amber-400"
-                autoFocus
-              />
-            </div>
-
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
                 Category
@@ -1481,76 +1763,78 @@ const ReportNotesWorkspace: React.FC<ReportNotesWorkspaceProps> = ({
               <select
                 value={noteCategory}
                 onChange={(e) => setNoteCategory(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs font-bold text-amber-300 focus:outline-none focus:border-amber-400 cursor-pointer"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-amber-400"
               >
-                {NOTE_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
+                {REPORT_NOTE_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
                   </option>
                 ))}
               </select>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-                Priority Level
+                Priority
               </label>
-              <div className="flex items-center gap-2">
-                {(['High', 'Important', 'Normal'] as const).map((pri) => (
-                  <button
-                    key={pri}
-                    type="button"
-                    onClick={() => setNotePriority(pri)}
-                    className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      notePriority === pri
-                        ? pri === 'High'
-                          ? 'bg-rose-600 text-white'
-                          : pri === 'Important'
-                          ? 'bg-amber-600 text-white'
-                          : 'bg-indigo-600 text-white'
-                        : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-                    }`}
-                  >
-                    {pri === 'High' ? '🚨 Red Alert' : pri === 'Important' ? '⭐ Important' : 'Standard'}
-                  </button>
-                ))}
-              </div>
+              <select
+                value={notePriority}
+                onChange={(e) =>
+                  setNotePriority(e.target.value as 'High' | 'Important' | 'Normal')
+                }
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+              >
+                <option value="High">🚨 High Alert</option>
+                <option value="Important">⭐ Important</option>
+                <option value="Normal">Standard</option>
+              </select>
             </div>
 
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-                Down &amp; Distance / Situation (Optional)
+                Situation / Down &amp; Dist
               </label>
               <input
                 type="text"
                 value={noteDownDistance}
                 onChange={(e) => setNoteDownDistance(e.target.value)}
-                placeholder="e.g. 1st & 10, 3rd & 2-4, Red Zone"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-amber-400"
+                placeholder="e.g. 3rd & Short / Red Zone"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
               />
             </div>
           </div>
 
           <div>
             <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-              Observation Details &amp; Game Plan Counter
+              Note Headline
+            </label>
+            <input
+              type="text"
+              value={noteTitle}
+              onChange={(e) => setNoteTitle(e.target.value)}
+              placeholder="e.g. Mike LB creeping into A-gap before snap"
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+              Observation &amp; Tactical Counter
             </label>
             <textarea
               rows={3}
               value={noteContent}
               onChange={(e) => setNoteContent(e.target.value)}
-              placeholder="What does film show? What is our coaching response? e.g. Pinch defensive tackle inside, shift linebackers boundary..."
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-amber-400 leading-relaxed"
+              placeholder="Detail the tell, formation trigger, and exactly how our offense/defense should react..."
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-1">
+          <div className="flex justify-end gap-2 pt-1">
             <button
               type="button"
               onClick={() => setIsAddingNote(false)}
-              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-xl text-xs font-bold cursor-pointer"
+              className="px-3 py-1.5 bg-slate-900 text-slate-400 hover:text-white rounded-xl text-xs font-bold cursor-pointer"
             >
               Cancel
             </button>
@@ -1558,36 +1842,36 @@ const ReportNotesWorkspace: React.FC<ReportNotesWorkspaceProps> = ({
               type="button"
               onClick={onAddNote}
               disabled={!noteTitle.trim() || !noteContent.trim()}
-              className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-md shadow-amber-500/20 active:scale-95"
+              className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 cursor-pointer"
             >
-              <Check className="w-4 h-4" />
-              <span>Save Note to Report</span>
+              <Check className="w-3.5 h-3.5" />
+              <span>Save Note</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Search & Category Filter Bar */}
-      {reportNotes.length > 2 && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="relative flex-1">
+      {/* Filter and Search */}
+      {reportNotes.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center gap-2">
+          <div className="relative flex-1 w-full">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
               value={notesSearch}
               onChange={(e) => setNotesSearch(e.target.value)}
-              placeholder="Search notes, personnel, or blitz cues..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-amber-400"
+              placeholder="Search notes by tell, player, or keyword..."
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-amber-400"
             />
           </div>
 
           <select
             value={notesCategoryFilter}
             onChange={(e) => setNotesCategoryFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 text-slate-300 text-xs rounded-xl px-2.5 py-1.5 font-bold focus:outline-none focus:border-amber-400 cursor-pointer"
+            className="w-full sm:w-auto bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-300 font-bold focus:outline-none focus:border-amber-400 cursor-pointer"
           >
             <option value="all">All Categories ({reportNotes.length})</option>
-            {NOTE_CATEGORIES.map((cat) => {
+            {REPORT_NOTE_CATEGORIES.map((cat) => {
               const count = reportNotes.filter((n) => n.category === cat).length;
               if (count === 0) return null;
               return (
@@ -1600,55 +1884,47 @@ const ReportNotesWorkspace: React.FC<ReportNotesWorkspaceProps> = ({
         </div>
       )}
 
-      {/* Notes List Cards */}
+      {/* Notes List */}
       {filteredNotes.length > 0 ? (
-        <div className={`space-y-2.5 ${isFullTab ? 'grid grid-cols-1 md:grid-cols-2 gap-3 space-y-0' : ''}`}>
+        <div className={`grid gap-3 ${isFullTab ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
           {filteredNotes.map((note) => {
-            const isHighAlert = note.title.includes('🚨') || note.title.toLowerCase().includes('alert');
-
+            const isHigh = note.title.includes('🚨');
             return (
               <div
                 key={note.id}
-                className={`bg-slate-950/80 border rounded-2xl p-3.5 transition-all shadow-md group ${
-                  isHighAlert
-                    ? 'border-rose-500/40 hover:border-rose-400/80'
-                    : 'border-slate-800 hover:border-amber-500/60'
-                }`}
+                className="bg-slate-950/70 border border-slate-800 hover:border-slate-700 rounded-2xl p-4 space-y-2.5 transition-all shadow-sm group"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="px-2 py-0.5 rounded-md bg-slate-800 text-amber-300 border border-slate-700 font-mono text-[9px] font-black uppercase">
-                        {note.category}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                      {note.category}
+                    </span>
+                    {isHigh && (
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                        Priority
                       </span>
-                      <span className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        <span>{new Date(note.timestamp || Date.now()).toLocaleDateString()}</span>
-                      </span>
-                    </div>
-
-                    <h5 className="font-black text-xs text-slate-100 leading-snug">
-                      {note.title}
-                    </h5>
+                    )}
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 shrink-0">
+                  <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                    {/* Promote to Keys to Victory */}
                     {onAddKeyToVictory && (
                       <button
                         type="button"
-                        onClick={() => onAddKeyToVictory(note.title.replace(/^🚨\s*/, ''))}
-                        className="p-1 text-slate-500 hover:text-amber-300 rounded-lg hover:bg-slate-900 transition-colors cursor-pointer"
-                        title="Add to Game Keys to Victory"
+                        onClick={() => onAddKeyToVictory(note.title.replace(/🚨\s*/, ''))}
+                        className="p-1 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-lg cursor-pointer"
+                        title="Add this insight to master Keys to Victory"
                       >
-                        <Flame className="w-3.5 h-3.5" />
+                        <Flame className="w-3.5 h-3.5 text-amber-400" />
                       </button>
                     )}
+
+                    {/* Delete Note */}
                     {isPowerAdmin && (
                       <button
                         type="button"
                         onClick={() => onDeleteNote(note.id)}
-                        className="p-1 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-slate-900 transition-colors cursor-pointer"
+                        className="p-1 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg cursor-pointer"
                         title="Delete note"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1657,26 +1933,24 @@ const ReportNotesWorkspace: React.FC<ReportNotesWorkspaceProps> = ({
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-300 mt-2 leading-relaxed bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/80">
-                  {note.content}
-                </p>
+                <div>
+                  <h5 className="font-black text-sm text-slate-100 leading-snug">{note.title}</h5>
+                  <p className="text-xs text-slate-300 mt-1 leading-relaxed whitespace-pre-wrap">
+                    {note.content}
+                  </p>
+                </div>
 
-                <div className="mt-2 pt-2 border-t border-slate-900 flex items-center justify-between text-[10px] text-slate-500">
-                  <span className="flex items-center gap-1">
-                    <User className="w-3 h-3 text-slate-400" />
-                    <span>Logged by: {note.author || 'Staff'}</span>
+                <div className="flex items-center justify-between text-[10px] text-slate-500 pt-2 border-t border-slate-900">
+                  <span className="flex items-center gap-1 font-mono">
+                    <User className="w-3 h-3 text-slate-600" />
+                    <span>{note.author || 'Staff'}</span>
                   </span>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(`${note.title}\n${note.content}`);
-                    }}
-                    className="text-slate-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer font-bold"
-                  >
-                    <Copy className="w-3 h-3" />
-                    <span>Copy</span>
-                  </button>
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-slate-600" />
+                    <span>
+                      {new Date(note.timestamp || note.createdAt || Date.now()).toLocaleDateString()}
+                    </span>
+                  </span>
                 </div>
               </div>
             );
@@ -1684,16 +1958,14 @@ const ReportNotesWorkspace: React.FC<ReportNotesWorkspaceProps> = ({
         </div>
       ) : reportNotes.length > 0 ? (
         <div className="py-6 text-center text-slate-500 text-xs italic bg-slate-950/40 rounded-2xl border border-dashed border-slate-800">
-          No notes match current filter criteria.
+          No notes match current search or filter criteria.
         </div>
       ) : (
         <div className="py-8 text-center space-y-2 bg-slate-950/40 rounded-2xl border border-dashed border-slate-800/80 p-4">
           <MessageSquare className="w-8 h-8 text-slate-600 mx-auto" />
-          <p className="text-xs font-bold text-slate-300">
-            No notes added for this report yet.
-          </p>
+          <p className="text-xs font-bold text-slate-300">No notes added for this report yet.</p>
           <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
-            Click &ldquo;Add Note&rdquo; above to log defensive front cues, offensive tells, or down-and-distance tendencies.
+            Log formation cues, blitz alarms, or down-and-distance tells discovered in film.
           </p>
           <button
             type="button"

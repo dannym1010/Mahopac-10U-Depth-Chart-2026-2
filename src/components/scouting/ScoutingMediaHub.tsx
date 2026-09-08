@@ -1018,7 +1018,6 @@ export const ScoutingMediaHub: React.FC<ScoutingMediaHubProps> = ({
                   <iframe
                     srcDoc={activeViewerAttachment.htmlCode || ''}
                     title={activeViewerAttachment.name}
-                    sandbox="allow-same-origin allow-scripts"
                     className="w-full h-full border-none"
                   />
                 </div>
