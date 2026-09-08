@@ -6270,7 +6270,7 @@ function mergeRemoteWeeklyData(
                 wristbandData={wristbandData || currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA}
                 onUpdateWristbandData={handleUpdateWristbandData}
                 scouting={currentWeekState.scouting || {}}
-                onUpdateScouting={(field, val) => {
+                onUpdateScouting={(field: any, val?: any) => {
                   setWeeklyData((prev) => {
                     const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
                     const existingWeek = prev[scopedKey] || prev[currentWeek] || {
@@ -6279,13 +6279,14 @@ function mergeRemoteWeeklyData(
                       scrimmageChart: {},
                       opponent: '',
                     };
+                    const updates = typeof field === 'object' && field !== null ? field : { [field]: val };
                     const updatedScouting = {
                       ...(existingWeek.scouting || {}),
-                      [field]: val,
+                      ...updates,
                     };
                     const updatedWeek = {
                       ...existingWeek,
-                      opponent: field === 'opponent' ? val : (existingWeek.opponent || ''),
+                      opponent: updates.opponent !== undefined ? updates.opponent : (existingWeek.opponent || ''),
                       scouting: updatedScouting,
                     };
                     return {
@@ -6372,7 +6373,7 @@ function mergeRemoteWeeklyData(
                 savedCoaches={savedCoaches}
                 scheduleEvents={activeTeamScheduleEvents}
                 currentWeek={currentWeek}
-                onUpdateScouting={(field, val) => {
+                onUpdateScouting={(field: any, val?: any) => {
                   setWeeklyData((prev) => {
                     const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
                     const existingWeek = prev[scopedKey] || prev[currentWeek] || {
@@ -6381,13 +6382,14 @@ function mergeRemoteWeeklyData(
                       scrimmageChart: {},
                       opponent: '',
                     };
+                    const updates = typeof field === 'object' && field !== null ? field : { [field]: val };
                     const updatedScouting = {
                       ...(existingWeek.scouting || {}),
-                      [field]: val,
+                      ...updates,
                     };
                     const updatedWeek = {
                       ...existingWeek,
-                      opponent: field === 'opponent' ? val : (existingWeek.opponent || ''),
+                      opponent: updates.opponent !== undefined ? updates.opponent : (existingWeek.opponent || ''),
                       scouting: updatedScouting,
                     };
                     return {
@@ -6407,7 +6409,7 @@ function mergeRemoteWeeklyData(
             {(activeUnit === 'tendencies' || activeUnit === 'html_tendencies') && (
               <TendenciesView
                 scouting={currentWeekState.scouting || {}}
-                onUpdateScouting={(field, val) => {
+                onUpdateScouting={(field: any, val?: any) => {
                   setWeeklyData((prev) => {
                     const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
                     const existingWeek = prev[scopedKey] || prev[currentWeek] || {
@@ -6416,13 +6418,14 @@ function mergeRemoteWeeklyData(
                       scrimmageChart: {},
                       opponent: '',
                     };
+                    const updates = typeof field === 'object' && field !== null ? field : { [field]: val };
                     const updatedScouting = {
                       ...(existingWeek.scouting || {}),
-                      [field]: val,
+                      ...updates,
                     };
                     const updatedWeek = {
                       ...existingWeek,
-                      opponent: field === 'opponent' ? val : (existingWeek.opponent || ''),
+                      opponent: updates.opponent !== undefined ? updates.opponent : (existingWeek.opponent || ''),
                       scouting: updatedScouting,
                     };
                     return {

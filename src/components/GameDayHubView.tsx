@@ -32,6 +32,7 @@ import { CallSheetMainView } from './CallSheetMainView';
 import { WristbandView } from './WristbandView';
 import { ScoutingView } from './ScoutingView';
 import { TendenciesView } from './scouting/TendenciesView';
+import { GameDayPackagePrintModal } from './gameDay/GameDayPackagePrintModal';
 import {
   CallSheetData,
   PlayDatabaseEntry,
@@ -166,11 +167,10 @@ export const GameDayHubView: React.FC<GameDayHubViewProps> = ({
     return count;
   }, [scouting?.tendenciesTree, scouting?.attachments]);
 
+  const [isPackagePrintModalOpen, setIsPackagePrintModalOpen] = useState(false);
+
   const handlePrintAll = () => {
-    triggerPrint({
-      targetElementSelector: '#game-day-hub-content',
-      documentTitle: `GameDay_Package_Week_${currentWeek}`,
-    });
+    setIsPackagePrintModalOpen(true);
   };
 
   const handlePrintPreGamePlan = () => {
@@ -984,6 +984,24 @@ export const GameDayHubView: React.FC<GameDayHubViewProps> = ({
           onNavigateToScouting={() => setActiveTab('scouting')}
         />
       )}
+
+      {/* Game Day Package Print Modal */}
+      <GameDayPackagePrintModal
+        isOpen={isPackagePrintModalOpen}
+        onClose={() => setIsPackagePrintModalOpen(false)}
+        data={{
+          activeTeamName,
+          opponent: opponent || scouting.opponent || matchedScheduledGame?.opponent || 'Opponent',
+          currentWeek,
+          gameDate: gameDate || matchedScheduledGame?.date,
+          callSheetData,
+          wristbandData,
+          scouting,
+          linkedPreGamePlan,
+          matchedScheduledGame,
+          staffList,
+        }}
+      />
     </div>
   );
 };

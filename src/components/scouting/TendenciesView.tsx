@@ -44,7 +44,7 @@ import { FullDocumentViewer } from '../common/FullDocumentViewer';
 
 interface TendenciesViewProps {
   scouting: ScoutingData;
-  onUpdateScouting: (field: string, val: any) => void;
+  onUpdateScouting: (fieldOrUpdates: any, val?: any) => void;
   opponentName?: string;
   weekName?: string;
   userRole?: UserRole;
@@ -454,41 +454,72 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
 }) => {
   // Extract or initialize the Tendencies tree and order
   const tendenciesTree: PlaybookGuideTree = useMemo(() => {
+    const base: PlaybookGuideTree = {};
     if (scouting.tendenciesTree && Object.keys(scouting.tendenciesTree).length > 0) {
-      return scouting.tendenciesTree;
-    }
-    // Initial fallback tree
-    const initial: PlaybookGuideTree = {};
-    DEFAULT_MAIN_CATEGORIES.forEach((cat) => {
-      initial[cat] = {};
-      const subs = DEFAULT_SUB_TABS[cat] || ['Overview'];
-      subs.forEach((sub) => {
-        initial[cat][sub] = '';
+      Object.entries(scouting.tendenciesTree).forEach(([k, v]) => {
+        base[k] = { ...v };
       });
-    });
+    } else {
+      // Initial fallback tree
+      DEFAULT_MAIN_CATEGORIES.forEach((cat) => {
+        base[cat] = {};
+        const subs = DEFAULT_SUB_TABS[cat] || ['Overview'];
+        subs.forEach((sub) => {
+          base[cat][sub] = '';
+        });
+      });
+    }
 
-    // Bridge any pre-existing attachments into the tree under "Imported Reports"
+    // Always bridge pre-existing attachments into the tree under "Imported Reports" if not already present
     if (scouting.attachments && scouting.attachments.length > 0) {
-      initial['Imported Reports'] = {};
+      if (!base['Imported Reports']) {
+        base['Imported Reports'] = {};
+      }
       scouting.attachments.forEach((a) => {
-        initial['Imported Reports'][a.name] = a.htmlCode || a.dataUrl || (a as any).fileUrl || '';
+        // Only bridge if this report slot was not explicitly cleared (empty string = deleted)
+        if (base['Imported Reports'][a.name] === undefined) {
+          base['Imported Reports'][a.name] = a.htmlCode || a.dataUrl || (a as any).fileUrl || '';
+        }
       });
     }
 
-    return initial;
+    return base;
   }, [scouting.tendenciesTree, scouting.attachments]);
 
   const tendenciesOrder: PlaybookGuideOrder = useMemo(() => {
-    if (scouting.tendenciesOrder && scouting.tendenciesOrder.main?.length > 0) {
-      return scouting.tendenciesOrder;
+    const existingOrder = scouting.tendenciesOrder;
+    const treeMains = Object.keys(tendenciesTree);
+
+    let mains: string[] = [];
+    if (existingOrder && existingOrder.main && existingOrder.main.length > 0) {
+      mains = [...existingOrder.main];
+      treeMains.forEach((m) => {
+        if (!mains.includes(m)) {
+          mains.push(m);
+        }
+      });
+    } else {
+      mains = treeMains.length > 0 ? treeMains : DEFAULT_MAIN_CATEGORIES;
     }
-    const mains = Object.keys(tendenciesTree);
+
     const subMap: Record<string, string[]> = {};
     mains.forEach((m) => {
-      subMap[m] = Object.keys(tendenciesTree[m] || {});
+      const treeSubs = Object.keys(tendenciesTree[m] || {});
+      const existingSubs = existingOrder?.sub?.[m];
+      if (existingSubs && existingSubs.length > 0) {
+        subMap[m] = [...existingSubs];
+        treeSubs.forEach((s) => {
+          if (!subMap[m].includes(s)) {
+            subMap[m].push(s);
+          }
+        });
+      } else {
+        subMap[m] = treeSubs;
+      }
     });
+
     return {
-      main: mains.length > 0 ? mains : DEFAULT_MAIN_CATEGORIES,
+      main: mains,
       sub: subMap,
     };
   }, [scouting.tendenciesOrder, tendenciesTree]);
@@ -524,12 +555,44 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
 
   // UI state
   const [isOrganizeModalOpen, setIsOrganizeModalOpen] = useState(false);
+  const [organizeCategory, setOrganizeCategory] = useState<string>(safeActiveMain);
   const [isFullScreenModalOpen, setIsFullScreenModalOpen] = useState(false);
   const [isHtmlEditorOpen, setIsHtmlEditorOpen] = useState(false);
   const [editorTab, setEditorTab] = useState<'code' | 'preview'>('code');
   const [htmlEditorCode, setHtmlEditorCode] = useState('');
   const [copiedNotification, setCopiedNotification] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // In-app Input/Rename Dialog State (safe against iframe prompt blocking)
+  const [inputDialog, setInputDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    subtitle?: string;
+    value: string;
+    placeholder?: string;
+    confirmLabel?: string;
+    onConfirm: (val: string) => void;
+  }>({
+    isOpen: false,
+    title: '',
+    value: '',
+    onConfirm: () => {},
+  });
+
+  // In-app Confirmation Dialog State (safe against iframe confirm blocking)
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    confirmVariant?: 'danger' | 'primary';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   // Printing state
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -568,10 +631,21 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
 
   // --- MUTATION HELPERS ---
 
-  const saveTreeAndOrder = (newTree: PlaybookGuideTree, newOrder?: PlaybookGuideOrder) => {
-    onUpdateScouting('tendenciesTree', newTree);
-    if (newOrder) {
-      onUpdateScouting('tendenciesOrder', newOrder);
+  const saveTreeAndOrder = (
+    newTree: PlaybookGuideTree,
+    newOrder?: PlaybookGuideOrder,
+    extraUpdates?: Partial<ScoutingData>
+  ) => {
+    try {
+      onUpdateScouting({
+        tendenciesTree: newTree,
+        ...(newOrder ? { tendenciesOrder: newOrder } : {}),
+        ...(extraUpdates || {}),
+      });
+    } catch {
+      onUpdateScouting('tendenciesTree', newTree);
+      if (newOrder) onUpdateScouting('tendenciesOrder', newOrder);
+      if (extraUpdates?.attachments) onUpdateScouting('attachments', extraUpdates.attachments);
     }
   };
 
@@ -633,31 +707,44 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
 
   // Clear / Delete Document
   const handleDeleteCurrentDocument = (main: string, sub: string) => {
-    if (!currentDocUrl) return;
+    const docToDelete = tendenciesTree[main]?.[sub] || currentDocUrl;
+    if (!docToDelete) return;
 
-    const confirmed = window.confirm(
-      `Are you sure you want to delete the uploaded document/HTML from [${main} > ${sub}]?\n\nThis will permanently remove the file.`
-    );
-    if (!confirmed) return;
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Document',
+      message: `Are you sure you want to delete the uploaded document or HTML from [${main} > ${sub}]? This will remove the file from this tab.`,
+      confirmLabel: 'Delete Document',
+      confirmVariant: 'danger',
+      onConfirm: () => {
+        const updatedTree = {
+          ...tendenciesTree,
+          [main]: {
+            ...(tendenciesTree[main] || {}),
+            [sub]: '',
+          },
+        };
 
-    const updatedTree = {
-      ...tendenciesTree,
-      [main]: {
-        ...(tendenciesTree[main] || {}),
-        [sub]: '',
+        // If there is any legacy matching attachment in scouting.attachments, also remove it
+        let extraUpdates: Partial<ScoutingData> | undefined = undefined;
+        if (scouting.attachments && scouting.attachments.length > 0) {
+          const filteredAttachments = scouting.attachments.filter(
+            (a) =>
+              a.name !== sub &&
+              a.id !== sub &&
+              a.dataUrl !== docToDelete &&
+              a.htmlCode !== docToDelete &&
+              (a as any).fileUrl !== docToDelete
+          );
+          if (filteredAttachments.length !== scouting.attachments.length) {
+            extraUpdates = { attachments: filteredAttachments };
+          }
+        }
+
+        saveTreeAndOrder(updatedTree, undefined, extraUpdates);
+        showToast(`Deleted document from [${main} > ${sub}]`);
       },
-    };
-
-    // If there is any legacy matching attachment in scouting.attachments, also remove it
-    if (scouting.attachments && scouting.attachments.length > 0) {
-      const filteredAttachments = scouting.attachments.filter(
-        (a) => a.name !== sub && a.dataUrl !== currentDocUrl && a.htmlCode !== currentDocUrl
-      );
-      onUpdateScouting('attachments', filteredAttachments);
-    }
-
-    saveTreeAndOrder(updatedTree);
-    showToast(`Deleted document from [${main} > ${sub}]`);
+    });
   };
 
   // Add Category Folder
@@ -665,7 +752,7 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
     if (!name.trim()) return;
     const clean = name.trim();
     if (tendenciesTree[clean]) {
-      alert(`Category "${clean}" already exists.`);
+      showToast(`Category "${clean}" already exists.`);
       return;
     }
     const updatedTree = {
@@ -682,6 +769,7 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
     saveTreeAndOrder(updatedTree, updatedOrder);
     setActiveMain(clean);
     setActiveSub('Tendencies Overview');
+    setOrganizeCategory(clean);
     showToast(`Created category "${clean}"`);
   };
 
@@ -696,11 +784,12 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
         [clean]: '',
       },
     };
+    const existingSubs = tendenciesOrder.sub?.[main] || currentSubTabs;
     const updatedOrder = {
       ...tendenciesOrder,
       sub: {
         ...(tendenciesOrder.sub || {}),
-        [main]: [...(tendenciesOrder.sub?.[main] || currentSubTabs), clean],
+        [main]: [...existingSubs.filter((s) => s !== clean), clean],
       },
     };
     saveTreeAndOrder(updatedTree, updatedOrder);
@@ -713,12 +802,19 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
     if (!newName.trim() || oldName === newName.trim()) return;
     const clean = newName.trim();
     const updatedTree = { ...tendenciesTree };
-    updatedTree[clean] = updatedTree[oldName];
+    updatedTree[clean] = updatedTree[oldName] || {};
     delete updatedTree[oldName];
 
-    const updatedOrder = { ...tendenciesOrder };
+    const updatedOrder = {
+      main: [...tendenciesOrder.main],
+      sub: { ...tendenciesOrder.sub },
+    };
     const mIdx = updatedOrder.main.indexOf(oldName);
-    if (mIdx !== -1) updatedOrder.main[mIdx] = clean;
+    if (mIdx !== -1) {
+      updatedOrder.main[mIdx] = clean;
+    } else {
+      updatedOrder.main.push(clean);
+    }
     if (updatedOrder.sub[oldName]) {
       updatedOrder.sub[clean] = updatedOrder.sub[oldName];
       delete updatedOrder.sub[oldName];
@@ -726,6 +822,7 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
 
     saveTreeAndOrder(updatedTree, updatedOrder);
     if (activeMain === oldName) setActiveMain(clean);
+    if (organizeCategory === oldName) setOrganizeCategory(clean);
     showToast(`Renamed category to "${clean}"`);
   };
 
@@ -733,68 +830,175 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
   const handleRenameSubTab = (main: string, oldName: string, newName: string) => {
     if (!newName.trim() || oldName === newName.trim()) return;
     const clean = newName.trim();
-    const updatedTree = { ...tendenciesTree };
+    const updatedTree: PlaybookGuideTree = { ...tendenciesTree };
     if (updatedTree[main]) {
-      const val = updatedTree[main][oldName];
-      delete updatedTree[main][oldName];
-      updatedTree[main][clean] = val;
+      const val = updatedTree[main][oldName] ?? '';
+      const newCategoryMap = { ...updatedTree[main] };
+      delete newCategoryMap[oldName];
+      newCategoryMap[clean] = val;
+      updatedTree[main] = newCategoryMap;
     }
 
-    const updatedOrder = { ...tendenciesOrder };
-    if (updatedOrder.sub[main]) {
-      const sIdx = updatedOrder.sub[main].indexOf(oldName);
-      if (sIdx !== -1) updatedOrder.sub[main][sIdx] = clean;
+    const updatedOrder: PlaybookGuideOrder = {
+      main: [...tendenciesOrder.main],
+      sub: { ...tendenciesOrder.sub },
+    };
+    const currentSubs = updatedOrder.sub[main] || Object.keys(updatedTree[main] || {});
+    const sIdx = currentSubs.indexOf(oldName);
+    if (sIdx !== -1) {
+      const newSubs = [...currentSubs];
+      newSubs[sIdx] = clean;
+      updatedOrder.sub[main] = newSubs;
+    } else {
+      updatedOrder.sub[main] = [...currentSubs.filter((s) => s !== oldName), clean];
     }
 
-    saveTreeAndOrder(updatedTree, updatedOrder);
+    // If there is any matching attachment in scouting.attachments, also update its name
+    let updatedAttachments: ScoutingAttachment[] | undefined = undefined;
+    if (scouting.attachments && scouting.attachments.length > 0) {
+      const hasMatch = scouting.attachments.some((a) => a.name === oldName || a.id === oldName);
+      if (hasMatch) {
+        updatedAttachments = scouting.attachments.map((a) => {
+          if (a.name === oldName || a.id === oldName) {
+            return { ...a, name: clean };
+          }
+          return a;
+        });
+      }
+    }
+
+    saveTreeAndOrder(updatedTree, updatedOrder, updatedAttachments ? { attachments: updatedAttachments } : undefined);
     if (activeSub === oldName) setActiveSub(clean);
-    showToast(`Renamed sub-tab to "${clean}"`);
+    showToast(`Renamed to "${clean}"`);
   };
 
   // Delete Category Folder
   const handleDeleteMainFolder = (name: string) => {
     if (mainCategories.length <= 1) {
-      alert('You must keep at least one category folder.');
+      showToast('You must keep at least one category folder.');
       return;
     }
-    if (!confirm(`Permanently delete category folder "${name}" and all sub-tabs inside it?`)) return;
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Category Folder',
+      message: `Permanently delete category folder "${name}" and all sub-tabs inside it?`,
+      confirmLabel: 'Delete Category',
+      confirmVariant: 'danger',
+      onConfirm: () => {
+        const updatedTree = { ...tendenciesTree };
+        delete updatedTree[name];
 
-    const updatedTree = { ...tendenciesTree };
-    delete updatedTree[name];
+        const updatedOrder = {
+          main: tendenciesOrder.main.filter((m) => m !== name),
+          sub: { ...tendenciesOrder.sub },
+        };
+        delete updatedOrder.sub[name];
 
-    const updatedOrder = { ...tendenciesOrder };
-    updatedOrder.main = updatedOrder.main.filter((m) => m !== name);
-    delete updatedOrder.sub[name];
+        let extraUpdates: Partial<ScoutingData> | undefined = undefined;
+        if (name === 'Imported Reports' && scouting.attachments && scouting.attachments.length > 0) {
+          extraUpdates = { attachments: [] };
+        }
 
-    saveTreeAndOrder(updatedTree, updatedOrder);
-    const nextMain = updatedOrder.main[0] || '';
-    setActiveMain(nextMain);
-    setActiveSub(updatedOrder.sub[nextMain]?.[0] || '');
-    showToast(`Deleted category "${name}"`);
+        saveTreeAndOrder(updatedTree, updatedOrder, extraUpdates);
+        const nextMain = updatedOrder.main[0] || '';
+        setActiveMain(nextMain);
+        setActiveSub(updatedOrder.sub[nextMain]?.[0] || '');
+        if (organizeCategory === name) setOrganizeCategory(nextMain);
+        showToast(`Deleted category "${name}"`);
+      },
+    });
   };
 
   // Delete Sub-Tab
   const handleDeleteSubTab = (main: string, name: string) => {
-    if (currentSubTabs.length <= 1) {
-      alert('You must keep at least one sub-tab in this category folder.');
+    const subsInMain = tendenciesOrder.sub?.[main] || Object.keys(tendenciesTree[main] || {});
+    if (subsInMain.length <= 1) {
+      showToast('You must keep at least one sub-tab in this category folder.');
       return;
     }
-    if (!confirm(`Permanently delete sub-tab "${name}" and any uploaded document inside it?`)) return;
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Sub-Tab / Report',
+      message: `Permanently delete sub-tab "${name}" from [${main}] and any uploaded document inside it?`,
+      confirmLabel: 'Delete Sub-Tab',
+      confirmVariant: 'danger',
+      onConfirm: () => {
+        const updatedTree: PlaybookGuideTree = { ...tendenciesTree };
+        if (updatedTree[main]) {
+          delete updatedTree[main][name];
+        }
 
-    const updatedTree = { ...tendenciesTree };
-    if (updatedTree[main]) {
-      delete updatedTree[main][name];
-    }
+        const updatedOrder = {
+          main: [...tendenciesOrder.main],
+          sub: { ...tendenciesOrder.sub },
+        };
+        if (updatedOrder.sub[main]) {
+          updatedOrder.sub[main] = updatedOrder.sub[main].filter((s) => s !== name);
+        }
 
-    const updatedOrder = { ...tendenciesOrder };
-    if (updatedOrder.sub[main]) {
-      updatedOrder.sub[main] = updatedOrder.sub[main].filter((s) => s !== name);
-    }
+        let extraUpdates: Partial<ScoutingData> | undefined = undefined;
+        if (scouting.attachments && scouting.attachments.length > 0) {
+          const filtered = scouting.attachments.filter((a) => a.name !== name && a.id !== name);
+          if (filtered.length !== scouting.attachments.length) {
+            extraUpdates = { attachments: filtered };
+          }
+        }
 
-    saveTreeAndOrder(updatedTree, updatedOrder);
-    const nextSub = updatedOrder.sub[main]?.[0] || '';
-    setActiveSub(nextSub);
-    showToast(`Deleted sub-tab "${name}"`);
+        saveTreeAndOrder(updatedTree, updatedOrder, extraUpdates);
+        const nextSub = updatedOrder.sub[main]?.[0] || '';
+        if (activeSub === name) setActiveSub(nextSub);
+        showToast(`Deleted sub-tab "${name}"`);
+      },
+    });
+  };
+
+  // Dialog opener helpers
+  const openRenameCategory = (cat: string) => {
+    setInputDialog({
+      isOpen: true,
+      title: 'Rename Category Folder',
+      subtitle: `Update name for category "${cat}"`,
+      value: cat,
+      placeholder: 'e.g. Opponent Offense, Blitz Tells...',
+      confirmLabel: 'Save Category',
+      onConfirm: (newName) => handleRenameMainFolder(cat, newName),
+    });
+  };
+
+  const openRenameSubTab = (main: string, sub: string) => {
+    setInputDialog({
+      isOpen: true,
+      title: 'Rename Report / Sub-Tab',
+      subtitle: `Update name for [${main} > ${sub}]`,
+      value: sub,
+      placeholder: 'e.g. Run vs Pass, Blitz Pickup, Report 1...',
+      confirmLabel: 'Save Name',
+      onConfirm: (newName) => handleRenameSubTab(main, sub, newName),
+    });
+  };
+
+  const openAddCategory = () => {
+    setInputDialog({
+      isOpen: true,
+      title: 'Add Category Folder',
+      subtitle: 'Create a new top-level category folder for game tendencies',
+      value: '',
+      placeholder: 'e.g. 3rd Down Blitzes, Red Zone, Personnel...',
+      confirmLabel: 'Create Category',
+      onConfirm: (name) => handleAddMainFolder(name),
+    });
+  };
+
+  const openAddSubTab = (main: string) => {
+    setInputDialog({
+      isOpen: true,
+      title: `Add Sub-Tab in [${main}]`,
+      subtitle: `Create a new sub-tab / report section inside "${main}"`,
+      value: '',
+      placeholder: 'e.g. Empty Formations, 2-Minute Drill, Report...',
+      confirmLabel: 'Create Sub-Tab',
+      onConfirm: (name) => handleAddSubTab(main, name),
+    });
   };
 
   // Move Category Folder
@@ -1072,11 +1276,9 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
             {/* Add Category Folder */}
             <button
               type="button"
-              onClick={() => {
-                const name = prompt('Enter New Tendencies Category Name (e.g. Blitz Tells, 3rd Down, Red Zone, Personnel):');
-                if (name && name.trim()) handleAddMainFolder(name.trim());
-              }}
+              onClick={openAddCategory}
               className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm"
+              title="Add a new category folder"
             >
               <Plus className="w-3.5 h-3.5 text-amber-400" />
               <span>+ Category Folder</span>
@@ -1085,11 +1287,9 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
             {/* Add Sub-Tab */}
             <button
               type="button"
-              onClick={() => {
-                const name = prompt(`Enter Sub-Tab Name for [${safeActiveMain}] (e.g. Run vs Pass, Coverages, Fronts):`);
-                if (name && name.trim()) handleAddSubTab(safeActiveMain, name.trim());
-              }}
+              onClick={() => openAddSubTab(safeActiveMain)}
               className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+              title={`Add sub-tab / report to [${safeActiveMain}]`}
             >
               <Plus className="w-3.5 h-3.5" />
               <span>+ Add Sub-Tab</span>
@@ -1113,13 +1313,25 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
                       '';
                     if (firstSub) setActiveSub(firstSub);
                   }}
-                  className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all select-none border cursor-pointer ${
+                  className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all select-none border cursor-pointer flex items-center gap-1.5 ${
                     isActive
                       ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-md'
                       : 'bg-slate-900 hover:bg-slate-750 text-slate-200 border-slate-700'
                   }`}
                 >
-                  {mainCat}
+                  <span>{mainCat}</span>
+                  {isActive && (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openRenameCategory(mainCat);
+                      }}
+                      className="p-0.5 hover:bg-amber-500/40 rounded text-slate-900 hover:text-black transition-colors"
+                      title={`Rename category "${mainCat}"`}
+                    >
+                      <Edit2 className="w-3 h-3" />
+                    </span>
+                  )}
                 </button>
               </div>
             );
@@ -1132,19 +1344,32 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
             const isActive = subTab === safeActiveSub;
             const hasDoc = Boolean(tendenciesTree[safeActiveMain]?.[subTab]);
             return (
-              <button
-                key={subTab}
-                type="button"
-                onClick={() => setActiveSub(subTab)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all select-none border cursor-pointer flex items-center gap-1.5 ${
-                  isActive
-                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                    : 'bg-slate-800 hover:bg-slate-750 text-slate-300 border-slate-700'
-                }`}
-              >
-                <span>{subTab}</span>
-                {hasDoc && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Has Document" />}
-              </button>
+              <div key={subTab} className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setActiveSub(subTab)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all select-none border cursor-pointer flex items-center gap-1.5 ${
+                    isActive
+                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                      : 'bg-slate-800 hover:bg-slate-750 text-slate-300 border-slate-700'
+                  }`}
+                >
+                  <span>{subTab}</span>
+                  {hasDoc && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Has Document" />}
+                  {isActive && (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openRenameSubTab(safeActiveMain, subTab);
+                      }}
+                      className="p-0.5 hover:bg-indigo-700/60 rounded text-indigo-200 hover:text-white transition-colors"
+                      title={`Rename sub-tab "${subTab}"`}
+                    >
+                      <Edit2 className="w-3 h-3" />
+                    </span>
+                  )}
+                </button>
+              </div>
             );
           })}
           {currentSubTabs.length === 0 && (
@@ -1159,9 +1384,21 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 p-3.5 rounded-2xl border border-slate-700">
           <div className="flex items-center gap-2.5 flex-wrap">
             <FileText className="w-4 h-4 text-amber-400" />
-            <span className="font-black text-xs text-slate-200">
+            <span className="font-black text-xs text-slate-200 flex items-center gap-1.5">
               Active Section: <span className="text-amber-300">{safeActiveMain} &gt; {safeActiveSub}</span>
             </span>
+
+            {safeActiveSub && (
+              <button
+                type="button"
+                onClick={() => openRenameSubTab(safeActiveMain, safeActiveSub)}
+                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-amber-300 font-bold text-[11px] rounded-lg border border-slate-700 hover:border-amber-400/40 flex items-center gap-1 transition-colors cursor-pointer"
+                title={`Rename sub-tab / report "${safeActiveSub}"`}
+              >
+                <Edit2 className="w-3 h-3 text-amber-400" />
+                <span>Rename Tab / Report</span>
+              </button>
+            )}
 
             {currentDocUrl ? (
               isCurrentHtml ? (
@@ -1325,7 +1562,18 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
                   onChange={(e) => {
                     const found = TENDENCY_STARTER_TEMPLATES.find((t) => t.id === e.target.value);
                     if (found) {
-                      if (htmlEditorCode.trim() && !confirm('Replace current editor code with this starter template?')) {
+                      if (htmlEditorCode.trim()) {
+                        const newCode = found.code;
+                        setConfirmDialog({
+                          isOpen: true,
+                          title: 'Load Starter Template',
+                          message: 'Replace current editor code with this starter template?',
+                          confirmLabel: 'Replace Code',
+                          confirmVariant: 'primary',
+                          onConfirm: () => {
+                            setHtmlEditorCode(newCode);
+                          },
+                        });
                         e.target.value = '';
                         return;
                       }
@@ -1507,15 +1755,17 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
               {/* Category Folders */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
-                    Category Folders
-                  </h4>
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">
+                      1. Category Folders ({mainCategories.length})
+                    </h4>
+                    <p className="text-[11px] text-slate-400">
+                      Click a category below to inspect its sub-tabs and reports.
+                    </p>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      const name = prompt('New Category Folder Name:');
-                      if (name && name.trim()) handleAddMainFolder(name.trim());
-                    }}
+                    onClick={openAddCategory}
                     className="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -1524,125 +1774,155 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
                 </div>
 
                 <div className="space-y-1.5">
-                  {mainCategories.map((cat, idx) => (
-                    <div
-                      key={cat}
-                      className="flex items-center justify-between p-2.5 bg-slate-800/80 border border-slate-700 rounded-xl"
-                    >
-                      <span className="font-bold text-xs text-slate-200">{cat}</span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleMoveMainFolder(cat, -1)}
-                          disabled={idx === 0}
-                          className="p-1 text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer"
-                          title="Move up"
-                        >
-                          <ArrowUp className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleMoveMainFolder(cat, 1)}
-                          disabled={idx === mainCategories.length - 1}
-                          className="p-1 text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer"
-                          title="Move down"
-                        >
-                          <ArrowDown className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newName = prompt('Rename Category Folder:', cat);
-                            if (newName && newName.trim()) handleRenameMainFolder(cat, newName.trim());
-                          }}
-                          className="p-1 text-slate-400 hover:text-amber-300 cursor-pointer"
-                          title="Rename"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteMainFolder(cat)}
-                          className="p-1 text-slate-400 hover:text-rose-400 cursor-pointer"
-                          title="Delete category"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                  {mainCategories.map((cat, idx) => {
+                    const isSelected = cat === (mainCategories.includes(organizeCategory) ? organizeCategory : safeActiveMain);
+                    return (
+                      <div
+                        key={cat}
+                        onClick={() => setOrganizeCategory(cat)}
+                        className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-colors ${
+                          isSelected
+                            ? 'bg-amber-500/15 border-amber-500/60 shadow-xs'
+                            : 'bg-slate-800/80 hover:bg-slate-800 border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`font-bold text-xs ${isSelected ? 'text-amber-300' : 'text-slate-200'}`}>
+                            {cat}
+                          </span>
+                          {isSelected && (
+                            <span className="text-[10px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-black uppercase">
+                              Active View
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => handleMoveMainFolder(cat, -1)}
+                            disabled={idx === 0}
+                            className="p-1 text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer"
+                            title="Move up"
+                          >
+                            <ArrowUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleMoveMainFolder(cat, 1)}
+                            disabled={idx === mainCategories.length - 1}
+                            className="p-1 text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer"
+                            title="Move down"
+                          >
+                            <ArrowDown className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openRenameCategory(cat)}
+                            className="p-1 text-slate-400 hover:text-amber-300 cursor-pointer"
+                            title="Rename category folder"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteMainFolder(cat)}
+                            className="p-1 text-slate-400 hover:text-rose-400 cursor-pointer"
+                            title="Delete category folder"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Sub-Tabs of Active Category */}
-              <div className="space-y-3 pt-4 border-t border-slate-800">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
-                    Sub-Tabs in [{safeActiveMain}]
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const name = prompt(`New Sub-Tab in [${safeActiveMain}]:`);
-                      if (name && name.trim()) handleAddSubTab(safeActiveMain, name.trim());
-                    }}
-                    className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Sub-Tab</span>
-                  </button>
-                </div>
+              {/* Sub-Tabs of Selected Category */}
+              {(() => {
+                const currentCat = mainCategories.includes(organizeCategory) ? organizeCategory : safeActiveMain;
+                const subsInCat = tendenciesOrder.sub?.[currentCat] || Object.keys(tendenciesTree[currentCat] || {});
 
-                <div className="space-y-1.5">
-                  {currentSubTabs.map((sub, idx) => (
-                    <div
-                      key={sub}
-                      className="flex items-center justify-between p-2.5 bg-slate-800/80 border border-slate-700 rounded-xl"
-                    >
-                      <span className="font-bold text-xs text-slate-200">{sub}</span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleMoveSubTab(safeActiveMain, sub, -1)}
-                          disabled={idx === 0}
-                          className="p-1 text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer"
-                          title="Move up"
-                        >
-                          <ArrowUp className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleMoveSubTab(safeActiveMain, sub, 1)}
-                          disabled={idx === currentSubTabs.length - 1}
-                          className="p-1 text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer"
-                          title="Move down"
-                        >
-                          <ArrowDown className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newName = prompt('Rename Sub-Tab:', sub);
-                            if (newName && newName.trim()) handleRenameSubTab(safeActiveMain, sub, newName.trim());
-                          }}
-                          className="p-1 text-slate-400 hover:text-amber-300 cursor-pointer"
-                          title="Rename"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteSubTab(safeActiveMain, sub)}
-                          className="p-1 text-slate-400 hover:text-rose-400 cursor-pointer"
-                          title="Delete sub-tab"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                return (
+                  <div className="space-y-3 pt-4 border-t border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">
+                          2. Sub-Tabs &amp; Reports in [{currentCat}] ({subsInCat.length})
+                        </h4>
+                        <p className="text-[11px] text-slate-400">
+                          Rename, reorder, or delete reports and sub-folders in this section.
+                        </p>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => openAddSubTab(currentCat)}
+                        className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Sub-Tab</span>
+                      </button>
                     </div>
-                  ))}
-                </div>
-              </div>
+
+                    <div className="space-y-1.5">
+                      {subsInCat.map((sub, idx) => (
+                        <div
+                          key={sub}
+                          className="flex items-center justify-between p-2.5 bg-slate-800/80 border border-slate-700 rounded-xl"
+                        >
+                          <div className="flex items-center gap-2 truncate pr-2">
+                            <span className="font-bold text-xs text-slate-200 truncate">{sub}</span>
+                            {Boolean(tendenciesTree[currentCat]?.[sub]) && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" title="Has Document" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleMoveSubTab(currentCat, sub, -1)}
+                              disabled={idx === 0}
+                              className="p-1 text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer"
+                              title="Move up"
+                            >
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveSubTab(currentCat, sub, 1)}
+                              disabled={idx === subsInCat.length - 1}
+                              className="p-1 text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer"
+                              title="Move down"
+                            >
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openRenameSubTab(currentCat, sub)}
+                              className="p-1 text-slate-400 hover:text-amber-300 cursor-pointer"
+                              title="Rename sub-tab / report"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSubTab(currentCat, sub)}
+                              className="p-1 text-slate-400 hover:text-rose-400 cursor-pointer"
+                              title="Delete sub-tab"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      {subsInCat.length === 0 && (
+                        <div className="text-xs text-slate-400 py-3 text-center bg-slate-800/40 rounded-xl border border-dashed border-slate-700">
+                          No sub-tabs or reports yet. Click &quot;Add Sub-Tab&quot; above to create one.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="p-4 bg-slate-850 border-t border-slate-800 flex justify-end">
@@ -1761,6 +2041,121 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
               >
                 <Printer className="w-4 h-4" />
                 <span>{isPrintingLoading ? 'Preparing Print...' : 'Print Now'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* INPUT / RENAME DIALOG (iFrame-safe prompt replacement) */}
+      {inputDialog.isOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Edit2 className="w-4 h-4 text-amber-400" />
+                <h3 className="font-black text-sm text-slate-100">{inputDialog.title}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInputDialog((prev) => ({ ...prev, isOpen: false }))}
+                className="p-1 text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {inputDialog.subtitle && (
+              <p className="text-xs text-slate-400">{inputDialog.subtitle}</p>
+            )}
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (inputDialog.value.trim()) {
+                  inputDialog.onConfirm(inputDialog.value.trim());
+                  setInputDialog((prev) => ({ ...prev, isOpen: false }));
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                  Name / Label
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={inputDialog.value}
+                  onChange={(e) => setInputDialog((prev) => ({ ...prev, value: e.target.value }))}
+                  placeholder={inputDialog.placeholder || 'Enter name...'}
+                  className="w-full bg-slate-950 border border-slate-700 focus:border-amber-400 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none shadow-inner"
+                  onFocus={(e) => e.target.select()}
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setInputDialog((prev) => ({ ...prev, isOpen: false }))}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-bold rounded-xl cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!inputDialog.value.trim()}
+                  className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-40 transition-all"
+                >
+                  {inputDialog.confirmLabel || 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* IN-APP CONFIRMATION DIALOG MODAL (Prevents browser confirm from being blocked in iframe) */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Trash2 className="w-4 h-4 text-rose-400" />
+                <h3 className="font-black text-sm text-slate-100">{confirmDialog.title}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+                className="p-1 text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">{confirmDialog.message}</p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-bold rounded-xl cursor-pointer transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  confirmDialog.onConfirm();
+                  setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+                }}
+                className={`px-5 py-2 text-xs font-black rounded-xl shadow-lg cursor-pointer transition-all ${
+                  confirmDialog.confirmVariant === 'danger'
+                    ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/20'
+                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20'
+                }`}
+              >
+                {confirmDialog.confirmLabel || 'Confirm'}
               </button>
             </div>
           </div>
