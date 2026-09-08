@@ -30,6 +30,7 @@ import {
   generatePlaybookGuidePrintHTML,
   generatePlaybookBinderPrintHTML,
 } from '../utils/printUtils';
+import { FullDocumentViewer } from './common/FullDocumentViewer';
 
 interface PlaybookGuidesViewProps {
   guideTree: PlaybookGuideTree;
@@ -902,36 +903,28 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
           </div>
         </div>
 
-        {/* Document Frame / Viewer */}
-        <div className="w-full bg-slate-900/90 border border-slate-700 rounded-2xl overflow-hidden min-h-[620px] flex flex-col">
-          {currentDocUrl ? (
-            isCurrentHtml ? (
-              <iframe
-                srcDoc={currentDocUrl}
-                title={`${activeMain} - ${activeSub}`}
-                sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals"
-                className="w-full flex-1 min-h-[650px] border-0 bg-white"
-              />
-            ) : (
-              <iframe
-                src={currentDocUrl}
-                title={`${activeMain} - ${activeSub}`}
-                className="w-full flex-1 min-h-[650px] border-0 bg-white"
-              />
-            )
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-slate-500 space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 shadow-inner">
-                <FileText className="w-8 h-8" />
-              </div>
-              <div className="space-y-1">
-                <p className="font-bold text-sm text-slate-200">
-                  No Document or HTML in [{activeMain} &gt; {activeSub}]
-                </p>
-                <p className="text-xs text-slate-400 max-w-md mx-auto">
-                  Upload a PDF playbook, offensive install sheet, wristband card, or write / paste custom HTML code with interactive play diagrams and video embeds.
-                </p>
-              </div>
+        {/* Document Frame / Full Page Continuous Viewer */}
+        {currentDocUrl ? (
+          <FullDocumentViewer
+            content={currentDocUrl}
+            title={`${activeMain} - ${activeSub}`}
+            categoryName={activeMain}
+            subTabName={activeSub}
+            onOpenFullScreen={() => setIsFullScreenModalOpen(true)}
+          />
+        ) : (
+          <div className="w-full bg-slate-900/90 border border-slate-700 rounded-2xl overflow-hidden min-h-[420px] flex flex-col items-center justify-center p-12 text-center text-slate-500 space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 shadow-inner">
+              <FileText className="w-8 h-8" />
+            </div>
+            <div className="space-y-1">
+              <p className="font-bold text-sm text-slate-200">
+                No Document or HTML in [{activeMain} &gt; {activeSub}]
+              </p>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                Upload a PDF playbook, offensive install sheet, wristband card, or write / paste custom HTML code with interactive play diagrams and video embeds.
+              </p>
+            </div>
 
               {userRole === 'admin' && (
                 <div className="flex items-center gap-3 pt-2">
@@ -963,7 +956,6 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
             </div>
           )}
         </div>
-      </div>
 
       {/* HTML Code Editor & Starter Template Modal */}
       {isHtmlEditorOpen && (

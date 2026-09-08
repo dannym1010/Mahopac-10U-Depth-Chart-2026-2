@@ -40,6 +40,7 @@ import {
   generatePlaybookGuidePrintHTML,
   generatePlaybookBinderPrintHTML,
 } from '../../utils/printUtils';
+import { FullDocumentViewer } from '../common/FullDocumentViewer';
 
 interface TendenciesViewProps {
   scouting: ScoutingData;
@@ -1254,36 +1255,28 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
           </div>
         </div>
 
-        {/* Document Frame / Viewer */}
-        <div className="w-full bg-slate-900/90 border border-slate-700 rounded-2xl overflow-hidden min-h-[620px] flex flex-col">
-          {currentDocUrl ? (
-            isCurrentHtml ? (
-              <iframe
-                srcDoc={currentDocUrl}
-                title={`${safeActiveMain} - ${safeActiveSub}`}
-                sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals"
-                className="w-full flex-1 min-h-[650px] border-0 bg-white"
-              />
-            ) : (
-              <iframe
-                src={currentDocUrl}
-                title={`${safeActiveMain} - ${safeActiveSub}`}
-                className="w-full flex-1 min-h-[650px] border-0 bg-white"
-              />
-            )
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-slate-500 space-y-4">
-              <div className="w-16 h-16 rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center text-amber-400 shadow-inner">
-                <TrendingUp className="w-8 h-8" />
-              </div>
-              <div className="space-y-1">
-                <p className="font-bold text-sm text-slate-200">
-                  No Tendency Document or HTML in [{safeActiveMain} &gt; {safeActiveSub}]
-                </p>
-                <p className="text-xs text-slate-400 max-w-md mx-auto">
-                  Upload an opponent scouting PDF, Hudl tendency export, or create custom HTML breakdown sheets with charts, diagrams, and video cutups.
-                </p>
-              </div>
+        {/* Document Frame / Full Continuous Viewer */}
+        {currentDocUrl ? (
+          <FullDocumentViewer
+            content={currentDocUrl}
+            title={`${safeActiveMain} - ${safeActiveSub}`}
+            categoryName={safeActiveMain}
+            subTabName={safeActiveSub}
+            onOpenFullScreen={() => setIsFullScreenModalOpen(true)}
+          />
+        ) : (
+          <div className="w-full bg-slate-900/90 border border-slate-700 rounded-2xl overflow-hidden min-h-[420px] flex flex-col items-center justify-center p-12 text-center text-slate-500 space-y-4">
+            <div className="w-16 h-16 rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center text-amber-400 shadow-inner">
+              <TrendingUp className="w-8 h-8" />
+            </div>
+            <div className="space-y-1">
+              <p className="font-bold text-sm text-slate-200">
+                No Tendency Document or HTML in [{safeActiveMain} &gt; {safeActiveSub}]
+              </p>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                Upload an opponent scouting PDF, Hudl tendency export, or create custom HTML breakdown sheets with charts, diagrams, and video cutups.
+              </p>
+            </div>
 
               <div className="flex items-center gap-3 pt-2">
                 <button
@@ -1307,7 +1300,6 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
             </div>
           )}
         </div>
-      </div>
 
       {/* HTML CODE EDITOR MODAL */}
       {isHtmlEditorOpen && (
