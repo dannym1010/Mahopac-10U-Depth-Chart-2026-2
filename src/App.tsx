@@ -6374,6 +6374,7 @@ function mergeRemoteWeeklyData(
                 scheduleEvents={activeTeamScheduleEvents}
                 currentWeek={currentWeek}
                 onUpdateScouting={(field: any, val?: any) => {
+                  lastLocalEditTimeRef.current = Date.now();
                   setWeeklyData((prev) => {
                     const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
                     const existingWeek = prev[scopedKey] || prev[currentWeek] || {
@@ -6392,12 +6393,16 @@ function mergeRemoteWeeklyData(
                       opponent: updates.opponent !== undefined ? updates.opponent : (existingWeek.opponent || ''),
                       scouting: updatedScouting,
                     };
-                    return {
+                    const updatedAll = {
                       ...prev,
                       [scopedKey]: updatedWeek,
                       [currentWeek]: updatedWeek,
                     };
+                    safeJSONSet('footballWeeklyData', updatedAll);
+                    latestStateRef.current.weeklyData = updatedAll;
+                    return updatedAll;
                   });
+                  flushAndSaveStateToStorage('scouting_update');
                 }}
                 onNavigateToSchedule={() => setActiveUnit('schedule')}
                 onNavigateToTendencies={() => setActiveUnit('tendencies')}
@@ -6410,6 +6415,7 @@ function mergeRemoteWeeklyData(
               <TendenciesView
                 scouting={currentWeekState.scouting || {}}
                 onUpdateScouting={(field: any, val?: any) => {
+                  lastLocalEditTimeRef.current = Date.now();
                   setWeeklyData((prev) => {
                     const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
                     const existingWeek = prev[scopedKey] || prev[currentWeek] || {
@@ -6428,12 +6434,16 @@ function mergeRemoteWeeklyData(
                       opponent: updates.opponent !== undefined ? updates.opponent : (existingWeek.opponent || ''),
                       scouting: updatedScouting,
                     };
-                    return {
+                    const updatedAll = {
                       ...prev,
                       [scopedKey]: updatedWeek,
                       [currentWeek]: updatedWeek,
                     };
+                    safeJSONSet('footballWeeklyData', updatedAll);
+                    latestStateRef.current.weeklyData = updatedAll;
+                    return updatedAll;
                   });
+                  flushAndSaveStateToStorage('scouting_update');
                 }}
                 opponentName={currentWeekState.opponent || currentWeekState.scouting?.opponent || 'Opponent'}
                 weekName={currentWeek.startsWith('Week') ? currentWeek : `Week ${currentWeek}`}

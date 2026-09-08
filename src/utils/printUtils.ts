@@ -2141,6 +2141,7 @@ export interface WristbandPrintOptions {
   showCutLines?: boolean;
   showCopyLabels?: boolean;
   documentTitle?: string;
+  snippetOnly?: boolean;
 }
 
 /**
@@ -2532,6 +2533,25 @@ export function generateWristbandPrintHTML(
       color: #000000;
     }
   </style>
+`;
+
+  if (options?.snippetOnly) {
+    return `
+      ${stylesBlock}
+      <div class="wristband-snippet-wrapper" style="width: 100%; margin: 10px 0;">
+        <div class="cards-container">
+          ${cardsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${title}</title>
+  ${stylesBlock}
 </head>
 <body>
   <div class="print-header">
@@ -2566,6 +2586,7 @@ export interface CallSheetPrintOptions {
   fitMode?: 'auto' | '1page' | '2page';
   inkFriendly?: boolean;
   hideEmptySlots?: boolean;
+  snippetOnly?: boolean;
   sectionsFilter?: {
     topSituations?: boolean;
     redZone?: boolean;
@@ -2949,11 +2970,7 @@ export function generateCallSheetPrintHTML(
     `;
   }
 
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>${title}</title>
+  const stylesBlock = `
   <style>
     @page {
       size: letter ${orientation};
@@ -2968,8 +2985,8 @@ export function generateCallSheetPrintHTML(
       margin: 0;
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background: #ffffff;
-      color: #000000;
+      background: ${inkFriendly ? '#ffffff' : '#090d16'};
+      color: ${inkFriendly ? '#000000' : '#f8fafc'};
       font-size: ${baseFontSize};
       line-height: 1.25;
       overflow: visible !important;
@@ -2978,11 +2995,13 @@ export function generateCallSheetPrintHTML(
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #cbd5e1;
-      padding-bottom: 2px;
-      margin-bottom: 3px;
-      background: #ffffff;
+      border-bottom: 1.5px solid ${inkFriendly ? '#cbd5e1' : '#334155'};
+      padding-bottom: 3px;
+      margin-bottom: 4px;
+      background: ${inkFriendly ? '#ffffff' : '#0f172a'};
       min-height: 0;
+      padding: 4px 6px;
+      border-radius: ${inkFriendly ? '0' : '4px'};
     }
     .banner-title-area {
       display: flex;
@@ -2992,7 +3011,7 @@ export function generateCallSheetPrintHTML(
     .banner-team {
       font-size: 10pt;
       font-weight: 800;
-      color: #0f172a;
+      color: ${inkFriendly ? '#0f172a' : '#f8fafc'};
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
@@ -3001,15 +3020,15 @@ export function generateCallSheetPrintHTML(
       font-weight: 800;
       padding: 1px 5px;
       border-radius: 3px;
-      background: ${inkFriendly ? '#f1f5f9' : isOffense ? '#e0f2fe' : '#fee2e2'};
-      color: ${inkFriendly ? '#000000' : isOffense ? '#0369a1' : '#b91c1c'};
-      border: 1px solid ${inkFriendly ? '#cbd5e1' : isOffense ? '#7dd3fc' : '#fca5a5'};
+      background: ${inkFriendly ? '#f1f5f9' : isOffense ? '#0284c7' : '#dc2626'};
+      color: ${inkFriendly ? '#000000' : '#ffffff'};
+      border: 1px solid ${inkFriendly ? '#cbd5e1' : isOffense ? '#38bdf8' : '#f87171'};
       text-transform: uppercase;
     }
     .banner-meta {
       font-size: 8.5pt;
       font-weight: 700;
-      color: #1e293b;
+      color: ${inkFriendly ? '#1e293b' : '#94a3b8'};
     }
     .section-group {
       margin-bottom: 8px;
@@ -3025,24 +3044,26 @@ export function generateCallSheetPrintHTML(
       font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      background: #e2e8f0;
-      color: #0f172a;
+      background: ${inkFriendly ? '#e2e8f0' : '#1e293b'};
+      color: ${inkFriendly ? '#0f172a' : '#f8fafc'};
       padding: 2px 6px;
       margin-bottom: 4px;
-      border: 1px solid #cbd5e1;
+      border: 1px solid ${inkFriendly ? '#cbd5e1' : '#334155'};
+      border-radius: ${inkFriendly ? '0' : '4px'};
     }
     .redzone-banner {
-      background: #fee2e2;
-      color: #991b1b;
-      border-color: #fca5a5;
+      background: ${inkFriendly ? '#fee2e2' : '#7f1d1d'};
+      color: ${inkFriendly ? '#991b1b' : '#fecaca'};
+      border-color: ${inkFriendly ? '#fca5a5' : '#991b1b'};
     }
     .cards-grid {
       display: grid;
       width: 100%;
     }
     .section-card {
-      border: 1.2px solid #000000;
-      background: #ffffff;
+      border: ${inkFriendly ? '1.2px solid #000000' : '1.5px solid #334155'};
+      background: ${inkFriendly ? '#ffffff' : '#0f172a'};
+      border-radius: ${inkFriendly ? '0' : '4px'};
       display: flex;
       flex-direction: column;
       page-break-inside: avoid !important;
@@ -3053,10 +3074,12 @@ export function generateCallSheetPrintHTML(
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #000000;
+      border-bottom: 1px solid ${inkFriendly ? '#000000' : '#334155'};
       font-weight: 900;
       text-transform: uppercase;
       font-size: 8.5pt;
+      border-top-left-radius: ${inkFriendly ? '0' : '3px'};
+      border-top-right-radius: ${inkFriendly ? '0' : '3px'};
     }
     .card-title {
       white-space: nowrap;
@@ -3071,13 +3094,15 @@ export function generateCallSheetPrintHTML(
     .card-body {
       display: flex;
       flex-direction: column;
-      background: #ffffff;
+      background: ${inkFriendly ? '#ffffff' : '#0f172a'};
+      border-bottom-left-radius: ${inkFriendly ? '0' : '3px'};
+      border-bottom-right-radius: ${inkFriendly ? '0' : '3px'};
     }
     .callsheet-cell {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #e2e8f0;
+      border-bottom: 1px solid ${inkFriendly ? '#e2e8f0' : '#1e293b'};
       gap: 4px;
       page-break-inside: avoid;
       break-inside: avoid;
@@ -3086,11 +3111,11 @@ export function generateCallSheetPrintHTML(
       border-bottom: none;
     }
     .empty-slot {
-      background: #f8fafc;
+      background: ${inkFriendly ? '#f8fafc' : '#090d16'};
       justify-content: center;
     }
     .slot-empty-text {
-      color: #94a3b8;
+      color: ${inkFriendly ? '#94a3b8' : '#475569'};
       font-style: italic;
       font-size: 7.5pt;
     }
@@ -3122,6 +3147,7 @@ export function generateCallSheetPrintHTML(
       line-height: 1.15;
       font-size: 8.5pt;
       flex: 1;
+      color: ${inkFriendly ? '#000000' : '#f8fafc'};
     }
     .cell-meta {
       display: flex;
@@ -3131,18 +3157,19 @@ export function generateCallSheetPrintHTML(
       font-size: 7.5pt;
     }
     .formation-tag {
-      color: #475569;
+      color: ${inkFriendly ? '#475569' : '#94a3b8'};
       font-weight: 700;
       font-family: monospace;
     }
     .personnel-tag {
-      background: #e2e8f0;
-      color: #1e293b;
+      background: ${inkFriendly ? '#e2e8f0' : '#1e293b'};
+      color: ${inkFriendly ? '#1e293b' : '#e2e8f0'};
       padding: 0 3px;
       border-radius: 2px;
       font-weight: 800;
       font-size: 7pt;
       font-family: monospace;
+      border: 1px solid ${inkFriendly ? '#cbd5e1' : '#334155'};
     }
     .bottom-grid {
       display: grid;
@@ -3157,8 +3184,9 @@ export function generateCallSheetPrintHTML(
       }
     }
     .bottom-card {
-      border: 1.2px solid #000000;
-      background: #ffffff;
+      border: ${inkFriendly ? '1.2px solid #000000' : '1.5px solid #334155'};
+      background: ${inkFriendly ? '#ffffff' : '#0f172a'};
+      border-radius: ${inkFriendly ? '0' : '4px'};
       page-break-inside: avoid;
       break-inside: avoid;
     }
@@ -3170,19 +3198,20 @@ export function generateCallSheetPrintHTML(
       display: flex;
       flex-direction: column;
       gap: 1px;
+      background: ${inkFriendly ? '#ffffff' : '#0f172a'};
     }
     .script-row {
       display: flex;
       align-items: center;
       gap: 4px;
       padding: 1.5px 3px;
-      border-bottom: 1px solid #f1f5f9;
+      border-bottom: 1px solid ${inkFriendly ? '#f1f5f9' : '#1e293b'};
       font-size: 8pt;
     }
     .script-num {
       font-weight: 900;
       font-family: monospace;
-      color: #475569;
+      color: ${inkFriendly ? '#475569' : '#94a3b8'};
       width: 18px;
     }
     .script-name {
@@ -3192,6 +3221,7 @@ export function generateCallSheetPrintHTML(
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      color: ${inkFriendly ? '#000000' : '#f8fafc'};
     }
     .twopoint-header {
       background: #334155;
@@ -3204,19 +3234,23 @@ export function generateCallSheetPrintHTML(
       text-align: center;
     }
     .twopoint-table th {
-      background: #e2e8f0;
+      background: ${inkFriendly ? '#e2e8f0' : '#1e293b'};
+      color: ${inkFriendly ? '#000000' : '#f8fafc'};
       font-weight: 900;
       padding: 2px;
-      border: 1px solid #cbd5e1;
+      border: 1px solid ${inkFriendly ? '#cbd5e1' : '#334155'};
     }
     .twopoint-table td {
       padding: 1.5px 2px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid ${inkFriendly ? '#e2e8f0' : '#334155'};
+      background: ${inkFriendly ? '#ffffff' : '#0f172a'};
+      color: ${inkFriendly ? '#000000' : '#e2e8f0'};
       font-weight: 700;
     }
     .diff-cell {
       font-family: monospace;
       font-weight: 900;
+      color: ${inkFriendly ? '#000000' : '#f8fafc'};
     }
     .action-highlight {
       background: #fef08a !important;
@@ -3227,10 +3261,13 @@ export function generateCallSheetPrintHTML(
       background: #0f172a;
       color: #ffffff;
     }
+    .timeouts-body {
+      background: ${inkFriendly ? '#ffffff' : '#0f172a'};
+    }
     .half-title {
       font-weight: 900;
       font-size: 7.5pt;
-      color: #475569;
+      color: ${inkFriendly ? '#475569' : '#94a3b8'};
       margin-bottom: 2px;
       text-transform: uppercase;
     }
@@ -3244,30 +3281,57 @@ export function generateCallSheetPrintHTML(
     .team-label {
       font-weight: 900;
       width: 32px;
+      color: ${inkFriendly ? '#000000' : '#f8fafc'};
     }
     .timeout-check-box {
       font-family: monospace;
       font-weight: 900;
       font-size: 9pt;
+      color: ${inkFriendly ? '#000000' : '#38bdf8'};
     }
     .text-muted {
       color: #94a3b8;
     }
   </style>
+`;
+
+  const bannerHtml = `
+    <div class="print-banner">
+      <div class="banner-title-area">
+        <span class="banner-team">${activeTeamName}</span>
+        <span class="banner-unit">${unitLabel}</span>
+        <span style="font-weight: 900; text-transform: uppercase;">${sheetTitle}</span>
+      </div>
+      <div class="banner-meta">
+        ${opponent ? `<span>${opponent}</span> &bull; ` : ''}
+        <span>${gameDate || 'Sideline Master'}</span>
+      </div>
+    </div>
+  `;
+
+  if (options?.snippetOnly) {
+    return `
+      ${stylesBlock}
+      <div class="callsheet-snippet-wrapper" style="width: 100%; background: ${inkFriendly ? '#ffffff' : '#090d16'}; color: ${inkFriendly ? '#000000' : '#f8fafc'};">
+        ${bannerHtml}
+        ${topSituationsHtml}
+        ${redZoneHtml}
+        ${tempoHtml}
+        ${customHtml}
+        ${bottomSectionHtml}
+      </div>
+    `;
+  }
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${title}</title>
+  ${stylesBlock}
 </head>
 <body>
-  <div class="print-banner">
-    <div class="banner-title-area">
-      <span class="banner-team">${activeTeamName}</span>
-      <span class="banner-unit">${unitLabel}</span>
-      <span style="font-weight: 900; text-transform: uppercase;">${sheetTitle}</span>
-    </div>
-    <div class="banner-meta">
-      ${opponent ? `<span>${opponent}</span> &bull; ` : ''}
-      <span>${gameDate || 'Sideline Master'}</span>
-    </div>
-  </div>
-
+  ${bannerHtml}
   ${topSituationsHtml}
   ${redZoneHtml}
   ${tempoHtml}

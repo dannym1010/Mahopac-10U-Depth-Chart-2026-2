@@ -707,42 +707,40 @@ export const TendenciesView: React.FC<TendenciesViewProps> = ({
 
   // Clear / Delete Document
   const handleDeleteCurrentDocument = (main: string, sub: string) => {
-    const docToDelete = tendenciesTree[main]?.[sub] || currentDocUrl;
-    if (!docToDelete) return;
+    const targetMain = main || safeActiveMain;
+    const targetSub = sub || safeActiveSub;
+    const docToDelete = tendenciesTree[targetMain]?.[targetSub] || currentDocUrl || '';
 
     setConfirmDialog({
       isOpen: true,
       title: 'Delete Document',
-      message: `Are you sure you want to delete the uploaded document or HTML from [${main} > ${sub}]? This will remove the file from this tab.`,
+      message: `Are you sure you want to delete the uploaded document or HTML from [${targetMain} > ${targetSub}]? This will remove the file from this tab.`,
       confirmLabel: 'Delete Document',
       confirmVariant: 'danger',
       onConfirm: () => {
-        const updatedTree = {
+        const updatedTree: PlaybookGuideTree = {
           ...tendenciesTree,
-          [main]: {
-            ...(tendenciesTree[main] || {}),
-            [sub]: '',
+          [targetMain]: {
+            ...(tendenciesTree[targetMain] || {}),
+            [targetSub]: '',
           },
         };
 
         // If there is any legacy matching attachment in scouting.attachments, also remove it
         let extraUpdates: Partial<ScoutingData> | undefined = undefined;
         if (scouting.attachments && scouting.attachments.length > 0) {
-          const filteredAttachments = scouting.attachments.filter(
-            (a) =>
-              a.name !== sub &&
-              a.id !== sub &&
-              a.dataUrl !== docToDelete &&
-              a.htmlCode !== docToDelete &&
-              (a as any).fileUrl !== docToDelete
-          );
-          if (filteredAttachments.length !== scouting.attachments.length) {
-            extraUpdates = { attachments: filteredAttachments };
-          }
+          const filteredAttachments = scouting.attachments.filter((a) => {
+            if (a.name === targetSub || a.id === targetSub) return false;
+            if (docToDelete && (a.dataUrl === docToDelete || a.htmlCode === docToDelete || (a as any).fileUrl === docToDelete)) {
+              return false;
+            }
+            return true;
+          });
+          extraUpdates = { attachments: filteredAttachments };
         }
 
         saveTreeAndOrder(updatedTree, undefined, extraUpdates);
-        showToast(`Deleted document from [${main} > ${sub}]`);
+        showToast(`Deleted document from [${targetMain} > ${targetSub}]`);
       },
     });
   };

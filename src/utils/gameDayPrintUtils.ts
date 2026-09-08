@@ -23,12 +23,33 @@ export interface GameDayPackageSectionsSelection {
   tendencies: boolean;
 }
 
+export interface GameDayPackageSubSelections {
+  sidelineHudItems?: {
+    matchupInfo?: boolean;
+    keysToVictory?: boolean;
+    objectives?: boolean;
+    inGameManagement?: boolean;
+  };
+  preGamePeriodIndices?: number[];
+  offenseSectionIds?: string[];
+  includeOffenseScripts?: boolean;
+  defenseSectionIds?: string[];
+  includeDefenseScripts?: boolean;
+  wristbandIds?: string[];
+  scoutingItems?: {
+    schemeOverview?: boolean;
+    keyPlayers?: boolean;
+  };
+  tendencyKeys?: string[];
+}
+
 export interface GameDayPackagePrintOptions {
   includeCoverPage: boolean;
   pageBreaksBetweenSections: boolean;
   inkFriendly: boolean;
   orientation: 'auto' | 'landscape' | 'portrait';
   sections: GameDayPackageSectionsSelection;
+  subSelections?: GameDayPackageSubSelections;
 }
 
 export interface GameDayPackageData {
@@ -68,9 +89,10 @@ export function generateGameDayPackageHTML(
   const {
     includeCoverPage = true,
     pageBreaksBetweenSections = true,
-    inkFriendly = true,
+    inkFriendly = false,
     orientation = 'auto',
     sections,
+    subSelections,
   } = options;
 
   const pageBreakClass = pageBreaksBetweenSections ? 'page-break-after' : 'section-spacing';
@@ -91,14 +113,60 @@ export function generateGameDayPackageHTML(
         print-color-adjust: exact !important;
       }
 
-      body {
+      html, body {
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        background-color: #ffffff;
-        color: #0f172a;
+        background-color: ${inkFriendly ? '#ffffff' : '#090d16'} !important;
+        color: ${inkFriendly ? '#0f172a' : '#f8fafc'} !important;
         margin: 0;
         padding: 0;
         line-height: 1.4;
         font-size: 11px;
+      }
+
+      @media print {
+        html, body {
+          background-color: ${inkFriendly ? '#ffffff' : '#090d16'} !important;
+          color: ${inkFriendly ? '#0f172a' : '#f8fafc'} !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .cover-container {
+          background-color: ${inkFriendly ? '#ffffff' : '#090d16'} !important;
+          color: ${inkFriendly ? '#0f172a' : '#f8fafc'} !important;
+        }
+        .cover-matchup {
+          background-color: ${inkFriendly ? '#f8fafc' : '#0f172a'} !important;
+          border-color: ${inkFriendly ? '#cbd5e1' : '#334155'} !important;
+        }
+        .cover-toc {
+          background-color: ${inkFriendly ? '#f1f5f9' : '#0f172a'} !important;
+          border-color: ${inkFriendly ? '#cbd5e1' : '#334155'} !important;
+        }
+        .section-header {
+          background-color: #0f172a !important;
+          color: #ffffff !important;
+        }
+        .card-box {
+          background-color: ${inkFriendly ? '#ffffff' : '#0f172a'} !important;
+          color: ${inkFriendly ? '#0f172a' : '#e2e8f0'} !important;
+          border-color: ${inkFriendly ? '#cbd5e1' : '#334155'} !important;
+        }
+        table {
+          background-color: ${inkFriendly ? '#ffffff' : '#0f172a'} !important;
+        }
+        th {
+          background-color: ${inkFriendly ? '#f1f5f9' : '#1e293b'} !important;
+          color: ${inkFriendly ? '#1e293b' : '#f8fafc'} !important;
+          border-color: ${inkFriendly ? '#cbd5e1' : '#334155'} !important;
+        }
+        td {
+          background-color: ${inkFriendly ? '#ffffff' : '#0f172a'} !important;
+          color: ${inkFriendly ? '#0f172a' : '#e2e8f0'} !important;
+          border-color: ${inkFriendly ? '#cbd5e1' : '#334155'} !important;
+        }
+        tr:nth-child(even) td {
+          background-color: ${inkFriendly ? '#f8fafc' : '#131c31'} !important;
+        }
       }
 
       .page-break-after {
@@ -119,7 +187,7 @@ export function generateGameDayPackageHTML(
       .section-spacing {
         margin-bottom: 24px;
         padding-bottom: 20px;
-        border-bottom: 2px dashed #cbd5e1;
+        border-bottom: 2px dashed ${inkFriendly ? '#cbd5e1' : '#334155'};
       }
 
       .cover-container {
@@ -129,10 +197,11 @@ export function generateGameDayPackageHTML(
         justify-content: space-between;
         padding: 40px 20px;
         text-align: center;
+        background: ${inkFriendly ? '#ffffff' : '#090d16'};
       }
 
       .cover-header {
-        border-bottom: 4px solid #0f172a;
+        border-bottom: 4px solid ${inkFriendly ? '#0f172a' : '#2563eb'};
         padding-bottom: 24px;
         margin-bottom: 32px;
       }
@@ -141,15 +210,16 @@ export function generateGameDayPackageHTML(
         font-size: 34px;
         font-weight: 900;
         letter-spacing: -0.5px;
-        color: #0f172a;
+        color: ${inkFriendly ? '#0f172a' : '#f8fafc'};
         margin: 0 0 8px 0;
         text-transform: uppercase;
       }
 
       .cover-badge {
         display: inline-block;
-        background: #0f172a;
-        color: #ffffff;
+        background: ${inkFriendly ? '#0f172a' : '#1e293b'};
+        color: ${inkFriendly ? '#ffffff' : '#38bdf8'};
+        border: ${inkFriendly ? 'none' : '1px solid #0284c7'};
         font-size: 13px;
         font-weight: 800;
         padding: 6px 16px;
@@ -161,30 +231,30 @@ export function generateGameDayPackageHTML(
       .cover-matchup {
         margin: 36px 0;
         padding: 24px;
-        background: #f8fafc;
-        border: 2px solid #e2e8f0;
+        background: ${inkFriendly ? '#f8fafc' : '#0f172a'};
+        border: 2px solid ${inkFriendly ? '#e2e8f0' : '#334155'};
         border-radius: 16px;
       }
 
       .cover-matchup-title {
         font-size: 28px;
         font-weight: 900;
-        color: #1e293b;
+        color: ${inkFriendly ? '#1e293b' : '#f8fafc'};
         margin: 0 0 8px 0;
       }
 
       .cover-details {
         font-size: 13px;
         font-weight: 600;
-        color: #64748b;
+        color: ${inkFriendly ? '#64748b' : '#94a3b8'};
       }
 
       .cover-toc {
         max-width: 500px;
         margin: 0 auto;
         text-align: left;
-        background: #f1f5f9;
-        border: 1px solid #cbd5e1;
+        background: ${inkFriendly ? '#f1f5f9' : '#0f172a'};
+        border: 1px solid ${inkFriendly ? '#cbd5e1' : '#334155'};
         border-radius: 12px;
         padding: 16px 20px;
       }
@@ -195,13 +265,13 @@ export function generateGameDayPackageHTML(
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 1px;
-        color: #334155;
+        color: ${inkFriendly ? '#334155' : '#38bdf8'};
       }
 
       .cover-toc ul {
         margin: 0;
         padding-left: 18px;
-        color: #1e293b;
+        color: ${inkFriendly ? '#1e293b' : '#e2e8f0'};
         font-size: 11px;
         font-weight: 600;
       }
@@ -214,8 +284,9 @@ export function generateGameDayPackageHTML(
         display: flex;
         align-items: center;
         justify-content: space-between;
-        background: #0f172a;
+        background: ${inkFriendly ? '#0f172a' : '#0f172a'};
         color: #ffffff;
+        border: ${inkFriendly ? 'none' : '1px solid #334155'};
         padding: 8px 14px;
         border-radius: 6px;
         margin-bottom: 12px;
@@ -230,6 +301,7 @@ export function generateGameDayPackageHTML(
         display: flex;
         align-items: center;
         gap: 6px;
+        color: #ffffff;
       }
 
       .section-meta {
@@ -245,25 +317,27 @@ export function generateGameDayPackageHTML(
       }
 
       th {
-        background: #f1f5f9;
-        color: #1e293b;
+        background: ${inkFriendly ? '#f1f5f9' : '#1e293b'};
+        color: ${inkFriendly ? '#1e293b' : '#f8fafc'};
         font-weight: 800;
         text-transform: uppercase;
         font-size: 9px;
         letter-spacing: 0.5px;
         padding: 6px 8px;
-        border: 1px solid #cbd5e1;
+        border: 1px solid ${inkFriendly ? '#cbd5e1' : '#334155'};
         text-align: left;
       }
 
       td {
         padding: 6px 8px;
-        border: 1px solid #cbd5e1;
+        border: 1px solid ${inkFriendly ? '#cbd5e1' : '#334155'};
         vertical-align: top;
+        background: ${inkFriendly ? '#ffffff' : '#0f172a'};
+        color: ${inkFriendly ? '#0f172a' : '#e2e8f0'};
       }
 
       tr:nth-child(even) td {
-        background-color: #f8fafc;
+        background-color: ${inkFriendly ? '#f8fafc' : '#131c31'};
       }
 
       .hud-grid {
@@ -274,21 +348,39 @@ export function generateGameDayPackageHTML(
       }
 
       .card-box {
-        border: 1px solid #cbd5e1;
+        border: 1px solid ${inkFriendly ? '#cbd5e1' : '#334155'};
         border-radius: 8px;
         padding: 10px 12px;
-        background: #ffffff;
+        background: ${inkFriendly ? '#ffffff' : '#0f172a'};
+        color: ${inkFriendly ? '#0f172a' : '#e2e8f0'};
       }
 
       .card-title {
         font-size: 11px;
         font-weight: 800;
-        color: #0f172a;
+        color: ${inkFriendly ? '#0f172a' : '#f8fafc'};
         text-transform: uppercase;
         letter-spacing: 0.5px;
         margin: 0 0 6px 0;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid ${inkFriendly ? '#e2e8f0' : '#1e293b'};
         padding-bottom: 4px;
+      }
+
+      .category-heading {
+        font-size: 12px;
+        font-weight: 800;
+        color: ${inkFriendly ? '#0f172a' : '#38bdf8'};
+        text-transform: uppercase;
+        margin: 0 0 6px 0;
+        border-bottom: 2px solid ${inkFriendly ? '#0f172a' : '#38bdf8'};
+        padding-bottom: 3px;
+      }
+
+      .subtab-heading {
+        margin: 0 0 6px 0;
+        font-size: 11px;
+        font-weight: 800;
+        color: ${inkFriendly ? '#1e293b' : '#f8fafc'};
       }
 
       .key-item {
@@ -297,10 +389,11 @@ export function generateGameDayPackageHTML(
         align-items: baseline;
         margin-bottom: 4px;
         font-size: 10px;
+        color: ${inkFriendly ? '#0f172a' : '#e2e8f0'};
       }
 
       .key-num {
-        background: #0f172a;
+        background: ${inkFriendly ? '#0f172a' : '#3b82f6'};
         color: white;
         border-radius: 9999px;
         font-size: 9px;
@@ -322,15 +415,16 @@ export function generateGameDayPackageHTML(
         text-transform: uppercase;
       }
 
-      .badge-run { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
-      .badge-pass { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
-      .badge-blitz { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+      .badge-run { background: ${inkFriendly ? '#dcfce7' : 'rgba(22, 163, 74, 0.25)'}; color: ${inkFriendly ? '#15803d' : '#4ade80'}; border: 1px solid ${inkFriendly ? '#bbf7d0' : '#16a34a'}; }
+      .badge-pass { background: ${inkFriendly ? '#dbeafe' : 'rgba(37, 99, 235, 0.25)'}; color: ${inkFriendly ? '#1d4ed8' : '#60a5fa'}; border: 1px solid ${inkFriendly ? '#bfdbfe' : '#2563eb'}; }
+      .badge-blitz { background: ${inkFriendly ? '#fee2e2' : 'rgba(220, 38, 38, 0.25)'}; color: ${inkFriendly ? '#b91c1c' : '#f87171'}; border: 1px solid ${inkFriendly ? '#fecaca' : '#dc2626'}; }
 
       .tendency-report-content {
         padding: 10px;
-        border: 1px solid #cbd5e1;
+        border: 1px solid ${inkFriendly ? '#cbd5e1' : '#334155'};
         border-radius: 6px;
-        background: #ffffff;
+        background: ${inkFriendly ? '#ffffff' : '#0f172a'};
+        color: ${inkFriendly ? '#0f172a' : '#e2e8f0'};
         font-size: 10px;
       }
     </style>
@@ -390,12 +484,22 @@ export function generateGameDayPackageHTML(
 
   // 2. SIDELINE HUD & MATCHUP OVERVIEW
   if (sections.sidelineHud) {
+    const hudFilter = subSelections?.sidelineHudItems || {
+      matchupInfo: true,
+      keysToVictory: true,
+      objectives: true,
+      inGameManagement: true,
+    };
+
     const keys = scouting?.keysToVictory || [
       'Dominate line of scrimmage & establish the run early',
       'Secure ball possession - Zero turnovers',
       'Discipline on defense - Stay in run fits & communicate coverage',
       'Win 3rd down conversions & finish in red zone',
     ];
+
+    const hasTopGrid = hudFilter.matchupInfo !== false || hudFilter.keysToVictory !== false;
+    const hasBottomGrid = hudFilter.objectives !== false || hudFilter.inGameManagement !== false;
 
     parts.push(`
       <div class="${pageBreakClass}">
@@ -404,7 +508,9 @@ export function generateGameDayPackageHTML(
           <span class="section-meta">${activeTeamName} vs ${opponent} &bull; Week ${currentWeek}</span>
         </div>
 
+        ${hasTopGrid ? `
         <div class="hud-grid no-break">
+          ${hudFilter.matchupInfo !== false ? `
           <div class="card-box">
             <h4 class="card-title">Game Information & Venue</h4>
             <table style="margin: 0;">
@@ -415,7 +521,9 @@ export function generateGameDayPackageHTML(
               <tr><th>Location</th><td>${matchedScheduledGame?.location || 'Home Field'} (${matchedScheduledGame?.locationType || 'Home'})</td></tr>
             </table>
           </div>
+          ` : ''}
 
+          ${hudFilter.keysToVictory !== false ? `
           <div class="card-box">
             <h4 class="card-title">Keys to Victory</h4>
             <div style="display: flex; flex-direction: column; gap: 4px;">
@@ -432,9 +540,13 @@ export function generateGameDayPackageHTML(
                 .join('')}
             </div>
           </div>
+          ` : ''}
         </div>
+        ` : ''}
 
+        ${hasBottomGrid ? `
         <div class="hud-grid no-break">
+          ${hudFilter.objectives !== false ? `
           <div class="card-box">
             <h4 class="card-title">Gameplan Objectives</h4>
             <p style="margin: 0 0 6px 0; font-size: 10px;">
@@ -444,7 +556,9 @@ export function generateGameDayPackageHTML(
               <strong>Defense:</strong> ${scouting?.gameplanDefense || 'Set hard edge against outside runs. Gang tackle ball carriers. Read quarterback eyes.'}
             </p>
           </div>
+          ` : ''}
 
+          ${hudFilter.inGameManagement !== false ? `
           <div class="card-box">
             <h4 class="card-title">Sideline In-Game Management</h4>
             <table style="margin: 0;">
@@ -453,26 +567,32 @@ export function generateGameDayPackageHTML(
               <tr><th>Special Teams</th><td>${scouting?.specialTeamsNotes || 'All 11 on kickoff team hustle to ball. No return middle.'}</td></tr>
             </table>
           </div>
+          ` : ''}
         </div>
+        ` : ''}
       </div>
     `);
   }
 
   // 3. PRE-GAME PRACTICE / WARMUP PLAN
   if (sections.preGamePlan) {
-    const periods = linkedPreGamePlan?.plan || [];
+    const allPeriods = linkedPreGamePlan?.plan || [];
+    const periodIndices = subSelections?.preGamePeriodIndices;
+    const periods = periodIndices !== undefined
+      ? allPeriods.filter((_, idx) => periodIndices.includes(idx))
+      : allPeriods;
     const planTitle = linkedPreGamePlan?.title || 'Pre-Game Warmup & Routine';
 
     parts.push(`
       <div class="${pageBreakClass}">
         <div class="section-header">
           <h2 class="section-title">📋 Pre-Game Practice & Warmup Plan</h2>
-          <span class="section-meta">${planTitle} &bull; ${periods.length} Periods</span>
+          <span class="section-meta">${planTitle} &bull; ${periods.length} of ${allPeriods.length} Periods</span>
         </div>
 
         ${
           periods.length === 0
-            ? `<div class="card-box" style="text-align: center; color: #64748b; padding: 24px;">No pre-game practice plan created for this week. Use the Pre-Game tab in Game Day Hub to link or generate a pre-game schedule.</div>`
+            ? `<div class="card-box" style="text-align: center; color: #64748b; padding: 24px;">No pre-game warmup periods selected.</div>`
             : `
           <table>
             <thead>
@@ -516,8 +636,21 @@ export function generateGameDayPackageHTML(
 
   // 4. OFFENSIVE CALL SHEET
   if (sections.offenseCallSheet && callSheetData) {
+    let customOffData: CallSheetFullData = callSheetData;
+    if (subSelections?.offenseSectionIds) {
+      const offIds = subSelections.offenseSectionIds;
+      const filteredSections = (callSheetData.offenseSections || []).filter(
+        (sec) => offIds.includes(sec.id) || offIds.includes(sec.title)
+      );
+      customOffData = {
+        ...callSheetData,
+        offenseSections: filteredSections,
+        offenseScript: subSelections.includeOffenseScripts === false ? [] : callSheetData.offenseScript,
+      };
+    }
+
     const offHtml = generateCallSheetPrintHTML(
-      callSheetData,
+      customOffData,
       'offense',
       activeTeamName,
       `${activeTeamName} • Offensive Call Sheet`,
@@ -526,10 +659,10 @@ export function generateGameDayPackageHTML(
         density: 'compact',
         inkFriendly,
         hideEmptySlots: true,
+        snippetOnly: true,
       }
     );
 
-    // Extract body content or embed cleanly
     parts.push(`
       <div class="${pageBreakClass}">
         <div class="section-header">
@@ -543,8 +676,21 @@ export function generateGameDayPackageHTML(
 
   // 5. DEFENSIVE CALL SHEET
   if (sections.defenseCallSheet && callSheetData) {
+    let customDefData: CallSheetFullData = callSheetData;
+    if (subSelections?.defenseSectionIds) {
+      const defIds = subSelections.defenseSectionIds;
+      const filteredSections = (callSheetData.defenseSections || []).filter(
+        (sec) => defIds.includes(sec.id) || defIds.includes(sec.title)
+      );
+      customDefData = {
+        ...callSheetData,
+        defenseSections: filteredSections,
+        defenseScript: subSelections.includeDefenseScripts === false ? [] : callSheetData.defenseScript,
+      };
+    }
+
     const defHtml = generateCallSheetPrintHTML(
-      callSheetData,
+      customDefData,
       'defense',
       activeTeamName,
       `${activeTeamName} • Defensive Call Sheet`,
@@ -553,6 +699,7 @@ export function generateGameDayPackageHTML(
         density: 'compact',
         inkFriendly,
         hideEmptySlots: true,
+        snippetOnly: true,
       }
     );
 
@@ -569,9 +716,18 @@ export function generateGameDayPackageHTML(
 
   // 6. PLAYER WRISTBAND INSERTS
   if (sections.wristbands && wristbandData?.wristbands && wristbandData.wristbands.length > 0) {
-    const activeWbs = wristbandData.wristbands.filter((wb) =>
+    let activeWbs = wristbandData.wristbands.filter((wb) =>
       wb.columns?.some((c) => c.plays && c.plays.length > 0)
     );
+
+    if (subSelections?.wristbandIds && subSelections.wristbandIds.length > 0) {
+      activeWbs = activeWbs.filter((wb, idx) =>
+        subSelections.wristbandIds!.includes(wb.id || '') ||
+        subSelections.wristbandIds!.includes(wb.name) ||
+        subSelections.wristbandIds!.includes(String(idx))
+      );
+    }
+
     const wbHtml = generateWristbandPrintHTML(
       activeWbs,
       activeTeamName,
@@ -579,6 +735,7 @@ export function generateGameDayPackageHTML(
       {
         inkFriendly,
         layout: 'grid_2up',
+        snippetOnly: true,
       }
     );
 
@@ -586,7 +743,7 @@ export function generateGameDayPackageHTML(
       <div class="${pageBreakClass}">
         <div class="section-header">
           <h2 class="section-title">⌚ Player Wristband Inserts</h2>
-          <span class="section-meta">${activeWbs.length} Active Wristbands</span>
+          <span class="section-meta">${activeWbs.length} Active Wristband Cards</span>
         </div>
         ${wbHtml}
       </div>
@@ -595,7 +752,11 @@ export function generateGameDayPackageHTML(
 
   // 7. OPPONENT SCOUTING REPORT & PERSONNEL
   if (sections.scouting) {
-    const keyPlayers = scouting?.keyPlayersList || [];
+    const scoutingFilter = subSelections?.scoutingItems || {
+      schemeOverview: true,
+      keyPlayers: true,
+    };
+    const keyPlayers = scoutingFilter.keyPlayers !== false ? (scouting?.keyPlayersList || []) : [];
 
     parts.push(`
       <div class="${pageBreakClass}">
@@ -604,6 +765,7 @@ export function generateGameDayPackageHTML(
           <span class="section-meta">${opponent} &bull; Scouting Dossier</span>
         </div>
 
+        ${scoutingFilter.schemeOverview !== false ? `
         <div class="hud-grid no-break" style="margin-bottom: 12px;">
           <div class="card-box">
             <h4 class="card-title">Offensive Tendencies & Scheme</h4>
@@ -631,6 +793,7 @@ export function generateGameDayPackageHTML(
             </p>
           </div>
         </div>
+        ` : ''}
 
         ${
           keyPlayers.length > 0
@@ -682,7 +845,25 @@ export function generateGameDayPackageHTML(
   // 8. OPPONENT TENDENCIES & REPORTS
   if (sections.tendencies && scouting?.tendenciesTree) {
     const tree = scouting.tendenciesTree;
-    const categories = Object.keys(tree);
+    let categories = Object.keys(tree);
+
+    // If subSelections.tendencyKeys specified, filter categories and subtabs
+    const selectedTendencyKeys = subSelections?.tendencyKeys;
+    let filteredTree: Record<string, Record<string, string>> = tree;
+
+    if (selectedTendencyKeys !== undefined) {
+      filteredTree = {};
+      for (const cat of categories) {
+        for (const sub of Object.keys(tree[cat] || {})) {
+          const key = `${cat}__${sub}`;
+          if (selectedTendencyKeys.includes(key)) {
+            if (!filteredTree[cat]) filteredTree[cat] = {};
+            filteredTree[cat][sub] = tree[cat][sub];
+          }
+        }
+      }
+      categories = Object.keys(filteredTree);
+    }
 
     parts.push(`
       <div class="${pageBreakClass}">
@@ -693,19 +874,20 @@ export function generateGameDayPackageHTML(
 
         ${
           categories.length === 0
-            ? `<div class="card-box" style="text-align: center; color: #64748b; padding: 24px;">No tendency documents uploaded.</div>`
+            ? `<div class="card-box" style="text-align: center; color: #64748b; padding: 24px;">No tendency documents selected.</div>`
             : categories
                 .map((cat) => {
-                  const subTabs = Object.keys(tree[cat] || {});
+                  const subTabs = Object.keys(filteredTree[cat] || {});
+                  if (subTabs.length === 0) return '';
                   return `
                 <div class="no-break" style="margin-bottom: 16px;">
-                  <h3 style="font-size: 12px; font-weight: 800; color: #0f172a; text-transform: uppercase; margin: 0 0 6px 0; border-bottom: 2px solid #0f172a; padding-bottom: 3px;">
+                  <h3 class="category-heading">
                     ${cat}
                   </h3>
                   <div style="display: flex; flex-direction: column; gap: 8px;">
                     ${subTabs
                       .map((sub) => {
-                        const content = tree[cat]?.[sub] || '';
+                        const content = filteredTree[cat]?.[sub] || '';
                         if (!content) {
                           return `
                           <div class="card-box">
@@ -727,7 +909,7 @@ export function generateGameDayPackageHTML(
 
                         return `
                         <div class="card-box no-break">
-                          <h4 style="margin: 0 0 6px 0; font-size: 11px; font-weight: 800; color: #1e293b;">${sub}</h4>
+                          <h4 class="subtab-heading">${sub}</h4>
                           <div class="tendency-report-content">
                             ${content}
                           </div>
