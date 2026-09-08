@@ -342,6 +342,7 @@ export interface ScoutingAttachment {
   fileSize?: string; // e.g. "450 KB"
   caption?: string; // Coach context or notes
   createdAt: number;
+  notes?: CoachScoutingNote[];
 }
 
 export interface ScoutingData {

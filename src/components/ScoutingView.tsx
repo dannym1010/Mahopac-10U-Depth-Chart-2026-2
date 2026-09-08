@@ -42,6 +42,7 @@ import {
 } from '../types';
 import { triggerPrint } from '../utils/printUtils';
 import { ScoutingMediaHub } from './scouting/ScoutingMediaHub';
+import { HtmlScoutingReportViewer } from './scouting/HtmlScoutingReportViewer';
 
 interface ScoutingViewProps {
   scouting: ScoutingData;
@@ -89,11 +90,15 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
   const [copied, setCopied] = useState(false);
 
   // Section Navigation Tabs
-  const [activeSectionTab, setActiveSectionTab] = useState<'all' | 'schemes' | 'media' | 'personnel'>('all');
+  const [activeSectionTab, setActiveSectionTab] = useState<'all' | 'html_report' | 'schemes' | 'media' | 'personnel'>('all');
 
   // Attachments from scouting data
   const attachments: ScoutingAttachment[] = React.useMemo(() => {
     return scouting.attachments || [];
+  }, [scouting.attachments]);
+
+  const htmlAttachmentsCount = React.useMemo(() => {
+    return (scouting.attachments || []).filter((a) => a.type === 'html').length;
   }, [scouting.attachments]);
 
   const handleUpdateAttachments = (updated: ScoutingAttachment[]) => {
@@ -233,8 +238,8 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
     );
   };
 
-  const handleAddKeyToVictory = () => {
-    const text = prompt('Enter new Key to Victory:');
+  const handleAddKeyToVictory = (customText?: string | React.MouseEvent) => {
+    const text = typeof customText === 'string' ? customText : prompt('Enter new Key to Victory:');
     if (text && text.trim()) {
       onUpdateScouting('keysToVictory', [...keysToVictory, text.trim()]);
     }
@@ -264,7 +269,13 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
 
     if (attachments.length > 0) {
       text += `\n\n📎 ATTACHED MEDIA & DOCUMENTS (${attachments.length}):\n` +
-        attachments.map((a) => `• [${a.type.toUpperCase()}] ${a.name} (${a.fileSize || 'File'})${a.caption ? ` - ${a.caption}` : ''}`).join('\n');
+        attachments.map((a) => {
+          let line = `• [${a.type.toUpperCase()}] ${a.name} (${a.fileSize || 'File'})${a.caption ? ` - ${a.caption}` : ''}`;
+          if (a.notes && a.notes.length > 0) {
+            line += `\n   Coach Notes (${a.notes.length}):\n` + a.notes.map((n) => `     - [${n.category}] ${n.title}: ${n.content}`).join('\n');
+          }
+          return line;
+        }).join('\n');
     }
 
     navigator.clipboard.writeText(text);
@@ -349,6 +360,19 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
         >
           <Layers className="w-3.5 h-3.5" />
           <span>Full Scouting Hub</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSectionTab('html_report')}
+          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+            activeSectionTab === 'html_report'
+              ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
+              : 'text-amber-300/80 hover:text-amber-200'
+          }`}
+        >
+          <FileCode className="w-3.5 h-3.5 text-amber-400" />
+          <span>HTML Film Report {htmlAttachmentsCount > 0 ? `(${htmlAttachmentsCount})` : ''}</span>
         </button>
 
         <button
@@ -544,6 +568,26 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* 1ST POSITION: INTERACTIVE HTML SCOUTING REPORT VIEWER & REPORT NOTES */}
+      {/* ========================================================================= */}
+      {(activeSectionTab === 'all' || activeSectionTab === 'html_report') && (
+        <div className="print:hidden">
+          <HtmlScoutingReportViewer
+            attachments={attachments}
+            isPowerAdmin={isPowerAdmin}
+            onUpdateAttachments={handleUpdateAttachments}
+            opponentName={scouting.opponent || 'Opponent'}
+            weekName={currentWeek.startsWith('Week') ? currentWeek : `Week ${currentWeek}`}
+            currentUserEmail={currentUser?.email || 'Coach'}
+            onAddKeyToVictory={(text) => handleAddKeyToVictory(text)}
+            onSyncToStaffNotes={(note) => {
+              onUpdateScouting('coachNotes', [note, ...coachNotes]);
+            }}
+          />
+        </div>
+      )}
 
       {/* Keys to Victory & Must-Win Priorities */}
       {(activeSectionTab === 'all' || activeSectionTab === 'schemes') && (
@@ -1271,6 +1315,18 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
                         dangerouslySetInnerHTML={{ __html: a.htmlCode || '' }}
                         className="text-xs max-h-96 overflow-hidden"
                       />
+                      {a.notes && a.notes.length > 0 && (
+                        <div className="mt-2 pt-1.5 border-t border-gray-300">
+                          <p className="font-bold text-[10px] uppercase text-gray-800 mb-0.5">Staff Observations &amp; Tells on this Report:</p>
+                          <ul className="list-disc list-inside space-y-0.5 text-[10px]">
+                            {a.notes.map((n) => (
+                              <li key={n.id}>
+                                <span className="font-bold">[{n.category}] {n.title}:</span> {n.content}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   ))}
               </div>
