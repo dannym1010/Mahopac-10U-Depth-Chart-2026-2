@@ -26,9 +26,14 @@ import {
   Zap,
   RefreshCw,
   Clock,
+  UploadCloud,
+  Paperclip,
+  FileCode,
+  Layers,
 } from 'lucide-react';
 import {
   ScoutingData,
+  ScoutingAttachment,
   CoachScoutingNote,
   OpponentKeyPlayer,
   StaffCoach,
@@ -36,6 +41,7 @@ import {
   ScheduleEvent,
 } from '../types';
 import { triggerPrint } from '../utils/printUtils';
+import { ScoutingMediaHub } from './scouting/ScoutingMediaHub';
 
 interface ScoutingViewProps {
   scouting: ScoutingData;
@@ -81,6 +87,18 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
   // Filter state for coach notes
   const [selectedCoachFilter, setSelectedCoachFilter] = useState<string>('all');
   const [copied, setCopied] = useState(false);
+
+  // Section Navigation Tabs
+  const [activeSectionTab, setActiveSectionTab] = useState<'all' | 'schemes' | 'media' | 'personnel'>('all');
+
+  // Attachments from scouting data
+  const attachments: ScoutingAttachment[] = React.useMemo(() => {
+    return scouting.attachments || [];
+  }, [scouting.attachments]);
+
+  const handleUpdateAttachments = (updated: ScoutingAttachment[]) => {
+    onUpdateScouting('attachments', updated);
+  };
 
   // New Note Modal / Form State
   const [isAddingNote, setIsAddingNote] = useState(false);
@@ -235,7 +253,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
 
   const handleCopySummary = () => {
     const opp = scouting.opponent || 'Upcoming Opponent';
-    const text = `🏈 SCOUTING REPORT: ${opp} (${scouting.week || 'Week 1'})\n` +
+    let text = `🏈 SCOUTING REPORT: ${opp} (${scouting.week || 'Week 1'})\n` +
       `📅 Game: ${scouting.gameDate || 'TBD'} @ ${scouting.gameLocation || 'TBD'}\n\n` +
       `🎯 KEYS TO VICTORY:\n` +
       keysToVictory.map((k, i) => `${i + 1}. ${k}`).join('\n') +
@@ -243,6 +261,11 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
       `⚡ OPPONENT OFFENSE:\nBase Formation: ${scouting.offenseFormations || 'N/A'}\nRun/Pass Ratio: ${scouting.runPassRatio || 'N/A'}\nNotes: ${scouting.offenseTendencies || 'N/A'}\n\n` +
       `⭐ KEY PLAYERS TO WATCH:\n` +
       keyPlayers.map((p) => `#${p.jersey} ${p.name} (${p.position}) - [${p.threatLevel} Threat] ${p.notes}`).join('\n');
+
+    if (attachments.length > 0) {
+      text += `\n\n📎 ATTACHED MEDIA & DOCUMENTS (${attachments.length}):\n` +
+        attachments.map((a) => `• [${a.type.toUpperCase()}] ${a.name} (${a.fileSize || 'File'})${a.caption ? ` - ${a.caption}` : ''}`).join('\n');
+    }
 
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -267,19 +290,32 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
                   {scouting.opponent || 'Upcoming Matchup'}
                 </span>
                 {matchedScheduledGame && (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black uppercase flex items-center gap-1">
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black uppercase flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
                     <span>Auto-Synced with Schedule</span>
                   </span>
                 )}
               </div>
               <p className="text-xs text-slate-400">
-                Opponent tendencies, key personnel breakdown, and game plan priorities
+                Opponent tendencies, key personnel breakdown, uploaded PDFs/diagrams, and game plan priorities
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setActiveSectionTab('media')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer ${
+                activeSectionTab === 'media'
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-indigo-600/30'
+                  : 'bg-slate-900 hover:bg-slate-750 text-slate-200 border-slate-700'
+              }`}
+              title="Upload and view PDF scouting packets, whiteboard photos, or HTML code"
+            >
+              <UploadCloud className="w-4 h-4 text-indigo-400" />
+              <span>Media &amp; PDFs ({attachments.length})</span>
+            </button>
+
             <button
               onClick={handleCopySummary}
               className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer"
@@ -298,6 +334,61 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Section View Filter Tabs */}
+      <div className="flex items-center gap-2 p-1.5 bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-800 text-xs font-bold w-fit overflow-x-auto print:hidden shadow-md">
+        <button
+          type="button"
+          onClick={() => setActiveSectionTab('all')}
+          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+            activeSectionTab === 'all'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>Full Scouting Hub</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSectionTab('media')}
+          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+            activeSectionTab === 'media'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <UploadCloud className="w-3.5 h-3.5 text-indigo-400" />
+          <span>Uploads &amp; Media ({attachments.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSectionTab('schemes')}
+          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+            activeSectionTab === 'schemes'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Shield className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Schemes &amp; Game Plans</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSectionTab('personnel')}
+          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+            activeSectionTab === 'personnel'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5 text-rose-400" />
+          <span>Key Players &amp; Staff Notes</span>
+        </button>
       </div>
 
       {/* Schedule Auto-Sync Banner */}
@@ -455,206 +546,222 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
       </div>
 
       {/* Keys to Victory & Must-Win Priorities */}
-      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-700/60">
-          <div className="flex items-center gap-2">
-            <Flame className="w-4 h-4 text-amber-400" />
-            <h3 className="font-black text-sm text-slate-100">
-              Keys to Victory &amp; Critical Game Goals
-            </h3>
-          </div>
-          <span className="text-xs font-bold text-slate-400">
-            {keysToVictory.length} Goals Defined
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {keysToVictory.map((keyGoal, idx) => (
-            <div
-              key={idx}
-              className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-3.5 flex items-start justify-between gap-2 shadow-xs group"
-            >
-              <div className="flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-500/30 flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
-                  {idx + 1}
-                </span>
-                <p className="text-xs font-bold text-slate-200 leading-snug">{keyGoal}</p>
-              </div>
-              {isPowerAdmin && (
-                <button
-                  onClick={() => handleRemoveKeyToVictory(idx)}
-                  className="text-slate-500 hover:text-rose-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                  title="Remove goal"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              )}
+      {(activeSectionTab === 'all' || activeSectionTab === 'schemes') && (
+        <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-700/60">
+            <div className="flex items-center gap-2">
+              <Flame className="w-4 h-4 text-amber-400" />
+              <h3 className="font-black text-sm text-slate-100">
+                Keys to Victory &amp; Critical Game Goals
+              </h3>
             </div>
-          ))}
+            <span className="text-xs font-bold text-slate-400">
+              {keysToVictory.length} Goals Defined
+            </span>
+          </div>
 
-          {isPowerAdmin && (
-            <button
-              onClick={handleAddKeyToVictory}
-              className="border-2 border-dashed border-slate-700 hover:border-amber-400/60 rounded-2xl p-3 flex items-center justify-center gap-1.5 text-xs font-bold text-slate-400 hover:text-amber-300 transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Key to Victory</span>
-            </button>
-          )}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {keysToVictory.map((keyGoal, idx) => (
+              <div
+                key={idx}
+                className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-3.5 flex items-start justify-between gap-2 shadow-xs group"
+              >
+                <div className="flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-500/30 flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
+                    {idx + 1}
+                  </span>
+                  <p className="text-xs font-bold text-slate-200 leading-snug">{keyGoal}</p>
+                </div>
+                {isPowerAdmin && (
+                  <button
+                    onClick={() => handleRemoveKeyToVictory(idx)}
+                    className="text-slate-500 hover:text-rose-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    title="Remove goal"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+
+            {isPowerAdmin && (
+              <button
+                onClick={handleAddKeyToVictory}
+                className="border-2 border-dashed border-slate-700 hover:border-amber-400/60 rounded-2xl p-3 flex items-center justify-center gap-1.5 text-xs font-bold text-slate-400 hover:text-amber-300 transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Key to Victory</span>
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Two Column Grid: Opponent Defense & Opponent Offense */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Opponent Defense Breakdown */}
-        <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-700/60">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300">
-                <Shield className="w-4 h-4" />
+      {(activeSectionTab === 'all' || activeSectionTab === 'schemes') && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Opponent Defense Breakdown */}
+          <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-700/60">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-black text-sm text-slate-100">Opponent Defensive Scheme</h3>
+                  <p className="text-[11px] text-slate-400">Fronts, blitzes, coverage shells, and weak spots</p>
+                </div>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <h3 className="font-black text-sm text-slate-100">Opponent Defensive Scheme</h3>
-                <p className="text-[11px] text-slate-400">Fronts, blitzes, coverage shells, and weak spots</p>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                  Base Defensive Front
+                </label>
+                <input
+                  type="text"
+                  value={scouting.defenseFront || ''}
+                  disabled={!isPowerAdmin}
+                  onChange={(e) => onUpdateScouting('defenseFront', e.target.value)}
+                  placeholder="e.g. 4-4 Stack, 5-3, 5-2"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-indigo-300 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                  Primary Secondary Coverage
+                </label>
+                <input
+                  type="text"
+                  value={scouting.defenseCoverage || ''}
+                  disabled={!isPowerAdmin}
+                  onChange={(e) => onUpdateScouting('defenseCoverage', e.target.value)}
+                  placeholder="e.g. Cover 3, Cover 1 Man, Cover 2"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-indigo-300 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                />
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-                Base Defensive Front
+                Defensive Tendencies &amp; Attack Angles
               </label>
-              <input
-                type="text"
-                value={scouting.defenseFront || ''}
+              <textarea
+                rows={3}
+                value={scouting.defenseTendencies || ''}
                 disabled={!isPowerAdmin}
-                onChange={(e) => onUpdateScouting('defenseFront', e.target.value)}
-                placeholder="e.g. 4-4 Stack, 5-3, 5-2"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-indigo-300 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                onChange={(e) => onUpdateScouting('defenseTendencies', e.target.value)}
+                placeholder="e.g. DL pinches inside on down-and-short; Corners give 7-yard cushion on 3rd down; Weak-side DE over-pursues on sweeps..."
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
               />
             </div>
 
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-                Primary Secondary Coverage
+                Offensive Game Plan Strategy vs. This Defense
               </label>
-              <input
-                type="text"
-                value={scouting.defenseCoverage || ''}
+              <textarea
+                rows={3}
+                value={scouting.gameplanOffense || ''}
                 disabled={!isPowerAdmin}
-                onChange={(e) => onUpdateScouting('defenseCoverage', e.target.value)}
-                placeholder="e.g. Cover 3, Cover 1 Man, Cover 2"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-indigo-300 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+                onChange={(e) => onUpdateScouting('gameplanOffense', e.target.value)}
+                placeholder="e.g. Run off-tackle power to test edge discipline; Use quick slant RPOs against soft corner coverage..."
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-emerald-300 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-              Defensive Tendencies &amp; Attack Angles
-            </label>
-            <textarea
-              rows={3}
-              value={scouting.defenseTendencies || ''}
-              disabled={!isPowerAdmin}
-              onChange={(e) => onUpdateScouting('defenseTendencies', e.target.value)}
-              placeholder="e.g. DL pinches inside on down-and-short; Corners give 7-yard cushion on 3rd down; Weak-side DE over-pursues on sweeps..."
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
-            />
-          </div>
+          {/* Opponent Offense Breakdown */}
+          <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-700/60">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-300">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-black text-sm text-slate-100">Opponent Offensive Scheme</h3>
+                  <p className="text-[11px] text-slate-400">Formations, primary ball carriers, and favorite concepts</p>
+                </div>
+              </div>
+            </div>
 
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-              Offensive Game Plan Strategy vs. This Defense
-            </label>
-            <textarea
-              rows={3}
-              value={scouting.gameplanOffense || ''}
-              disabled={!isPowerAdmin}
-              onChange={(e) => onUpdateScouting('gameplanOffense', e.target.value)}
-              placeholder="e.g. Run off-tackle power to test edge discipline; Use quick slant RPOs against soft corner coverage..."
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-emerald-300 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500"
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                  Base Formations
+                </label>
+                <input
+                  type="text"
+                  value={scouting.offenseFormations || ''}
+                  disabled={!isPowerAdmin}
+                  onChange={(e) => onUpdateScouting('offenseFormations', e.target.value)}
+                  placeholder="e.g. Wing-T, Singleback, Pistol"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-amber-300 placeholder:text-slate-600 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                  Run / Pass Ratio
+                </label>
+                <input
+                  type="text"
+                  value={scouting.runPassRatio || ''}
+                  disabled={!isPowerAdmin}
+                  onChange={(e) => onUpdateScouting('runPassRatio', e.target.value)}
+                  placeholder="e.g. 75% Run / 25% Pass"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-amber-300 placeholder:text-slate-600 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                Offensive Tendencies &amp; Tell Keys
+              </label>
+              <textarea
+                rows={3}
+                value={scouting.offenseTendencies || ''}
+                disabled={!isPowerAdmin}
+                onChange={(e) => onUpdateScouting('offenseTendencies', e.target.value)}
+                placeholder="e.g. #22 carries on 80% of inside runs; QB looks only to right side on sprint-outs; Backfield depth tips pass vs run..."
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                Defensive Game Plan Strategy vs. This Offense
+              </label>
+              <textarea
+                rows={3}
+                value={scouting.gameplanDefense || ''}
+                disabled={!isPowerAdmin}
+                onChange={(e) => onUpdateScouting('gameplanDefense', e.target.value)}
+                placeholder="e.g. Set hard edge on outside stretch; Safety key on tight end release; LB flow with guard pull..."
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-indigo-300 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Opponent Offense Breakdown */}
-        <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-700/60">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-300">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="font-black text-sm text-slate-100">Opponent Offensive Scheme</h3>
-                <p className="text-[11px] text-slate-400">Formations, primary ball carriers, and favorite concepts</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-                Base Formations
-              </label>
-              <input
-                type="text"
-                value={scouting.offenseFormations || ''}
-                disabled={!isPowerAdmin}
-                onChange={(e) => onUpdateScouting('offenseFormations', e.target.value)}
-                placeholder="e.g. Wing-T, Singleback, Pistol"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-amber-300 placeholder:text-slate-600 focus:outline-none focus:border-amber-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-                Run / Pass Ratio
-              </label>
-              <input
-                type="text"
-                value={scouting.runPassRatio || ''}
-                disabled={!isPowerAdmin}
-                onChange={(e) => onUpdateScouting('runPassRatio', e.target.value)}
-                placeholder="e.g. 75% Run / 25% Pass"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-amber-300 placeholder:text-slate-600 focus:outline-none focus:border-amber-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-              Offensive Tendencies &amp; Tell Keys
-            </label>
-            <textarea
-              rows={3}
-              value={scouting.offenseTendencies || ''}
-              disabled={!isPowerAdmin}
-              onChange={(e) => onUpdateScouting('offenseTendencies', e.target.value)}
-              placeholder="e.g. #22 carries on 80% of inside runs; QB looks only to right side on sprint-outs; Backfield depth tips pass vs run..."
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-amber-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-              Defensive Game Plan Strategy vs. This Offense
-            </label>
-            <textarea
-              rows={3}
-              value={scouting.gameplanDefense || ''}
-              disabled={!isPowerAdmin}
-              onChange={(e) => onUpdateScouting('gameplanDefense', e.target.value)}
-              placeholder="e.g. Set hard edge on outside stretch; Safety key on tight end release; LB flow with guard pull..."
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-indigo-300 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
-            />
-          </div>
-        </div>
-      </div>
+      {/* Uploaded Scouting Reports, Diagrams & HTML Media Hub */}
+      {(activeSectionTab === 'all' || activeSectionTab === 'media') && (
+        <ScoutingMediaHub
+          attachments={attachments}
+          isPowerAdmin={isPowerAdmin}
+          onUpdateAttachments={handleUpdateAttachments}
+          opponentName={scouting.opponent || 'Opponent'}
+          weekName={currentWeek.startsWith('Week') ? currentWeek : `Week ${currentWeek}`}
+        />
+      )}
 
       {/* Key Players to Watch Section */}
-      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
+      {(activeSectionTab === 'all' || activeSectionTab === 'personnel') && (
+        <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-700/60">
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-rose-400" />
@@ -838,10 +945,12 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
           </table>
         </div>
       </div>
+      )}
 
       {/* Staff Collaboration & Coaching Notes */}
-      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-700/60">
+      {(activeSectionTab === 'all' || activeSectionTab === 'personnel') && (
+        <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-700/60">
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-indigo-400" />
             <div>
@@ -1009,6 +1118,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
           )}
         </div>
       </div>
+      )}
 
       {/* PRINT-ONLY COMPLETE SCOUTING BRIEFING */}
       <div className="hidden print:block space-y-4 bg-white text-black p-6">
@@ -1088,7 +1198,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
 
         {/* Coach Observations */}
         {coachNotes.length > 0 && (
-          <div className="border border-black p-3">
+          <div className="border border-black p-3 mb-3">
             <h3 className="text-sm font-black uppercase mb-1">📋 Staff Film Observations:</h3>
             <div className="space-y-1.5 text-xs">
               {coachNotes.slice(0, 6).map((n) => (
@@ -1098,6 +1208,73 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Attached Documents, Pictures & HTML Reports in Print */}
+        {attachments.length > 0 && (
+          <div className="border border-black p-3 mb-3">
+            <h3 className="text-sm font-black uppercase mb-2">📎 Attached Scouting Media &amp; Uploads:</h3>
+
+            {/* PDF Packets */}
+            {attachments.some((a) => a.type === 'pdf') && (
+              <div className="mb-3">
+                <p className="font-bold text-xs uppercase mb-1">📄 Uploaded PDF Packets &amp; Documents:</p>
+                <ul className="list-disc list-inside text-xs space-y-0.5">
+                  {attachments
+                    .filter((a) => a.type === 'pdf')
+                    .map((a) => (
+                      <li key={a.id}>
+                        <span className="font-bold">{a.name}</span>{' '}
+                        <span className="text-gray-600 font-mono text-[10px]">({a.fileSize || 'PDF'})</span>
+                        {a.caption ? ` — ${a.caption}` : ''}
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Pictures / Whiteboards */}
+            {attachments.some((a) => a.type === 'image') && (
+              <div className="mb-3">
+                <p className="font-bold text-xs uppercase mb-1.5">📸 Scouting Diagrams &amp; Whiteboard Stills:</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {attachments
+                    .filter((a) => a.type === 'image')
+                    .map((a) => (
+                      <div key={a.id} className="border border-gray-400 p-2 text-center rounded">
+                        {a.dataUrl && (
+                          <img
+                            src={a.dataUrl}
+                            alt={a.name}
+                            className="max-h-52 mx-auto object-contain mb-1 rounded"
+                          />
+                        )}
+                        <p className="font-bold text-xs">{a.name}</p>
+                        {a.caption && <p className="text-[10px] text-gray-700 italic">{a.caption}</p>}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* HTML Reports */}
+            {attachments.some((a) => a.type === 'html') && (
+              <div>
+                <p className="font-bold text-xs uppercase mb-1">💻 Custom HTML Scouting Code / Reports:</p>
+                {attachments
+                  .filter((a) => a.type === 'html')
+                  .map((a) => (
+                    <div key={a.id} className="border border-gray-400 p-2.5 mb-2 rounded bg-gray-50">
+                      <p className="font-bold text-xs border-b border-gray-300 pb-1 mb-1">{a.name}</p>
+                      <div
+                        dangerouslySetInnerHTML={{ __html: a.htmlCode || '' }}
+                        className="text-xs max-h-96 overflow-hidden"
+                      />
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
         )}
       </div>

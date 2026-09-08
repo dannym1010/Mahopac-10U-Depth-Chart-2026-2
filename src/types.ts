@@ -333,6 +333,17 @@ export interface OpponentKeyPlayer {
   notes: string;
 }
 
+export interface ScoutingAttachment {
+  id: string;
+  name: string;
+  type: 'pdf' | 'image' | 'html';
+  dataUrl?: string; // Base64 data URI for PDF or image
+  htmlCode?: string; // Raw HTML markup for HTML reports or embeds
+  fileSize?: string; // e.g. "450 KB"
+  caption?: string; // Coach context or notes
+  createdAt: number;
+}
+
 export interface ScoutingData {
   year?: string;
   week?: string;
@@ -356,6 +367,8 @@ export interface ScoutingData {
   keyPlayersList?: OpponentKeyPlayer[];
   keyPlayers?: any;
   coachNotes?: CoachScoutingNote[];
+  attachments?: ScoutingAttachment[];
+  customHtmlReport?: string;
 }
 
 export interface WeekState {
