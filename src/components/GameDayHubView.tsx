@@ -25,10 +25,12 @@ import {
   AlertCircle,
   Play,
   Check,
+  FileCode,
 } from 'lucide-react';
 import { CallSheetMainView } from './CallSheetMainView';
 import { WristbandView } from './WristbandView';
 import { ScoutingView } from './ScoutingView';
+import { HtmlTendenciesView } from './scouting/HtmlTendenciesView';
 import {
   CallSheetData,
   PlayDatabaseEntry,
@@ -74,7 +76,7 @@ interface GameDayHubViewProps {
   onUpdateScheduleEvent?: (eventId: string, updates: Partial<ScheduleEvent>) => void;
 }
 
-export type GameDayTab = 'command' | 'pregame' | 'call_sheet' | 'wristband' | 'scouting';
+export type GameDayTab = 'command' | 'pregame' | 'call_sheet' | 'wristband' | 'scouting' | 'html_tendencies';
 
 export const GameDayHubView: React.FC<GameDayHubViewProps> = ({
   userRole,
@@ -148,6 +150,9 @@ export const GameDayHubView: React.FC<GameDayHubViewProps> = ({
   const totalCallSheetPlays =
     (callSheetData?.offenseSections?.reduce((acc, s) => acc + (s.plays?.filter(Boolean).length || 0), 0) || 0) +
     (callSheetData?.defenseSections?.reduce((acc, s) => acc + (s.plays?.filter(Boolean).length || 0), 0) || 0);
+  const htmlTendenciesCount = useMemo(() => {
+    return (scouting?.attachments || []).filter((a) => a.type === 'html').length;
+  }, [scouting?.attachments]);
 
   const handlePrintAll = () => {
     triggerPrint({
@@ -368,6 +373,24 @@ export const GameDayHubView: React.FC<GameDayHubViewProps> = ({
           >
             <BarChart3 className="w-4 h-4 text-blue-300" />
             <span>📊 Scouting Report</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('html_tendencies')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 border ${
+              activeTab === 'html_tendencies'
+                ? 'bg-amber-600 text-slate-950 font-black border-amber-400 shadow-lg shadow-amber-600/30'
+                : 'bg-slate-800/80 text-amber-300/90 border-slate-700 hover:bg-slate-750 hover:text-amber-200'
+            }`}
+          >
+            <FileCode className="w-4 h-4 text-amber-400" />
+            <span>💻 HTML Tendencies</span>
+            {htmlTendenciesCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded text-[9px] bg-amber-400/20 text-amber-300 border border-amber-400/30 font-bold">
+                {htmlTendenciesCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -933,6 +956,19 @@ export const GameDayHubView: React.FC<GameDayHubViewProps> = ({
           currentWeek={currentWeek}
           onUpdateScouting={onUpdateScouting}
           onNavigateToSchedule={onNavigateToSchedule}
+          onNavigateToHtmlTendencies={() => setActiveTab('html_tendencies')}
+        />
+      )}
+
+      {/* Embedded HTML Tendencies Tab */}
+      {activeTab === 'html_tendencies' && (
+        <HtmlTendenciesView
+          scouting={scouting}
+          onUpdateScouting={onUpdateScouting}
+          opponentName={opponent || scouting.opponent || 'Opponent'}
+          weekName={currentWeek.startsWith('Week') ? currentWeek : `Week ${currentWeek}`}
+          isPowerAdmin={userRole === 'admin'}
+          onNavigateToScouting={() => setActiveTab('scouting')}
         />
       )}
     </div>

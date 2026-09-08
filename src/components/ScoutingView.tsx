@@ -26,14 +26,10 @@ import {
   Zap,
   RefreshCw,
   Clock,
-  UploadCloud,
-  Paperclip,
   FileCode,
-  Layers,
 } from 'lucide-react';
 import {
   ScoutingData,
-  ScoutingAttachment,
   CoachScoutingNote,
   OpponentKeyPlayer,
   StaffCoach,
@@ -41,8 +37,6 @@ import {
   ScheduleEvent,
 } from '../types';
 import { triggerPrint } from '../utils/printUtils';
-import { ScoutingMediaHub } from './scouting/ScoutingMediaHub';
-import { HtmlScoutingReportViewer } from './scouting/HtmlScoutingReportViewer';
 
 interface ScoutingViewProps {
   scouting: ScoutingData;
@@ -54,6 +48,7 @@ interface ScoutingViewProps {
   currentWeek?: string;
   onUpdateScouting: (field: keyof ScoutingData, val: any) => void;
   onNavigateToSchedule?: () => void;
+  onNavigateToHtmlTendencies?: () => void;
 }
 
 const NOTE_CATEGORIES = [
@@ -77,6 +72,7 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
   currentWeek = '1',
   onUpdateScouting,
   onNavigateToSchedule,
+  onNavigateToHtmlTendencies,
 }) => {
   // Current user email & power admin check
   const currentEmail = (currentUser?.email || '').toLowerCase().trim();
@@ -88,22 +84,6 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
   // Filter state for coach notes
   const [selectedCoachFilter, setSelectedCoachFilter] = useState<string>('all');
   const [copied, setCopied] = useState(false);
-
-  // Section Navigation Tabs
-  const [activeSectionTab, setActiveSectionTab] = useState<'all' | 'html_report' | 'schemes' | 'media' | 'personnel'>('all');
-
-  // Attachments from scouting data
-  const attachments: ScoutingAttachment[] = React.useMemo(() => {
-    return scouting.attachments || [];
-  }, [scouting.attachments]);
-
-  const htmlAttachmentsCount = React.useMemo(() => {
-    return (scouting.attachments || []).filter((a) => a.type === 'html').length;
-  }, [scouting.attachments]);
-
-  const handleUpdateAttachments = (updated: ScoutingAttachment[]) => {
-    onUpdateScouting('attachments', updated);
-  };
 
   // New Note Modal / Form State
   const [isAddingNote, setIsAddingNote] = useState(false);
@@ -267,17 +247,6 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
       `⭐ KEY PLAYERS TO WATCH:\n` +
       keyPlayers.map((p) => `#${p.jersey} ${p.name} (${p.position}) - [${p.threatLevel} Threat] ${p.notes}`).join('\n');
 
-    if (attachments.length > 0) {
-      text += `\n\n📎 ATTACHED MEDIA & DOCUMENTS (${attachments.length}):\n` +
-        attachments.map((a) => {
-          let line = `• [${a.type.toUpperCase()}] ${a.name} (${a.fileSize || 'File'})${a.caption ? ` - ${a.caption}` : ''}`;
-          if (a.notes && a.notes.length > 0) {
-            line += `\n   Coach Notes (${a.notes.length}):\n` + a.notes.map((n) => `     - [${n.category}] ${n.title}: ${n.content}`).join('\n');
-          }
-          return line;
-        }).join('\n');
-    }
-
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -308,24 +277,23 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
                 )}
               </div>
               <p className="text-xs text-slate-400">
-                Opponent tendencies, key personnel breakdown, uploaded PDFs/diagrams, and game plan priorities
+                Opponent tendencies, key personnel breakdown, and game plan priorities
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => setActiveSectionTab('media')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer ${
-                activeSectionTab === 'media'
-                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-indigo-600/30'
-                  : 'bg-slate-900 hover:bg-slate-750 text-slate-200 border-slate-700'
-              }`}
-              title="Upload and view PDF scouting packets, whiteboard photos, or HTML code"
-            >
-              <UploadCloud className="w-4 h-4 text-indigo-400" />
-              <span>Media &amp; PDFs ({attachments.length})</span>
-            </button>
+            {onNavigateToHtmlTendencies && (
+              <button
+                type="button"
+                onClick={onNavigateToHtmlTendencies}
+                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 text-amber-300 rounded-xl text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer"
+                title="Go to the dedicated HTML Tendencies tab"
+              >
+                <FileCode className="w-4 h-4 text-amber-400" />
+                <span>HTML Tendencies</span>
+              </button>
+            )}
 
             <button
               onClick={handleCopySummary}
@@ -345,74 +313,6 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
             </button>
           </div>
         </div>
-      </div>
-
-      {/* Section View Filter Tabs */}
-      <div className="flex items-center gap-2 p-1.5 bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-800 text-xs font-bold w-fit overflow-x-auto print:hidden shadow-md">
-        <button
-          type="button"
-          onClick={() => setActiveSectionTab('all')}
-          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeSectionTab === 'all'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>Full Scouting Hub</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveSectionTab('html_report')}
-          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeSectionTab === 'html_report'
-              ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
-              : 'text-amber-300/80 hover:text-amber-200'
-          }`}
-        >
-          <FileCode className="w-3.5 h-3.5 text-amber-400" />
-          <span>HTML Film Report {htmlAttachmentsCount > 0 ? `(${htmlAttachmentsCount})` : ''}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveSectionTab('media')}
-          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeSectionTab === 'media'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <UploadCloud className="w-3.5 h-3.5 text-indigo-400" />
-          <span>Uploads &amp; Media ({attachments.length})</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveSectionTab('schemes')}
-          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeSectionTab === 'schemes'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Shield className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Schemes &amp; Game Plans</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveSectionTab('personnel')}
-          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeSectionTab === 'personnel'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5 text-rose-400" />
-          <span>Key Players &amp; Staff Notes</span>
-        </button>
       </div>
 
       {/* Schedule Auto-Sync Banner */}
@@ -569,82 +469,58 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* 1ST POSITION: INTERACTIVE HTML SCOUTING REPORT VIEWER & REPORT NOTES */}
-      {/* ========================================================================= */}
-      {(activeSectionTab === 'all' || activeSectionTab === 'html_report') && (
-        <div className="print:hidden">
-          <HtmlScoutingReportViewer
-            scouting={scouting}
-            attachments={attachments}
-            isPowerAdmin={isPowerAdmin}
-            onUpdateAttachments={handleUpdateAttachments}
-            opponentName={scouting.opponent || 'Opponent'}
-            weekName={currentWeek.startsWith('Week') ? currentWeek : `Week ${currentWeek}`}
-            currentUserEmail={currentUser?.email || 'Coach'}
-            onAddKeyToVictory={(text) => handleAddKeyToVictory(text)}
-            onSyncToStaffNotes={(note) => {
-              onUpdateScouting('coachNotes', [note, ...coachNotes]);
-            }}
-          />
-        </div>
-      )}
-
       {/* Keys to Victory & Must-Win Priorities */}
-      {(activeSectionTab === 'all' || activeSectionTab === 'schemes') && (
-        <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-700/60">
-            <div className="flex items-center gap-2">
-              <Flame className="w-4 h-4 text-amber-400" />
-              <h3 className="font-black text-sm text-slate-100">
-                Keys to Victory &amp; Critical Game Goals
-              </h3>
-            </div>
-            <span className="text-xs font-bold text-slate-400">
-              {keysToVictory.length} Goals Defined
-            </span>
+      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-700/60">
+          <div className="flex items-center gap-2">
+            <Flame className="w-4 h-4 text-amber-400" />
+            <h3 className="font-black text-sm text-slate-100">
+              Keys to Victory &amp; Critical Game Goals
+            </h3>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {keysToVictory.map((keyGoal, idx) => (
-              <div
-                key={idx}
-                className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-3.5 flex items-start justify-between gap-2 shadow-xs group"
-              >
-                <div className="flex items-start gap-2.5">
-                  <span className="w-5 h-5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-500/30 flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
-                    {idx + 1}
-                  </span>
-                  <p className="text-xs font-bold text-slate-200 leading-snug">{keyGoal}</p>
-                </div>
-                {isPowerAdmin && (
-                  <button
-                    onClick={() => handleRemoveKeyToVictory(idx)}
-                    className="text-slate-500 hover:text-rose-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                    title="Remove goal"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            ))}
-
-            {isPowerAdmin && (
-              <button
-                onClick={handleAddKeyToVictory}
-                className="border-2 border-dashed border-slate-700 hover:border-amber-400/60 rounded-2xl p-3 flex items-center justify-center gap-1.5 text-xs font-bold text-slate-400 hover:text-amber-300 transition-all cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Key to Victory</span>
-              </button>
-            )}
-          </div>
+          <span className="text-xs font-bold text-slate-400">
+            {keysToVictory.length} Goals Defined
+          </span>
         </div>
-      )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {keysToVictory.map((keyGoal, idx) => (
+            <div
+              key={idx}
+              className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-3.5 flex items-start justify-between gap-2 shadow-xs group"
+            >
+              <div className="flex items-start gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-500/30 flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
+                  {idx + 1}
+                </span>
+                <p className="text-xs font-bold text-slate-200 leading-snug">{keyGoal}</p>
+              </div>
+              {isPowerAdmin && (
+                <button
+                  onClick={() => handleRemoveKeyToVictory(idx)}
+                  className="text-slate-500 hover:text-rose-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  title="Remove goal"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          ))}
+
+          {isPowerAdmin && (
+            <button
+              onClick={handleAddKeyToVictory}
+              className="border-2 border-dashed border-slate-700 hover:border-amber-400/60 rounded-2xl p-3 flex items-center justify-center gap-1.5 text-xs font-bold text-slate-400 hover:text-amber-300 transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Key to Victory</span>
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Two Column Grid: Opponent Defense & Opponent Offense */}
-      {(activeSectionTab === 'all' || activeSectionTab === 'schemes') && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Opponent Defense Breakdown */}
           <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-700/60">
@@ -791,22 +667,9 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
             </div>
           </div>
         </div>
-      )}
-
-      {/* Uploaded Scouting Reports, Diagrams & HTML Media Hub */}
-      {(activeSectionTab === 'all' || activeSectionTab === 'media') && (
-        <ScoutingMediaHub
-          attachments={attachments}
-          isPowerAdmin={isPowerAdmin}
-          onUpdateAttachments={handleUpdateAttachments}
-          opponentName={scouting.opponent || 'Opponent'}
-          weekName={currentWeek.startsWith('Week') ? currentWeek : `Week ${currentWeek}`}
-        />
-      )}
 
       {/* Key Players to Watch Section */}
-      {(activeSectionTab === 'all' || activeSectionTab === 'personnel') && (
-        <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
+      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-700/60">
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-rose-400" />
@@ -990,12 +853,10 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
           </table>
         </div>
       </div>
-      )}
 
       {/* Staff Collaboration & Coaching Notes */}
-      {(activeSectionTab === 'all' || activeSectionTab === 'personnel') && (
-        <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-700/60">
+      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 md:p-6 print:hidden space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-700/60">
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-indigo-400" />
             <div>
@@ -1163,7 +1024,6 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
           )}
         </div>
       </div>
-      )}
 
       {/* PRINT-ONLY COMPLETE SCOUTING BRIEFING */}
       <div className="hidden print:block space-y-4 bg-white text-black p-6">
@@ -1253,85 +1113,6 @@ export const ScoutingView: React.FC<ScoutingViewProps> = ({
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* Attached Documents, Pictures & HTML Reports in Print */}
-        {attachments.length > 0 && (
-          <div className="border border-black p-3 mb-3">
-            <h3 className="text-sm font-black uppercase mb-2">📎 Attached Scouting Media &amp; Uploads:</h3>
-
-            {/* PDF Packets */}
-            {attachments.some((a) => a.type === 'pdf') && (
-              <div className="mb-3">
-                <p className="font-bold text-xs uppercase mb-1">📄 Uploaded PDF Packets &amp; Documents:</p>
-                <ul className="list-disc list-inside text-xs space-y-0.5">
-                  {attachments
-                    .filter((a) => a.type === 'pdf')
-                    .map((a) => (
-                      <li key={a.id}>
-                        <span className="font-bold">{a.name}</span>{' '}
-                        <span className="text-gray-600 font-mono text-[10px]">({a.fileSize || 'PDF'})</span>
-                        {a.caption ? ` — ${a.caption}` : ''}
-                      </li>
-                    ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Pictures / Whiteboards */}
-            {attachments.some((a) => a.type === 'image') && (
-              <div className="mb-3">
-                <p className="font-bold text-xs uppercase mb-1.5">📸 Scouting Diagrams &amp; Whiteboard Stills:</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {attachments
-                    .filter((a) => a.type === 'image')
-                    .map((a) => (
-                      <div key={a.id} className="border border-gray-400 p-2 text-center rounded">
-                        {a.dataUrl && (
-                          <img
-                            src={a.dataUrl}
-                            alt={a.name}
-                            className="max-h-52 mx-auto object-contain mb-1 rounded"
-                          />
-                        )}
-                        <p className="font-bold text-xs">{a.name}</p>
-                        {a.caption && <p className="text-[10px] text-gray-700 italic">{a.caption}</p>}
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
-
-            {/* HTML Reports */}
-            {attachments.some((a) => a.type === 'html') && (
-              <div>
-                <p className="font-bold text-xs uppercase mb-1">💻 Custom HTML Scouting Code / Reports:</p>
-                {attachments
-                  .filter((a) => a.type === 'html')
-                  .map((a) => (
-                    <div key={a.id} className="border border-gray-400 p-2.5 mb-2 rounded bg-gray-50">
-                      <p className="font-bold text-xs border-b border-gray-300 pb-1 mb-1">{a.name}</p>
-                      <div
-                        dangerouslySetInnerHTML={{ __html: a.htmlCode || '' }}
-                        className="text-xs max-h-96 overflow-hidden"
-                      />
-                      {a.notes && a.notes.length > 0 && (
-                        <div className="mt-2 pt-1.5 border-t border-gray-300">
-                          <p className="font-bold text-[10px] uppercase text-gray-800 mb-0.5">Staff Observations &amp; Tells on this Report:</p>
-                          <ul className="list-disc list-inside space-y-0.5 text-[10px]">
-                            {a.notes.map((n) => (
-                              <li key={n.id}>
-                                <span className="font-bold">[{n.category}] {n.title}:</span> {n.content}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-              </div>
-            )}
           </div>
         )}
       </div>

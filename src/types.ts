@@ -11,6 +11,7 @@ export type UnitType =
   | 'call_sheet'
   | 'schedule'
   | 'scouting' 
+  | 'html_tendencies'
   | 'practice'
   | 'drills' 
   | 'compliance'

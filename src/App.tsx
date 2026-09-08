@@ -103,6 +103,7 @@ import { MASTER_PLAY_DATABASE, DEFAULT_CALL_SHEET_DATA } from './data/callSheetD
 import { syncWristbandToCallSheet } from './utils/wristbandLinking';
 import { saveCallSheetSnapshot } from './utils/callSheetStorage';
 import { ScoutingView } from './components/ScoutingView';
+import { HtmlTendenciesView } from './components/scouting/HtmlTendenciesView';
 import { PlaybookGuidesView } from './components/PlaybookGuidesView';
 import { DrillLibraryView } from './components/DrillLibraryView';
 import { PracticePlanView } from './components/PracticePlanView';
@@ -6397,6 +6398,43 @@ function mergeRemoteWeeklyData(
                   });
                 }}
                 onNavigateToSchedule={() => setActiveUnit('schedule')}
+                onNavigateToHtmlTendencies={() => setActiveUnit('html_tendencies')}
+              />
+            )}
+
+            {/* HTML Tendencies View */}
+            {activeUnit === 'html_tendencies' && (
+              <HtmlTendenciesView
+                scouting={currentWeekState.scouting || {}}
+                onUpdateScouting={(field, val) => {
+                  setWeeklyData((prev) => {
+                    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+                    const existingWeek = prev[scopedKey] || prev[currentWeek] || {
+                      formations: defaultFormations,
+                      depthChart: {},
+                      scrimmageChart: {},
+                      opponent: '',
+                    };
+                    const updatedScouting = {
+                      ...(existingWeek.scouting || {}),
+                      [field]: val,
+                    };
+                    const updatedWeek = {
+                      ...existingWeek,
+                      opponent: field === 'opponent' ? val : (existingWeek.opponent || ''),
+                      scouting: updatedScouting,
+                    };
+                    return {
+                      ...prev,
+                      [scopedKey]: updatedWeek,
+                      [currentWeek]: updatedWeek,
+                    };
+                  });
+                }}
+                opponentName={currentWeekState.opponent || currentWeekState.scouting?.opponent || 'Opponent'}
+                weekName={currentWeek.startsWith('Week') ? currentWeek : `Week ${currentWeek}`}
+                isPowerAdmin={userRole === 'admin'}
+                onNavigateToScouting={() => setActiveUnit('scouting')}
               />
             )}
 
