@@ -68,6 +68,7 @@ export const WristbandPrintModal: React.FC<WristbandPrintModalProps> = ({
   const [inkFriendly, setInkFriendly] = useState<boolean>(false);
   const [showCutLines, setShowCutLines] = useState<boolean>(true);
   const [showCopyLabels, setShowCopyLabels] = useState<boolean>(true);
+  const [showColumnHeaders, setShowColumnHeaders] = useState<boolean>(false); // Unchecked by default to remove Blue (1-13) header and maximize row space
 
   // Reset/sync when opened or initialMode changes
   React.useEffect(() => {
@@ -139,6 +140,7 @@ export const WristbandPrintModal: React.FC<WristbandPrintModalProps> = ({
       inkFriendly,
       showCutLines,
       showCopyLabels,
+      showColumnHeaders,
       documentTitle: `${activeTeamName} Wristband Inserts (${totalInsertCount} Copies)`,
     };
   };
@@ -529,6 +531,16 @@ export const WristbandPrintModal: React.FC<WristbandPrintModalProps> = ({
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
+                    checked={showColumnHeaders}
+                    onChange={(e) => setShowColumnHeaders(e.target.checked)}
+                    className="w-4 h-4 rounded text-indigo-600 bg-slate-900 border-slate-700"
+                  />
+                  <span>Include Column Sub-Headers (e.g. Blue 1-13)</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
                     checked={showCutLines}
                     onChange={(e) => setShowCutLines(e.target.checked)}
                     className="w-4 h-4 rounded text-indigo-600 bg-slate-900 border-slate-700"
@@ -622,50 +634,55 @@ export const WristbandPrintModal: React.FC<WristbandPrintModalProps> = ({
                           </div>
 
                           {/* Columns */}
-                          <div className="grid grid-cols-2 border-b border-black text-[9px] font-mono font-black text-center">
-                            {cols.map((col, cIdx) => (
-                              <div
-                                key={cIdx}
-                                className="py-0.5 px-1 truncate border-r last:border-r-0 border-black"
-                                style={{
-                                  backgroundColor: inkFriendly ? '#f1f5f9' : col.numberBgColor || col.color,
-                                  color: inkFriendly ? '#000000' : col.headerTextColor || '#000000',
-                                }}
-                              >
-                                {col.name || `Col ${cIdx + 1}`}
-                              </div>
-                            ))}
-                          </div>
+                          {showColumnHeaders && (
+                            <div className="grid grid-cols-2 border-b border-black text-[9px] font-mono font-black text-center">
+                              {cols.map((col, cIdx) => (
+                                <div
+                                  key={cIdx}
+                                  className="py-0.5 px-1 truncate border-r last:border-r-0 border-black"
+                                  style={{
+                                    backgroundColor: inkFriendly ? '#f1f5f9' : col.numberBgColor || col.color,
+                                    color: inkFriendly ? '#000000' : col.headerTextColor || '#000000',
+                                  }}
+                                >
+                                  {col.name || `Col ${cIdx + 1}`}
+                                </div>
+                              ))}
+                            </div>
+                          )}
 
                           {/* Sample Plays Rows */}
                           <div className="grid grid-cols-2 divide-x border-black text-[8px] font-mono">
-                            {cols.map((col, cIdx) => (
-                              <div key={cIdx} className="divide-y divide-slate-200">
-                                {Array.from({ length: Math.min(5, rows) }).map((_, rIdx) => {
-                                  const play = col.plays?.[rIdx];
-                                  return (
-                                    <div key={rIdx} className="flex items-center h-4 overflow-hidden">
-                                      <span
-                                        className="w-5 text-center font-bold border-r border-slate-300 shrink-0 text-[8px]"
-                                        style={{
-                                          backgroundColor: inkFriendly ? '#ffffff' : col.numberBgColor || col.color,
-                                        }}
-                                      >
-                                        {col.plays?.[rIdx]?.wristbandNum || rIdx + 1}
-                                      </span>
-                                      <span className="px-1 truncate font-bold text-[7.5px] text-slate-900">
-                                        {play?.text || '—'}
-                                      </span>
+                            {cols.map((col, cIdx) => {
+                              const previewRowsCount = showColumnHeaders ? Math.min(5, rows) : Math.min(7, rows);
+                              return (
+                                <div key={cIdx} className="divide-y divide-slate-200">
+                                  {Array.from({ length: previewRowsCount }).map((_, rIdx) => {
+                                    const play = col.plays?.[rIdx];
+                                    return (
+                                      <div key={rIdx} className="flex items-center h-4 overflow-hidden">
+                                        <span
+                                          className="w-5 text-center font-bold border-r border-slate-300 shrink-0 text-[8px]"
+                                          style={{
+                                            backgroundColor: inkFriendly ? '#ffffff' : col.numberBgColor || col.color,
+                                          }}
+                                        >
+                                          {col.plays?.[rIdx]?.wristbandNum || rIdx + 1}
+                                        </span>
+                                        <span className="px-1 truncate font-bold text-[7.5px] text-slate-900">
+                                          {play?.text || '—'}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                  {rows > previewRowsCount && (
+                                    <div className="text-center text-[7px] text-slate-400 py-0.5 bg-slate-50 font-sans">
+                                      + {rows - previewRowsCount} more plays...
                                     </div>
-                                  );
-                                })}
-                                {rows > 5 && (
-                                  <div className="text-center text-[7px] text-slate-400 py-0.5 bg-slate-50 font-sans">
-                                    + {rows - 5} more plays...
-                                  </div>
-                                )}
-                              </div>
-                            ))}
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       </div>

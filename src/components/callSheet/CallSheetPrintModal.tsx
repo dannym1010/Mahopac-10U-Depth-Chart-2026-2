@@ -20,6 +20,7 @@ import {
   triggerPrint,
   generateCallSheetPrintHTML,
   openCleanPrintTab,
+  printCallSheet,
   CallSheetPrintOptions,
 } from '../../utils/printUtils';
 
@@ -87,7 +88,7 @@ export const CallSheetPrintModal: React.FC<CallSheetPrintModalProps> = ({
     },
   };
 
-  // Direct print via window.print()
+  // Direct print with exact sectionsFilter and clean print engine
   const handleDirectPrint = () => {
     const bodyClasses: string[] = ['is-printing-callsheet'];
     if (orientation === 'landscape') {
@@ -110,21 +111,26 @@ export const CallSheetPrintModal: React.FC<CallSheetPrintModalProps> = ({
       bodyClasses.push('callsheet-hide-empty');
     }
 
+    if (!includeTopSituations) bodyClasses.push('callsheet-hide-top-situations');
+    if (!includeRedZone) bodyClasses.push('callsheet-hide-redzone');
+    if (!includeTempo) bodyClasses.push('callsheet-hide-tempo');
+    if (!includeCustom) bodyClasses.push('callsheet-hide-custom');
+    if (!includeScripts) bodyClasses.push('callsheet-hide-scripts');
+    if (!includeTwoPoint) bodyClasses.push('callsheet-hide-twopoint');
+    if (!includeTimeouts) bodyClasses.push('callsheet-hide-timeouts');
+    if (inkFriendly) bodyClasses.push('callsheet-ink-friendly');
+
     onClose();
 
-    // Trigger browser print with exact orientation & styles
+    // Call printCallSheet with full printOptions so only selected sections print
     setTimeout(() => {
-      triggerPrint({
-        orientation,
-        documentTitle: `${activeTeamName} ${activeUnit.toUpperCase()} Call Sheet`,
-        bodyClasses,
-        extraStyles: `
-          @page {
-            size: letter ${orientation} !important;
-            margin: 0.2in !important;
-          }
-        `,
-      });
+      printCallSheet(
+        callSheetData,
+        activeUnit,
+        activeTeamName,
+        `${activeTeamName} ${activeUnit.toUpperCase()} Call Sheet`,
+        printOptions
+      );
     }, 150);
   };
 

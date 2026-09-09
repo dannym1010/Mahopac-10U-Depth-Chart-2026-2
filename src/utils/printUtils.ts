@@ -2170,6 +2170,7 @@ export interface WristbandPrintOptions {
   inkFriendly?: boolean;
   showCutLines?: boolean;
   showCopyLabels?: boolean;
+  showColumnHeaders?: boolean; // When false (default), removes the "Blue (1-13)" column header so more lines fit
   documentTitle?: string;
   snippetOnly?: boolean;
 }
@@ -2192,6 +2193,7 @@ export function generateWristbandPrintHTML(
   const inkFriendly = options?.inkFriendly || false;
   const showCutLines = options?.showCutLines !== false;
   const showCopyLabels = options?.showCopyLabels !== false;
+  const showColumnHeaders = options?.showColumnHeaders ?? false; // Default to FALSE to remove Blue (1-13) header and maximize lines
 
   const getContrastColor = (hexColor: string, defaultColor?: string): string => {
     if (defaultColor) return defaultColor;
@@ -2274,25 +2276,29 @@ export function generateWristbandPrintHTML(
               { color: '#38bdf8', plays: [] },
             ];
 
-      const colHeadersHtml = cols
-        .map((col, cIdx) => {
-          let colBg = col.numberBgColor || col.color || (cIdx === 0 ? '#facc15' : '#38bdf8');
-          let colText = col.headerTextColor || getContrastColor(colBg, col.numberTextColor);
-          if (inkFriendly) {
-            colBg = '#f1f5f9';
-            colText = '#000000';
-          }
-          const colName =
-            col.name ||
-            (cIdx === 0 ? `COL 1 (1 - ${rows})` : `COL 2 (${rows + 1} - ${rows * 2})`);
+      const colHeadersHtml = showColumnHeaders
+        ? `<div class="cols-header">
+            ${cols
+              .map((col, cIdx) => {
+                let colBg = col.numberBgColor || col.color || (cIdx === 0 ? '#facc15' : '#38bdf8');
+                let colText = col.headerTextColor || getContrastColor(colBg, col.numberTextColor);
+                if (inkFriendly) {
+                  colBg = '#f1f5f9';
+                  colText = '#000000';
+                }
+                const colName =
+                  col.name ||
+                  (cIdx === 0 ? `COL 1 (1 - ${rows})` : `COL 2 (${rows + 1} - ${rows * 2})`);
 
-          return `
-            <div class="col-head" style="background-color: ${colBg}; color: ${colText};">
-              ${colName}
-            </div>
-          `;
-        })
-        .join('');
+                return `
+                  <div class="col-head" style="background-color: ${colBg}; color: ${colText};">
+                    ${colName}
+                  </div>
+                `;
+              })
+              .join('')}
+          </div>`
+        : '';
 
       const colsBodyHtml = cols
         .map((col, cIdx) => {
@@ -2300,6 +2306,33 @@ export function generateWristbandPrintHTML(
           let colBg = col.numberBgColor || col.color || (cIdx === 0 ? '#facc15' : '#38bdf8');
           if (inkFriendly) {
             colBg = '#ffffff';
+          }
+
+          // Dynamic row typography & slot-num dimensions so higher row counts fit cleanly inside 4.5" x 2.25"
+          let rowFontSize = '7.5pt';
+          let numFontSize = '8pt';
+          let numWidth = '22px';
+          let textPadding = '0 4px';
+          let borderBottomStyle = '1px solid rgba(0, 0, 0, 0.25)';
+
+          if (rows >= 22) {
+            rowFontSize = '5.2pt';
+            numFontSize = '5.5pt';
+            numWidth = '16px';
+            textPadding = '0 2px';
+            borderBottomStyle = '0.5px solid rgba(0, 0, 0, 0.2)';
+          } else if (rows >= 18) {
+            rowFontSize = '5.8pt';
+            numFontSize = '6.2pt';
+            numWidth = '18px';
+            textPadding = '0 2.5px';
+            borderBottomStyle = '0.75px solid rgba(0, 0, 0, 0.2)';
+          } else if (rows >= 15) {
+            rowFontSize = '6.6pt';
+            numFontSize = '7pt';
+            numWidth = '20px';
+            textPadding = '0 3px';
+            borderBottomStyle = '1px solid rgba(0, 0, 0, 0.25)';
           }
 
           const rowsHtml = Array.from({ length: rows })
@@ -2320,11 +2353,11 @@ export function generateWristbandPrintHTML(
               const playText = (play.text || '—').trim() || '—';
 
               return `
-                <div class="row-item" style="background-color: ${rowBg}; height: calc(100% / ${rows});">
-                  <div class="slot-num" style="background-color: ${numberBg}; color: ${numberTextColor};">
+                <div class="row-item" style="background-color: ${rowBg}; height: calc(100% / ${rows}); font-size: ${rowFontSize}; border-bottom: ${borderBottomStyle};">
+                  <div class="slot-num" style="background-color: ${numberBg}; color: ${numberTextColor}; width: ${numWidth}; min-width: ${numWidth}; max-width: ${numWidth}; font-size: ${numFontSize};">
                     ${slotLabel}
                   </div>
-                  <div class="slot-text">
+                  <div class="slot-text" style="padding: ${textPadding}; font-size: ${rowFontSize};">
                     ${playText}
                   </div>
                 </div>
@@ -2368,9 +2401,7 @@ export function generateWristbandPrintHTML(
                   : `${wb.title || 'WRISTBAND INSERT'} &bull; ${activeTeamName.toUpperCase()}${copyBadgeHeader}`
               }
             </div>
-            <div class="cols-header">
-              ${colHeadersHtml}
-            </div>
+            ${colHeadersHtml}
             <div class="cols-grid">
               ${colsBodyHtml}
             </div>
@@ -2505,7 +2536,7 @@ export function generateWristbandPrintHTML(
       display: flex;
       flex: 1;
       overflow: hidden;
-      height: calc(2.25in - 34px);
+      height: ${showColumnHeaders ? 'calc(2.25in - 34px)' : 'calc(2.25in - 18px)'};
     }
     .col-body {
       flex: 1;

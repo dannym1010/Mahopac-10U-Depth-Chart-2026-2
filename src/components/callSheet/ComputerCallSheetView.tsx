@@ -713,7 +713,7 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
       {/* =========================================================================
           1. TOP SITUATIONAL SECTION (Drag-and-Drop Rows & Custom Table Counts)
           ========================================================================= */}
-      <div className="space-y-3 callsheet-avoid-break print:overflow-visible">
+      <div className="space-y-3 callsheet-avoid-break print:overflow-visible callsheet-top-situations-container">
         {/* Header Bar */}
         <div className="flex items-center justify-between px-1 flex-wrap gap-2 print:hidden">
           <div className="flex items-center gap-2">
@@ -1114,7 +1114,7 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
           3. TEMPO & GAME MANAGEMENT SECTION (Auto-Formatting Grid)
           ========================================================================= */}
       {tempoSections.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-2 callsheet-tempo-container">
           <div className="flex items-center justify-between px-1 print:hidden">
             <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
               Tempo, Clock &amp; Specials ({tempoSections.length} Tables)
@@ -1178,7 +1178,7 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
           4. CUSTOM SECTIONS (If Any Added By Coach)
           ========================================================================= */}
       {customSections.length > 0 && (
-        <div className="space-y-2 pt-1">
+        <div className="space-y-2 pt-1 callsheet-custom-container">
           <div className="flex items-center justify-between px-1 print:hidden">
             <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
               Custom Sections ({customSections.length} Tables)
