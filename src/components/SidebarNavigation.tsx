@@ -584,7 +584,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         ...prev,
         depth_chart_main: true,
       }));
-    } else if (['game_day', 'wristband', 'call_sheet', 'scouting'].includes(activeUnit)) {
+    } else if (['game_day', 'wristband', 'call_sheet', 'scouting', 'tendencies', 'html_tendencies'].includes(activeUnit)) {
       setExpandedFolders((prev) => ({
         ...prev,
         game_day_main: true,
@@ -661,7 +661,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
       return activeUnit === 'whiteboard' || activeUnit === 'drills';
     }
     if (id === 'game_day') {
-      return ['game_day', 'wristband', 'call_sheet', 'scouting'].includes(activeUnit);
+      return ['game_day', 'wristband', 'call_sheet', 'scouting', 'tendencies', 'html_tendencies'].includes(activeUnit);
     }
     return activeUnit === id;
   };
@@ -670,7 +670,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
     <>
       <aside
         id="side-navigation-folder-system"
-        className={`bg-slate-950 border-r border-slate-800 h-screen sticky top-0 flex flex-col z-40 transition-all duration-300 select-none print:hidden shadow-2xl ${
+        className={`hidden md:flex bg-slate-950 border-r border-slate-800 h-screen sticky top-0 flex-col z-40 transition-all duration-300 select-none print:hidden shadow-2xl ${
           isExpanded ? 'w-80 min-w-[320px]' : 'w-18 min-w-[72px]'
         }`}
       >
@@ -1288,6 +1288,140 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                                 setHoveredItemId(null);
                               }}
                               className="px-2 py-1 rounded bg-slate-800 hover:bg-indigo-600 text-[11px] font-bold text-slate-200 hover:text-white transition-colors cursor-pointer"
+                            >
+                              {s.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // ===============================================================
+            // SPECIAL CASCADING EXPANSION: GAME DAY HUB (SIDELINE HUD, CALL SHEET, WRISTBANDS, SCOUTING, TENDENCIES)
+            // ===============================================================
+            if (item.id === 'game_day') {
+              const isGameDayOpen = expandedFolders.game_day_main;
+              const isGameDayActive = isItemActive('game_day');
+
+              return (
+                <div key={item.id} className="relative group">
+                  <div
+                    onMouseEnter={() => handleHoverEnter(item.id)}
+                    onMouseLeave={handleHoverLeave}
+                    onClick={() => {
+                      if (!isExpanded) {
+                        handleItemClick(item.id);
+                      } else {
+                        toggleFolder('game_day_main');
+                        handleItemClick(item.id);
+                      }
+                    }}
+                    className={`flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl cursor-pointer transition-all border ${
+                      isGameDayActive
+                        ? 'bg-red-600 text-white font-black shadow-lg shadow-red-600/30 border-red-400 ring-1 ring-red-400/40'
+                        : 'bg-slate-900/60 hover:bg-slate-800/90 text-slate-300 hover:text-white border-slate-800/80 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="relative shrink-0 flex items-center justify-center w-7 h-7">
+                      <Swords
+                        className={`w-5 h-5 ${isGameDayActive ? 'text-white stroke-[2.5]' : 'text-red-400'}`}
+                      />
+                    </div>
+
+                    {isExpanded && (
+                      <div className="flex-1 min-w-0 flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-black truncate">{item.label}</span>
+                          <span
+                            className={`text-[10px] font-bold ${
+                              isGameDayActive ? 'text-red-200' : 'text-slate-400'
+                            }`}
+                          >
+                            Live Sideline HUD & Plays
+                          </span>
+                        </div>
+                        <ChevronRight
+                          className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                            isGameDayOpen ? 'rotate-90 text-white' : 'text-slate-500'
+                          }`}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Cascading Sub-Items for Game Day Hub */}
+                  {isExpanded && isGameDayOpen && (
+                    <div className="mt-1.5 ml-3 pl-3 border-l-2 border-red-500/30 space-y-1 animate-in fade-in slide-in-from-top-2 duration-150">
+                      {[
+                        { id: 'game_day', label: '⚡ Sideline HUD & Clock' },
+                        { id: 'call_sheet', label: '🏈 Sideline Call Sheet' },
+                        { id: 'wristband', label: '⌚ Wristband Inserts' },
+                        { id: 'scouting', label: '📊 Scouting Report & Notes' },
+                        { id: 'tendencies', label: '📈 Formations & Tendencies' },
+                      ].map((sub) => {
+                        const isSubActive = activeUnit === sub.id;
+                        return (
+                          <div
+                            key={sub.id}
+                            onClick={() => {
+                              onSelectUnit(sub.id as any);
+                            }}
+                            className={`px-2.5 py-1.5 rounded-lg cursor-pointer transition-all text-xs font-bold flex items-center gap-1.5 ${
+                              isSubActive
+                                ? 'bg-red-600 text-white font-black shadow-xs'
+                                : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+                            }`}
+                          >
+                            <span>{sub.label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Hover Details for Game Day Hub when collapsed */}
+                  {!isExpanded && hoveredItemId === item.id && (
+                    <div
+                      className="absolute left-full top-0 ml-3 w-76 bg-slate-900 border border-red-500/40 rounded-2xl p-4 shadow-2xl z-50 animate-in fade-in slide-in-from-left-2 duration-150 backdrop-blur-md"
+                      onMouseEnter={() => handleHoverEnter(item.id)}
+                      onMouseLeave={handleHoverLeave}
+                    >
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                        <div className="flex items-center gap-2">
+                          <Swords className="w-5 h-5 text-red-400" />
+                          <h4 className="text-sm font-black text-white">{item.label}</h4>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 text-[10px] font-black">
+                          Sideline Hub
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 mt-2.5 leading-relaxed">
+                        {item.description}
+                      </p>
+                      <div className="mt-3 pt-2.5 border-t border-slate-800 space-y-1">
+                        <span className="text-[10px] font-black uppercase text-slate-400">
+                          Sub-Tabs:
+                        </span>
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {[
+                            { id: 'game_day', label: '⚡ Sideline HUD' },
+                            { id: 'call_sheet', label: '🏈 Call Sheet' },
+                            { id: 'wristband', label: '⌚ Wristbands' },
+                            { id: 'scouting', label: '📊 Scouting' },
+                            { id: 'tendencies', label: '📈 Tendencies' },
+                          ].map((s) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => {
+                                onSelectUnit(s.id as any);
+                                setHoveredItemId(null);
+                              }}
+                              className="px-2 py-1 rounded bg-slate-800 hover:bg-red-600 text-[11px] font-bold text-slate-200 hover:text-white transition-colors cursor-pointer"
                             >
                               {s.label}
                             </button>

@@ -12,7 +12,11 @@ import {
   Smartphone,
   Watch,
   Calendar,
+  Menu,
+  Layers,
+  PenTool,
 } from 'lucide-react';
+import { MobileNavigationModal } from './components/MobileNavigationModal';
 import {
   UnitType,
   UserRole,
@@ -369,6 +373,7 @@ export default function App() {
   );
   const [isSeasonConfigModalOpen, setIsSeasonConfigModalOpen] = useState(false);
   const [isCopyWeekModalOpen, setIsCopyWeekModalOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
   const [editingPlayerForModal, setEditingPlayerForModal] = useState<RosterPlayer | null>(null);
   const [selectivePrintUnit, setSelectivePrintUnit] = useState<
@@ -6014,10 +6019,11 @@ function mergeRemoteWeeklyData(
         onOpenThemeGallery={() => setIsThemeGalleryOpen(true)}
         onForceSave={handleForceSave}
         onForceRefresh={handleForceRefresh}
+        onOpenMobileNav={() => setIsMobileNavOpen(true)}
       />
 
       {/* Main Layout Area */}
-      <main className="flex-1 max-w-[1700px] w-full mx-auto p-4 md:p-6">
+      <main className="flex-1 max-w-[1700px] w-full mx-auto p-4 md:p-6 pb-24 md:pb-6">
         <div className="flex flex-col lg:flex-row gap-6 items-start">
           {/* Main Board / Panel Column */}
           <div className="flex-1 min-w-0 w-full">
@@ -6984,10 +6990,11 @@ function mergeRemoteWeeklyData(
       </main>
 
       {/* Mobile Bottom Quick Launch Dock (Phone Viewports) */}
-      <nav aria-label="Mobile Navigation" className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-lg border-t border-slate-700/80 px-2 py-1.5 flex items-center justify-around shadow-2xl print:hidden">
+      <nav aria-label="Mobile Navigation" className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-lg border-t border-slate-800 px-2 py-1.5 flex items-center justify-around shadow-2xl print:hidden">
         <button
+          type="button"
           onClick={() => setActiveUnit('mobile_hub')}
-          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all ${
+          className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
             activeUnit === 'mobile_hub' ? 'text-indigo-400 font-black' : 'text-slate-400 font-semibold'
           }`}
         >
@@ -6996,51 +7003,83 @@ function mergeRemoteWeeklyData(
         </button>
 
         <button
+          type="button"
           onClick={() => {
-            setDepthSubUnit(depthSubUnit || 'offense');
-            setActiveUnit(depthSubUnit || 'offense');
+            const target = depthSubUnit || 'offense';
+            setDepthSubUnit(target);
+            setActiveUnit(target);
           }}
-          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all ${
+          className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
             ['offense', 'defense', 'st', 'groups', 'scrimmage', 'depth_chart'].includes(activeUnit)
               ? 'text-indigo-400 font-black'
               : 'text-slate-400 font-semibold'
           }`}
         >
-          <Zap className="w-5 h-5" />
+          <Layers className="w-5 h-5" />
           <span className="text-[10px]">Depth</span>
         </button>
 
         <button
-          onClick={() => setActiveUnit('wristband')}
-          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all ${
-            activeUnit === 'wristband' ? 'text-indigo-400 font-black' : 'text-slate-400 font-semibold'
+          type="button"
+          onClick={() => setActiveUnit('game_day')}
+          className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
+            ['game_day', 'wristband', 'call_sheet', 'scouting', 'tendencies', 'html_tendencies'].includes(activeUnit)
+              ? 'text-red-400 font-black'
+              : 'text-slate-400 font-semibold'
           }`}
         >
-          <Watch className="w-5 h-5" />
-          <span className="text-[10px]">Plays</span>
+          <Swords className="w-5 h-5" />
+          <span className="text-[10px]">Game Day</span>
         </button>
 
         <button
-          onClick={() => setActiveUnit('practice')}
-          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all ${
-            activeUnit === 'practice' ? 'text-indigo-400 font-black' : 'text-slate-400 font-semibold'
+          type="button"
+          onClick={() => setActiveUnit('whiteboard')}
+          className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
+            activeUnit === 'whiteboard' || activeUnit === 'drills'
+              ? 'text-emerald-400 font-black'
+              : 'text-slate-400 font-semibold'
           }`}
         >
-          <ClipboardList className="w-5 h-5" />
-          <span className="text-[10px]">Plan</span>
+          <PenTool className="w-5 h-5" />
+          <span className="text-[10px]">Drills</span>
         </button>
 
         <button
-          onClick={() => setActiveUnit('schedule')}
-          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all ${
-            activeUnit === 'schedule' ? 'text-indigo-400 font-black' : 'text-slate-400 font-semibold'
+          type="button"
+          onClick={() => setIsMobileNavOpen(true)}
+          className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
+            isMobileNavOpen ? 'text-indigo-400 font-black' : 'text-slate-400 font-semibold'
           }`}
         >
-          <Calendar className="w-5 h-5" />
-          <span className="text-[10px]">Schedule</span>
+          <Menu className="w-5 h-5" />
+          <span className="text-[10px]">All Views</span>
         </button>
       </nav>
       </div>
+
+      {/* Full Mobile Navigation Sheet Modal */}
+      <MobileNavigationModal
+        isOpen={isMobileNavOpen}
+        onClose={() => setIsMobileNavOpen(false)}
+        activeUnit={activeUnit}
+        depthSubUnit={depthSubUnit}
+        onSelectUnit={(unit, subUnit) => {
+          if (subUnit) {
+            setDepthSubUnit(subUnit);
+            setActiveUnit(subUnit);
+          } else if (unit === 'depth_chart') {
+            const target = depthSubUnit || 'offense';
+            setDepthSubUnit(target);
+            setActiveUnit(target);
+          } else {
+            setActiveUnit(unit);
+          }
+        }}
+        userRole={userRole}
+        activeTeamName={currentActiveTeam?.name || 'Mahopac 10U'}
+        onOpenPreferencesModal={() => setIsPreferencesModalOpen(true)}
+      />
 
       {/* Global Dialog Modals */}
       <CopyWeekModal

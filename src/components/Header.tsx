@@ -22,6 +22,7 @@ import {
   Sparkles,
   Zap,
   Smartphone,
+  Layers,
 } from 'lucide-react';
 import { UserRole, SeasonConfig, Team, formatWeekLabel } from '../types';
 import { getAutoActiveWeek, getSeasonWeekList, getWeekDisplayLabelWithOpponent } from '../utils/seasonWeekUtils';
@@ -58,6 +59,7 @@ interface HeaderProps {
   scheduleEvents?: import('../types').ScheduleEvent[];
   onForceSave?: () => void;
   onForceRefresh?: () => void;
+  onOpenMobileNav?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -92,6 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
   scheduleEvents = [],
   onForceSave,
   onForceRefresh,
+  onOpenMobileNav,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -544,6 +547,24 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Quick Actions List */}
             <div className="space-y-2 text-xs">
+              {/* All Navigation Views */}
+              {onOpenMobileNav && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onOpenMobileNav();
+                  }}
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-black shadow-md shadow-indigo-600/30 border border-indigo-400 cursor-pointer active:scale-[0.99] transition-all"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Layers className="w-4 h-4 text-white" />
+                    <span>Browse All Navigation Views</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-indigo-200" />
+                </button>
+              )}
+
               {/* Jump to Mobile HUD */}
               {onNavigateToMobileHub && (
                 <button
