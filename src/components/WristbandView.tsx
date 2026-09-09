@@ -1275,11 +1275,20 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     });
   };
 
-  // Print Handlers - Uses isolated clean print engine to preserve DOM and state
+  // Print Handlers - Uses isolated clean print engine and direct window print
   const handlePrint = (mode: 'active' | 'all') => {
     setPrintMode(mode);
     const targetWristbands = mode === 'all' ? wristbands : [currentWristband];
     const docTitle = mode === 'all' ? `${activeTeamName} Wristband Inserts` : `${currentWristband.title}`;
+    
+    document.body.classList.add('is-printing-wristbands');
+    const cleanup = () => {
+      document.body.classList.remove('is-printing-wristbands');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    setTimeout(cleanup, 12000);
+
     printWristbandInserts(targetWristbands, activeTeamName, docTitle);
   };
 
@@ -1339,7 +1348,13 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
         </div>
 
         {/* Column Headers */}
-        <div className="grid grid-cols-2 text-center text-[10px] font-black tracking-wider border-b-[1.5px] border-black shrink-0">
+        <div
+          className="text-center text-[10px] font-black tracking-wider border-b-[1.5px] border-black shrink-0"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${cols.length || 2}, minmax(0, 1fr))`,
+          }}
+        >
           {cols.map((col, cIdx) => {
             const colHighlightColor = col.numberBgColor || col.color || (cIdx === 0 ? '#facc15' : '#38bdf8');
             const colHeaderTextColor = col.headerTextColor || getContrastTextColor(colHighlightColor, col.numberTextColor);
@@ -1363,8 +1378,14 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
           })}
         </div>
 
-        {/* 2-Column High-Density Grid */}
-        <div className="grid grid-cols-2 flex-1 divide-x-[1.5px] divide-black overflow-hidden">
+        {/* High-Density Grid */}
+        <div
+          className="flex-1 divide-x-[1.5px] divide-black overflow-hidden"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${cols.length || 2}, minmax(0, 1fr))`,
+          }}
+        >
           {cols.map((col, cIdx) => {
             const plays = col.plays || [];
             const colHighlightColor = col.numberBgColor || col.color || (cIdx === 0 ? '#facc15' : '#38bdf8');
@@ -1416,7 +1437,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
   };
 
   return (
-    <div className="h-[calc(100vh-4.5rem)] bg-slate-900 text-slate-100 flex flex-col font-sans overflow-hidden">
+    <div className="wristband-root-view h-[calc(100vh-4.5rem)] print:h-auto print:overflow-visible bg-slate-900 text-slate-100 flex flex-col font-sans overflow-hidden">
       {/* 1. Main Navigation Toolbar (Hidden when printing - matching CallSheetMainView) */}
       <header className="bg-slate-850 border-b border-slate-750 px-3 sm:px-6 py-2.5 shrink-0 shadow-md print:hidden">
         <div className="max-w-[1500px] mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -1608,9 +1629,9 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
             {/* Quick Print Active Insert (Exact 4.5" x 2.25") */}
             <button
               type="button"
-              onClick={() => handleOpenPrintModal('active')}
-              className="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5"
-              title="Print active 4.5 x 2.25 insert card"
+              onClick={() => handlePrint('active')}
+              className="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+              title="Print active 4.5 x 2.25 insert card immediately"
             >
               <Printer className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Active Card</span>
@@ -1620,9 +1641,9 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
             {wristbands.length > 1 && (
               <button
                 type="button"
-                onClick={() => handleOpenPrintModal('all')}
-                className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-750 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                title="Select and print all made wristbands"
+                onClick={() => handlePrint('all')}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-750 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95"
+                title="Print all made wristbands immediately"
               >
                 <Layers className="w-3.5 h-3.5 text-emerald-400" />
                 <span className="hidden sm:inline">All ({wristbands.length})</span>
@@ -2517,6 +2538,10 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                 }}
               >
                 {/* Thin dashed cut guideline marking the exact 4.5" x 2.25" wrist sleeve insert */}
+                <div className="flex items-center justify-between font-mono text-[9px] font-bold text-slate-700 mb-1 px-1 select-none">
+                  <span>✂ CUT ALONG DASHED GUIDE</span>
+                  <span>STANDARD 4.5&quot; &times; 2.25&quot; WRIST COACH INSERT</span>
+                </div>
                 <div
                   className="border-[1.5px] border-dashed border-black bg-white"
                   style={{

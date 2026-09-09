@@ -146,6 +146,16 @@ export const WristbandPrintModal: React.FC<WristbandPrintModalProps> = ({
   const handleDirectPrint = () => {
     if (selectedWristbands.length === 0) return;
     const opts = buildPrintOptions();
+    
+    // Tag document body to activate clean wristband cutout styles
+    document.body.classList.add('is-printing-wristbands');
+    const cleanup = () => {
+      document.body.classList.remove('is-printing-wristbands');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    setTimeout(cleanup, 15000);
+
     printWristbandInserts(selectedWristbands, activeTeamName, opts.documentTitle, opts);
   };
 
@@ -164,7 +174,7 @@ export const WristbandPrintModal: React.FC<WristbandPrintModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200 print:hidden">
       <div
         className="bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden text-slate-100 ring-1 ring-white/10"
         role="dialog"

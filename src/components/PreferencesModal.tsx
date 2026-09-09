@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Sliders,
   Copy,
+  PenTool,
 } from 'lucide-react';
 import { UnitType, Team, UserRole } from '../types';
 
@@ -160,6 +161,13 @@ const SCREEN_OPTIONS: ScreenOption[] = [
     category: 'Reference & Guides',
     description: 'Offensive and defensive system playbook sheets, route trees, and coaching manuals',
     icon: BookOpen,
+  },
+  {
+    id: 'whiteboard',
+    name: 'Interactive Whiteboard Playbook',
+    category: 'Reference & Guides',
+    description: 'Chalkboard with moveable X\'s and O\'s, blitz arrows, zone coverage bubbles, and D-Line fundamental drills',
+    icon: PenTool,
   },
   {
     id: 'users',

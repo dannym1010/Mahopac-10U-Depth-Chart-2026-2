@@ -178,6 +178,28 @@ export function normalizePracticeTemplates(raw: any): Record<string, PracticePer
   return result;
 }
 
+function findDefaultDrillsForFolder(folderName: string, defaults: DrillFolder[]): DrillItem[] {
+  for (const def of defaults) {
+    if (def.name.toLowerCase().trim() === folderName.toLowerCase().trim()) return def.drills || [];
+    if (def.subfolders && def.subfolders.length > 0) {
+      const match = findDefaultDrillsForFolder(folderName, def.subfolders);
+      if (match.length > 0) return match;
+    }
+  }
+  return [];
+}
+
+function findDefaultSubfoldersForFolder(folderName: string, defaults: DrillFolder[]): DrillFolder[] {
+  for (const def of defaults) {
+    if (def.name.toLowerCase().trim() === folderName.toLowerCase().trim()) return def.subfolders || [];
+    if (def.subfolders && def.subfolders.length > 0) {
+      const match = findDefaultSubfoldersForFolder(folderName, def.subfolders);
+      if (match.length > 0) return match;
+    }
+  }
+  return [];
+}
+
 /**
  * Normalizes cascading drill folders, ensuring all custom/saved folders and drills are preserved,
  * subfolders and drills arrays are valid, and stable IDs are assigned.
@@ -201,8 +223,37 @@ export function normalizeCascadingDrills(raw: any): DrillFolder[] {
           key: typeof d.key === 'string' ? d.key : (typeof d.focus === 'string' ? d.focus : ''),
         }));
 
+      // If this is a known default category folder, ensure any newly added default drills are merged in
+      const defaultDrillsForThis = findDefaultDrillsForFolder(folderName, DEFAULT_CASCADING_DRILLS);
+      if (defaultDrillsForThis.length > 0) {
+        const existingNames = new Set(sanitizedDrills.map((d) => d.name.toLowerCase().trim()));
+        for (const defDrill of defaultDrillsForThis) {
+          if (!existingNames.has(defDrill.name.toLowerCase().trim())) {
+            sanitizedDrills.push({
+              id: `def_drill_${fIdx}_${Math.random().toString(36).substring(2, 7)}`,
+              name: defDrill.name,
+              desc: defDrill.desc,
+              key: defDrill.key,
+            });
+            existingNames.add(defDrill.name.toLowerCase().trim());
+          }
+        }
+      }
+
       const rawSubfolders = Array.isArray(folder.subfolders) ? folder.subfolders : [];
       const sanitizedSubfolders: DrillFolder[] = rawSubfolders.length > 0 ? normalizeCascadingDrills(rawSubfolders) : [];
+
+      // If this folder has default subfolders that are missing, merge them in
+      const defaultSubfoldersForThis = findDefaultSubfoldersForFolder(folderName, DEFAULT_CASCADING_DRILLS);
+      if (defaultSubfoldersForThis.length > 0) {
+        const existingSubfolderNames = new Set(sanitizedSubfolders.map((sf) => sf.name.toLowerCase().trim()));
+        for (const defSub of defaultSubfoldersForThis) {
+          if (!existingSubfolderNames.has(defSub.name.toLowerCase().trim())) {
+            sanitizedSubfolders.push(deepClone(defSub));
+            existingSubfolderNames.add(defSub.name.toLowerCase().trim());
+          }
+        }
+      }
 
       return {
         name: folderName,

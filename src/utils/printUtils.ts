@@ -336,13 +336,14 @@ export function printCleanHTML(htmlString: string, documentTitle?: string) {
   try {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
-    iframe.style.left = '-9999px';
-    iframe.style.top = '-9999px';
-    iframe.style.width = '8.5in';
-    iframe.style.height = '11in';
+    iframe.style.left = '0';
+    iframe.style.top = '0';
+    iframe.style.width = '100vw';
+    iframe.style.height = '100vh';
     iframe.style.border = '0';
     iframe.style.opacity = '0';
     iframe.style.pointerEvents = 'none';
+    iframe.style.zIndex = '-9999';
     iframe.setAttribute('aria-hidden', 'true');
     document.body.appendChild(iframe);
 
@@ -357,6 +358,7 @@ export function printCleanHTML(htmlString: string, documentTitle?: string) {
     doc.write(htmlString);
     doc.close();
 
+    let didPrint = false;
     const cleanup = () => {
       try {
         if (iframe && iframe.parentNode) {
@@ -365,7 +367,9 @@ export function printCleanHTML(htmlString: string, documentTitle?: string) {
       } catch {}
     };
 
-    setTimeout(() => {
+    const triggerIframePrint = () => {
+      if (didPrint) return;
+      didPrint = true;
       try {
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
@@ -373,9 +377,16 @@ export function printCleanHTML(htmlString: string, documentTitle?: string) {
         console.warn('Iframe print blocked, opening standalone print tab:', err);
         openCleanPrintTab(htmlString, documentTitle);
       } finally {
-        setTimeout(cleanup, 2000);
+        setTimeout(cleanup, 2500);
       }
-    }, 150);
+    };
+
+    if (doc.readyState === 'complete') {
+      setTimeout(triggerIframePrint, 250);
+    } else {
+      iframe.onload = () => setTimeout(triggerIframePrint, 200);
+      setTimeout(triggerIframePrint, 600);
+    }
   } catch (err) {
     console.warn('Print iframe creation error, falling back to clean tab:', err);
     openCleanPrintTab(htmlString, documentTitle);
@@ -384,31 +395,50 @@ export function printCleanHTML(htmlString: string, documentTitle?: string) {
 
 /**
  * Opens a clean printable sheet in a new tab/window and triggers print.
- * Guaranteed to bypass iframe restrictions and hardware spooler hangs.
+ * Uses a Blob URL to guarantee compatibility and prevent popup/sandbox blocking.
  */
 export function openCleanPrintTab(htmlString: string, documentTitle?: string) {
   if (typeof window === 'undefined') return;
 
+  const scriptTag = `
+    <script>
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          window.focus();
+          window.print();
+        }, 350);
+      });
+    </script>
+  `;
+
+  const fullHtml = htmlString.includes('</body>')
+    ? htmlString.replace('</body>', `${scriptTag}</body>`)
+    : `${htmlString}${scriptTag}`;
+
   try {
-    const printWindow = window.open('', '_blank');
+    const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+    const blobUrl = URL.createObjectURL(blob);
+    const printWindow = window.open(blobUrl, '_blank');
     if (printWindow) {
-      printWindow.document.open();
-      printWindow.document.write(`
-        ${htmlString}
-        <script>
-          window.onload = function() {
-            setTimeout(function() {
-              window.focus();
-              window.print();
-            }, 200);
-          };
-        </script>
-      `);
-      printWindow.document.close();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
       return;
     }
   } catch (e) {
-    console.warn('Popup blocked, falling back to direct print:', e);
+    console.warn('Blob URL print tab blocked, trying direct window open:', e);
+  }
+
+  // Fallback: direct window.open with document write
+  try {
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.open();
+      win.document.write(fullHtml);
+      win.document.close();
+      win.focus();
+      return;
+    }
+  } catch (e) {
+    console.warn('Direct popup window open blocked:', e);
   }
 
   triggerPrint();
@@ -2352,11 +2382,7 @@ export function generateWristbandPrintHTML(
 
   const isLandscape = orientation === 'landscape';
 
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>${title}</title>
+  const stylesBlock = `
   <style>
     @page {
       size: letter ${isLandscape ? 'landscape' : 'portrait'};

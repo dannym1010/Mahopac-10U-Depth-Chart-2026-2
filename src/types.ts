@@ -17,6 +17,7 @@ export type UnitType =
   | 'drills' 
   | 'compliance'
   | 'guide' 
+  | 'whiteboard'
   | 'users';
 
 export type UserRole = 'admin' | 'assistant';
@@ -473,3 +474,53 @@ export interface SectionLock {
   acquiredAt: number;
   expiresAt: number;
 }
+
+export interface WhiteboardToken {
+  id: string;
+  type: 'X' | 'O' | 'ball' | 'cone' | 'bag' | 'square' | 'letter' | 'target';
+  label: string;
+  x: number;
+  y: number;
+  color?: string;
+  radius?: number;
+  subLabel?: string;
+  isSquare?: boolean;
+}
+
+export interface WhiteboardArrow {
+  id: string;
+  type: 'blitz' | 'straight' | 'curved' | 'block' | 'drop' | 'run' | 'pass' | 'tackle';
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+  controlX?: number;
+  controlY?: number;
+  color: string;
+  dashed?: boolean;
+  label?: string;
+}
+
+export interface WhiteboardZoneBubble {
+  id: string;
+  name: string;
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  color: string;
+  opacity?: number;
+}
+
+export interface WhiteboardPlay {
+  id: string;
+  title: string;
+  objective?: string;
+  cues?: string[];
+  faults?: string[];
+  tokens: WhiteboardToken[];
+  arrows: WhiteboardArrow[];
+  zones: WhiteboardZoneBubble[];
+  createdAt?: number;
+}
+

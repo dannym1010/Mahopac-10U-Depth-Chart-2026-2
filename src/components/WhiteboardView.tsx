@@ -1,0 +1,1723 @@
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import {
+  PenTool,
+  RotateCcw,
+  Play,
+  Pause,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  Trash2,
+  Printer,
+  Sparkles,
+  Download,
+  BookOpen,
+  Check,
+  Layers,
+  Shield,
+  Target,
+  FileText,
+  Sliders,
+  Folder,
+  FolderOpen,
+  Search,
+  ArrowUpDown,
+  Filter,
+  Eye,
+  Maximize2,
+  SunMedium,
+  X as CloseIcon,
+  Flag,
+  ListOrdered,
+} from 'lucide-react';
+import { WhiteboardToken, WhiteboardArrow, WhiteboardZoneBubble, Team, UserRole } from '../types';
+import {
+  DLINE_DRILLS,
+  DEFENSIVE_DRILLS,
+  DEFENSIVE_POSITION_GROUPS,
+  DefensivePositionCategory,
+  PRESET_SCHEMES,
+  WhiteboardDrill,
+  loadEffectiveWhiteboardDrills,
+  getCustomWhiteboardDrills,
+  saveCustomWhiteboardDrills,
+  getDeletedWhiteboardDrillIds,
+  saveDeletedWhiteboardDrillIds,
+} from './whiteboard/whiteboardDrillData';
+import { WhiteboardCanvas } from './whiteboard/WhiteboardCanvas';
+import { printCleanHTML } from '../utils/printUtils';
+import { printDrillSheet } from './whiteboard/drillPrintHelper';
+import { spreadDiagramElements, WhiteboardSpreadMode } from './whiteboard/whiteboardSpreadHelper';
+import { AddWhiteboardDrillModal } from './whiteboard/AddWhiteboardDrillModal';
+import { WhiteboardDrillDescriptionView } from './whiteboard/WhiteboardDrillDescriptionView';
+
+interface WhiteboardViewProps {
+  userRole?: UserRole;
+  activeTeam?: Team;
+  onNavigateToGuide?: () => void;
+  onSaveToGuidePlaybook?: (mainFolder: string, subTabName: string, htmlContent: string) => void;
+  externalDrillId?: string;
+  externalCategory?: 'ALL' | DefensivePositionCategory;
+  onDrillSelect?: (drillId: string, category: DefensivePositionCategory) => void;
+  onCategorySelect?: (category: 'ALL' | DefensivePositionCategory) => void;
+}
+
+const DRILL_ICONS = ['🏈', '💥', '🔄', '🛡️', '🎯', '🧱', '👁️', '🚨', '⚡', '🦅', '🏹', '⚔️', '🧤', '🏃', '🦾', '🔥', '🏆'];
+
+const POSITION_FOLDER_META: Record<
+  DefensivePositionCategory,
+  { name: string; shortLabel: string; icon: string; badgeColor: string; description: string }
+> = {
+  SCHEME: {
+    name: 'Defensive Schemes & Shells',
+    shortLabel: 'Schemes',
+    icon: '📋',
+    badgeColor: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
+    description: '4-4 Base Stack Liz, 5-3 Bear Youth, 4-3 Over Front, 6-2 Goal Line Wall, Cover 3 Sky, Cover 2 Tampa',
+  },
+  DL: {
+    name: 'Defensive Tackles (DL / NT)',
+    shortLabel: 'DL / DT',
+    icon: '🏈',
+    badgeColor: 'bg-indigo-600/20 text-indigo-300 border-indigo-500/30',
+    description: 'A/B-Gap Fits, Ball Get-Off, Strike & Shed, NT 2-Gap Bullet & Spill, Double-Team Split',
+  },
+  DE: {
+    name: 'Defensive Ends (DE / Edge)',
+    shortLabel: 'DE / Edge',
+    icon: '⚡',
+    badgeColor: 'bg-cyan-600/20 text-cyan-300 border-cyan-500/30',
+    description: 'Outside Containment Stiff-Arm, Hoop Bend & Flatten, Backside Squeeze & Settle, Contain-Crash Stunt',
+  },
+  LB: {
+    name: 'Linebackers (LB / Box & Edge)',
+    shortLabel: 'Linebackers',
+    icon: '💥',
+    badgeColor: 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30',
+    description: '6-Inch Freeze Step, Scrape-and-Spill Pulling Guard, Inside-Out Mirror & Scrape, Pass-Off Zone Drops',
+  },
+  DB: {
+    name: 'Defensive Backs (DB / Secondary)',
+    shortLabel: 'Secondary',
+    icon: '🦅',
+    badgeColor: 'bg-purple-600/20 text-purple-300 border-purple-500/30',
+    description: 'Fast Alley Trigger, Open-Field Force & Alley Tackle, Centerfield Post Break, 45° Backpedal, Tip Turnover Circuit',
+  },
+  TEAM: {
+    name: 'Team Tackling & Circuits',
+    shortLabel: 'Team Defense',
+    icon: '🎯',
+    badgeColor: 'bg-amber-600/20 text-amber-300 border-amber-500/30',
+    description: '4-Corner Pursuit & Swarm, Hawk Profile Tackle, 3-Man Turnover Relay, Goal Line Stand (4th & Inches)',
+  },
+  OFFENSE: {
+    name: 'Offense (All Units)',
+    shortLabel: 'Offense',
+    icon: '🏈',
+    badgeColor: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
+    description: 'Quarterback drops, running back mesh paths, offensive line power steps, receiver routes & team install',
+  },
+  DEFENSE: {
+    name: 'Defense (All Units)',
+    shortLabel: 'Defense',
+    icon: '🛡️',
+    badgeColor: 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30',
+    description: 'Defensive tackles, edge containment, linebacker scrape, secondary trigger, stunts & team schemes',
+  },
+  OFF_QB: {
+    name: 'Quarterbacks (QB)',
+    shortLabel: 'QB',
+    icon: '🎯',
+    badgeColor: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
+    description: 'Under-center drop, shotgun quick game, play-action bootleg mesh, and target net drills',
+  },
+  OFF_RB: {
+    name: 'Running Backs (RB)',
+    shortLabel: 'RB',
+    icon: '💨',
+    badgeColor: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
+    description: 'Handoff mesh, downhill A/B gap press, running back gauntlet, and perimeter outside zone',
+  },
+  OFF_OL: {
+    name: 'Offensive Line (OL)',
+    shortLabel: 'OL',
+    icon: '🧱',
+    badgeColor: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
+    description: '6-inch power step, drive blocking under chute, pulling guard trap technique, and 2-step footwork',
+  },
+  OFF_WR: {
+    name: 'Wide Receivers & Tight Ends (WR/TE)',
+    shortLabel: 'WR/TE',
+    icon: '⚡',
+    badgeColor: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
+    description: '2-point stance release, route tree landmarks, stalk blocking, diamond hands, and inline TE seal',
+  },
+  OFF_TEAM: {
+    name: 'Team Offense & Group Install',
+    shortLabel: 'Off Team',
+    icon: '👥',
+    badgeColor: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
+    description: 'Individual stance & legal alignment, QB-Center exchanges, walkthrough installs, and 11-on-11 scrimmage',
+  },
+  TACKLE: {
+    name: 'Form Fit Tackling Circuits',
+    shortLabel: 'Tackling',
+    icon: '🥋',
+    badgeColor: 'bg-rose-600/20 text-rose-300 border-rose-500/30',
+    description: 'Near-foot drive, chest-to-chest fit, wrap & squeeze, and safe head-out form tackle drills',
+  },
+  BLOCKING: {
+    name: 'Run & Pass Blocking Technique',
+    shortLabel: 'Blocking',
+    icon: '🛡️',
+    badgeColor: 'bg-teal-600/20 text-teal-300 border-teal-500/30',
+    description: 'Drive block 6-inch power step, double-team post-and-drive, zone combo climbing, and pass set punch',
+  },
+  ST: {
+    name: 'Special Teams (Kick & Punt)',
+    shortLabel: 'Special Teams',
+    icon: '🌟',
+    badgeColor: 'bg-yellow-600/20 text-yellow-300 border-yellow-500/30',
+    description: 'Kickoff lane containment, wedge breaking, punt snap protection, and gunner release technique',
+  },
+  WARMUP: {
+    name: 'Dynamic Warm-Up & Agility',
+    shortLabel: 'Warm-Up',
+    icon: '🏃',
+    badgeColor: 'bg-orange-600/20 text-orange-300 border-orange-500/30',
+    description: 'High knees, butt kicks, carioca, hip openers, lateral shuffles, and change-of-direction ladders',
+  },
+};
+
+export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
+  userRole = 'admin',
+  activeTeam,
+  onNavigateToGuide,
+  onSaveToGuidePlaybook,
+  externalDrillId,
+  externalCategory,
+  onDrillSelect,
+  onCategorySelect,
+}) => {
+  // Defensive Position Category Filter ('ALL' | 'SCHEME' | 'DL' | 'DE' | 'LB' | 'DB' | 'TEAM')
+  const [selectedCategory, setSelectedCategory] = useState<'ALL' | DefensivePositionCategory>(
+    externalCategory || 'ALL'
+  );
+
+  // Folder Directory State: search, sorting, and collapsible accordion
+  const [folderSearchQuery, setFolderSearchQuery] = useState<string>('');
+  const [sortMode, setSortMode] = useState<'position' | 'alpha' | 'phases'>('position');
+  const [isFolderDirectoryOpen, setIsFolderDirectoryOpen] = useState<boolean>(true);
+  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({
+    SCHEME: true,
+    DL: true,
+    DE: true,
+    LB: true,
+    DB: true,
+    TEAM: true,
+    CUSTOM: true,
+  });
+
+  const toggleFolder = (folderKey: string) => {
+    setOpenFolders((prev) => ({
+      ...prev,
+      [folderKey]: !prev[folderKey],
+    }));
+  };
+
+  const expandAllFolders = () => {
+    setOpenFolders({ SCHEME: true, DL: true, DE: true, LB: true, DB: true, TEAM: true, CUSTOM: true });
+  };
+
+  const collapseAllFolders = () => {
+    setOpenFolders({ SCHEME: false, DL: false, DE: false, LB: false, DB: false, TEAM: false, CUSTOM: false });
+  };
+
+  // Dynamic Whiteboard Drills State
+  const [drills, setDrills] = useState<WhiteboardDrill[]>(() => loadEffectiveWhiteboardDrills());
+  const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+
+  const refreshDrills = () => {
+    const updated = loadEffectiveWhiteboardDrills();
+    setDrills(updated);
+    window.dispatchEvent(new CustomEvent('football_whiteboard_drills_updated'));
+  };
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      const updated = loadEffectiveWhiteboardDrills();
+      setDrills(updated);
+    };
+    window.addEventListener('football_whiteboard_drills_updated', handleUpdate);
+    return () => window.removeEventListener('football_whiteboard_drills_updated', handleUpdate);
+  }, []);
+
+  // Active Drill by ID or Custom Mode
+  const [activeDrillId, setActiveDrillId] = useState<string>(() => {
+    if (externalDrillId) return externalDrillId;
+    const initial = loadEffectiveWhiteboardDrills();
+    return initial[0]?.id || 'drill-dl-ball-getoff';
+  });
+  const [activePhaseIdx, setActivePhaseIdx] = useState<number>(0);
+  const [isCustomMode, setIsCustomMode] = useState<boolean>(false);
+  const [isAutoPlaying, setIsAutoPlaying] = useState<boolean>(false);
+
+  // Sync external props if provided
+  useEffect(() => {
+    if (externalDrillId && externalDrillId !== activeDrillId) {
+      setActiveDrillId(externalDrillId);
+      setActivePhaseIdx(0);
+      setIsCustomMode(false);
+      setIsAutoPlaying(false);
+      const matched = drills.find((d) => d.id === externalDrillId);
+      if (matched?.category) {
+        setSelectedCategory(matched.category);
+        setOpenFolders((prev) => ({ ...prev, [matched.category]: true }));
+      }
+    }
+  }, [externalDrillId, drills]);
+
+  useEffect(() => {
+    if (externalCategory && externalCategory !== selectedCategory) {
+      setSelectedCategory(externalCategory);
+      if (externalCategory !== 'ALL') {
+        setOpenFolders((prev) => ({ ...prev, [externalCategory]: true }));
+      }
+    }
+  }, [externalCategory]);
+
+  // Active Tokens, Arrows, and Zones on the board
+  const [tokens, setTokens] = useState<WhiteboardToken[]>([]);
+  const [arrows, setArrows] = useState<WhiteboardArrow[]>([]);
+  const [zones, setZones] = useState<WhiteboardZoneBubble[]>([]);
+
+  // Selection state
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<'token' | 'arrow' | 'zone' | null>(null);
+
+  // Stamping / Tool mode
+  const [stampMode, setStampMode] = useState<'none' | 'O' | 'X' | 'blitz' | 'zone'>('none');
+  const [stampLabel, setStampLabel] = useState<string>('DE');
+
+  // Drawing Canvas State
+  const [isDrawingMode, setIsDrawingMode] = useState<boolean>(false);
+  const [penColor, setPenColor] = useState<string>('#0052cc');
+  const [penWidth, setPenWidth] = useState<number>(3.5);
+  const sketchPadRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Whiteboard readability toggles (prevent clutter and overlapping labels)
+  const [showLabels, setShowLabels] = useState<boolean>(true);
+  const [showCoachingInset, setShowCoachingInset] = useState<boolean>(false);
+  const [spreadMode, setSpreadMode] = useState<WhiteboardSpreadMode>('spread');
+  const [zoneShadeMode, setZoneShadeMode] = useState<'dim' | 'soft' | 'outline' | 'standard'>('dim');
+
+  // Custom Objective / Notes state
+  const [customTitle, setCustomTitle] = useState<string>('CUSTOM DEFENSIVE SCHEME');
+  const [customObjective, setCustomObjective] = useState<string>(
+    'Install blitz angles, front alignment, and pass rush lanes against opponent formations.'
+  );
+  const [customCues, setCustomCues] = useState<string[]>([
+    'Attack with low pads & aggressive get-off',
+    'Hold outside contain on rollouts',
+    'Linebacker fills A-gap with high motor',
+  ]);
+  const [customFaults, setCustomFaults] = useState<string[]>([
+    'Do not jump offsides on hard count',
+    'Do not get washed out past the depth of the pocket',
+  ]);
+
+  // Toast / notification
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2500);
+  };
+
+  // Filtered drills based on position category
+  const filteredDrills = selectedCategory === 'ALL'
+    ? DEFENSIVE_DRILLS
+    : selectedCategory === 'OFFENSE'
+    ? DEFENSIVE_DRILLS.filter((d) => d.category === 'OFFENSE' || d.category.startsWith('OFF_'))
+    : DEFENSIVE_DRILLS.filter((d) => d.category === selectedCategory);
+
+  // Check if a drill matches the search query
+  const matchesSearch = (drill: WhiteboardDrill): boolean => {
+    if (!folderSearchQuery.trim()) return true;
+    const q = folderSearchQuery.toLowerCase();
+    return (
+      drill.title.toLowerCase().includes(q) ||
+      drill.subtitle.toLowerCase().includes(q) ||
+      drill.objective.toLowerCase().includes(q) ||
+      drill.category.toLowerCase().includes(q) ||
+      drill.categoryLabel.toLowerCase().includes(q) ||
+      drill.cues.some((c) => c.toLowerCase().includes(q))
+    );
+  };
+
+  // Sort helper for drills
+  const sortDrills = (drills: WhiteboardDrill[]): WhiteboardDrill[] => {
+    const list = [...drills];
+    if (sortMode === 'alpha') {
+      return list.sort((a, b) => a.title.localeCompare(b.title));
+    }
+    if (sortMode === 'phases') {
+      return list.sort((a, b) => b.phases.length - a.phases.length);
+    }
+    return list;
+  };
+
+  // Drills organized into position folders with search and sort applied
+  const folderData = useMemo(() => {
+    const positionOrder: DefensivePositionCategory[] = ['SCHEME', 'DL', 'DE', 'LB', 'DB', 'TEAM'];
+    return positionOrder.map((posKey) => {
+      const allInPos = DEFENSIVE_DRILLS.filter((d) => d.category === posKey);
+      const matchingDrills = sortDrills(allInPos.filter(matchesSearch));
+      return {
+        key: posKey,
+        meta: POSITION_FOLDER_META[posKey],
+        drills: matchingDrills,
+        totalCount: allInPos.length,
+      };
+    });
+  }, [folderSearchQuery, sortMode]);
+
+  const currentDrill: WhiteboardDrill =
+    drills.find((d) => d.id === activeDrillId) ||
+    filteredDrills[0] ||
+    drills[0] ||
+    DEFENSIVE_DRILLS[0];
+
+  // Handle category change
+  const handleSelectCategory = (catId: 'ALL' | DefensivePositionCategory) => {
+    setSelectedCategory(catId);
+    setIsCustomMode(false);
+    if (catId !== 'ALL' && onCategorySelect) {
+      onCategorySelect(catId);
+    }
+    const matching =
+      catId === 'ALL'
+        ? drills
+        : catId === 'OFFENSE'
+        ? drills.filter((d) => d.category === 'OFFENSE' || d.category.startsWith('OFF_'))
+        : drills.filter((d) => d.category === catId);
+    if (matching.length > 0 && !matching.some((d) => d.id === activeDrillId)) {
+      setActiveDrillId(matching[0].id);
+      setActivePhaseIdx(0);
+      setIsAutoPlaying(false);
+      if (matching[0].category && onDrillSelect) {
+        onDrillSelect(matching[0].id, matching[0].category);
+      }
+    }
+  };
+
+  // Handle drill change
+  const handleSelectDrill = (drillId: string) => {
+    setIsCustomMode(false);
+    setActiveDrillId(drillId);
+    setActivePhaseIdx(0);
+    setIsAutoPlaying(false);
+    const matched = drills.find((d) => d.id === drillId);
+    if (matched?.category && onDrillSelect) {
+      onDrillSelect(drillId, matched.category);
+    }
+  };
+
+  // Save new custom drill
+  const handleSaveNewDrill = (newDrill: WhiteboardDrill) => {
+    const custom = getCustomWhiteboardDrills();
+    saveCustomWhiteboardDrills([...custom, newDrill]);
+    refreshDrills();
+    setActiveDrillId(newDrill.id);
+    setSelectedCategory(newDrill.category);
+    setActivePhaseIdx(0);
+    setIsCustomMode(false);
+    if (newDrill.category && onDrillSelect) {
+      onDrillSelect(newDrill.id, newDrill.category);
+    }
+    showToast(`Drill "${newDrill.title}" saved to library!`);
+  };
+
+  // Delete current drill
+  const handleDeleteDrill = () => {
+    if (!currentDrill) return;
+    const drillTitle = currentDrill.title;
+    if (!window.confirm(`Are you sure you want to delete "${drillTitle}" from the whiteboard?`)) {
+      return;
+    }
+
+    // 1. If in custom drills, remove from custom drills
+    const custom = getCustomWhiteboardDrills();
+    const filteredCustom = custom.filter((d) => d.id !== currentDrill.id);
+    saveCustomWhiteboardDrills(filteredCustom);
+
+    // 2. Mark in deleted IDs
+    const deletedIds = getDeletedWhiteboardDrillIds();
+    if (!deletedIds.includes(currentDrill.id)) {
+      saveDeletedWhiteboardDrillIds([...deletedIds, currentDrill.id]);
+    }
+
+    // 3. Find next drill to switch to
+    const remaining = drills.filter((d) => d.id !== currentDrill.id);
+    refreshDrills();
+
+    if (remaining.length > 0) {
+      setActiveDrillId(remaining[0].id);
+      setSelectedCategory(remaining[0].category);
+      setActivePhaseIdx(0);
+      if (remaining[0].category && onDrillSelect) {
+        onDrillSelect(remaining[0].id, remaining[0].category);
+      }
+    }
+    showToast(`Deleted drill "${drillTitle}".`);
+  };
+
+  // Load drill data when switching drill or phase (unless in custom mode)
+  useEffect(() => {
+    if (isCustomMode) return;
+    const drill = drills.find((d) => d.id === activeDrillId) || drills[0];
+    if (!drill) return;
+    if (drill.phases && drill.phases.length > 0) {
+      const phase = drill.phases[activePhaseIdx] || drill.phases[0];
+      if (phase) {
+        const spread = spreadDiagramElements(phase.tokens, phase.arrows, phase.zones, spreadMode);
+        setTokens(spread.tokens);
+        setArrows(spread.arrows);
+        setZones(spread.zones);
+        setSelectedId(null);
+        setSelectedType(null);
+      }
+    } else {
+      setTokens([]);
+      setArrows([]);
+      setZones([]);
+      setSelectedId(null);
+      setSelectedType(null);
+    }
+  }, [activeDrillId, activePhaseIdx, isCustomMode, spreadMode, drills]);
+
+  // Diagram Spacing / Spread Mode handler
+  const handleSetSpreadMode = (mode: WhiteboardSpreadMode) => {
+    setSpreadMode(mode);
+    if (isCustomMode) {
+      const spread = spreadDiagramElements(tokens, arrows, zones, mode);
+      setTokens(spread.tokens);
+      setArrows(spread.arrows);
+      setZones(spread.zones);
+    }
+    showToast(
+      mode === 'wide'
+        ? 'Wide Spread spacing (1.4x) applied!'
+        : mode === 'spread'
+        ? 'Spread spacing (1.25x) applied!'
+        : 'Standard spacing applied!'
+    );
+  };
+
+  // Auto-play loop for drills
+  useEffect(() => {
+    let timer: any = null;
+    if (isAutoPlaying && !isCustomMode) {
+      timer = setInterval(() => {
+        const drill = drills.find((d) => d.id === activeDrillId) || drills[0];
+        if (drill && drill.phases && drill.phases.length > 0) {
+          setActivePhaseIdx((prev) => (prev + 1) % drill.phases.length);
+        }
+      }, 2400);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isAutoPlaying, activeDrillId, isCustomMode, drills]);
+
+  // Phase Stepping
+  const handlePrevPhase = () => {
+    if (isCustomMode) return;
+    const total = currentDrill.phases.length;
+    setActivePhaseIdx((prev) => (prev - 1 + total) % total);
+  };
+
+  const handleNextPhase = () => {
+    if (isCustomMode) return;
+    const total = currentDrill.phases.length;
+    setActivePhaseIdx((prev) => (prev + 1) % total);
+  };
+
+  const toggleAutoPlay = () => {
+    setIsAutoPlaying((prev) => !prev);
+  };
+
+  // Wipe Freehand Canvas
+  const handleWipeBoard = () => {
+    if (sketchPadRef.current) {
+      const ctx = sketchPadRef.current.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, sketchPadRef.current.width, sketchPadRef.current.height);
+      }
+    }
+    showToast('Dry erase marker wiped clean!');
+  };
+
+  // Clear All Board Elements
+  const handleClearAll = () => {
+    if (confirm('Clear all X\'s, O\'s, blitz arrows, and coverage zones from the board?')) {
+      setTokens([]);
+      setArrows([]);
+      setZones([]);
+      setSelectedId(null);
+      setSelectedType(null);
+      handleWipeBoard();
+      setIsCustomMode(true);
+      showToast('Board reset to clean field');
+    }
+  };
+
+  // Switch to a Preset Scheme
+  const handleLoadPreset = (presetId: string) => {
+    const preset = PRESET_SCHEMES.find((p) => p.id === presetId);
+    if (!preset) return;
+    setIsCustomMode(true);
+    setIsAutoPlaying(false);
+    setTokens([...preset.tokens]);
+    setArrows([...preset.arrows]);
+    setZones([...preset.zones]);
+    setCustomTitle(preset.name.toUpperCase());
+    setCustomObjective(`Installed ${preset.name} with assigned coverage drops and rush responsibilities.`);
+    setSelectedId(null);
+    setSelectedType(null);
+    showToast(`Loaded ${preset.name}`);
+  };
+
+  // Delete selected element
+  const handleDeleteSelected = () => {
+    if (!selectedId || !selectedType) return;
+    if (selectedType === 'token') {
+      setTokens(tokens.filter((t) => t.id !== selectedId));
+    } else if (selectedType === 'arrow') {
+      setArrows(arrows.filter((a) => a.id !== selectedId));
+    } else if (selectedType === 'zone') {
+      setZones(zones.filter((z) => z.id !== selectedId));
+    }
+    setSelectedId(null);
+    setSelectedType(null);
+    showToast('Element deleted');
+  };
+
+  // Print Whiteboard - Isolates JUST the current active drill or scheme onto a high-contrast coaching sheet
+  const handlePrintWhiteboard = () => {
+    if (!isCustomMode && currentDrill) {
+      printDrillSheet(currentDrill, activePhaseIdx);
+      showToast(`Printing drill sheet for ${currentDrill.title}...`);
+      return;
+    }
+
+    // In custom mode, construct WhiteboardDrill object
+    const customDrill: WhiteboardDrill = {
+      id: 'custom-scheme',
+      category: 'SCHEME',
+      categoryLabel: 'Custom Chalkboard Scheme',
+      title: customTitle,
+      subtitle: 'Custom Whiteboard Defensive Scheme',
+      objective: customObjective,
+      equipment: 'Standard field cones & football',
+      cues: customCues,
+      faults: customFaults,
+      phases: [
+        {
+          name: 'CUSTOM SETUP',
+          description: customObjective,
+          tokens,
+          arrows,
+          zones,
+        },
+      ],
+    };
+    printDrillSheet(customDrill, 0);
+    showToast(`Printing custom sheet for ${customTitle}...`);
+  };
+
+  // Save to Playbooks & Guides Binder
+  const handleSaveToPlaybook = () => {
+    if (!onSaveToGuidePlaybook) {
+      showToast('Saved to local whiteboard storage');
+      return;
+    }
+    const folderName = isCustomMode
+      ? 'Custom Defensive Whiteboard'
+      : currentDrill.category === 'LB'
+      ? 'Linebackers (LB) Whiteboard'
+      : currentDrill.category === 'DE'
+      ? 'Defensive Ends (DE) Whiteboard'
+      : currentDrill.category === 'DB'
+      ? 'Defensive Backs (DB) Whiteboard'
+      : 'D-Line Whiteboard';
+    const subTabName = isCustomMode ? customTitle : currentDrill.title;
+
+    // Generate self-contained HTML
+    const htmlExport = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${isCustomMode ? customTitle : currentDrill.title}</title>
+<link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Permanent+Marker&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Space Grotesk', sans-serif; background: #1e222a; color: #f8fafc; padding: 16px; margin: 0; }
+  .frame { background: #cbd5e1; padding: 12px; border-radius: 12px; max-width: 1000px; margin: 0 auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  .board { background: radial-gradient(circle at 50% 20%, #ffffff 0%, #f4f6f9 85%, #eaecf1 100%); border-radius: 8px; overflow: hidden; }
+  .notes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .card { background: white; padding: 12px; border-radius: 6px; font-family: 'Architects Daughter', cursive; color: #1e293b; }
+  .card-green { border-left: 5px solid #058538; }
+  .card-red { border-left: 5px solid #d91b24; }
+  h3 { font-family: 'Permanent Marker', cursive; margin-top: 0; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; color: #0f172a;">
+    <h2 style="margin: 0; font-family: 'Permanent Marker', cursive;">${isCustomMode ? customTitle : currentDrill.title}</h2>
+    <span style="background: #d91b24; color: white; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">10U WHITEBOARD</span>
+  </div>
+  <div class="board">
+    <svg viewBox="0 0 700 500" style="width: 100%; height: auto;">
+      <line x1="30" y1="240" x2="670" y2="240" stroke="#0052cc" stroke-width="2.5" />
+      <text x="40" y="232" font-family="'Permanent Marker', cursive" font-size="13" fill="#0052cc">LOS (LINE OF SCRIMMAGE)</text>
+      ${zones.map((z) => `<ellipse cx="${z.cx}" cy="${z.cy}" rx="${z.rx}" ry="${z.ry}" fill="${z.color}" fill-opacity="${z.opacity || 0.2}" stroke="${z.color}" stroke-width="2" stroke-dasharray="6,4"/><text x="${z.cx}" y="${z.cy + 4}" font-family="'Permanent Marker', cursive" font-size="12" fill="${z.color}" text-anchor="middle">${z.name}</text>`).join('')}
+      ${arrows.map((a) => `<path d="M ${a.startX} ${a.startY} ${a.controlX ? `Q ${a.controlX} ${a.controlY}` : 'L'} ${a.endX} ${a.endY}" fill="none" stroke="${a.color}" stroke-width="3" ${a.dashed ? 'stroke-dasharray="6,4"' : ''}/><text x="${(a.startX + a.endX) / 2 + 6}" y="${(a.startY + a.endY) / 2}" font-family="'Architects Daughter', cursive" font-size="11" fill="${a.color}">${a.label || ''}</text>`).join('')}
+      ${tokens.map((t) => `<g transform="translate(${t.x}, ${t.y})"><circle cx="0" cy="0" r="16" fill="${t.type === 'O' ? '#fff' : t.color || '#0052cc'}" stroke="#1a1a24" stroke-width="2.5"/><text x="0" y="5" font-family="'Permanent Marker', cursive" font-size="11" text-anchor="middle" fill="${t.type === 'O' ? '#1a1a24' : '#fff'}">${t.label}</text></g>`).join('')}
+    </svg>
+  </div>
+  <div class="notes">
+    <div class="card card-green">
+      <h3 style="color: #058538;">10U COACHING CUES</h3>
+      <ul>${(isCustomMode ? customCues : currentDrill.cues).map((c) => `<li>${c}</li>`).join('')}</ul>
+    </div>
+    <div class="card card-red">
+      <h3 style="color: #d91b24;">DO NOT DO THIS!</h3>
+      <ul>${(isCustomMode ? customFaults : currentDrill.faults).map((f) => `<li>${f}</li>`).join('')}</ul>
+    </div>
+  </div>
+</div>
+</body>
+</html>`;
+
+    onSaveToGuidePlaybook(folderName, subTabName, htmlExport);
+    showToast(`Saved to Playbook Guides under [${folderName} > ${subTabName}]!`);
+  };
+
+  return (
+    <div className="w-full min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center p-3 sm:p-5">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-4 right-4 z-50 bg-emerald-600 text-white px-4 py-2 rounded-xl shadow-2xl font-bold text-sm flex items-center gap-2 animate-in fade-in">
+          <Check className="w-4 h-4" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Main Header */}
+      <header className="w-full max-w-7xl flex flex-wrap justify-between items-center gap-3 mb-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-2xl border border-blue-500/30 shadow-md">
+            <PenTool className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                10U DEFENSIVE WHITEBOARD{' '}
+                <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded font-bold">COACH PLAYBOOK</span>
+              </h1>
+            </div>
+            <p className="text-xs text-slate-400">
+              Interactive Fundamentals, Blitz Tracks & Zone Bubbles for DL, DE, LB, and DB
+            </p>
+          </div>
+        </div>
+
+        {/* Global Quick Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={handlePrintWhiteboard}
+            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1.5 shadow-sm transition-all"
+          >
+            <Printer className="w-3.5 h-3.5 text-blue-400" />
+            <span>Print Board</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSaveToPlaybook}
+            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5 transition-all"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Save to Playbook</span>
+          </button>
+
+          {onNavigateToGuide && (
+            <button
+              type="button"
+              onClick={onNavigateToGuide}
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl border border-slate-800 transition-colors"
+            >
+              Open Playbook Binder
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* =========================================================================
+          SECTION 1: COMPACT DRILL HEADER & ACTIONS (NO REDUNDANT DIRECTORY)
+          ========================================================================= */}
+      <section className="w-full max-w-7xl mb-3 bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xl">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Left: Active Drill Identity & Position Group */}
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-blue-600/20 text-blue-300 rounded-xl border border-blue-500/30 text-xl flex items-center justify-center shrink-0">
+              {DEFENSIVE_POSITION_GROUPS.find((g) => g.id === currentDrill.category)?.icon || "🏈"}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] sm:text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full bg-blue-600/20 text-blue-300 border border-blue-500/30">
+                  {DEFENSIVE_POSITION_GROUPS.find((g) => g.id === currentDrill.category)?.label || currentDrill.categoryLabel || currentDrill.category}
+                </span>
+                {!isCustomMode && (!currentDrill.phases || currentDrill.phases.length === 0) && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    Description & Technique Guide
+                  </span>
+                )}
+                {isCustomMode && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    Custom Drawing Canvas
+                  </span>
+                )}
+              </div>
+              <h2
+                className="text-base sm:text-xl font-black text-white tracking-wide uppercase mt-0.5"
+                style={{ fontFamily: "'Permanent Marker', cursive" }}
+              >
+                {isCustomMode ? customTitle : currentDrill.title}
+              </h2>
+              <p className="text-xs text-slate-400">
+                {isCustomMode ? customObjective : currentDrill.subtitle || currentDrill.objective}
+              </p>
+            </div>
+          </div>
+
+          {/* Right: Phase Controls & Drill Actions */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Phase Stepper (Only shown when drill has multiple phases) */}
+            {!isCustomMode && currentDrill.phases && currentDrill.phases.length > 1 && (
+              <div className="flex items-center bg-slate-950/80 border border-slate-700/80 rounded-xl p-1 gap-1 shadow-inner">
+                <button
+                  type="button"
+                  onClick={handlePrevPhase}
+                  className="px-2 py-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                  title="Previous Phase"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <div className="px-2 py-0.5 text-center">
+                  <span className="text-[10px] font-black uppercase text-blue-400 block leading-tight">
+                    Phase {activePhaseIdx + 1} of {currentDrill.phases.length}
+                  </span>
+                  <span className="text-[11px] font-bold text-slate-200 truncate max-w-[120px] sm:max-w-[160px] block">
+                    {currentDrill.phases[activePhaseIdx]?.name?.replace(/PHASE \d+:\s*/i, "") || `Phase ${activePhaseIdx + 1}`}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleNextPhase}
+                  className="px-2 py-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                  title="Next Phase"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsAutoPlaying(!isAutoPlaying)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ${
+                    isAutoPlaying
+                      ? "bg-amber-600 text-white"
+                      : "bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700"
+                  }`}
+                  title={isAutoPlaying ? "Pause Animation" : "Auto-Play Phases"}
+                >
+                  {isAutoPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                  <span className="hidden sm:inline">{isAutoPlaying ? "Pause" : "Play"}</span>
+                </button>
+              </div>
+            )}
+
+            {/* Chalkboard Mode Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsCustomMode(!isCustomMode)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                isCustomMode
+                  ? "bg-blue-600 text-white border-blue-500 shadow-sm"
+                  : "bg-slate-800 hover:bg-slate-750 text-slate-300 border-slate-700 hover:border-slate-600"
+              }`}
+              title="Toggle between preset diagram and blank chalkboard canvas"
+            >
+              <PenTool className="w-3.5 h-3.5 text-blue-400" />
+              <span>{isCustomMode ? "Viewing Chalkboard" : "Open Chalkboard"}</span>
+            </button>
+
+            {/* Add Drill Button */}
+            <button
+              type="button"
+              onClick={() => setIsAddModalOpen(true)}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Create a new drill for this category"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Add Drill</span>
+            </button>
+
+            {/* Delete Drill Button */}
+            {!isCustomMode && (
+              <button
+                type="button"
+                onClick={handleDeleteDrill}
+                className="px-2.5 py-1.5 bg-slate-800 hover:bg-rose-900/60 text-slate-300 hover:text-rose-200 border border-slate-700 hover:border-rose-600/50 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1"
+                title="Delete this drill from the whiteboard"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                <span className="hidden sm:inline">Delete Drill</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          SECTION 2 & 3: WHITEBOARD CANVAS OR DESCRIPTION VIEW
+          ========================================================================= */}
+      {!isCustomMode && (!currentDrill.phases || currentDrill.phases.length === 0) ? (
+        <WhiteboardDrillDescriptionView
+          drill={currentDrill}
+          onOpenChalkboard={() => setIsCustomMode(true)}
+          onPrintDrill={handlePrintWhiteboard}
+        />
+      ) : (
+        <>
+          {/* =========================================================================
+          SECTION 2: FULL-WIDTH WHITEBOARD CANVAS & TOOLBAR
+          ========================================================================= */}
+      <div className="w-full max-w-7xl bg-slate-400/90 p-3 sm:p-4 rounded-2xl shadow-2xl border-2 border-slate-300 flex flex-col relative">
+        {/* Canvas Quick Controls Bar (Declutter, Labels, Coaching Inset, Print) */}
+        <div className="flex items-center justify-between gap-2 mb-2.5 px-1 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black uppercase text-slate-800 tracking-wide flex items-center gap-1.5 bg-slate-200/80 px-2.5 py-1 rounded-lg border border-slate-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Tactical Chalkboard
+            </span>
+            <span className="text-[11px] font-semibold text-slate-700 hidden sm:inline">
+              Clear routes & high-contrast alignment
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Diagram Spacing Level Selector */}
+            <div className="flex items-center bg-slate-200/90 rounded-lg p-0.5 border border-slate-300 shadow-xs">
+              <span className="text-[10px] font-extrabold uppercase text-slate-600 px-1.5 flex items-center gap-1">
+                <Maximize2 className="w-3 h-3 text-slate-700" />
+                Spacing:
+              </span>
+              <button
+                type="button"
+                onClick={() => handleSetSpreadMode('standard')}
+                className={`px-2 py-0.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                  spreadMode === 'standard'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Standard compact spacing"
+              >
+                Standard
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetSpreadMode('spread')}
+                className={`px-2 py-0.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                  spreadMode === 'spread'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Spread out diagram for better spacing and readability (Default)"
+              >
+                Spread (1.25x)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetSpreadMode('wide')}
+                className={`px-2 py-0.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                  spreadMode === 'wide'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Wide spread diagram across the full whiteboard width"
+              >
+                Wide (1.4x)
+              </button>
+            </div>
+
+            {/* Zone Shade Dimmer Selector */}
+            <div className="flex items-center bg-slate-200/90 rounded-lg p-0.5 border border-slate-300 shadow-xs">
+              <span className="text-[10px] font-extrabold uppercase text-slate-600 px-1.5 flex items-center gap-1">
+                <SunMedium className="w-3 h-3 text-slate-700" />
+                Zone Shade:
+              </span>
+              <button
+                type="button"
+                onClick={() => setZoneShadeMode('dim')}
+                className={`px-2 py-0.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                  zoneShadeMode === 'dim'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Dim shade: soft translucent wash (Default per coach preference)"
+              >
+                Dim
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoneShadeMode('soft')}
+                className={`px-2 py-0.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                  zoneShadeMode === 'soft'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Soft shade: subtle tint"
+              >
+                Soft
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoneShadeMode('outline')}
+                className={`px-2 py-0.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                  zoneShadeMode === 'outline'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Outline only: dashed boundary without fill tint"
+              >
+                Outline
+              </button>
+            </div>
+
+            {/* Toggle Labels */}
+            <button
+              type="button"
+              onClick={() => setShowLabels(!showLabels)}
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
+                showLabels
+                  ? 'bg-slate-800 hover:bg-slate-750 text-sky-300 border-slate-700'
+                  : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300'
+              }`}
+              title={showLabels ? 'Hide arrow and zone labels for clean uncluttered view' : 'Show all diagram labels'}
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>Labels: {showLabels ? 'Visible' : 'Decluttered'}</span>
+            </button>
+
+            {/* Toggle Coaching Keys Card */}
+            {currentDrill.diagramKeys && currentDrill.diagramKeys.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowCoachingInset(!showCoachingInset)}
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
+                  showCoachingInset
+                    ? 'bg-blue-600 text-white border-blue-700'
+                    : 'bg-slate-200 hover:bg-slate-300 text-slate-700 border-slate-300'
+                }`}
+                title="Toggle the coaching keys inset card overlay on the whiteboard"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>Playbook Keys: {showCoachingInset ? 'ON' : 'OFF'}</span>
+              </button>
+            )}
+
+            {/* Quick Print Button */}
+            {!isCustomMode && (
+              <button
+                type="button"
+                onClick={() => printDrillSheet(currentDrill, activePhaseIdx)}
+                className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-850 text-xs font-bold rounded-lg border border-slate-300 shadow-xs flex items-center gap-1.5 cursor-pointer"
+                title="Print this isolated drill sheet"
+              >
+                <Printer className="w-3.5 h-3.5 text-blue-600" />
+                <span>Print Drill</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Full-Width Canvas Container */}
+        <div className="w-full bg-slate-50 rounded-xl border border-slate-300 overflow-hidden shadow-inner relative min-h-[560px] sm:min-h-[620px]">
+          <WhiteboardCanvas
+            tokens={tokens}
+            arrows={arrows}
+            zones={zones}
+            isDrawingMode={isDrawingMode}
+            penColor={penColor}
+            penWidth={penWidth}
+            stampMode={stampMode}
+            stampLabel={stampLabel}
+            onUpdateTokens={setTokens}
+            onUpdateArrows={setArrows}
+            onUpdateZones={setZones}
+            onSelectElement={(type, id) => {
+              setSelectedType(type);
+              setSelectedId(id);
+            }}
+            selectedId={selectedId}
+            selectedType={selectedType}
+            sketchPadRef={sketchPadRef}
+            diagramKeys={currentDrill.diagramKeys}
+            showCoachingInset={showCoachingInset}
+            showLabels={showLabels}
+            zoneShadeMode={zoneShadeMode}
+          />
+        </div>
+
+        {/* Whiteboard Lower Toolbar */}
+        <div className="mt-3 p-2 sm:p-3 bg-slate-600/90 rounded-xl shadow-md flex flex-wrap justify-between items-center gap-3">
+          {/* Left: Phase controls for Drills */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {!isCustomMode ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handlePrevPhase}
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-white text-slate-800 text-xs font-bold rounded-lg border border-slate-400 shadow transition-all active:translate-y-0.5 cursor-pointer"
+                >
+                  ◀ Prev Phase
+                </button>
+                <div className="px-3.5 py-1.5 bg-slate-900 text-sky-400 text-xs font-mono font-bold rounded-lg border border-slate-700 shadow-inner">
+                  {currentDrill.phases[activePhaseIdx]?.name || 'PHASE 1'}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleNextPhase}
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-white text-slate-800 text-xs font-bold rounded-lg border border-slate-400 shadow transition-all active:translate-y-0.5 cursor-pointer"
+                >
+                  Next Phase ▶
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleAutoPlay}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg border shadow transition-all flex items-center gap-1 cursor-pointer ${
+                    isAutoPlaying
+                      ? 'bg-rose-600 text-white border-rose-700 animate-pulse'
+                      : 'bg-blue-600 hover:bg-blue-500 text-white border-blue-700'
+                  }`}
+                >
+                  {isAutoPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                  <span>{isAutoPlaying ? 'Pause Loop' : 'Play Loop'}</span>
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1.5 bg-amber-500 text-slate-950 font-black text-xs rounded-lg uppercase">
+                  Chalkboard Free Playmaker
+                </span>
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  className="px-2.5 py-1.5 bg-rose-700 hover:bg-rose-600 text-white text-xs font-bold rounded-lg border border-rose-800 cursor-pointer"
+                >
+                  Clear Field
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Center: Stamp X's, O's, Blitz, Zones */}
+          <div className="flex items-center gap-1.5 bg-slate-700/80 p-1 rounded-xl border border-slate-500 flex-wrap">
+            <span className="text-[10px] font-black uppercase text-slate-300 px-1">Stamp:</span>
+
+            {/* Add X (Defense) */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsDrawingMode(false);
+                setStampMode(stampMode === 'X' ? 'none' : 'X');
+              }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                stampMode === 'X'
+                  ? 'bg-blue-600 text-white ring-2 ring-blue-300'
+                  : 'bg-slate-800 hover:bg-slate-750 text-blue-300 border border-slate-600'
+              }`}
+            >
+              + X (Def)
+            </button>
+
+            {/* Position Picker for X */}
+            {stampMode === 'X' && (
+              <select
+                value={stampLabel}
+                onChange={(e) => setStampLabel(e.target.value)}
+                className="bg-slate-900 text-white text-xs font-bold px-1.5 py-1 rounded border border-slate-600"
+              >
+                {['DE', 'DT', 'NT', 'MLB', 'OLB', 'CB', 'FS', 'SS', 'X'].map((pos) => (
+                  <option key={pos} value={pos}>
+                    {pos}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* Add O (Offense) */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsDrawingMode(false);
+                setStampMode(stampMode === 'O' ? 'none' : 'O');
+              }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                stampMode === 'O'
+                  ? 'bg-slate-900 text-amber-400 ring-2 ring-amber-300'
+                  : 'bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-600'
+              }`}
+            >
+              + O (Off)
+            </button>
+
+            {/* Position Picker for O */}
+            {stampMode === 'O' && (
+              <select
+                value={stampLabel}
+                onChange={(e) => setStampLabel(e.target.value)}
+                className="bg-slate-900 text-white text-xs font-bold px-1.5 py-1 rounded border border-slate-600"
+              >
+                {['C', 'LG', 'RG', 'LT', 'RT', 'QB', 'RB', 'FB', 'TE', 'WR', 'O'].map((pos) => (
+                  <option key={pos} value={pos}>
+                    {pos}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* Add Blitz Arrow */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsDrawingMode(false);
+                setStampMode(stampMode === 'blitz' ? 'none' : 'blitz');
+              }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                stampMode === 'blitz'
+                  ? 'bg-rose-600 text-white ring-2 ring-rose-300'
+                  : 'bg-slate-800 hover:bg-slate-750 text-rose-300 border border-slate-600'
+              }`}
+            >
+              + Blitz Arrow
+            </button>
+
+            {/* Add Zone Coverage Bubble */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsDrawingMode(false);
+                setStampMode(stampMode === 'zone' ? 'none' : 'zone');
+              }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                stampMode === 'zone'
+                  ? 'bg-sky-600 text-white ring-2 ring-sky-300'
+                  : 'bg-slate-800 hover:bg-slate-750 text-sky-300 border border-slate-600'
+              }`}
+            >
+              + Zone Bubble
+            </button>
+
+            {stampMode === 'zone' && (
+              <select
+                value={stampLabel}
+                onChange={(e) => setStampLabel(e.target.value)}
+                className="bg-slate-900 text-white text-xs font-bold px-1.5 py-1 rounded border border-slate-600"
+              >
+                {['DEEP 1/3', 'DEEP 1/2', 'FLAT', 'HOOK/CURL', 'ROBBER', 'ZONE'].map((z) => (
+                  <option key={z} value={z}>
+                    {z}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Right: Dry-Erase Markers Tray */}
+          <div className="flex items-center gap-2 bg-slate-200 p-1.5 rounded-xl border border-slate-300 shadow-inner">
+            <span className="text-[10px] font-black uppercase text-slate-700 mr-1">Dry Erase:</span>
+            {[
+              { color: '#1a1a24', label: 'Black' },
+              { color: '#0052cc', label: 'Blue' },
+              { color: '#d91b24', label: 'Red' },
+              { color: '#058538', label: 'Green' },
+              { color: '#e06c00', label: 'Orange' },
+            ].map((pen) => (
+              <button
+                key={pen.color}
+                type="button"
+                onClick={() => {
+                  setPenColor(pen.color);
+                  setIsDrawingMode(true);
+                  setStampMode('none');
+                }}
+                className={`w-5 h-5 rounded-full border-2 border-white shadow transition-transform cursor-pointer ${
+                  penColor === pen.color && isDrawingMode ? 'scale-125 ring-2 ring-slate-900' : 'hover:scale-110'
+                }`}
+                style={{ backgroundColor: pen.color }}
+                title={`${pen.label} Marker`}
+              />
+            ))}
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsDrawingMode(!isDrawingMode);
+                if (!isDrawingMode) setStampMode('none');
+              }}
+              className={`px-2.5 py-1 rounded text-xs font-bold border transition-all cursor-pointer ${
+                isDrawingMode
+                  ? 'bg-emerald-600 text-white border-emerald-700'
+                  : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-100'
+              }`}
+            >
+              {isDrawingMode ? '✏️ Drawing ON' : '✏️ Draw'}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleWipeBoard}
+              className="px-2 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300 rounded text-xs font-bold transition-colors cursor-pointer"
+            >
+              Wipe Board
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          SECTION 3: PLAY NOTES & COACHING NOTEPAD (BELOW THE DIAGRAM)
+          ========================================================================= */}
+      <section className="w-full max-w-7xl mt-4 bg-slate-900/95 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4">
+        {/* Play Notes Header & Active Scheme Status */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs text-blue-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Defensive Playbook Notes:</span>
+              </span>
+              {!isCustomMode ? (
+                <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-blue-600/20 text-blue-300 border border-blue-500/40 uppercase">
+                  {currentDrill.category} • {currentDrill.categoryLabel}
+                </span>
+              ) : (
+                <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-amber-600/20 text-amber-300 border border-amber-500/40 uppercase">
+                  Custom Scheme Mode
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <h3
+                className="text-lg sm:text-2xl font-black text-white tracking-wide"
+                style={{ fontFamily: "'Permanent Marker', cursive" }}
+              >
+                {isCustomMode ? customTitle : currentDrill.title}
+              </h3>
+              {isCustomMode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newTitle = prompt('Enter Play / Scheme Title:', customTitle);
+                    if (newTitle) setCustomTitle(newTitle.toUpperCase());
+                  }}
+                  className="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-xs font-bold border border-slate-700 flex items-center gap-1 cursor-pointer"
+                  title="Edit Title"
+                >
+                  <Sliders className="w-3.5 h-3.5" />
+                  <span>Rename</span>
+                </button>
+              )}
+            </div>
+
+            <p className="text-xs text-slate-400 mt-0.5">
+              {isCustomMode
+                ? customObjective
+                : `${currentDrill.subtitle} — ${currentDrill.phases[activePhaseIdx]?.name || 'Phase 1'}`}
+            </p>
+          </div>
+
+          {/* Phase Quick Indicator & Print Action */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {!isCustomMode && currentDrill.phases.length > 0 && (
+              <div className="flex items-center gap-1.5 bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700">
+                <span className="text-[10px] uppercase font-black text-slate-400 px-2">Phases:</span>
+                {currentDrill.phases.map((ph, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActivePhaseIdx(idx)}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activePhaseIdx === idx
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-slate-900 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {idx + 1}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handlePrintWhiteboard}
+              title="Print isolated 1-page coaching sheet with field setup and cues"
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-blue-300 hover:text-white text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+            >
+              <Printer className="w-3.5 h-3.5 text-blue-400" />
+              <span>Print Drill Sheet</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Selected Element Inspector (Appears when coach clicks a token, arrow, or zone on the canvas) */}
+        {selectedId && selectedType && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 shadow-md animate-in fade-in">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-black uppercase text-amber-300 tracking-wider flex items-center gap-1.5">
+                <Target className="w-4 h-4 text-amber-400" />
+                <span>Selected On Diagram: {selectedType.toUpperCase()} #{selectedId}</span>
+              </span>
+              <button
+                type="button"
+                onClick={handleDeleteSelected}
+                className="px-2.5 py-1 bg-rose-900/60 hover:bg-rose-800 text-rose-200 rounded-lg flex items-center gap-1 text-xs font-bold border border-rose-700/60 transition-colors cursor-pointer"
+                title="Delete Element from Diagram"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Element</span>
+              </button>
+            </div>
+
+            {selectedType === 'token' && (
+              <div className="flex flex-wrap items-center gap-4 text-xs">
+                <div className="flex items-center gap-2">
+                  <label className="text-slate-300 font-bold">Position Label:</label>
+                  <input
+                    type="text"
+                    value={tokens.find((t) => t.id === selectedId)?.label || ''}
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase();
+                      setTokens(tokens.map((t) => (t.id === selectedId ? { ...t, label: val } : t)));
+                    }}
+                    className="px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-lg font-bold w-20 text-white focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-slate-300 font-bold">Color:</label>
+                  <div className="flex items-center gap-1.5">
+                    {['#1a1a24', '#0052cc', '#d91b24', '#058538', '#e06c00', '#7c3aed'].map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => {
+                          setTokens(tokens.map((t) => (t.id === selectedId ? { ...t, color: c } : t)));
+                        }}
+                        className="w-5 h-5 rounded-full border border-white/60 shadow-sm transition-transform hover:scale-110 cursor-pointer"
+                        style={{ background: c }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedType === 'arrow' && (
+              <div className="flex flex-wrap items-center gap-4 text-xs">
+                <div className="flex items-center gap-2">
+                  <label className="text-slate-300 font-bold">Route / Blitz Label:</label>
+                  <input
+                    type="text"
+                    value={arrows.find((a) => a.id === selectedId)?.label || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setArrows(arrows.map((a) => (a.id === selectedId ? { ...a, label: val } : a)));
+                    }}
+                    className="px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-lg font-bold w-40 text-white focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-slate-300 font-bold">Color:</label>
+                  <div className="flex items-center gap-1.5">
+                    {['#d91b24', '#0052cc', '#058538', '#e06c00', '#1a1a24'].map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => {
+                          setArrows(arrows.map((a) => (a.id === selectedId ? { ...a, color: c } : a)));
+                        }}
+                        className="w-5 h-5 rounded-full border border-white/60 shadow-sm transition-transform hover:scale-110 cursor-pointer"
+                        style={{ background: c }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedType === 'zone' && (
+              <div className="flex flex-wrap items-center gap-4 text-xs">
+                <div className="flex items-center gap-2">
+                  <label className="text-slate-300 font-bold">Coverage Zone Name:</label>
+                  <input
+                    type="text"
+                    value={zones.find((z) => z.id === selectedId)?.name || ''}
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase();
+                      setZones(zones.map((z) => (z.id === selectedId ? { ...z, name: val } : z)));
+                    }}
+                    className="px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-lg font-bold w-44 text-white focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-slate-300 font-bold">Color:</label>
+                  <div className="flex items-center gap-1.5">
+                    {['#0284c7', '#058538', '#d91b24', '#e06c00', '#7c3aed'].map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => {
+                          setZones(zones.map((z) => (z.id === selectedId ? { ...z, color: c } : z)));
+                        }}
+                        className="w-5 h-5 rounded-full border border-white/60 shadow-sm transition-transform hover:scale-110 cursor-pointer"
+                        style={{ background: c }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Drill Setup & Execution Instructions (When available on active drill) */}
+        {!isCustomMode && (currentDrill.setup || (currentDrill.instructions && currentDrill.instructions.length > 0)) && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            {currentDrill.setup && (
+              <div
+                className={`${
+                  currentDrill.instructions && currentDrill.instructions.length > 0
+                    ? 'lg:col-span-5'
+                    : 'lg:col-span-12'
+                } bg-white p-4 rounded-2xl border-l-4 border-indigo-600 shadow-lg text-slate-800`}
+              >
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-[11px] font-black uppercase text-indigo-700 tracking-wider flex items-center gap-1.5">
+                    <Flag className="w-4 h-4 text-indigo-600" />
+                    <span>Field Setup & Alignment</span>
+                  </span>
+                </div>
+                <p className="text-sm text-slate-800 leading-relaxed font-semibold">
+                  {currentDrill.setup}
+                </p>
+                {currentDrill.equipment && (
+                  <div className="mt-3 pt-2.5 border-t border-slate-100 text-xs text-slate-600 flex items-start gap-1.5">
+                    <span className="font-black text-slate-800 uppercase tracking-wider text-[10px] shrink-0">Equipment:</span>
+                    <span>{currentDrill.equipment}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {currentDrill.instructions && currentDrill.instructions.length > 0 && (
+              <div
+                className={`${
+                  currentDrill.setup ? 'lg:col-span-7' : 'lg:col-span-12'
+                } bg-white p-4 rounded-2xl border-l-4 border-amber-600 shadow-lg text-slate-800`}
+              >
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-[11px] font-black uppercase text-amber-700 tracking-wider flex items-center gap-1.5">
+                    <ListOrdered className="w-4 h-4 text-amber-600" />
+                    <span>Step-by-Step Execution Instructions</span>
+                  </span>
+                </div>
+                <ol className="space-y-2 text-xs sm:text-sm text-slate-800">
+                  {currentDrill.instructions.map((inst, idx) => (
+                    <li key={idx} className="flex items-start gap-2.5">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-900 font-black text-xs shrink-0 mt-0.5 shadow-xs">
+                        {idx + 1}
+                      </span>
+                      <span className="leading-snug">{inst}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 3-Column / Responsive Grid of Dry-Erase Coaching Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* CARD 1: Objective & Scheme Technical Progression */}
+          <div className="bg-white p-4 rounded-2xl border-l-4 border-blue-600 shadow-lg flex flex-col justify-between text-slate-800">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-black uppercase text-blue-700 tracking-wider flex items-center gap-1.5">
+                  <Shield className="w-4 h-4 text-blue-600" />
+                  <span>Objective & Scheme Breakdown</span>
+                </span>
+                {isCustomMode && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newObj = prompt('Enter Scheme Objective & Notes:', customObjective);
+                      if (newObj) setCustomObjective(newObj);
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Sliders className="w-3 h-3" />
+                    <span>Edit</span>
+                  </button>
+                )}
+              </div>
+
+              <p
+                className="text-sm text-slate-800 leading-relaxed mb-3"
+                style={{ fontFamily: "'Architects Daughter', cursive" }}
+              >
+                {isCustomMode ? customObjective : currentDrill.objective}
+              </p>
+
+              {/* Active Phase Description (if preset drill) */}
+              {!isCustomMode && currentDrill.phases[activePhaseIdx] && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mt-2">
+                  <div className="text-[11px] font-black text-blue-900 uppercase tracking-wider mb-1">
+                    Current Phase Focus: {currentDrill.phases[activePhaseIdx].name}
+                  </div>
+                  <p
+                    className="text-xs text-slate-700 leading-normal"
+                    style={{ fontFamily: "'Architects Daughter', cursive" }}
+                  >
+                    {currentDrill.phases[activePhaseIdx].description}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* CARD 2: 10U Practice Coaching Cues & Verbal Triggers */}
+          <div className="bg-white p-4 rounded-2xl border-l-4 border-emerald-600 shadow-lg text-slate-800">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-black uppercase text-emerald-700 tracking-wider flex items-center gap-1.5">
+                <Target className="w-4 h-4 text-emerald-600" />
+                <span>10U Practice Coaching Cues</span>
+              </span>
+              {isCustomMode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cue = prompt('Add Coaching Cue:');
+                    if (cue) setCustomCues([...customCues, cue]);
+                  }}
+                  className="text-xs text-emerald-600 hover:text-emerald-800 font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Add Cue</span>
+                </button>
+              )}
+            </div>
+
+            <ul
+              className="space-y-2 text-slate-800 text-sm leading-relaxed"
+              style={{ fontFamily: "'Architects Daughter', cursive" }}
+            >
+              {(isCustomMode ? customCues : currentDrill.cues).map((cue, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <span className="text-emerald-600 font-black text-base leading-none mt-0.5">✔</span>
+                  <span>{cue}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* CARD 3: Critical Mistakes & Penalties (DO NOT DO THIS!) */}
+          <div className="bg-white p-4 rounded-2xl border-l-4 border-rose-600 shadow-lg text-slate-800">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-black uppercase text-rose-700 tracking-wider flex items-center gap-1.5">
+                <Trash2 className="w-4 h-4 text-rose-600" />
+                <span>DO NOT DO THIS! (CRITICAL FAULTS)</span>
+              </span>
+              {isCustomMode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const fault = prompt('Add Critical Fault:');
+                    if (fault) setCustomFaults([...customFaults, fault]);
+                  }}
+                  className="text-xs text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Add Fault</span>
+                </button>
+              )}
+            </div>
+
+            <ul
+              className="space-y-2 text-slate-800 text-sm leading-relaxed"
+              style={{ fontFamily: "'Architects Daughter', cursive" }}
+            >
+              {(isCustomMode ? customFaults : currentDrill.faults).map((fault, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <span className="text-rose-600 font-black text-base leading-none mt-0.5">✖</span>
+                  <span>{fault}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* Quick-Load Defensive Fronts & Coverage Shells */}
+        <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+              <Shield className="w-3.5 h-3.5 text-blue-400" />
+              <span>Load Defensive Front / Shell:</span>
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            {PRESET_SCHEMES.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => handleLoadPreset(preset.id)}
+                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700 hover:border-blue-500 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
+              >
+                {preset.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+            </>
+      )}
+
+      {/* Add Whiteboard Drill Modal */}
+      <AddWhiteboardDrillModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSaveDrill={handleSaveNewDrill}
+        defaultCategory={currentDrill.category}
+        currentBoardTokens={tokens}
+        currentBoardArrows={arrows}
+        currentBoardZones={zones}
+      />
+    </div>
+  );
+};

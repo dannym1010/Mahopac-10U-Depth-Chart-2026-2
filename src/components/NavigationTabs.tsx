@@ -19,6 +19,7 @@ import {
   Layers,
   ChevronRight,
   SlidersHorizontal,
+  PenTool,
 } from 'lucide-react';
 import { CustomTabGroup, UnitType, UserRole } from '../types';
 import { safeJSONParse, safeJSONSet } from '../services/storageService';
@@ -53,6 +54,7 @@ export const DEFAULT_NAV_TABS: NavTabItem[] = [
   { id: 'practice', label: '📋 Practice Plan', icon: ClipboardList },
   { id: 'drills', label: '🏋️ Drill Library', icon: Dumbbell },
   { id: 'guide', label: '📖 Playbooks & Guides', icon: BookOpen },
+  { id: 'whiteboard', label: '🖍️ Whiteboard Playbook', icon: PenTool },
   { id: 'users', label: '👥 Staff & Access', icon: Users, adminOnly: true },
 ];
 

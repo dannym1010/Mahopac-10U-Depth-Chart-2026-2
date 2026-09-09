@@ -153,7 +153,7 @@ export const Header: React.FC<HeaderProps> = ({
   const autoWeekInfo = useMemo(() => getAutoActiveWeek(scheduleEvents), [scheduleEvents]);
 
   return (
-    <header className="bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-slate-100 shadow-xl sticky top-0 z-40">
+    <header className="bg-slate-950 border-b border-slate-800 text-slate-100 shadow-xl sticky top-0 z-40">
       {/* =========================================================================
           1. SLEEK COMPACT MOBILE HEADER (< md: 768px)
           ========================================================================= */}
@@ -372,7 +372,8 @@ export const Header: React.FC<HeaderProps> = ({
       {/* =========================================================================
           3. AUTOMATED GAME WEEK & MATCHUP BAR (md: and above)
           ========================================================================= */}
-      <div className="hidden md:flex max-w-[1700px] mx-auto px-4 py-2 bg-slate-900/60 backdrop-blur-sm items-center justify-between gap-3 text-xs border-b border-slate-800">
+      <div className="hidden md:flex w-full bg-slate-950 border-b border-slate-800">
+        <div className="max-w-[1700px] w-full mx-auto px-4 py-2 flex items-center justify-between gap-3 text-xs bg-slate-950">
         <div className="flex items-center gap-3 flex-wrap">
           {/* Week Selector with Stepper Buttons */}
           <div className="flex items-center gap-1.5 bg-slate-900 p-1 px-2.5 rounded-2xl border border-slate-700/80 shadow-inner">
@@ -513,6 +514,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span>Clone Week Lineup</span>
             </button>
           )}
+        </div>
         </div>
       </div>
 

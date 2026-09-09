@@ -90,6 +90,8 @@ import { isEventAlreadyInSchedule } from './utils/teamSnapSync';
 
 import { Header } from './components/Header';
 import { NavigationTabs } from './components/NavigationTabs';
+import { SidebarNavigation } from './components/SidebarNavigation';
+import { DefensivePositionCategory } from './components/whiteboard/whiteboardDrillData';
 import { RosterSidebar } from './components/RosterSidebar';
 import { FormationsView } from './components/FormationsView';
 import { ScrimmageView } from './components/ScrimmageView';
@@ -105,6 +107,7 @@ import { saveCallSheetSnapshot } from './utils/callSheetStorage';
 import { ScoutingView } from './components/ScoutingView';
 import { TendenciesView } from './components/scouting/TendenciesView';
 import { PlaybookGuidesView } from './components/PlaybookGuidesView';
+import { WhiteboardView } from './components/WhiteboardView';
 import { DrillLibraryView } from './components/DrillLibraryView';
 import { PracticePlanView } from './components/PracticePlanView';
 import { StaffManagerView } from './components/StaffManagerView';
@@ -328,6 +331,11 @@ export default function App() {
   const [activeGuideSub, setActiveGuideSub] = useState<string>('Full Playbook');
   const [printFontSize, setPrintFontSize] = useState<string>(() =>
     safeJSONParse('footballPrintFontSize', '12')
+  );
+  const [activeWhiteboardDrillId, setActiveWhiteboardDrillId] = useState<string>('krausko-blitz-master');
+  const [activeWhiteboardCategory, setActiveWhiteboardCategory] = useState<DefensivePositionCategory | 'ALL'>('LB');
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState<boolean>(() =>
+    safeJSONParse('footballSidebarExpanded', false)
   );
 
   // Filter & Search States
@@ -1374,7 +1382,7 @@ function mergeRemoteWeeklyData(
     if (db && initialCloudLoadDoneRef.current) {
       try {
         const cleanPayload = JSON.parse(
-          JSON.stringify({
+          safeJSONStringify({
             ...payload,
             updatedAt: Date.now(),
             lastAuthor: authorEmail,
@@ -2519,7 +2527,7 @@ function mergeRemoteWeeklyData(
         .doc('depthChartData')
         .set(
           JSON.parse(
-            JSON.stringify({
+            safeJSONStringify({
               teamSavedCoaches: latestStateRef.current.teamSavedCoaches,
               updatedAt: Date.now(),
             })
@@ -5871,7 +5879,7 @@ function mergeRemoteWeeklyData(
   }
 
   return (
-    <div className="min-h-screen bg-[#0f172a] print:bg-white print:text-black flex flex-col font-sans text-slate-100 selection:bg-indigo-600 selection:text-white">
+    <div className="min-h-screen bg-[#0f172a] print:bg-white print:text-black flex flex-row font-sans text-slate-100 selection:bg-indigo-600 selection:text-white overflow-x-hidden">
       {/* Hidden File Inputs for Import */}
       <input
         type="file"
@@ -5895,8 +5903,50 @@ function mergeRemoteWeeklyData(
         onChange={handleImportDrillsJSON}
       />
 
-      {/* Main Athletic Header */}
-      <Header
+      {/* Left Vertical Sidebar Navigation (Folder System with Cascading Expansion & Hover Details) */}
+      <SidebarNavigation
+        activeUnit={activeUnit}
+        onSelectUnit={(unit) => {
+          if (unit === 'depth_chart') {
+            setActiveUnit(depthSubUnit || 'offense');
+          } else {
+            setActiveUnit(unit);
+          }
+        }}
+        userRole={userRole}
+        depthSubUnit={depthSubUnit}
+        onSelectDepthSubUnit={(sub) => {
+          setDepthSubUnit(sub);
+          setActiveUnit(sub);
+        }}
+        defaultScreen={defaultScreen}
+        onSetDefaultScreen={handleSetDefaultScreen}
+        onOpenPreferencesModal={() => setIsPreferencesModalOpen(true)}
+        activeWhiteboardDrillId={activeWhiteboardDrillId}
+        activeWhiteboardCategory={activeWhiteboardCategory}
+        onSelectWhiteboardDrill={(drillId, category) => {
+          setActiveWhiteboardDrillId(drillId);
+          setActiveWhiteboardCategory(category);
+          setActiveUnit('whiteboard');
+        }}
+        onSelectWhiteboardCategory={(category) => {
+          setActiveWhiteboardCategory(category);
+          setActiveUnit('whiteboard');
+        }}
+        activeTeam={currentActiveTeam}
+        guideTree={guideTree}
+        onSelectGuideMain={(main) => {
+          setActiveGuideMain(main);
+          setActiveUnit('guide');
+        }}
+        isExpanded={isSidebarExpanded}
+        onToggleExpanded={() => setIsSidebarExpanded((prev) => !prev)}
+      />
+
+      {/* Main Right Scrollable Viewport (Header + Active Screen) */}
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+        {/* Main Athletic Header */}
+        <Header
         currentWeek={currentWeek}
         onWeekChange={(wk) => {
           setCurrentWeek(wk);
@@ -5964,27 +6014,6 @@ function mergeRemoteWeeklyData(
         onOpenThemeGallery={() => setIsThemeGalleryOpen(true)}
         onForceSave={handleForceSave}
         onForceRefresh={handleForceRefresh}
-      />
-
-      {/* Sticky Unit Navigation Tabs */}
-      <NavigationTabs
-        activeUnit={activeUnit}
-        onSelectUnit={(unit) => {
-          if (unit === 'depth_chart') {
-            setActiveUnit(depthSubUnit || 'offense');
-          } else {
-            setActiveUnit(unit);
-          }
-        }}
-        userRole={userRole}
-        depthSubUnit={depthSubUnit}
-        onSelectDepthSubUnit={(sub) => {
-          setDepthSubUnit(sub);
-          setActiveUnit(sub);
-        }}
-        defaultScreen={defaultScreen}
-        onSetDefaultScreen={handleSetDefaultScreen}
-        onOpenPreferencesModal={() => setIsPreferencesModalOpen(true)}
       />
 
       {/* Main Layout Area */}
@@ -6628,6 +6657,59 @@ function mergeRemoteWeeklyData(
               />
             )}
 
+            {/* 5.5. Interactive Whiteboard Playbook */}
+            {activeUnit === 'whiteboard' && (
+              <WhiteboardView
+                userRole={userRole}
+                activeTeam={currentActiveTeam}
+                onNavigateToGuide={() => setActiveUnit('guide')}
+                externalDrillId={activeWhiteboardDrillId}
+                externalCategory={activeWhiteboardCategory}
+                onDrillSelect={(drillId, cat) => {
+                  setActiveWhiteboardDrillId(drillId);
+                  setActiveWhiteboardCategory(cat);
+                }}
+                onCategorySelect={(cat) => {
+                  setActiveWhiteboardCategory(cat);
+                }}
+                onSaveToGuidePlaybook={(mainFolder, subTabName, htmlContent) => {
+                  setGuideTree((prev) => {
+                    const next = {
+                      ...prev,
+                      [mainFolder]: {
+                        ...(prev[mainFolder] || {}),
+                        [subTabName]: htmlContent,
+                      },
+                    };
+                    latestStateRef.current.guideTree = next;
+                    safeJSONSet('footballPdfGuidesTree', next);
+                    return next;
+                  });
+                  setGuideOrder((prev) => {
+                    const mainList = prev.main.includes(mainFolder)
+                      ? prev.main
+                      : [...prev.main, mainFolder];
+                    const curSubs = prev.sub[mainFolder] || [];
+                    const nextSubs = curSubs.includes(subTabName)
+                      ? curSubs
+                      : [...curSubs, subTabName];
+                    const next = {
+                      ...prev,
+                      main: mainList,
+                      sub: {
+                        ...prev.sub,
+                        [mainFolder]: nextSubs,
+                      },
+                    };
+                    latestStateRef.current.guideOrder = next;
+                    safeJSONSet('footballPdfGuidesOrder', next);
+                    return next;
+                  });
+                  flushAndSaveStateToStorage('whiteboard_save_guide');
+                }}
+              />
+            )}
+
             {/* 6. Drill Library */}
             {activeUnit === 'drills' && (
               <DrillLibraryView
@@ -6850,7 +6932,7 @@ function mergeRemoteWeeklyData(
           </div>
 
           {/* Master Roster Sidebar (Shown on Depth Charts and Scrimmage) */}
-          {!['mobile_hub', 'game_day', 'wristband', 'drills', 'scouting', 'guide', 'practice', 'users', 'schedule', 'compliance', 'call_sheet'].includes(
+          {!['mobile_hub', 'game_day', 'wristband', 'drills', 'scouting', 'guide', 'practice', 'users', 'schedule', 'compliance', 'call_sheet', 'whiteboard'].includes(
             activeUnit
           ) && (
             <RosterSidebar
@@ -6958,6 +7040,7 @@ function mergeRemoteWeeklyData(
           <span className="text-[10px]">Schedule</span>
         </button>
       </nav>
+      </div>
 
       {/* Global Dialog Modals */}
       <CopyWeekModal

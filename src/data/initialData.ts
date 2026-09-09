@@ -936,6 +936,67 @@ export const DEFAULT_CASCADING_DRILLS: DrillFolder[] = [
             "key": "Never get reached!. If DL gets driven backward, interior run lane opens up",
             "desc": "OT down-blocks on DL while OG pulls. DL reads down-block, presses into OT hip to squeeze hole, spills play wide",
             "name": "Defense DL: Down-Block Squeeze & Spill"
+          },
+          {
+            "key": "Dip inside shoulder low ('scrape grass') and rip upward through the OT armpit. Flatten immediately to QB launch spot",
+            "desc": "DE bends around agile hoop or circular cones from 7-technique. Dip inside shoulder under OT punch hands, rip upward violently, and flatten sharply to the quarterback without getting washed upfield",
+            "name": "Defense DL: Hoop Bend & Dip (Edge Rusher Corner Flatten)"
+          },
+          {
+            "key": "Drop pad level under their breastplates. Drop down-knee and corkscrew into the post blocker. Eat the double team so linebackers scrape clean",
+            "desc": "DT faces Guard and Tackle double team. On snap, DT strikes post blocker, drops hips, corkscrews to drop pad level, and wedges between blockers to anchor the line of scrimmage",
+            "name": "Defense DL: 2-on-1 Split & Anchor (Defeating the Double Team)"
+          },
+          {
+            "key": "Key blocker's helmet: Reach step means fight across face; Down block means squeeze the hip and hunt the kick-out puller",
+            "desc": "DL lines up in 5-technique. Blocker gives either reach or down-block look. On reach, DL fights across face maintaining outside leverage; on down-block, DL squeezes down LOS to destroy the kick-out",
+            "name": "Defense DL: Reach vs. Down Block Read (Hat-Track Mirror)"
+          },
+          {
+            "key": "Yell 'SCREEN!' at the top of your lungs. If pass protection feels too easy, immediately plant cleats and retrace back into the tunnel",
+            "desc": "Offensive line sets pass protection and releases to perimeter screen. DL recognizes 'too easy' rush, yells 'SCREEN!', plants outside foot, retraces footsteps, and chases down the ballcarrier from behind",
+            "name": "Defense DL: Screen & Draw Retrace (High-Hat Recognition)"
+          },
+          {
+            "key": "Violent club to knock down blocker's outside arm, followed by explosive upward rip. Keep hips square to target",
+            "desc": "DL executes two-move pass rush moves against OT: Move 1 is Club-and-Rip (club punch arm, vertical rip through armpit); Move 2 is Chop-and-Swim (chop outside wrist, high arm swim through hip)",
+            "name": "Defense DL: Pass Rush Club-Rip & Chop-Swim Progression"
+          },
+          {
+            "key": "Aim for the throwing arm with tomahawk swipe. If ball is loose, scoop and score or smother with chest and knees",
+            "desc": "DE closes on QB dummy from blind side, executes downward tomahawk swipe on football, followed by immediate scoop-and-score recovery or smother drill",
+            "name": "Defense DL: Fumble Recovery & Strip-Sack Turnover Circuit"
+          }
+        ]
+      },
+      {
+        "name": "Defensive Ends (DE)",
+        "subfolders": [],
+        "drills": [
+          {
+            "name": "Defense DE: Containment Stiff-Arm Track",
+            "desc": "Fire vertically across LOS. As blocker climbs, strike blocker's outside shoulder with locked-out rigid inside arm. Keep outside arm and shoulder high and completely free to funnel ballcarrier back inside.",
+            "key": "The most important rule for young edge players: Never get reached and never let the ball carrier outside of your outside shoulder."
+          },
+          {
+            "name": "Defense DE: Backside Squeeze & Settle",
+            "desc": "DE takes initial vertical containment read step. On diagnosing flow away, transition immediately to backside rule: squeeze down LOS, settle at containment depth 2 yards deeper than deepest back, shuffle parallel to LOS watching QB bootleg/counter.",
+            "key": "'Squeeze & Check Boot/Reverse': Squeeze down the LOS to the depth of the QB. Do not chase flat from behind."
+          },
+          {
+            "name": "Defense DE: Hoop Bend & Dip (Edge Rusher Corner Flatten)",
+            "desc": "DE bends around agile hoop or circular cones from 7-technique. Dip inside shoulder under OT punch hands, rip upward violently, and flatten sharply to the quarterback without getting washed upfield.",
+            "key": "Dip inside shoulder low ('scrape grass') and rip upward through the OT armpit. Flatten immediately to QB launch spot."
+          },
+          {
+            "name": "Defense DE: Spill vs. Box Gap Fit (Wrong-Arm Puller)",
+            "desc": "Offensive guard pulls to kick out DE. DE reads puller, attacks downhill, executes wrong-arm technique with inside shoulder into puller's inside hip to bounce running back outside into scraping linebacker.",
+            "key": "'DL spills the soup, linebackers eat it!' Outside arm stays free or wrong-arm blows up the puller."
+          },
+          {
+            "name": "Defense DE: Fumble Recovery & Strip-Sack Turnover Circuit",
+            "desc": "DE closes on QB dummy from blind side, executes downward tomahawk swipe on football, followed by immediate scoop-and-score recovery or smother drill.",
+            "key": "Aim for the throwing arm with tomahawk swipe. If ball is loose, scoop and score with two hands."
           }
         ]
       },

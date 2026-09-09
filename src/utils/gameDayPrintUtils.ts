@@ -723,7 +723,7 @@ export function generateGameDayPackageHTML(
     if (subSelections?.wristbandIds && subSelections.wristbandIds.length > 0) {
       activeWbs = activeWbs.filter((wb, idx) =>
         subSelections.wristbandIds!.includes(wb.id || '') ||
-        subSelections.wristbandIds!.includes(wb.name) ||
+        subSelections.wristbandIds!.includes((wb as any).name || wb.title || '') ||
         subSelections.wristbandIds!.includes(String(idx))
       );
     }

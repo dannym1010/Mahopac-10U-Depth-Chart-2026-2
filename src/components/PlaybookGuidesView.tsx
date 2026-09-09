@@ -359,6 +359,89 @@ const HTML_STARTER_TEMPLATES = [
 </body>
 </html>`,
   },
+  {
+    id: 'whiteboard_playbook',
+    name: '🖍️ 10U D-Line Whiteboard & Gap Fit Playbook',
+    description: 'Chalkboard card with moveable X\'s, O\'s, blitz arrows, zone coverage bubbles, and 10U coaching cues',
+    code: `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>10U D-Line Whiteboard Playbook</title>
+<link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Permanent+Marker&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Space Grotesk', -apple-system, sans-serif; background: #0b0f19; color: #f8fafc; margin: 0; padding: 20px; }
+  .frame { background: #94a3b8; border-radius: 16px; padding: 16px; max-width: 960px; margin: 0 auto; box-shadow: 0 15px 35px rgba(0,0,0,0.6); }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; color: #0f172a; }
+  .header h2 { margin: 0; font-family: 'Permanent Marker', cursive; font-size: 22px; }
+  .badge { background: #d91b24; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; }
+  .board { background: radial-gradient(circle at 50% 20%, #ffffff 0%, #f4f6f9 85%, #eaecf1 100%); border-radius: 12px; overflow: hidden; border: 1px solid #cbd5e1; }
+  .notes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  .note-card { background: white; padding: 14px; border-radius: 8px; font-family: 'Architects Daughter', cursive; color: #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+  .note-green { border-left: 6px solid #058538; }
+  .note-red { border-left: 6px solid #d91b24; }
+  .note-card h3 { margin-top: 0; font-family: 'Permanent Marker', cursive; font-size: 16px; margin-bottom: 8px; }
+  ul { margin: 0; padding-left: 18px; line-height: 1.6; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="header">
+    <h2>10U D-LINE: BALL GET-OFF & GAP CONTROL</h2>
+    <span class="badge">DEFENSIVE SCHEME & DRILLS</span>
+  </div>
+  <div class="board">
+    <svg viewBox="0 0 700 460" style="width: 100%; height: auto; display: block;">
+      <line x1="30" y1="230" x2="670" y2="230" stroke="#0052cc" stroke-width="2.5" />
+      <text x="40" y="222" font-family="'Permanent Marker', cursive" font-size="12" fill="#0052cc">LOS (LINE OF SCRIMMAGE)</text>
+      <!-- Zone Coverage Bubble -->
+      <ellipse cx="350" cy="150" rx="90" ry="35" fill="#d91b24" fill-opacity="0.18" stroke="#d91b24" stroke-width="2" stroke-dasharray="6,4"/>
+      <text x="350" y="154" font-family="'Permanent Marker', cursive" font-size="11" fill="#d91b24" text-anchor="middle">COLLAPSED POCKET ZONE</text>
+      <!-- Offensive O's -->
+      <g transform="translate(230, 230)"><circle cx="0" cy="0" r="16" fill="#fff" stroke="#1a1a24" stroke-width="2.5"/><text x="0" y="5" font-family="'Permanent Marker'" font-size="11" text-anchor="middle" fill="#1a1a24">LT</text></g>
+      <g transform="translate(290, 230)"><circle cx="0" cy="0" r="16" fill="#fff" stroke="#1a1a24" stroke-width="2.5"/><text x="0" y="5" font-family="'Permanent Marker'" font-size="11" text-anchor="middle" fill="#1a1a24">LG</text></g>
+      <g transform="translate(350, 230)"><circle cx="0" cy="0" r="16" fill="#fff" stroke="#1a1a24" stroke-width="2.5"/><text x="0" y="5" font-family="'Permanent Marker'" font-size="11" text-anchor="middle" fill="#1a1a24">C</text></g>
+      <g transform="translate(410, 230)"><circle cx="0" cy="0" r="16" fill="#fff" stroke="#1a1a24" stroke-width="2.5"/><text x="0" y="5" font-family="'Permanent Marker'" font-size="11" text-anchor="middle" fill="#1a1a24">RG</text></g>
+      <g transform="translate(470, 230)"><circle cx="0" cy="0" r="16" fill="#fff" stroke="#1a1a24" stroke-width="2.5"/><text x="0" y="5" font-family="'Permanent Marker'" font-size="11" text-anchor="middle" fill="#1a1a24">RT</text></g>
+      <g transform="translate(350, 150)"><circle cx="0" cy="0" r="16" fill="#fff" stroke="#d91b24" stroke-width="2.5"/><text x="0" y="5" font-family="'Permanent Marker'" font-size="11" text-anchor="middle" fill="#d91b24">QB</text></g>
+      <!-- Defensive X's -->
+      <g transform="translate(180, 290)"><circle cx="0" cy="0" r="16" fill="#0052cc" stroke="#1a1a24" stroke-width="2.5"/><text x="0" y="24" font-family="'Permanent Marker'" font-size="11" text-anchor="middle" fill="#0052cc">LDE</text></g>
+      <g transform="translate(290, 290)"><circle cx="0" cy="0" r="16" fill="#0052cc" stroke="#1a1a24" stroke-width="2.5"/><text x="0" y="24" font-family="'Permanent Marker'" font-size="11" text-anchor="middle" fill="#0052cc">LDT</text></g>
+      <g transform="translate(410, 290)"><circle cx="0" cy="0" r="16" fill="#0052cc" stroke="#1a1a24" stroke-width="2.5"/><text x="0" y="24" font-family="'Permanent Marker'" font-size="11" text-anchor="middle" fill="#0052cc">RDT</text></g>
+      <g transform="translate(520, 290)"><circle cx="0" cy="0" r="16" fill="#0052cc" stroke="#1a1a24" stroke-width="2.5"/><text x="0" y="24" font-family="'Permanent Marker'" font-size="11" text-anchor="middle" fill="#0052cc">RDE</text></g>
+      <!-- Blitz Arrows -->
+      <path d="M 180 280 Q 160 210 200 160" fill="none" stroke="#0052cc" stroke-width="3"/>
+      <polygon points="200,160 192,165 197,172" fill="#0052cc"/>
+      <path d="M 520 280 Q 540 210 500 160" fill="none" stroke="#0052cc" stroke-width="3"/>
+      <polygon points="500,160 503,172 508,165" fill="#0052cc"/>
+      <path d="M 290 275 L 290 240" fill="none" stroke="#058538" stroke-width="3"/>
+      <polygon points="290,235 285,245 295,245" fill="#058538"/>
+      <path d="M 410 275 L 410 240" fill="none" stroke="#058538" stroke-width="3"/>
+      <polygon points="410,235 405,245 415,245" fill="#058538"/>
+    </svg>
+  </div>
+  <div class="notes">
+    <div class="note-card note-green">
+      <h3 style="color: #058538;">10U COACHING CUES</h3>
+      <ul>
+        <li>"Eyes burned into the leather &mdash; fire on the ball!"</li>
+        <li>"Elbows glued to your ribs, violent lockout punch!"</li>
+        <li>"DEs hold outside contain ceiling &mdash; never flush QB wide!"</li>
+      </ul>
+    </div>
+    <div class="note-card note-red">
+      <h3 style="color: #d91b24;">DO NOT DO THIS!</h3>
+      <ul>
+        <li>Jumping offsides on the quarterback's hard count.</li>
+        <li>False stepping backwards with front foot before exploding forward.</li>
+        <li>Speed rushing 10 yards behind QB and giving up easy scramble lanes.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</body>
+</html>`,
+  },
 ];
 
 export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
