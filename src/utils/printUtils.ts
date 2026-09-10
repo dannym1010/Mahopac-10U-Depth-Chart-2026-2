@@ -3042,8 +3042,9 @@ export function generateCallSheetPrintHTML(
       margin: 0;
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background: ${inkFriendly ? '#ffffff' : '#090d16'};
-      color: ${inkFriendly ? '#000000' : '#f8fafc'};
+      background: #ffffff !important;
+      background-color: #ffffff !important;
+      color: #000000 !important;
       font-size: ${baseFontSize};
       line-height: 1.25;
       overflow: visible !important;
@@ -3052,10 +3053,10 @@ export function generateCallSheetPrintHTML(
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1.5px solid ${inkFriendly ? '#cbd5e1' : '#334155'};
+      border-bottom: 2px solid #0f172a;
       padding-bottom: 3px;
       margin-bottom: 4px;
-      background: ${inkFriendly ? '#ffffff' : '#0f172a'};
+      background: #ffffff !important;
       min-height: 0;
       padding: 4px 6px;
       border-radius: ${inkFriendly ? '0' : '4px'};
@@ -3068,7 +3069,7 @@ export function generateCallSheetPrintHTML(
     .banner-team {
       font-size: 10pt;
       font-weight: 800;
-      color: ${inkFriendly ? '#0f172a' : '#f8fafc'};
+      color: #0f172a;
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
@@ -3085,7 +3086,7 @@ export function generateCallSheetPrintHTML(
     .banner-meta {
       font-size: 8.5pt;
       font-weight: 700;
-      color: ${inkFriendly ? '#1e293b' : '#94a3b8'};
+      color: #334155;
     }
     .section-group {
       margin-bottom: 8px;
@@ -3101,25 +3102,25 @@ export function generateCallSheetPrintHTML(
       font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      background: ${inkFriendly ? '#e2e8f0' : '#1e293b'};
-      color: ${inkFriendly ? '#0f172a' : '#f8fafc'};
+      background: ${inkFriendly ? '#f1f5f9' : '#e2e8f0'} !important;
+      color: #0f172a !important;
       padding: 2px 6px;
       margin-bottom: 4px;
-      border: 1px solid ${inkFriendly ? '#cbd5e1' : '#334155'};
+      border: 1px solid #cbd5e1;
       border-radius: ${inkFriendly ? '0' : '4px'};
     }
     .redzone-banner {
-      background: ${inkFriendly ? '#fee2e2' : '#7f1d1d'};
-      color: ${inkFriendly ? '#991b1b' : '#fecaca'};
-      border-color: ${inkFriendly ? '#fca5a5' : '#991b1b'};
+      background: #fee2e2 !important;
+      color: #991b1b !important;
+      border-color: #fca5a5 !important;
     }
     .cards-grid {
       display: grid;
       width: 100%;
     }
     .section-card {
-      border: ${inkFriendly ? '1.2px solid #000000' : '1.5px solid #334155'};
-      background: ${inkFriendly ? '#ffffff' : '#0f172a'};
+      border: 1.5px solid #0f172a !important;
+      background: #ffffff !important;
       border-radius: ${inkFriendly ? '0' : '4px'};
       display: flex;
       flex-direction: column;
@@ -3131,7 +3132,7 @@ export function generateCallSheetPrintHTML(
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid ${inkFriendly ? '#000000' : '#334155'};
+      border-bottom: 1.2px solid #0f172a;
       font-weight: 900;
       text-transform: uppercase;
       font-size: 8.5pt;
@@ -3151,7 +3152,7 @@ export function generateCallSheetPrintHTML(
     .card-body {
       display: flex;
       flex-direction: column;
-      background: ${inkFriendly ? '#ffffff' : '#0f172a'};
+      background: #ffffff !important;
       border-bottom-left-radius: ${inkFriendly ? '0' : '3px'};
       border-bottom-right-radius: ${inkFriendly ? '0' : '3px'};
     }
@@ -3159,20 +3160,21 @@ export function generateCallSheetPrintHTML(
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid ${inkFriendly ? '#e2e8f0' : '#1e293b'};
+      border-bottom: 1px solid #e2e8f0;
       gap: 4px;
       page-break-inside: avoid;
       break-inside: avoid;
+      background: #ffffff !important;
     }
     .callsheet-cell:last-child {
       border-bottom: none;
     }
     .empty-slot {
-      background: ${inkFriendly ? '#f8fafc' : '#090d16'};
+      background: #f8fafc !important;
       justify-content: center;
     }
     .slot-empty-text {
-      color: ${inkFriendly ? '#94a3b8' : '#475569'};
+      color: #94a3b8;
       font-style: italic;
       font-size: 7.5pt;
     }
@@ -3204,7 +3206,7 @@ export function generateCallSheetPrintHTML(
       line-height: 1.15;
       font-size: 8.5pt;
       flex: 1;
-      color: ${inkFriendly ? '#000000' : '#f8fafc'};
+      color: #000000 !important;
     }
     .cell-meta {
       display: flex;
@@ -3214,19 +3216,19 @@ export function generateCallSheetPrintHTML(
       font-size: 7.5pt;
     }
     .formation-tag {
-      color: ${inkFriendly ? '#475569' : '#94a3b8'};
+      color: #475569;
       font-weight: 700;
       font-family: monospace;
     }
     .personnel-tag {
-      background: ${inkFriendly ? '#e2e8f0' : '#1e293b'};
-      color: ${inkFriendly ? '#1e293b' : '#e2e8f0'};
+      background: #e2e8f0;
+      color: #1e293b;
       padding: 0 3px;
       border-radius: 2px;
       font-weight: 800;
       font-size: 7pt;
       font-family: monospace;
-      border: 1px solid ${inkFriendly ? '#cbd5e1' : '#334155'};
+      border: 1px solid #cbd5e1;
     }
     .bottom-grid {
       display: grid;
@@ -3241,8 +3243,8 @@ export function generateCallSheetPrintHTML(
       }
     }
     .bottom-card {
-      border: ${inkFriendly ? '1.2px solid #000000' : '1.5px solid #334155'};
-      background: ${inkFriendly ? '#ffffff' : '#0f172a'};
+      border: 1.5px solid #0f172a !important;
+      background: #ffffff !important;
       border-radius: ${inkFriendly ? '0' : '4px'};
       page-break-inside: avoid;
       break-inside: avoid;
@@ -3255,20 +3257,21 @@ export function generateCallSheetPrintHTML(
       display: flex;
       flex-direction: column;
       gap: 1px;
-      background: ${inkFriendly ? '#ffffff' : '#0f172a'};
+      background: #ffffff !important;
     }
     .script-row {
       display: flex;
       align-items: center;
       gap: 4px;
       padding: 1.5px 3px;
-      border-bottom: 1px solid ${inkFriendly ? '#f1f5f9' : '#1e293b'};
+      border-bottom: 1px solid #f1f5f9;
       font-size: 8pt;
+      background: #ffffff !important;
     }
     .script-num {
       font-weight: 900;
       font-family: monospace;
-      color: ${inkFriendly ? '#475569' : '#94a3b8'};
+      color: #475569;
       width: 18px;
     }
     .script-name {
@@ -3278,7 +3281,7 @@ export function generateCallSheetPrintHTML(
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      color: ${inkFriendly ? '#000000' : '#f8fafc'};
+      color: #000000 !important;
     }
     .twopoint-header {
       background: #334155;
@@ -3289,25 +3292,26 @@ export function generateCallSheetPrintHTML(
       border-collapse: collapse;
       font-size: 7.5pt;
       text-align: center;
+      background: #ffffff !important;
     }
     .twopoint-table th {
-      background: ${inkFriendly ? '#e2e8f0' : '#1e293b'};
-      color: ${inkFriendly ? '#000000' : '#f8fafc'};
+      background: #e2e8f0 !important;
+      color: #000000 !important;
       font-weight: 900;
       padding: 2px;
-      border: 1px solid ${inkFriendly ? '#cbd5e1' : '#334155'};
+      border: 1px solid #cbd5e1;
     }
     .twopoint-table td {
       padding: 1.5px 2px;
-      border: 1px solid ${inkFriendly ? '#e2e8f0' : '#334155'};
-      background: ${inkFriendly ? '#ffffff' : '#0f172a'};
-      color: ${inkFriendly ? '#000000' : '#e2e8f0'};
+      border: 1px solid #e2e8f0;
+      background: #ffffff !important;
+      color: #000000 !important;
       font-weight: 700;
     }
     .diff-cell {
       font-family: monospace;
       font-weight: 900;
-      color: ${inkFriendly ? '#000000' : '#f8fafc'};
+      color: #000000 !important;
     }
     .action-highlight {
       background: #fef08a !important;
@@ -3319,12 +3323,12 @@ export function generateCallSheetPrintHTML(
       color: #ffffff;
     }
     .timeouts-body {
-      background: ${inkFriendly ? '#ffffff' : '#0f172a'};
+      background: #ffffff !important;
     }
     .half-title {
       font-weight: 900;
       font-size: 7.5pt;
-      color: ${inkFriendly ? '#475569' : '#94a3b8'};
+      color: #475569;
       margin-bottom: 2px;
       text-transform: uppercase;
     }
@@ -3334,20 +3338,21 @@ export function generateCallSheetPrintHTML(
       gap: 4px;
       margin-bottom: 2px;
       font-size: 8pt;
+      background: #ffffff !important;
     }
     .team-label {
       font-weight: 900;
       width: 32px;
-      color: ${inkFriendly ? '#000000' : '#f8fafc'};
+      color: #000000 !important;
     }
     .timeout-check-box {
       font-family: monospace;
       font-weight: 900;
       font-size: 9pt;
-      color: ${inkFriendly ? '#000000' : '#38bdf8'};
+      color: #0284c7 !important;
     }
     .text-muted {
-      color: #94a3b8;
+      color: #64748b;
     }
   </style>
 `;

@@ -113,6 +113,23 @@ body {
     page-break-inside: avoid !important;
     overflow: visible !important;
     margin-bottom: 6px !important;
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  body.is-printing-callsheet .callsheet-main-content,
+  body.is-printing-callsheet .callsheet-section-card,
+  body.is-printing-callsheet .callsheet-table-box,
+  body.is-printing-callsheet .callsheet-scripts-box,
+  body.is-printing-callsheet .callsheet-twopoint-box,
+  body.is-printing-callsheet .callsheet-timeouts-box,
+  body.is-printing-callsheet .callsheet-cell-slot,
+  body.is-printing-callsheet [class*="bg-slate-"],
+  body.is-printing-callsheet [class*="dark:bg-slate-"] {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
   }
 
   /* Row container */

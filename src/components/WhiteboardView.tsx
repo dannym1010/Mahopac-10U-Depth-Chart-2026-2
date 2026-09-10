@@ -210,6 +210,10 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
     externalCategory || 'ALL'
   );
 
+  // Mobile Drill View Mode: 'drill' (showing full-width chalkboard & notes) or 'list' (position and drill selector list)
+  const [mobileViewMode, setMobileViewMode] = useState<'drill' | 'list'>('drill');
+  const [drillSearchTerm, setDrillSearchTerm] = useState<string>('');
+
   // Mobile Drill Picker Modal
   const [isDrillPickerModalOpen, setIsDrillPickerModalOpen] = useState<boolean>(false);
 
@@ -395,6 +399,33 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
     filteredDrills[0] ||
     drills[0] ||
     DEFENSIVE_DRILLS[0];
+
+  // Filtered drills specifically for the Mobile/Sideline Position & Drill Selector List
+  const listFilteredDrills = useMemo(() => {
+    return drills.filter((drill) => {
+      // Category filter
+      if (selectedCategory !== 'ALL') {
+        if (selectedCategory === 'OFFENSE') {
+          if (!drill.category.startsWith('OFF')) return false;
+        } else if (selectedCategory === 'DEFENSE') {
+          if (!['DL', 'DE', 'LB', 'DB', 'SCHEME', 'DEFENSE'].includes(drill.category)) return false;
+        } else if (drill.category !== selectedCategory) {
+          return false;
+        }
+      }
+      // Search filter
+      if (!drillSearchTerm.trim()) return true;
+      const q = drillSearchTerm.toLowerCase();
+      return (
+        drill.title.toLowerCase().includes(q) ||
+        (drill.subtitle && drill.subtitle.toLowerCase().includes(q)) ||
+        (drill.objective && drill.objective.toLowerCase().includes(q)) ||
+        drill.category.toLowerCase().includes(q) ||
+        (drill.categoryLabel && drill.categoryLabel.toLowerCase().includes(q)) ||
+        (drill.cues && drill.cues.some((c) => c.toLowerCase().includes(q)))
+      );
+    });
+  }, [drills, selectedCategory, drillSearchTerm]);
 
   // Handle category change
   const handleSelectCategory = (catId: 'ALL' | DefensivePositionCategory) => {
@@ -732,7 +763,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
   };
 
   return (
-    <div className="w-full min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center p-3 sm:p-5">
+    <div className="w-full min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center px-0 sm:px-4 py-2 sm:py-5">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-4 right-4 z-50 bg-emerald-600 text-white px-4 py-2 rounded-xl shadow-2xl font-bold text-sm flex items-center gap-2 animate-in fade-in">
@@ -742,7 +773,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
       )}
 
       {/* Main Header */}
-      <header className="w-full max-w-7xl flex flex-wrap justify-between items-center gap-3 mb-3">
+      <header className="w-full max-w-7xl flex flex-wrap justify-between items-center gap-3 mb-3 px-2 sm:px-0">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-2xl border border-blue-500/30 shadow-md">
             <PenTool className="w-6 h-6" />
@@ -813,34 +844,303 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
         </div>
       )}
 
-      {/* Mobile & Sideline Drill Stepper & Selector Bar */}
-      <div className="w-full max-w-7xl mb-3 bg-slate-900/95 border border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-xl print:hidden">
-        <div className="flex items-center justify-between gap-2">
-          {/* Prev Drill */}
+      {/* Mobile Top Segmented Tab (Position & Drill List vs Full-Width Chalkboard) */}
+      <div className="w-full max-w-7xl mb-2.5 px-2 sm:px-0 sm:hidden print:hidden">
+        <div className="grid grid-cols-2 p-1 bg-slate-900 border border-slate-800 rounded-xl text-xs font-black shadow-lg">
           <button
             type="button"
-            onClick={handlePrevDrill}
-            className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 hover:border-slate-600 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer shrink-0"
-            title="Previous Drill"
+            onClick={() => setMobileViewMode('list')}
+            className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              mobileViewMode === 'list'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
           >
-            <ChevronLeft className="w-4 h-4 text-blue-400" />
-            <span className="hidden xs:inline">Prev</span>
+            <Layers className="w-4 h-4" />
+            <span>Select Position & Drill</span>
           </button>
-
-          {/* Center Selector Button (Opens WhiteboardDrillPickerModal) */}
           <button
             type="button"
-            onClick={() => setIsDrillPickerModalOpen(true)}
-            className="flex-1 min-w-0 px-3 py-2 bg-slate-950/90 hover:bg-slate-950 border border-blue-500/40 hover:border-blue-400 text-white rounded-xl shadow-inner transition-all flex items-center justify-between gap-2 cursor-pointer group"
-            title="Browse and select drills"
+            onClick={() => setMobileViewMode('drill')}
+            className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              mobileViewMode === 'drill'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
           >
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-base shrink-0">
-                {DEFENSIVE_POSITION_GROUPS.find((g) => g.id === currentDrill.category)?.icon || "🏈"}
+            <PenTool className="w-4 h-4" />
+            <span>Whiteboard & Notes</span>
+          </button>
+        </div>
+      </div>
+
+      {mobileViewMode === 'list' ? (
+        /* =========================================================================
+           POSITION & DRILL SELECTION LIST VIEW (SELECT POSITION & DRILL FROM LIST)
+           ========================================================================= */
+        <section className="w-full max-w-7xl bg-slate-900 border-x-0 sm:border border-slate-800 rounded-none sm:rounded-2xl p-3 sm:p-5 shadow-2xl space-y-4">
+          {/* Header & Return to Open Drill */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30">
+                  <Layers className="w-5 h-5" />
+                </span>
+                <div>
+                  <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-wide">
+                    Select Position & Drill
+                  </h2>
+                  <p className="text-xs text-slate-400">
+                    Choose a position group below, then tap any drill to open directly on the whiteboard
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Button to return to currently open drill */}
+            <button
+              type="button"
+              onClick={() => {
+                setMobileViewMode('drill');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-750 text-blue-300 hover:text-blue-200 border border-blue-500/30 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            >
+              <span>Return to Open Drill</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* 1. Position Group Selection Chips */}
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-xs font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-blue-400" />
+                Step 1: Choose Position Group
               </span>
-              <div className="text-left min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-black uppercase text-blue-400 tracking-wider">
+              <span className="text-[11px] text-slate-500 font-bold">
+                {listFilteredDrills.length} Drills Shown
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleSelectCategory('ALL')}
+                className={`p-2.5 rounded-xl border text-left flex flex-col justify-between gap-1 transition-all cursor-pointer ${
+                  selectedCategory === 'ALL'
+                    ? 'bg-blue-600 text-white border-blue-500 shadow-md ring-2 ring-blue-400/40'
+                    : 'bg-slate-950/70 hover:bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-base">🏈</span>
+                  <span className={`text-[10px] font-black px-1.5 py-0.2 rounded ${
+                    selectedCategory === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {drills.length}
+                  </span>
+                </div>
+                <div>
+                  <div className="text-xs font-black uppercase">ALL POSITIONS</div>
+                  <div className={`text-[10px] ${selectedCategory === 'ALL' ? 'text-blue-100' : 'text-slate-500'}`}>
+                    Entire Playbook
+                  </div>
+                </div>
+              </button>
+
+              {DEFENSIVE_POSITION_GROUPS.map((pos) => {
+                const isSelected = selectedCategory === pos.id;
+                const count = drills.filter((d) => d.category === pos.id).length;
+                return (
+                  <button
+                    key={pos.id}
+                    type="button"
+                    onClick={() => handleSelectCategory(pos.id)}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col justify-between gap-1 transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-blue-600 text-white border-blue-500 shadow-md ring-2 ring-blue-400/40'
+                        : 'bg-slate-950/70 hover:bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-base">{pos.icon}</span>
+                      <span className={`text-[10px] font-black px-1.5 py-0.2 rounded ${
+                        isSelected ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
+                      }`}>
+                        {count}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xs font-black uppercase">{pos.shortLabel}</div>
+                      <div className={`text-[10px] truncate ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
+                        {pos.label}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 2. Fast Search Bar */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={drillSearchTerm}
+              onChange={(e) => setDrillSearchTerm(e.target.value)}
+              placeholder="Search drills by name, coaching cues, or techniques..."
+              className="w-full bg-slate-950/90 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors shadow-inner"
+            />
+            {drillSearchTerm && (
+              <button
+                type="button"
+                onClick={() => setDrillSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-bold px-1.5 py-0.5 rounded bg-slate-800 cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          {/* 3. Step 2: Drills List */}
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-2.5">
+              <span className="text-xs font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
+                <Target className="w-3.5 h-3.5 text-emerald-400" />
+                Step 2: Tap Any Drill to Open ({listFilteredDrills.length})
+              </span>
+              <span className="text-[11px] text-blue-400 font-bold">
+                Tap opens full whiteboard & coaching notes
+              </span>
+            </div>
+
+            {listFilteredDrills.length === 0 ? (
+              <div className="p-8 text-center bg-slate-950/60 rounded-2xl border border-slate-800">
+                <p className="text-sm font-bold text-slate-400">No drills found matching your selection.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDrillSearchTerm('');
+                    setSelectedCategory('ALL');
+                  }}
+                  className="mt-3 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold cursor-pointer"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                {listFilteredDrills.map((drill) => {
+                  const isActive = drill.id === activeDrillId && !isCustomMode;
+                  const posMeta = DEFENSIVE_POSITION_GROUPS.find((g) => g.id === drill.category);
+
+                  return (
+                    <div
+                      key={drill.id}
+                      onClick={() => {
+                        handleSelectDrill(drill.id);
+                        setMobileViewMode('drill');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer group ${
+                        isActive
+                          ? 'bg-blue-950/50 border-blue-500 ring-2 ring-blue-500/50 shadow-xl'
+                          : 'bg-slate-950/80 hover:bg-slate-950 border-slate-800 hover:border-blue-500/50 hover:shadow-lg'
+                      }`}
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1 border bg-blue-600/20 text-blue-300 border-blue-500/30">
+                            <span>{posMeta?.icon || '🏈'}</span>
+                            <span>{posMeta?.shortLabel || drill.category}</span>
+                          </span>
+
+                          <div className="flex items-center gap-1.5">
+                            {drill.phases && drill.phases.length > 0 && (
+                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800/90 text-sky-300 border border-slate-700">
+                                {drill.phases.length} {drill.phases.length === 1 ? 'Phase' : 'Phases'}
+                              </span>
+                            )}
+                            {isActive && (
+                              <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-600 text-white">
+                                ACTIVE
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <h3 className="text-sm font-black text-white group-hover:text-blue-300 transition-colors">
+                          {drill.title}
+                        </h3>
+
+                        {drill.subtitle && (
+                          <p className="text-xs text-slate-400 line-clamp-2">
+                            {drill.subtitle}
+                          </p>
+                        )}
+
+                        {drill.cues && drill.cues.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            {drill.cues.slice(0, 3).map((cue, idx) => (
+                              <span
+                                key={idx}
+                                className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800/80 text-slate-300 border border-slate-700/60"
+                              >
+                                {cue}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs font-black text-blue-400 group-hover:text-blue-300">
+                        <span className="flex items-center gap-1">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                          <span>{isActive ? 'Currently on Whiteboard' : 'Open Drill on Whiteboard'}</span>
+                        </span>
+                        <div className="w-6 h-6 rounded-full bg-blue-600/20 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center transition-colors">
+                          <ChevronRight className="w-4 h-4" />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+      ) : (
+        <>
+          {/* Mobile & Desktop Top Bar with Quick "Select Position & Drill" Button */}
+          <div className="w-full max-w-7xl mb-2 sm:mb-2.5 px-2 sm:px-0 print:hidden">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl sm:rounded-2xl p-2 sm:p-2.5 shadow-xl flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileViewMode('list');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer shrink-0"
+                title="Select a position and drill from list"
+              >
+                <Layers className="w-4 h-4" />
+                <span>Select Position & Drill</span>
+              </button>
+
+              {/* Active Drill Title & Category summary */}
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileViewMode('list');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="min-w-0 flex-1 text-right cursor-pointer group px-1"
+                title="Click to change drill"
+              >
+                <div className="flex items-center justify-end gap-1.5">
+                  <span className="text-[10px] font-black uppercase text-blue-400 tracking-wider truncate">
                     {DEFENSIVE_POSITION_GROUPS.find((g) => g.id === currentDrill.category)?.shortLabel || currentDrill.category}
                   </span>
                   <span className="text-[10px] text-slate-500 font-bold">•</span>
@@ -848,73 +1148,66 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                     {drills.findIndex((d) => d.id === activeDrillId) + 1} of {drills.length}
                   </span>
                 </div>
-                <p className="text-xs font-black text-slate-100 group-hover:text-blue-300 transition-colors truncate">
+                <p className="text-xs font-black text-slate-100 group-hover:text-blue-300 truncate">
                   {isCustomMode ? customTitle : currentDrill.title}
                 </p>
-              </div>
-            </div>
+              </button>
 
-            <div className="flex items-center gap-1 shrink-0 bg-blue-600/20 text-blue-300 px-2 py-1 rounded-lg border border-blue-500/30 text-[11px] font-extrabold">
-              <span>Browse</span>
-              <ChevronDown className="w-3.5 h-3.5 text-blue-400" />
-            </div>
-          </button>
-
-          {/* Next Drill */}
-          <button
-            type="button"
-            onClick={handleNextDrill}
-            className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 hover:border-slate-600 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer shrink-0"
-            title="Next Drill"
-          >
-            <span className="hidden xs:inline">Next</span>
-            <ChevronRight className="w-4 h-4 text-blue-400" />
-          </button>
-        </div>
-
-        {/* Quick Position Category Filter Shortcuts */}
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pt-2 mt-2 border-t border-slate-800/80">
-          <button
-            type="button"
-            onClick={() => handleSelectCategory('ALL')}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all border cursor-pointer ${
-              selectedCategory === 'ALL'
-                ? 'bg-blue-600 text-white border-blue-500 font-black'
-                : 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-slate-200'
-            }`}
-          >
-            ALL ({drills.length})
-          </button>
-          {DEFENSIVE_POSITION_GROUPS.map((pos) => {
-            const isSelected = selectedCategory === pos.id;
-            const count = drills.filter((d) => d.category === pos.id).length;
-            return (
+              {/* Quick Browse Modal button */}
               <button
-                key={pos.id}
                 type="button"
-                onClick={() => handleSelectCategory(pos.id)}
-                className={`px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all border cursor-pointer flex items-center gap-1 ${
-                  isSelected
+                onClick={() => setIsDrillPickerModalOpen(true)}
+                className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 text-xs font-bold cursor-pointer shrink-0"
+                title="Browse modal"
+              >
+                <span>Quick Modal</span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              </button>
+            </div>
+
+            {/* Quick Position Category Filter Shortcuts */}
+            <div className="hidden sm:flex items-center gap-1 overflow-x-auto no-scrollbar pt-2 mt-2 border-t border-slate-800/80">
+              <button
+                type="button"
+                onClick={() => handleSelectCategory('ALL')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all border cursor-pointer ${
+                  selectedCategory === 'ALL'
                     ? 'bg-blue-600 text-white border-blue-500 font-black'
                     : 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-slate-200'
                 }`}
               >
-                <span>{pos.icon}</span>
-                <span>{pos.shortLabel}</span>
-                <span className={`text-[10px] ${isSelected ? 'text-blue-200 font-bold' : 'text-slate-500'}`}>({count})</span>
+                ALL ({drills.length})
               </button>
-            );
-          })}
-        </div>
-      </div>
+              {DEFENSIVE_POSITION_GROUPS.map((pos) => {
+                const isSelected = selectedCategory === pos.id;
+                const count = drills.filter((d) => d.category === pos.id).length;
+                return (
+                  <button
+                    key={pos.id}
+                    type="button"
+                    onClick={() => handleSelectCategory(pos.id)}
+                    className={`px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all border cursor-pointer flex items-center gap-1 ${
+                      isSelected
+                        ? 'bg-blue-600 text-white border-blue-500 font-black'
+                        : 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-slate-200'
+                    }`}
+                  >
+                    <span>{pos.icon}</span>
+                    <span>{pos.shortLabel}</span>
+                    <span className={`text-[10px] ${isSelected ? 'text-blue-200 font-bold' : 'text-slate-500'}`}>({count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-      {/* =========================================================================
-          SECTION 1: COMPACT DRILL HEADER & ACTIONS (NO REDUNDANT DIRECTORY)
-          ========================================================================= */}
-      <section className="w-full max-w-7xl mb-3 bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xl">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Left: Active Drill Identity & Position Group */}
-          <div className="flex items-center gap-3">
+          {/* =========================================================================
+              SECTION 1: COMPACT DRILL HEADER & ACTIONS (FULL WIDTH ON MOBILE)
+              ========================================================================= */}
+          <section className="w-full max-w-7xl mb-2 sm:mb-3 bg-slate-900 border-x-0 sm:border border-slate-800 rounded-none sm:rounded-2xl p-3 sm:p-4 shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {/* Left: Active Drill Identity & Position Group */}
+              <div className="flex items-center gap-3">
             <div className="p-2.5 bg-blue-600/20 text-blue-300 rounded-xl border border-blue-500/30 text-xl flex items-center justify-center shrink-0">
               {DEFENSIVE_POSITION_GROUPS.find((g) => g.id === currentDrill.category)?.icon || "🏈"}
             </div>
@@ -1047,9 +1340,9 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           {/* =========================================================================
           SECTION 2: FULL-WIDTH WHITEBOARD CANVAS & TOOLBAR
           ========================================================================= */}
-      <div className="w-full max-w-7xl bg-slate-400/90 p-3 sm:p-4 rounded-2xl shadow-2xl border-2 border-slate-300 flex flex-col relative">
+      <div className="w-full max-w-7xl bg-slate-400/90 p-0 sm:p-4 rounded-none sm:rounded-2xl shadow-2xl border-x-0 sm:border-2 border-y border-slate-300 flex flex-col relative">
         {/* Canvas Quick Controls Bar (Declutter, Labels, Coaching Inset, Print) */}
-        <div className="flex items-center justify-between gap-2 mb-2.5 px-1 flex-wrap">
+        <div className="flex items-center justify-between gap-2 mb-2 sm:mb-2.5 px-2 sm:px-1 pt-2 sm:pt-0 flex-wrap">
           <div className="flex items-center gap-2">
             <span className="text-xs font-black uppercase text-slate-800 tracking-wide flex items-center gap-1.5 bg-slate-200/80 px-2.5 py-1 rounded-lg border border-slate-300">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -1197,7 +1490,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
         </div>
 
         {/* Full-Width Canvas Container */}
-        <div className="w-full bg-slate-50 rounded-xl border border-slate-300 overflow-hidden shadow-inner relative min-h-[560px] sm:min-h-[620px]">
+        <div className="w-full bg-slate-50 rounded-none sm:rounded-xl border-x-0 sm:border border-slate-300 overflow-hidden shadow-inner relative min-h-[520px] sm:min-h-[620px]">
           <WhiteboardCanvas
             tokens={tokens}
             arrows={arrows}
@@ -1225,7 +1518,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
         </div>
 
         {/* Whiteboard Lower Toolbar */}
-        <div className="mt-3 p-2 sm:p-3 bg-slate-600/90 rounded-xl shadow-md flex flex-wrap justify-between items-center gap-3">
+        <div className="mt-1.5 sm:mt-3 p-2 sm:p-3 bg-slate-600/90 rounded-none sm:rounded-xl shadow-md flex flex-wrap justify-between items-center gap-2 sm:gap-3">
           {/* Left: Phase controls for Drills */}
           <div className="flex items-center gap-2 flex-wrap">
             {!isCustomMode ? (
@@ -1444,7 +1737,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
       {/* =========================================================================
           SECTION 3: PLAY NOTES & COACHING NOTEPAD (BELOW THE DIAGRAM)
           ========================================================================= */}
-      <section className="w-full max-w-7xl mt-4 bg-slate-900/95 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4">
+      <section className="w-full max-w-7xl mt-2 sm:mt-4 bg-slate-900/95 border-x-0 sm:border border-slate-800 rounded-none sm:rounded-3xl p-3 sm:p-6 shadow-2xl space-y-4">
         {/* Play Notes Header & Active Scheme Status */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
           <div>
@@ -1847,7 +2140,9 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           </div>
         </div>
       </section>
-            </>
+        </>
+      )}
+        </>
       )}
 
       {/* Add Whiteboard Drill Modal */}

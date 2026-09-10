@@ -45,7 +45,7 @@ export const CallSheetPrintModal: React.FC<CallSheetPrintModalProps> = ({
   const [fitMode, setFitMode] = useState<'auto' | '1page' | '2page'>('1page');
   const [density, setDensity] = useState<'standard' | 'compact' | 'ultra'>('compact');
   const [hideEmptySlots, setHideEmptySlots] = useState(true);
-  const [inkFriendly, setInkFriendly] = useState(false);
+  const [inkFriendly, setInkFriendly] = useState(true);
 
   // Section filters
   const [includeTopSituations, setIncludeTopSituations] = useState(true);
