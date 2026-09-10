@@ -2639,6 +2639,7 @@ export function printWristbandInserts(
 
 export interface CallSheetPrintOptions {
   orientation?: 'landscape' | 'portrait';
+  columns?: number;
   density?: 'standard' | 'compact' | 'ultra';
   fitMode?: 'auto' | '1page' | '2page';
   inkFriendly?: boolean;
@@ -2717,6 +2718,10 @@ export function generateCallSheetPrintHTML(
   const custom = sections.filter((s) => s.group === 'custom');
   const rawScripts = isOffense ? callSheetData.offenseScript || [] : callSheetData.defenseScript || [];
 
+  // Parity with screen: default to provided columns, or saved desktopGridColumns, or orientation standard
+  const defaultCols = options?.columns || (callSheetData.desktopGridColumns ?? (orientation === 'landscape' ? 4 : 2));
+  const printColumns = Math.max(1, Math.min(6, defaultCols));
+
   // Density sizing
   let baseFontSize = '9pt';
   let cellPadding = '2px 4px';
@@ -2738,6 +2743,18 @@ export function generateCallSheetPrintHTML(
     gridGap = '8px';
   }
 
+  // Adjust for wide (<=2 cols) or dense (>=5 cols) layouts
+  if (printColumns >= 5 && density !== 'ultra') {
+    baseFontSize = '8pt';
+    badgeFontSize = '7pt';
+    cellPadding = '1.5px 3px';
+    gridGap = '4px';
+  } else if (printColumns <= 2 && density === 'compact') {
+    baseFontSize = '9.5pt';
+    badgeFontSize = '8.5pt';
+    cellPadding = '3px 5px';
+  }
+
   const renderSectionCard = (sec: CallSheetSection) => {
     const headerBg = inkFriendly ? '#f1f5f9' : sec.headerBgColor || '#0284c7';
     const headerText = inkFriendly ? '#000000' : sec.headerTextColor || getContrastColor(headerBg);
@@ -2747,6 +2764,13 @@ export function generateCallSheetPrintHTML(
     if (hideEmptySlots) {
       playsToRender = validPlays.length > 0 ? validPlays : [];
     }
+
+    const colSpan = sec.colSpan || 1;
+    const colSpanStyle = colSpan > 1 ? `grid-column: span ${Math.min(colSpan, printColumns)};` : '';
+
+    const innerCols = sec.columnsCount && sec.columnsCount > 1 ? sec.columnsCount : 1;
+    const cardBodyClass = innerCols > 1 ? 'card-body card-body-grid' : 'card-body';
+    const cardBodyStyle = innerCols > 1 ? `display: grid; grid-template-columns: repeat(${innerCols}, 1fr);` : '';
 
     const rowsHtml = playsToRender
       .map((play, idx) => {
@@ -2803,19 +2827,19 @@ export function generateCallSheetPrintHTML(
       .join('');
 
     return `
-      <div class="section-card">
-        <div class="card-header" style="background: ${headerBg}; color: ${headerText}; padding: ${headerPadding};">
+      <div class="section-card" ${colSpanStyle ? `style="${colSpanStyle}"` : ''}>
+        <div class="card-header" style="background: ${headerBg}; color: ${headerText}; padding: ${headerPadding}; font-size: ${baseFontSize};">
           <span class="card-title">${sec.title}</span>
           <span class="card-count">${validPlays.length}/${sec.slotsCount}</span>
         </div>
-        <div class="card-body">
+        <div class="${cardBodyClass}" ${cardBodyStyle ? `style="${cardBodyStyle}"` : ''}>
           ${rowsHtml || '<div class="callsheet-cell empty-slot"><span class="slot-empty-text">No plays assigned</span></div>'}
         </div>
       </div>
     `;
   };
 
-  const renderSectionGrid = (sectionList: CallSheetSection[], cols = orientation === 'landscape' ? 4 : 2) => {
+  const renderSectionGrid = (sectionList: CallSheetSection[], cols = printColumns) => {
     if (!sectionList || sectionList.length === 0) return '';
     const cards = sectionList.map((sec) => renderSectionCard(sec)).join('');
     return `
@@ -2828,10 +2852,51 @@ export function generateCallSheetPrintHTML(
   // Build Sections HTML
   let topSituationsHtml = '';
   if (filter.topSituations && topSituations.length > 0) {
+    const allHaveRowIndex = topSituations.length > 0 && topSituations.every((s) => typeof s.rowIndex === 'number');
+
+    let rowsHtml = '';
+    if (allHaveRowIndex) {
+      const rowMap = new Map<number, CallSheetSection[]>();
+      topSituations.forEach((sec) => {
+        const r = sec.rowIndex ?? 0;
+        if (!rowMap.has(r)) rowMap.set(r, []);
+        rowMap.get(r)!.push(sec);
+      });
+      const sortedRowIndices = Array.from(rowMap.keys()).sort((a, b) => a - b);
+      rowsHtml = sortedRowIndices
+        .map((rIdx) => {
+          const rowSecs = (rowMap.get(rIdx) || []).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+          if (rowSecs.length === 0) return '';
+          const rowCards = rowSecs.map((sec) => renderSectionCard(sec)).join('');
+          return `
+            <div class="cards-grid situational-row" style="grid-template-columns: repeat(${printColumns}, 1fr); gap: ${gridGap}; margin-bottom: ${gridGap}; page-break-inside: avoid; break-inside: avoid;">
+              ${rowCards}
+            </div>
+          `;
+        })
+        .join('');
+    } else {
+      // Chunk into rows of printColumns
+      const rows: CallSheetSection[][] = [];
+      for (let i = 0; i < topSituations.length; i += printColumns) {
+        rows.push(topSituations.slice(i, i + printColumns));
+      }
+      rowsHtml = rows
+        .map((rowSecs) => {
+          const rowCards = rowSecs.map((sec) => renderSectionCard(sec)).join('');
+          return `
+            <div class="cards-grid situational-row" style="grid-template-columns: repeat(${printColumns}, 1fr); gap: ${gridGap}; margin-bottom: ${gridGap}; page-break-inside: avoid; break-inside: avoid;">
+              ${rowCards}
+            </div>
+          `;
+        })
+        .join('');
+    }
+
     topSituationsHtml = `
       <div class="section-group">
         <div class="group-banner">SITUATIONAL CALLS &amp; DOWN-AND-DISTANCE</div>
-        ${renderSectionGrid(topSituations, orientation === 'landscape' ? 4 : 2)}
+        ${rowsHtml}
       </div>
     `;
   }
@@ -2840,8 +2905,8 @@ export function generateCallSheetPrintHTML(
   if (filter.redZone && redZone.length > 0) {
     redZoneHtml = `
       <div class="section-group redzone-group ${fitMode === '2page' ? 'page-break-before' : ''}">
-        <div class="group-banner redzone-banner">RED ZONE &amp; GOAL LINE (INSIDE 20)</div>
-        ${renderSectionGrid(redZone, orientation === 'landscape' ? 4 : 2)}
+        <div class="group-banner redzone-banner">${isOffense ? 'RED ZONE &amp; GOAL LINE (INSIDE 20)' : 'RED ZONE DEFENSE &amp; GOAL LINE'}</div>
+        ${renderSectionGrid(redZone, printColumns)}
       </div>
     `;
   }
@@ -2851,7 +2916,7 @@ export function generateCallSheetPrintHTML(
     tempoHtml = `
       <div class="section-group">
         <div class="group-banner">TEMPO, CLOCK &amp; SPECIALS</div>
-        ${renderSectionGrid(tempo, orientation === 'landscape' ? 4 : 2)}
+        ${renderSectionGrid(tempo, printColumns)}
       </div>
     `;
   }
@@ -2861,7 +2926,7 @@ export function generateCallSheetPrintHTML(
     customHtml = `
       <div class="section-group">
         <div class="group-banner">CUSTOM SITUATIONS</div>
-        ${renderSectionGrid(custom, orientation === 'landscape' ? 4 : 2)}
+        ${renderSectionGrid(custom, printColumns)}
       </div>
     `;
   }
@@ -3013,12 +3078,26 @@ export function generateCallSheetPrintHTML(
     `;
   }
 
-  // Bottom section grid
+  // Bottom section grid with dynamic columns
+  const activeBottomCount = (filter.scripts ? 1 : 0) + (filter.twoPoint ? 1 : 0) + (filter.timeouts ? 1 : 0);
+  let bottomGridTemplate = '4.5fr 4.5fr 3fr';
+  if (activeBottomCount === 2) {
+    if (filter.scripts && filter.twoPoint) {
+      bottomGridTemplate = '1.2fr 1fr';
+    } else if (filter.scripts && filter.timeouts) {
+      bottomGridTemplate = '1.6fr 1fr';
+    } else {
+      bottomGridTemplate = '1.4fr 1fr';
+    }
+  } else if (activeBottomCount === 1) {
+    bottomGridTemplate = '1fr';
+  }
+
   let bottomSectionHtml = '';
   if (filter.scripts || filter.twoPoint || filter.timeouts) {
     bottomSectionHtml = `
       <div class="section-group bottom-group">
-        <div class="bottom-grid">
+        <div class="bottom-grid" style="grid-template-columns: ${bottomGridTemplate};">
           ${scriptsHtml}
           ${twoPointHtml}
           ${timeoutsHtml}
@@ -3156,6 +3235,12 @@ export function generateCallSheetPrintHTML(
       border-bottom-left-radius: ${inkFriendly ? '0' : '3px'};
       border-bottom-right-radius: ${inkFriendly ? '0' : '3px'};
     }
+    .card-body-grid {
+      display: grid !important;
+    }
+    .card-body-grid .callsheet-cell {
+      border-right: 1px solid #e2e8f0;
+    }
     .callsheet-cell {
       display: flex;
       align-items: center;
@@ -3204,7 +3289,7 @@ export function generateCallSheetPrintHTML(
       text-transform: uppercase;
       word-break: break-word;
       line-height: 1.15;
-      font-size: 8.5pt;
+      font-size: ${baseFontSize};
       flex: 1;
       color: #000000 !important;
     }

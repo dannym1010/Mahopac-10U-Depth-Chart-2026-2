@@ -184,6 +184,50 @@ body {
     display: none !important;
   }
 
+  /* Section hide rules for direct call sheet print */
+  body.callsheet-hide-top-situations .callsheet-top-situations-container,
+  .callsheet-hide-top-situations .callsheet-top-situations-container {
+    display: none !important;
+  }
+  body.callsheet-hide-redzone .callsheet-redzone-container,
+  .callsheet-hide-redzone .callsheet-redzone-container {
+    display: none !important;
+  }
+  body.callsheet-hide-tempo .callsheet-tempo-container,
+  .callsheet-hide-tempo .callsheet-tempo-container {
+    display: none !important;
+  }
+  body.callsheet-hide-custom .callsheet-custom-container,
+  .callsheet-hide-custom .callsheet-custom-container {
+    display: none !important;
+  }
+  body.callsheet-hide-scripts .callsheet-scripts-box,
+  .callsheet-hide-scripts .callsheet-scripts-box {
+    display: none !important;
+  }
+  body.callsheet-hide-twopoint .callsheet-twopoint-box,
+  .callsheet-hide-twopoint .callsheet-twopoint-box {
+    display: none !important;
+  }
+  body.callsheet-hide-timeouts .callsheet-timeouts-box,
+  .callsheet-hide-timeouts .callsheet-timeouts-box {
+    display: none !important;
+  }
+
+  /* Column parity in direct print */
+  body.callsheet-cols-2 .callsheet-row-container {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  body.callsheet-cols-3 .callsheet-row-container {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  body.callsheet-cols-4 .callsheet-row-container {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+  body.callsheet-cols-5 .callsheet-row-container {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  }
+
   /* When empty slots are kept in print, suppress all placeholder text and edit buttons */
   .callsheet-slot-empty span,
   .callsheet-slot-empty button,

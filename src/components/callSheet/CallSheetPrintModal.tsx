@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Printer,
   ExternalLink,
@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Swords,
   Shield,
+  LayoutGrid,
 } from 'lucide-react';
 import { CallSheetFullData } from '../../types/callSheet';
 import { WristbandData } from '../../types';
@@ -40,12 +41,23 @@ export const CallSheetPrintModal: React.FC<CallSheetPrintModalProps> = ({
   callSheetData,
   activeUnit,
   activeTeamName,
+  gridColumns = 4,
 }) => {
   const [orientation, setOrientation] = useState<'landscape' | 'portrait'>('landscape');
   const [fitMode, setFitMode] = useState<'auto' | '1page' | '2page'>('1page');
   const [density, setDensity] = useState<'standard' | 'compact' | 'ultra'>('compact');
   const [hideEmptySlots, setHideEmptySlots] = useState(true);
   const [inkFriendly, setInkFriendly] = useState(true);
+
+  // Column layout matching screen (e.g. 4 columns on screen = 4 columns on call sheet)
+  const screenCols = gridColumns || callSheetData.desktopGridColumns || 4;
+  const [selectedColumns, setSelectedColumns] = useState<number>(screenCols);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedColumns(gridColumns || callSheetData.desktopGridColumns || 4);
+    }
+  }, [isOpen, gridColumns, callSheetData.desktopGridColumns]);
 
   // Section filters
   const [includeTopSituations, setIncludeTopSituations] = useState(true);
@@ -71,8 +83,47 @@ export const CallSheetPrintModal: React.FC<CallSheetPrintModalProps> = ({
     ? (callSheetData.offenseScript || []).filter((p) => p && p.name).length
     : (callSheetData.defenseScript || []).filter((p) => p && p.name).length;
 
+  const totalSectionsCount =
+    (topCount > 0 ? 1 : 0) +
+    (redZoneCount > 0 ? 1 : 0) +
+    (tempoCount > 0 ? 1 : 0) +
+    (scriptsCount > 0 ? 1 : 0) +
+    1 + // 2-Pt chart
+    1 + // Timeouts
+    (customCount > 0 ? 1 : 0);
+
+  const selectedSectionsCount =
+    (includeTopSituations && topCount > 0 ? 1 : 0) +
+    (includeRedZone && redZoneCount > 0 ? 1 : 0) +
+    (includeTempo && tempoCount > 0 ? 1 : 0) +
+    (includeScripts && scriptsCount > 0 ? 1 : 0) +
+    (includeTwoPoint ? 1 : 0) +
+    (includeTimeouts ? 1 : 0) +
+    (includeCustom && customCount > 0 ? 1 : 0);
+
+  const handleSelectAllSections = () => {
+    setIncludeTopSituations(true);
+    setIncludeRedZone(true);
+    setIncludeTempo(true);
+    setIncludeScripts(true);
+    setIncludeTwoPoint(true);
+    setIncludeTimeouts(true);
+    setIncludeCustom(true);
+  };
+
+  const handleClearAllSections = () => {
+    setIncludeTopSituations(false);
+    setIncludeRedZone(false);
+    setIncludeTempo(false);
+    setIncludeScripts(false);
+    setIncludeTwoPoint(false);
+    setIncludeTimeouts(false);
+    setIncludeCustom(false);
+  };
+
   const printOptions: CallSheetPrintOptions = {
     orientation,
+    columns: selectedColumns,
     density: fitMode === '1page' ? 'ultra' : density,
     fitMode,
     inkFriendly,
@@ -96,6 +147,8 @@ export const CallSheetPrintModal: React.FC<CallSheetPrintModalProps> = ({
     } else {
       bodyClasses.push('print-portrait');
     }
+
+    bodyClasses.push(`callsheet-cols-${selectedColumns}`);
 
     if (fitMode === '1page' || density === 'ultra') {
       bodyClasses.push('callsheet-density-ultra');
@@ -122,7 +175,7 @@ export const CallSheetPrintModal: React.FC<CallSheetPrintModalProps> = ({
 
     onClose();
 
-    // Call printCallSheet with full printOptions so only selected sections print
+    // Call printCallSheet with full printOptions so only selected sections and columns print
     setTimeout(() => {
       printCallSheet(
         callSheetData,
@@ -257,10 +310,57 @@ export const CallSheetPrintModal: React.FC<CallSheetPrintModalProps> = ({
             </div>
           </div>
 
-          {/* 2. Fit to Page / Layout Density */}
+          {/* 2. Column Format (Parity with Screen) */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <LayoutGrid className="w-3.5 h-3.5 text-indigo-400" />
+                <span>2. Column Format</span>
+              </label>
+              <span className="text-[11px] text-slate-400 font-medium">
+                Current screen format: <strong className="text-indigo-400">{screenCols} Columns</strong>
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {([2, 3, 4, 5] as const).map((cols) => {
+                const isSelected = selectedColumns === cols;
+                const isScreenDefault = screenCols === cols;
+                return (
+                  <button
+                    key={cols}
+                    type="button"
+                    onClick={() => setSelectedColumns(cols)}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      isSelected
+                        ? 'bg-indigo-600/20 border-indigo-500 ring-1 ring-indigo-500 text-white shadow-md'
+                        : 'bg-slate-850/80 border-slate-750 text-slate-300 hover:border-slate-650'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span className="font-black text-xs">{cols} Columns</span>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-slate-400">
+                      <span>{cols === 2 ? 'Compact/Wide' : cols === 4 ? 'Sideline Std' : cols === 5 ? 'High Density' : 'Balanced'}</span>
+                      {isScreenDefault && (
+                        <span className="px-1.5 py-0.5 rounded bg-indigo-500/25 text-indigo-300 border border-indigo-500/40 font-bold text-[9px]">
+                          Screen
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1.5 leading-snug">
+              Print format defaults to <strong>{screenCols} columns</strong> to mirror what is currently displayed on screen.
+            </p>
+          </div>
+
+          {/* 3. Fit to Page / Layout Density */}
           <div>
             <label className="text-xs font-black uppercase tracking-wider text-slate-300 block mb-2">
-              2. Page Fit &amp; Sideline Sizing
+              3. Page Fit &amp; Sideline Sizing
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <button
@@ -343,13 +443,37 @@ export const CallSheetPrintModal: React.FC<CallSheetPrintModalProps> = ({
             </div>
           </div>
 
-          {/* 3. Sections to Include */}
+          {/* 4. Sections to Include */}
           <div>
-            <label className="text-xs font-black uppercase tracking-wider text-slate-300 block mb-2">
-              3. Sections to Include
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                <span>4. Sections to Include ({selectedSectionsCount} of {totalSectionsCount} Selected)</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSelectAllSections}
+                  className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
+                >
+                  Select All
+                </button>
+                <span className="text-slate-600">&bull;</span>
+                <button
+                  type="button"
+                  onClick={handleClearAllSections}
+                  className="text-[11px] font-bold text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-              <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-850 border border-slate-750/80 hover:border-slate-650 cursor-pointer">
+              <label className={`flex items-center gap-2 p-2 rounded-lg border transition-all cursor-pointer ${
+                includeTopSituations
+                  ? 'bg-indigo-600/15 border-indigo-500/80 text-white'
+                  : 'bg-slate-850/50 border-slate-750 text-slate-400 opacity-60 hover:opacity-90'
+              }`}>
                 <input
                   type="checkbox"
                   checked={includeTopSituations}
@@ -359,7 +483,11 @@ export const CallSheetPrintModal: React.FC<CallSheetPrintModalProps> = ({
                 <span className="font-bold">Situations ({topCount})</span>
               </label>
 
-              <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-850 border border-slate-750/80 hover:border-slate-650 cursor-pointer">
+              <label className={`flex items-center gap-2 p-2 rounded-lg border transition-all cursor-pointer ${
+                includeRedZone
+                  ? 'bg-indigo-600/15 border-indigo-500/80 text-white'
+                  : 'bg-slate-850/50 border-slate-750 text-slate-400 opacity-60 hover:opacity-90'
+              }`}>
                 <input
                   type="checkbox"
                   checked={includeRedZone}
@@ -369,7 +497,11 @@ export const CallSheetPrintModal: React.FC<CallSheetPrintModalProps> = ({
                 <span className="font-bold">Red Zone ({redZoneCount})</span>
               </label>
 
-              <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-850 border border-slate-750/80 hover:border-slate-650 cursor-pointer">
+              <label className={`flex items-center gap-2 p-2 rounded-lg border transition-all cursor-pointer ${
+                includeTempo
+                  ? 'bg-indigo-600/15 border-indigo-500/80 text-white'
+                  : 'bg-slate-850/50 border-slate-750 text-slate-400 opacity-60 hover:opacity-90'
+              }`}>
                 <input
                   type="checkbox"
                   checked={includeTempo}
@@ -379,7 +511,11 @@ export const CallSheetPrintModal: React.FC<CallSheetPrintModalProps> = ({
                 <span className="font-bold">Tempo &amp; Clock ({tempoCount})</span>
               </label>
 
-              <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-850 border border-slate-750/80 hover:border-slate-650 cursor-pointer">
+              <label className={`flex items-center gap-2 p-2 rounded-lg border transition-all cursor-pointer ${
+                includeScripts
+                  ? 'bg-indigo-600/15 border-indigo-500/80 text-white'
+                  : 'bg-slate-850/50 border-slate-750 text-slate-400 opacity-60 hover:opacity-90'
+              }`}>
                 <input
                   type="checkbox"
                   checked={includeScripts}
@@ -389,7 +525,11 @@ export const CallSheetPrintModal: React.FC<CallSheetPrintModalProps> = ({
                 <span className="font-bold">Scripts ({scriptsCount})</span>
               </label>
 
-              <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-850 border border-slate-750/80 hover:border-slate-650 cursor-pointer">
+              <label className={`flex items-center gap-2 p-2 rounded-lg border transition-all cursor-pointer ${
+                includeTwoPoint
+                  ? 'bg-indigo-600/15 border-indigo-500/80 text-white'
+                  : 'bg-slate-850/50 border-slate-750 text-slate-400 opacity-60 hover:opacity-90'
+              }`}>
                 <input
                   type="checkbox"
                   checked={includeTwoPoint}
@@ -399,7 +539,11 @@ export const CallSheetPrintModal: React.FC<CallSheetPrintModalProps> = ({
                 <span className="font-bold">2-Pt Chart</span>
               </label>
 
-              <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-850 border border-slate-750/80 hover:border-slate-650 cursor-pointer">
+              <label className={`flex items-center gap-2 p-2 rounded-lg border transition-all cursor-pointer ${
+                includeTimeouts
+                  ? 'bg-indigo-600/15 border-indigo-500/80 text-white'
+                  : 'bg-slate-850/50 border-slate-750 text-slate-400 opacity-60 hover:opacity-90'
+              }`}>
                 <input
                   type="checkbox"
                   checked={includeTimeouts}
@@ -410,7 +554,11 @@ export const CallSheetPrintModal: React.FC<CallSheetPrintModalProps> = ({
               </label>
 
               {customCount > 0 && (
-                <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-850 border border-slate-750/80 hover:border-slate-650 cursor-pointer">
+                <label className={`flex items-center gap-2 p-2 rounded-lg border transition-all cursor-pointer ${
+                  includeCustom
+                    ? 'bg-indigo-600/15 border-indigo-500/80 text-white'
+                    : 'bg-slate-850/50 border-slate-750 text-slate-400 opacity-60 hover:opacity-90'
+                }`}>
                   <input
                     type="checkbox"
                     checked={includeCustom}
@@ -423,10 +571,10 @@ export const CallSheetPrintModal: React.FC<CallSheetPrintModalProps> = ({
             </div>
           </div>
 
-          {/* 4. Format & Layout Tweaks */}
+          {/* 5. Print Optimization */}
           <div>
             <label className="text-xs font-black uppercase tracking-wider text-slate-300 block mb-2">
-              4. Print Optimization
+              5. Print Optimization
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               <label className="flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-850 border border-slate-750/80 hover:border-slate-650 cursor-pointer">
