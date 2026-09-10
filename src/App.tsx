@@ -6669,6 +6669,7 @@ function mergeRemoteWeeklyData(
                 userRole={userRole}
                 activeTeam={currentActiveTeam}
                 onNavigateToGuide={() => setActiveUnit('guide')}
+                onNavigateToDrills={() => setActiveUnit('drills')}
                 externalDrillId={activeWhiteboardDrillId}
                 externalCategory={activeWhiteboardCategory}
                 onDrillSelect={(drillId, cat) => {
@@ -6722,6 +6723,11 @@ function mergeRemoteWeeklyData(
                 cascadingDrills={cascadingDrills}
                 collapsedFolders={collapsedFolders}
                 userRole={userRole}
+                onNavigateToWhiteboard={(drillId, cat) => {
+                  if (drillId) setActiveWhiteboardDrillId(drillId);
+                  if (cat) setActiveWhiteboardCategory(cat as any);
+                  setActiveUnit('whiteboard');
+                }}
                 onToggleFolder={(pathKey) => {
                   setCollapsedFolders((prev) => ({
                     ...prev,
