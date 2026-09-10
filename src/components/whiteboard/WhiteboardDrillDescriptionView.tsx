@@ -1,24 +1,32 @@
 import React from 'react';
-import { Target, Flag, CheckCircle2, AlertTriangle, PenTool, Dumbbell, Clock, Layers, Printer } from 'lucide-react';
+import { Target, Flag, CheckCircle2, AlertTriangle, PenTool, Dumbbell, Clock, Layers, Printer, Calendar } from 'lucide-react';
 import { WhiteboardDrill } from './whiteboardDrillData';
 
 interface WhiteboardDrillDescriptionViewProps {
   drill: WhiteboardDrill;
   onOpenChalkboard: () => void;
   onPrintDrill: () => void;
+  onNavigateToPracticePlan?: () => void;
+  practicePlanInfo?: {
+    planTitle: string;
+    periodNumber: number;
+    stationName: string;
+  } | null;
 }
 
 export const WhiteboardDrillDescriptionView: React.FC<WhiteboardDrillDescriptionViewProps> = ({
   drill,
   onOpenChalkboard,
   onPrintDrill,
+  onNavigateToPracticePlan,
+  practicePlanInfo,
 }) => {
   return (
     <div className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-2xl space-y-5 animate-in fade-in">
       {/* Top Banner */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <span className="text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full bg-blue-600/20 text-blue-300 border border-blue-500/30 flex items-center gap-1.5">
               <Dumbbell className="w-3.5 h-3.5" />
               <span>{drill.categoryLabel || drill.category}</span>
@@ -26,6 +34,12 @@ export const WhiteboardDrillDescriptionView: React.FC<WhiteboardDrillDescription
             <span className="text-[10px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700">
               Description & Practice Guide
             </span>
+            {practicePlanInfo && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                Scheduled: P{practicePlanInfo.periodNumber} ({practicePlanInfo.planTitle})
+              </span>
+            )}
           </div>
 
           <h2
@@ -39,6 +53,25 @@ export const WhiteboardDrillDescriptionView: React.FC<WhiteboardDrillDescription
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
+          {onNavigateToPracticePlan && (
+            <button
+              type="button"
+              onClick={onNavigateToPracticePlan}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+              title={
+                practicePlanInfo
+                  ? `Open in ${practicePlanInfo.planTitle} (Period ${practicePlanInfo.periodNumber})`
+                  : 'Open in Practice Plan'
+              }
+            >
+              <Calendar className="w-3.5 h-3.5 text-emerald-200" />
+              <span>
+                {practicePlanInfo
+                  ? `View in Plan (Period ${practicePlanInfo.periodNumber})`
+                  : 'Open Practice Plan'}
+              </span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onPrintDrill}

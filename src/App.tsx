@@ -6672,6 +6672,15 @@ function mergeRemoteWeeklyData(
                 onNavigateToDrills={() => setActiveUnit('drills')}
                 externalDrillId={activeWhiteboardDrillId}
                 externalCategory={activeWhiteboardCategory}
+                practices={activeTeamPracticeData.length > 0 ? activeTeamPracticeData : practiceData}
+                currentPracticeId={currentPracticeId}
+                onNavigateToPracticePlan={(practiceId, drillTitle) => {
+                  if (practiceId) {
+                    setCurrentPracticeId(practiceId);
+                    safeJSONSet('footballCurrentPracticeId', practiceId);
+                  }
+                  setActiveUnit('practice');
+                }}
                 onDrillSelect={(drillId, cat) => {
                   setActiveWhiteboardDrillId(drillId);
                   setActiveWhiteboardCategory(cat);
@@ -6798,6 +6807,11 @@ function mergeRemoteWeeklyData(
                 onDeleteSavedCoach={(name) => handleDeleteSavedCoach(name, activeTeamId)}
                 onNavigateToSchedule={() => setActiveUnit('schedule')}
                 onPracticeWizardGenerate={handlePracticeWizardGenerate}
+                onOpenWhiteboardDrill={(drillId, cat) => {
+                  if (drillId) setActiveWhiteboardDrillId(drillId);
+                  if (cat) setActiveWhiteboardCategory(cat as any);
+                  setActiveUnit('whiteboard');
+                }}
               />
             )}
 

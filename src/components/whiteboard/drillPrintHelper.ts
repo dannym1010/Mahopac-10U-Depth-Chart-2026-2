@@ -680,3 +680,30 @@ export function printDrillSheet(drill: WhiteboardDrill, activePhaseIndex: number
   const html = generateDrillPrintHTML(drill, activePhaseIndex);
   printCleanHTML(html, `${drill.title} - Mahopac 10U Defensive Playbook`);
 }
+
+/**
+ * Extracts the drill stylesheet rules for inclusion in multi-page packages.
+ */
+export function extractDrillPrintStyles(drill: WhiteboardDrill): string {
+  const full = generateDrillPrintHTML(drill, 0);
+  const sStart = full.indexOf('<style>');
+  const sEnd = full.indexOf('</style>');
+  if (sStart !== -1 && sEnd !== -1) {
+    return full.substring(sStart + 7, sEnd);
+  }
+  return '';
+}
+
+/**
+ * Extracts the inner card markup for a drill to embed in multi-page practice plans.
+ */
+export function extractDrillCardMarkup(drill: WhiteboardDrill, activePhaseIndex: number = 0): string {
+  const full = generateDrillPrintHTML(drill, activePhaseIndex);
+  const start = full.indexOf('<div class="print-card">');
+  const end = full.lastIndexOf('</div>');
+  if (start !== -1 && end !== -1) {
+    return full.substring(start, end + 6);
+  }
+  return '';
+}
+

@@ -31,6 +31,7 @@ import {
   CheckCircle2,
   Filter,
   Eye,
+  PenTool,
 } from 'lucide-react';
 import {
   PracticePlan,
@@ -56,6 +57,10 @@ import {
   generatePracticePlanHTML,
   openCleanPrintTab,
 } from '../utils/printUtils';
+import { WhiteboardDrill, WHITEBOARD_DRILLS } from './whiteboard/whiteboardDrillData';
+import { findMatchingWhiteboardDrill } from '../utils/drillPlanLinking';
+import { printDrillSheet } from './whiteboard/drillPrintHelper';
+import { PracticePlanPrintModal } from './PracticePlanPrintModal';
 
 interface PracticePlanViewProps {
   practices: PracticePlan[];
@@ -101,6 +106,8 @@ interface PracticePlanViewProps {
   onNavigateToSchedule?: () => void;
   onPracticeWizardGenerate?: (result: PracticeWizardGeneratedResult) => void;
   onQuickCreateFromSchedule?: (event: any) => void;
+  onOpenWhiteboardDrill?: (drillId: string, category?: string) => void;
+  whiteboardDrills?: WhiteboardDrill[];
 }
 
 export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
@@ -138,6 +145,8 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   onNavigateToSchedule,
   onPracticeWizardGenerate,
   onQuickCreateFromSchedule,
+  onOpenWhiteboardDrill,
+  whiteboardDrills,
 }) => {
   const [isPlanLibraryOpen, setIsPlanLibraryOpen] = useState(false);
   const [dropdownSearchTerm, setDropdownSearchTerm] = useState('');
@@ -150,7 +159,12 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   const [collapsedTreeFolders, setCollapsedTreeFolders] = useState<Record<string, boolean>>({});
   const [stationGroupFilters, setStationGroupFilters] = useState<Record<string, string>>({});
   const [isPrintMenuOpen, setIsPrintMenuOpen] = useState(false);
+  const [isPrintPackageModalOpen, setIsPrintPackageModalOpen] = useState(false);
   const printMenuRef = useRef<HTMLDivElement>(null);
+  const effectiveWhiteboardDrills = useMemo(
+    () => (whiteboardDrills && whiteboardDrills.length > 0 ? whiteboardDrills : WHITEBOARD_DRILLS),
+    [whiteboardDrills]
+  );
 
   // Sideline / View-Only Mode State (Optimized for Mobile and Field Reading)
   const [viewOnlyMode, setViewOnlyMode] = useState<boolean>(() => typeof window !== 'undefined' && window.innerWidth < 768);
@@ -895,9 +909,9 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
             <div className="relative inline-flex items-center" ref={printMenuRef}>
               <button
                 type="button"
-                onClick={() => handleExecutePrint('clean')}
+                onClick={() => setIsPrintPackageModalOpen(true)}
                 className="px-4 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-100 font-bold text-xs rounded-l-xl border border-r-0 border-slate-700 shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
-                title="Click to print this practice plan directly"
+                title="Print practice plan with option to select drill whiteboard sheets"
               >
                 <Printer className="w-3.5 h-3.5 text-indigo-400" />
                 <span>Print Plan</span>
@@ -912,35 +926,58 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
               </button>
 
               {isPrintMenuOpen && (
-                <div className="absolute right-0 top-full mt-1.5 w-64 bg-slate-850 border border-slate-600 rounded-2xl shadow-2xl p-2 z-50 space-y-1 backdrop-blur-md ring-1 ring-slate-700/80 animate-in fade-in duration-150">
+                <div className="absolute right-0 top-full mt-1.5 w-68 bg-slate-850 border border-slate-600 rounded-2xl shadow-2xl p-2 z-50 space-y-1 backdrop-blur-md ring-1 ring-slate-700/80 animate-in fade-in duration-150">
                   <div className="px-2.5 py-1 text-[10px] font-black uppercase text-slate-400 border-b border-slate-700">
                     Print Options
                   </div>
                   <button
                     type="button"
-                    onClick={() => handleExecutePrint('clean')}
+                    onClick={() => {
+                      setIsPrintMenuOpen(false);
+                      setIsPrintPackageModalOpen(true);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-indigo-300 hover:bg-indigo-600 hover:text-white flex items-center gap-2 transition-all cursor-pointer bg-indigo-950/40 border border-indigo-700/40"
+                  >
+                    <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                    <div>
+                      <div>Print Plan & Drill Sheets...</div>
+                      <div className="text-[10px] text-indigo-200 font-normal">Select drills to print alongside plan</div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPrintMenuOpen(false);
+                      handleExecutePrint('clean');
+                    }}
                     className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:bg-indigo-600 hover:text-white flex items-center gap-2 transition-all cursor-pointer"
                   >
                     <Printer className="w-3.5 h-3.5" />
                     <div>
-                      <div>Instant Clean Print</div>
+                      <div>Quick Print (Plan Only)</div>
                       <div className="text-[10px] text-slate-400 group-hover:text-indigo-100 font-normal">Fast layout, avoids browser preview hangs</div>
                     </div>
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleExecutePrint('tab')}
+                    onClick={() => {
+                      setIsPrintMenuOpen(false);
+                      handleExecutePrint('tab');
+                    }}
                     className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:bg-indigo-600 hover:text-white flex items-center gap-2 transition-all cursor-pointer"
                   >
                     <FileText className="w-3.5 h-3.5" />
                     <div>
-                      <div>Open Printable Tab</div>
+                      <div>Open Printable Tab (Plan Only)</div>
                       <div className="text-[10px] text-slate-400 group-hover:text-indigo-100 font-normal">Best for saving PDF or Chrome iframe bypass</div>
                     </div>
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleExecutePrint('direct')}
+                    onClick={() => {
+                      setIsPrintMenuOpen(false);
+                      handleExecutePrint('direct');
+                    }}
                     className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:bg-slate-700 flex items-center gap-2 transition-all cursor-pointer"
                   >
                     <Settings className="w-3.5 h-3.5" />
@@ -2104,6 +2141,65 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                               </span>
                             </div>
                           )}
+
+                          {/* Drill Whiteboard Link & Print Drill (print:hidden) */}
+                          {station.name && (
+                            <div className="flex items-center gap-2 pt-1 flex-wrap print:hidden">
+                              {onOpenWhiteboardDrill && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const matched = findMatchingWhiteboardDrill(station.name, effectiveWhiteboardDrills);
+                                    if (matched) {
+                                      onOpenWhiteboardDrill(matched.id, matched.category);
+                                    } else {
+                                      onOpenWhiteboardDrill(station.name);
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 bg-blue-600/25 hover:bg-blue-600/40 text-blue-200 hover:text-white text-xs font-bold rounded-lg border border-blue-500/35 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                                  title={`Open ${station.name} in interactive whiteboard`}
+                                >
+                                  <PenTool className="w-3.5 h-3.5 text-blue-400" />
+                                  <span>Open in Whiteboard</span>
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const matched = findMatchingWhiteboardDrill(station.name, effectiveWhiteboardDrills);
+                                  if (matched) {
+                                    printDrillSheet(matched, 0);
+                                  } else {
+                                    printDrillSheet({
+                                      id: `station-${pIdx}-${sIdx}`,
+                                      title: station.name,
+                                      subtitle: `${period.category || 'Practice'} • Period ${pIdx + 1}`,
+                                      category: 'TEAM',
+                                      categoryLabel: 'Practice Drill',
+                                      objective: station.desc || 'Station execution & coaching fundamentals',
+                                      diagramKeys: [],
+                                      cues: station.focus ? [station.focus] : ['Execute with burst', 'Communicate assignments'],
+                                      faults: ['Lack of burst', 'Slowing down before completion'],
+                                      phases: [
+                                        {
+                                          name: 'Field Setup & Execution',
+                                          description: station.desc || 'Station execution & coaching fundamentals',
+                                          tokens: [],
+                                          arrows: [],
+                                          zones: [],
+                                        },
+                                      ],
+                                    }, 0);
+                                  }
+                                }}
+                                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                                title={`Print isolated drill sheet for ${station.name}`}
+                              >
+                                <Printer className="w-3.5 h-3.5 text-indigo-400" />
+                                <span>Print Drill Sheet</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ))}
 
@@ -2469,6 +2565,65 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                             className="w-full bg-slate-900/90 border border-slate-700 rounded-xl p-2.5 text-xs font-medium text-slate-200 leading-relaxed focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-500 print:hidden"
                           />
 
+                          {/* Whiteboard Link & Print Drill Sheet (print:hidden) */}
+                          {safeStation.name && (
+                            <div className="flex items-center gap-2 pt-1 print:hidden flex-wrap">
+                              {onOpenWhiteboardDrill && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const matched = findMatchingWhiteboardDrill(safeStation.name, effectiveWhiteboardDrills);
+                                    if (matched) {
+                                      onOpenWhiteboardDrill(matched.id, matched.category);
+                                    } else {
+                                      onOpenWhiteboardDrill(safeStation.name);
+                                    }
+                                  }}
+                                  className="px-2 py-0.5 bg-blue-600/20 hover:bg-blue-600/35 text-blue-300 hover:text-blue-100 text-[10px] font-bold rounded-md border border-blue-500/30 flex items-center gap-1 transition-all cursor-pointer"
+                                  title={`Open ${safeStation.name} on Interactive Whiteboard`}
+                                >
+                                  <PenTool className="w-2.5 h-2.5 text-blue-400" />
+                                  <span>Open in Whiteboard</span>
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const matched = findMatchingWhiteboardDrill(safeStation.name, effectiveWhiteboardDrills);
+                                  if (matched) {
+                                    printDrillSheet(matched, 0);
+                                  } else {
+                                    printDrillSheet({
+                                      id: `station-${pIdx}-${sIdx}`,
+                                      title: safeStation.name,
+                                      subtitle: `${row.category || 'Practice'} • Period ${pIdx + 1}`,
+                                      category: 'TEAM',
+                                      categoryLabel: 'Practice Drill',
+                                      objective: safeStation.desc || 'Station execution & coaching fundamentals',
+                                      diagramKeys: [],
+                                      cues: safeStation.focus ? [safeStation.focus] : ['Execute with burst', 'Communicate assignments'],
+                                      faults: ['Lack of burst', 'Slowing down before completion'],
+                                      phases: [
+                                        {
+                                          name: 'Field Setup & Execution',
+                                          description: safeStation.desc || 'Station execution & coaching fundamentals',
+                                          tokens: [],
+                                          arrows: [],
+                                          zones: [],
+                                        },
+                                      ],
+                                    }, 0);
+                                  }
+                                }}
+                                className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[10px] font-bold rounded-md border border-slate-600 flex items-center gap-1 transition-all cursor-pointer"
+                                title={`Print isolated drill sheet for ${safeStation.name}`}
+                              >
+                                <Printer className="w-2.5 h-2.5 text-indigo-400" />
+                                <span>Print Drill Sheet</span>
+                              </button>
+                            </div>
+                          )}
+
                           {/* Print view */}
                           <div className="hidden print:block">
                             <div className="font-black text-black uppercase tracking-tight leading-snug print-text-title">
@@ -2794,6 +2949,20 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
           }
         }}
       />
+
+      {/* Practice Plan & Selected Drill Whiteboard Package Print Modal */}
+      {currentPlan && (
+        <PracticePlanPrintModal
+          isOpen={isPrintPackageModalOpen}
+          onClose={() => setIsPrintPackageModalOpen(false)}
+          plan={currentPlan}
+          periods={currentPlanPeriods}
+          seqInfo={currentSeq}
+          whiteboardDrills={effectiveWhiteboardDrills}
+          initialPrintFontSize={printFontSize}
+          onOpenWhiteboardDrill={onOpenWhiteboardDrill}
+        />
+      )}
     </div>
   );
 };

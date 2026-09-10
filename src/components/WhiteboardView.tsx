@@ -32,8 +32,9 @@ import {
   Flag,
   ListOrdered,
   Dumbbell,
+  Calendar,
 } from 'lucide-react';
-import { WhiteboardToken, WhiteboardArrow, WhiteboardZoneBubble, Team, UserRole } from '../types';
+import { WhiteboardToken, WhiteboardArrow, WhiteboardZoneBubble, Team, UserRole, PracticePlan } from '../types';
 import {
   DLINE_DRILLS,
   DEFENSIVE_DRILLS,
@@ -54,6 +55,7 @@ import { spreadDiagramElements, WhiteboardSpreadMode } from './whiteboard/whiteb
 import { AddWhiteboardDrillModal } from './whiteboard/AddWhiteboardDrillModal';
 import { WhiteboardDrillDescriptionView } from './whiteboard/WhiteboardDrillDescriptionView';
 import { WhiteboardDrillPickerModal } from './whiteboard/WhiteboardDrillPickerModal';
+import { findDrillInPracticePlans } from '../utils/drillPlanLinking';
 
 interface WhiteboardViewProps {
   userRole?: UserRole;
@@ -65,6 +67,9 @@ interface WhiteboardViewProps {
   externalCategory?: 'ALL' | DefensivePositionCategory;
   onDrillSelect?: (drillId: string, category: DefensivePositionCategory) => void;
   onCategorySelect?: (category: 'ALL' | DefensivePositionCategory) => void;
+  onNavigateToPracticePlan?: (practiceId?: string, drillTitle?: string) => void;
+  practices?: PracticePlan[];
+  currentPracticeId?: string | null;
 }
 
 const DRILL_ICONS = ['🏈', '💥', '🔄', '🛡️', '🎯', '🧱', '👁️', '🚨', '⚡', '🦅', '🏹', '⚔️', '🧤', '🏃', '🦾', '🔥', '🏆'];
@@ -204,6 +209,9 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
   externalCategory,
   onDrillSelect,
   onCategorySelect,
+  onNavigateToPracticePlan,
+  practices = [],
+  currentPracticeId,
 }) => {
   // Defensive Position Category Filter ('ALL' | 'SCHEME' | 'DL' | 'DE' | 'LB' | 'DB' | 'TEAM')
   const [selectedCategory, setSelectedCategory] = useState<'ALL' | DefensivePositionCategory>(
@@ -399,6 +407,12 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
     filteredDrills[0] ||
     drills[0] ||
     DEFENSIVE_DRILLS[0];
+
+  // Match current drill with scheduled practice plan
+  const matchingPracticePlanInfo = useMemo(() => {
+    if (!currentDrill || !practices || practices.length === 0) return null;
+    return findDrillInPracticePlans(currentDrill, practices, currentPracticeId);
+  }, [currentDrill, practices, currentPracticeId]);
 
   // Filtered drills specifically for the Mobile/Sideline Position & Drill Selector List
   const listFilteredDrills = useMemo(() => {
@@ -1334,6 +1348,20 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           drill={currentDrill}
           onOpenChalkboard={() => setIsCustomMode(true)}
           onPrintDrill={handlePrintWhiteboard}
+          onNavigateToPracticePlan={
+            onNavigateToPracticePlan
+              ? () => onNavigateToPracticePlan(matchingPracticePlanInfo?.plan.id, currentDrill.title)
+              : undefined
+          }
+          practicePlanInfo={
+            matchingPracticePlanInfo
+              ? {
+                  planTitle: matchingPracticePlanInfo.plan.title,
+                  periodNumber: matchingPracticePlanInfo.periodNumber,
+                  stationName: matchingPracticePlanInfo.stationName,
+                }
+              : null
+          }
         />
       ) : (
         <>
@@ -1476,15 +1504,36 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
 
             {/* Quick Print Button */}
             {!isCustomMode && (
-              <button
-                type="button"
-                onClick={() => printDrillSheet(currentDrill, activePhaseIdx)}
-                className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-850 text-xs font-bold rounded-lg border border-slate-300 shadow-xs flex items-center gap-1.5 cursor-pointer"
-                title="Print this isolated drill sheet"
-              >
-                <Printer className="w-3.5 h-3.5 text-blue-600" />
-                <span>Print Drill</span>
-              </button>
+              <div className="flex items-center gap-1.5">
+                {onNavigateToPracticePlan && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateToPracticePlan(matchingPracticePlanInfo?.plan.id, currentDrill.title)}
+                    className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg border border-emerald-300 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                    title={
+                      matchingPracticePlanInfo
+                        ? `Open in ${matchingPracticePlanInfo.plan.title} (Period ${matchingPracticePlanInfo.periodNumber})`
+                        : 'Open in Practice Plan'
+                    }
+                  >
+                    <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>
+                      {matchingPracticePlanInfo
+                        ? `Plan (P${matchingPracticePlanInfo.periodNumber})`
+                        : 'Plan'}
+                    </span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => printDrillSheet(currentDrill, activePhaseIdx)}
+                  className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-850 text-xs font-bold rounded-lg border border-slate-300 shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  title="Print this isolated drill sheet"
+                >
+                  <Printer className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Print Drill</span>
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -1807,6 +1856,26 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                   </button>
                 ))}
               </div>
+            )}
+
+            {onNavigateToPracticePlan && (
+              <button
+                type="button"
+                onClick={() => onNavigateToPracticePlan(matchingPracticePlanInfo?.plan.id, currentDrill.title)}
+                className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 hover:text-white text-xs font-bold rounded-xl border border-emerald-500/40 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                title={
+                  matchingPracticePlanInfo
+                    ? `Open in ${matchingPracticePlanInfo.plan.title} (Period ${matchingPracticePlanInfo.periodNumber})`
+                    : 'Open in Practice Plan'
+                }
+              >
+                <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                <span>
+                  {matchingPracticePlanInfo
+                    ? `View in Plan (P${matchingPracticePlanInfo.periodNumber})`
+                    : 'Open in Plan'}
+                </span>
+              </button>
             )}
 
             <button
