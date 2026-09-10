@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Zap,
   Shield,
@@ -91,6 +91,7 @@ import { getAutoActiveWeek, normalizeWeeklyData } from './utils/seasonWeekUtils'
 import { normalizeRoster } from './utils/depthChartUtils';
 import { triggerPrint } from './utils/printUtils';
 import { isEventAlreadyInSchedule } from './utils/teamSnapSync';
+import { VALID_UNITS, parseRouteHash, buildRouteHash } from './utils/routeUtils';
 
 import { Header } from './components/Header';
 import { NavigationTabs } from './components/NavigationTabs';
@@ -311,16 +312,29 @@ export default function App() {
     return auto.activeWeek || '1';
   });
   const [dismissedCopyPrompts, setDismissedCopyPrompts] = useState<Set<string>>(new Set());
-  const [activeUnit, setActiveUnit] = useState<UnitType>(() => {
+  const isPopStateNavRef = useRef(false);
+  const modalOpenInHistoryRef = useRef<string | null>(null);
+
+  const [_activeUnit, _setActiveUnitRaw] = useState<UnitType>(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const parsed = parseRouteHash(window.location.hash);
+      if (parsed.unit) return parsed.unit;
+    }
     const savedDefault = safeJSONParse('footballDefaultScreen', null);
-    if (savedDefault) return savedDefault;
+    if (savedDefault && VALID_UNITS.has(savedDefault)) return savedDefault;
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     if (isMobile) return 'mobile_hub';
     return safeJSONParse('footballActiveUnit', 'schedule');
   });
+  const activeUnit = _activeUnit;
+
   const [depthSubUnit, setDepthSubUnit] = useState<
     'offense' | 'defense' | 'st' | 'groups' | 'scrimmage'
   >(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const parsed = parseRouteHash(window.location.hash);
+      if (parsed.subUnit) return parsed.subUnit;
+    }
     const savedDefault = safeJSONParse('footballDefaultDepthSubUnit', null);
     if (savedDefault) return savedDefault;
     return 'offense';
@@ -328,19 +342,210 @@ export default function App() {
   const [selectedFormationId, setSelectedFormationId] = useState<string | null>(
     null
   );
-  const [currentPracticeId, setCurrentPracticeId] = useState<string | null>(() =>
-    safeJSONParse('footballCurrentPracticeId', null)
-  );
+  const [currentPracticeId, setCurrentPracticeId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const parsed = parseRouteHash(window.location.hash);
+      if (parsed.practiceId) return parsed.practiceId;
+    }
+    return safeJSONParse('footballCurrentPracticeId', null);
+  });
   const [activeGuideMain, setActiveGuideMain] = useState<string>('Offense');
   const [activeGuideSub, setActiveGuideSub] = useState<string>('Full Playbook');
   const [printFontSize, setPrintFontSize] = useState<string>(() =>
     safeJSONParse('footballPrintFontSize', '12')
   );
-  const [activeWhiteboardDrillId, setActiveWhiteboardDrillId] = useState<string>('krausko-blitz-master');
-  const [activeWhiteboardCategory, setActiveWhiteboardCategory] = useState<DefensivePositionCategory | 'ALL'>('LB');
+  const [activeWhiteboardDrillId, setActiveWhiteboardDrillId] = useState<string>(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const parsed = parseRouteHash(window.location.hash);
+      if (parsed.drillId) return parsed.drillId;
+    }
+    return 'krausko-blitz-master';
+  });
+  const [activeWhiteboardCategory, setActiveWhiteboardCategory] = useState<DefensivePositionCategory | 'ALL'>(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const parsed = parseRouteHash(window.location.hash);
+      if (parsed.drillCategory) return parsed.drillCategory;
+    }
+    return 'LB';
+  });
   const [isSidebarExpanded, setIsSidebarExpanded] = useState<boolean>(() =>
     safeJSONParse('footballSidebarExpanded', false)
   );
+
+  // Centralized route navigator supporting browser history, Back/Forward buttons, and deep links
+  const navigateToUnit = useCallback(
+    (
+      unit: UnitType,
+      options?: {
+        subUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage';
+        drillId?: string;
+        drillCategory?: DefensivePositionCategory | 'ALL';
+        practiceId?: string;
+        replace?: boolean;
+      }
+    ) => {
+      const effectiveSubUnit =
+        options?.subUnit ||
+        (['offense', 'defense', 'st', 'groups', 'scrimmage'].includes(unit)
+          ? (unit as 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage')
+          : undefined);
+
+      if (effectiveSubUnit) {
+        setDepthSubUnit(effectiveSubUnit);
+      }
+      if (options?.drillId) {
+        setActiveWhiteboardDrillId(options.drillId);
+      }
+      if (options?.drillCategory) {
+        setActiveWhiteboardCategory(options.drillCategory);
+      }
+      if (options?.practiceId) {
+        setCurrentPracticeId(options.practiceId);
+      }
+
+      _setActiveUnitRaw(unit);
+      safeJSONSet('footballActiveUnit', unit);
+
+      if (typeof window !== 'undefined') {
+        const hash = buildRouteHash(unit, {
+          subUnit: effectiveSubUnit || depthSubUnit,
+          drillId: options?.drillId || (unit === 'whiteboard' ? activeWhiteboardDrillId : undefined),
+          drillCategory: options?.drillCategory || (unit === 'whiteboard' ? activeWhiteboardCategory : undefined),
+          practiceId: options?.practiceId || (unit === 'practice' ? currentPracticeId || undefined : undefined),
+        });
+
+        const stateObj = {
+          unit,
+          subUnit: effectiveSubUnit,
+          drillId: options?.drillId,
+          drillCategory: options?.drillCategory,
+          practiceId: options?.practiceId,
+        };
+
+        if (options?.replace) {
+          window.history.replaceState(stateObj, '', hash);
+        } else if (window.location.hash !== hash) {
+          window.history.pushState(stateObj, '', hash);
+        }
+      }
+    },
+    [depthSubUnit, activeWhiteboardDrillId, activeWhiteboardCategory, currentPracticeId]
+  );
+
+  // Wrapped setActiveUnit maintaining backward compatibility across the entire application
+  const setActiveUnit = useCallback(
+    (action: React.SetStateAction<UnitType>) => {
+      _setActiveUnitRaw((prev) => {
+        const next = typeof action === 'function' ? action(prev) : action;
+        if (next === prev) return prev;
+
+        if (!isPopStateNavRef.current) {
+          if (typeof window !== 'undefined') {
+            const effectiveSubUnit = ['offense', 'defense', 'st', 'groups', 'scrimmage'].includes(next)
+              ? (next as any)
+              : depthSubUnit;
+            const hash = buildRouteHash(next, {
+              subUnit: effectiveSubUnit,
+              drillId: next === 'whiteboard' ? activeWhiteboardDrillId : undefined,
+              drillCategory: next === 'whiteboard' ? activeWhiteboardCategory : undefined,
+              practiceId: next === 'practice' ? currentPracticeId || undefined : undefined,
+            });
+            if (window.location.hash !== hash) {
+              window.history.pushState(
+                {
+                  unit: next,
+                  subUnit: effectiveSubUnit,
+                  drillId: next === 'whiteboard' ? activeWhiteboardDrillId : undefined,
+                  drillCategory: next === 'whiteboard' ? activeWhiteboardCategory : undefined,
+                  practiceId: next === 'practice' ? currentPracticeId : undefined,
+                },
+                '',
+                hash
+              );
+            }
+          }
+        } else {
+          isPopStateNavRef.current = false;
+        }
+
+        safeJSONSet('footballActiveUnit', next);
+        return next;
+      });
+    },
+    [depthSubUnit, activeWhiteboardDrillId, activeWhiteboardCategory, currentPracticeId]
+  );
+
+  // Synchronize browser history Back and Forward buttons with internal unit and drill state
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const currentParsed = parseRouteHash(window.location.hash);
+    if (!currentParsed.unit) {
+      const initialHash = buildRouteHash(activeUnit, {
+        subUnit: depthSubUnit,
+        drillId: activeUnit === 'whiteboard' ? activeWhiteboardDrillId : undefined,
+        drillCategory: activeUnit === 'whiteboard' ? activeWhiteboardCategory : undefined,
+        practiceId: activeUnit === 'practice' ? currentPracticeId || undefined : undefined,
+      });
+      window.history.replaceState(
+        {
+          unit: activeUnit,
+          subUnit: depthSubUnit,
+          drillId: activeUnit === 'whiteboard' ? activeWhiteboardDrillId : undefined,
+          drillCategory: activeUnit === 'whiteboard' ? activeWhiteboardCategory : undefined,
+          practiceId: activeUnit === 'practice' ? currentPracticeId || undefined : undefined,
+        },
+        '',
+        initialHash
+      );
+    }
+
+    const handlePopState = (e: PopStateEvent) => {
+      // 1. If mobile navigation drawer was open, close it on back
+      if (modalOpenInHistoryRef.current === 'mobile_nav') {
+        modalOpenInHistoryRef.current = null;
+        setIsMobileNavOpen(false);
+        return;
+      }
+
+      // 2. Parse destination from history state or URL hash
+      const stateUnit = e.state?.unit;
+      const parsed = parseRouteHash(window.location.hash);
+      const targetUnit = (stateUnit && VALID_UNITS.has(stateUnit) ? stateUnit : parsed.unit) as UnitType | null;
+
+      if (targetUnit) {
+        isPopStateNavRef.current = true;
+        _setActiveUnitRaw(targetUnit);
+        safeJSONSet('footballActiveUnit', targetUnit);
+
+        const targetSubUnit = e.state?.subUnit || parsed.subUnit;
+        if (targetSubUnit) {
+          setDepthSubUnit(targetSubUnit);
+        } else if (['offense', 'defense', 'st', 'groups', 'scrimmage'].includes(targetUnit)) {
+          setDepthSubUnit(targetUnit as any);
+        }
+
+        const targetDrillId = e.state?.drillId || parsed.drillId;
+        if (targetDrillId) {
+          setActiveWhiteboardDrillId(targetDrillId);
+        }
+        const targetDrillCat = e.state?.drillCategory || parsed.drillCategory;
+        if (targetDrillCat) {
+          setActiveWhiteboardCategory(targetDrillCat);
+        }
+
+        const targetPracticeId = e.state?.practiceId || parsed.practiceId;
+        if (targetPracticeId) {
+          setCurrentPracticeId(targetPracticeId);
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [activeUnit, depthSubUnit, activeWhiteboardDrillId, activeWhiteboardCategory, currentPracticeId]);
 
   // Filter & Search States
   const [rosterSearchTerm, setRosterSearchTerm] = useState('');
@@ -6080,9 +6285,10 @@ function mergeRemoteWeeklyData(
                 onSelectGuideMain={setActiveGuideMain}
                 onSelectGuideSub={setActiveGuideSub}
                 onOpenWhiteboardDrill={(drillId, cat) => {
-                  if (drillId) setActiveWhiteboardDrillId(drillId);
-                  if (cat) setActiveWhiteboardCategory(cat as any);
-                  setActiveUnit('whiteboard');
+                  navigateToUnit('whiteboard', {
+                    drillId,
+                    drillCategory: cat as any,
+                  });
                 }}
               />
             )}
@@ -6345,8 +6551,9 @@ function mergeRemoteWeeklyData(
                 practicePlans={practiceData}
                 onSyncPracticeToPlan={handleSyncPracticeToPlan}
                 onNavigateToPractice={(planId) => {
-                  if (planId) setCurrentPracticeId(planId);
-                  setActiveUnit('practice');
+                  navigateToUnit('practice', {
+                    practiceId: planId,
+                  });
                 }}
                 onUpdateScheduleEvent={handleUpdateScheduleEvent}
               />
@@ -6680,18 +6887,26 @@ function mergeRemoteWeeklyData(
                 practices={activeTeamPracticeData.length > 0 ? activeTeamPracticeData : practiceData}
                 currentPracticeId={currentPracticeId}
                 onNavigateToPracticePlan={(practiceId, drillTitle) => {
-                  if (practiceId) {
-                    setCurrentPracticeId(practiceId);
-                    safeJSONSet('footballCurrentPracticeId', practiceId);
-                  }
-                  setActiveUnit('practice');
+                  navigateToUnit('practice', {
+                    practiceId,
+                  });
                 }}
                 onDrillSelect={(drillId, cat) => {
                   setActiveWhiteboardDrillId(drillId);
                   setActiveWhiteboardCategory(cat);
+                  navigateToUnit('whiteboard', {
+                    drillId,
+                    drillCategory: cat,
+                    replace: true,
+                  });
                 }}
                 onCategorySelect={(cat) => {
                   setActiveWhiteboardCategory(cat);
+                  navigateToUnit('whiteboard', {
+                    drillId: activeWhiteboardDrillId,
+                    drillCategory: cat,
+                    replace: true,
+                  });
                 }}
                 onSaveToGuidePlaybook={(mainFolder, subTabName, htmlContent) => {
                   setGuideTree((prev) => {
@@ -6813,9 +7028,10 @@ function mergeRemoteWeeklyData(
                 onNavigateToSchedule={() => setActiveUnit('schedule')}
                 onPracticeWizardGenerate={handlePracticeWizardGenerate}
                 onOpenWhiteboardDrill={(drillId, cat) => {
-                  if (drillId) setActiveWhiteboardDrillId(drillId);
-                  if (cat) setActiveWhiteboardCategory(cat as any);
-                  setActiveUnit('whiteboard');
+                  navigateToUnit('whiteboard', {
+                    drillId,
+                    drillCategory: cat as any,
+                  });
                 }}
               />
             )}
@@ -7072,7 +7288,19 @@ function mergeRemoteWeeklyData(
 
         <button
           type="button"
-          onClick={() => setIsMobileNavOpen(true)}
+          onClick={() => {
+            setIsMobileNavOpen(true);
+            try {
+              window.history.pushState(
+                { modal: 'mobile_nav', unit: activeUnit },
+                '',
+                window.location.hash
+              );
+              modalOpenInHistoryRef.current = 'mobile_nav';
+            } catch (e) {
+              // ignore
+            }
+          }}
           className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
             isMobileNavOpen ? 'text-indigo-400 font-black' : 'text-slate-400 font-semibold'
           }`}
@@ -7086,20 +7314,37 @@ function mergeRemoteWeeklyData(
       {/* Full Mobile Navigation Sheet Modal */}
       <MobileNavigationModal
         isOpen={isMobileNavOpen}
-        onClose={() => setIsMobileNavOpen(false)}
+        onClose={() => {
+          setIsMobileNavOpen(false);
+          if (modalOpenInHistoryRef.current === 'mobile_nav') {
+            modalOpenInHistoryRef.current = null;
+            window.history.back();
+          }
+        }}
         activeUnit={activeUnit}
         depthSubUnit={depthSubUnit}
         onSelectUnit={(unit, subUnit) => {
-          if (subUnit) {
-            setDepthSubUnit(subUnit);
-            setActiveUnit(subUnit);
-          } else if (unit === 'depth_chart') {
-            const target = depthSubUnit || 'offense';
-            setDepthSubUnit(target);
-            setActiveUnit(target);
+          if (modalOpenInHistoryRef.current === 'mobile_nav') {
+            modalOpenInHistoryRef.current = null;
+            if (subUnit) {
+              navigateToUnit(subUnit, { subUnit, replace: true });
+            } else if (unit === 'depth_chart') {
+              const target = depthSubUnit || 'offense';
+              navigateToUnit(target, { subUnit: target, replace: true });
+            } else {
+              navigateToUnit(unit, { replace: true });
+            }
           } else {
-            setActiveUnit(unit);
+            if (subUnit) {
+              navigateToUnit(subUnit, { subUnit });
+            } else if (unit === 'depth_chart') {
+              const target = depthSubUnit || 'offense';
+              navigateToUnit(target, { subUnit: target });
+            } else {
+              navigateToUnit(unit);
+            }
           }
+          setIsMobileNavOpen(false);
         }}
         userRole={userRole}
         activeTeamName={currentActiveTeam?.name || 'Mahopac 10U'}
