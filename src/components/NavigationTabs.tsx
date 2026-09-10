@@ -20,6 +20,7 @@ import {
   ChevronRight,
   SlidersHorizontal,
   PenTool,
+  Home as HomeIcon,
 } from 'lucide-react';
 import { CustomTabGroup, UnitType, UserRole } from '../types';
 import { safeJSONParse, safeJSONSet } from '../services/storageService';
@@ -46,6 +47,7 @@ export interface NavTabItem {
 }
 
 export const DEFAULT_NAV_TABS: NavTabItem[] = [
+  { id: 'home', label: '🏠 Home', icon: HomeIcon },
   { id: 'mobile_hub', label: '📱 Mobile HUD', icon: Smartphone },
   { id: 'game_day', label: '🏆 Game Day Hub', icon: Swords },
   { id: 'schedule', label: '📅 Schedule', icon: Calendar },

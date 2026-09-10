@@ -260,8 +260,10 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all');
   const [copiedDrillId, setCopiedDrillId] = useState<string | null>(null);
   const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState<boolean>(false);
-  const [isCompactCardMode, setIsCompactCardMode] = useState<boolean>(false);
+  const [isCompactCardMode, setIsCompactCardMode] = useState<boolean>(true);
   const [expandedCardIds, setExpandedCardIds] = useState<Record<string, boolean>>({});
+  // Section collapse state for Cards mode: by default all sections are collapsed (not expanded)
+  const [collapsedCardSections, setCollapsedCardSections] = useState<Record<string, boolean>>({});
 
   // Helper to normalize strings for robust category matching (stripping emoji, whitespace, punctuation)
   const cleanCategoryStr = (str: string) =>
@@ -524,6 +526,56 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
     );
   }, [flattenedDrillList, selectedCategory, selectedSubcategory, query]);
 
+  // Group filtered drills by top category for clean section accordions in Cards Mode
+  const groupedCardDrills = useMemo(() => {
+    const groups: { category: string; icon: string; drills: typeof filteredCardDrills }[] = [];
+    const map = new Map<string, typeof filteredCardDrills>();
+
+    for (const item of filteredCardDrills) {
+      const cat = item.topCategory || item.folderName || 'General Drills';
+      if (!map.has(cat)) {
+        map.set(cat, []);
+      }
+      map.get(cat)!.push(item);
+    }
+
+    for (const [cat, drills] of map.entries()) {
+      groups.push({
+        category: cat,
+        icon: getCategoryIcon(cat),
+        drills,
+      });
+    }
+
+    return groups;
+  }, [filteredCardDrills]);
+
+  const toggleCardSection = (catName: string) => {
+    setCollapsedCardSections((prev) => {
+      const isCurrentlyCollapsed = prev[catName] !== undefined ? prev[catName] : true;
+      return {
+        ...prev,
+        [catName]: !isCurrentlyCollapsed,
+      };
+    });
+  };
+
+  const handleExpandAllCardSections = () => {
+    const next: Record<string, boolean> = {};
+    groupedCardDrills.forEach((g) => {
+      next[g.category] = false;
+    });
+    setCollapsedCardSections(next);
+  };
+
+  const handleCollapseAllCardSections = () => {
+    const next: Record<string, boolean> = {};
+    groupedCardDrills.forEach((g) => {
+      next[g.category] = true;
+    });
+    setCollapsedCardSections(next);
+  };
+
   // Helper: check if a drill matches query
   const isDrillMatch = (drill: DrillItem) => {
     if (!query) return true;
@@ -541,10 +593,11 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
     return false;
   };
 
-  // Handle expand/collapse all
+  // Handle expand/collapse all in Tree Mode
   const handleExpandAll = () => {
     allFolders.forEach((f) => {
-      if (collapsedFolders[f.path]) {
+      const isCol = collapsedFolders[f.path] !== undefined ? collapsedFolders[f.path] : true;
+      if (isCol) {
         onToggleFolder(f.path);
       }
     });
@@ -552,7 +605,8 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
 
   const handleCollapseAll = () => {
     allFolders.forEach((f) => {
-      if (!collapsedFolders[f.path]) {
+      const isCol = collapsedFolders[f.path] !== undefined ? collapsedFolders[f.path] : true;
+      if (!isCol) {
         onToggleFolder(f.path);
       }
     });
@@ -576,7 +630,8 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
       return null;
     }
 
-    const isCollapsed = query ? false : Boolean(collapsedFolders[pathKey]);
+    // Default to collapsed unless opened or query active
+    const isCollapsed = query ? false : (collapsedFolders[pathKey] !== undefined ? Boolean(collapsedFolders[pathKey]) : true);
     const isDragOver = dragOverFolderPath === pathKey;
 
     const visibleDrills = query
@@ -639,6 +694,9 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
             </span>
             <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-800 text-indigo-300 border border-slate-700">
               {query ? `${visibleDrills.length} match` : `${totalFolderDrills} drills`}
+            </span>
+            <span className="text-slate-400 ml-1">
+              {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </span>
           </div>
 
@@ -907,7 +965,7 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
                   title="Expand all categories"
                 >
                   <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
-                  <span className="hidden xs:inline">Expand</span>
+                  <span className="hidden xs:inline">Expand All</span>
                 </button>
                 <button
                   onClick={handleCollapseAll}
@@ -915,7 +973,43 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
                   title="Collapse all categories"
                 >
                   <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="hidden xs:inline">Collapse</span>
+                  <span className="hidden xs:inline">Collapse All</span>
+                </button>
+              </div>
+            )}
+
+            {/* Cards Mode Controls: Expand/Collapse All Sections */}
+            {viewMode === 'cards' && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleExpandAllCardSections}
+                  className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-bold rounded-xl flex items-center gap-1 transition-all cursor-pointer"
+                  title="Expand all drill sections"
+                >
+                  <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
+                  <span className="hidden xs:inline">Expand All</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCollapseAllCardSections}
+                  className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-bold rounded-xl flex items-center gap-1 transition-all cursor-pointer"
+                  title="Collapse all drill sections"
+                >
+                  <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="hidden xs:inline">Collapse All</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCompactCardMode((prev) => !prev)}
+                  className={`px-2.5 py-1.5 border text-xs font-bold rounded-xl flex items-center gap-1 transition-all cursor-pointer ${
+                    isCompactCardMode
+                      ? 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                      : 'bg-indigo-600/30 border-indigo-500/50 text-indigo-200'
+                  }`}
+                  title="Toggle card detail level"
+                >
+                  <span>{isCompactCardMode ? 'Compact' : 'Detailed'}</span>
                 </button>
               </div>
             )}
@@ -1066,132 +1160,184 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
             )}
           </div>
 
-          {/* Drill Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {filteredCardDrills.map(({ drill, folderName, topCategory, pathKey, drillIdx }) => {
-              const cardId = `${pathKey}_${drillIdx}`;
-              const isCopied = copiedDrillId === cardId;
-              const isExpanded = !isCompactCardMode || Boolean(expandedCardIds[cardId]);
+          {/* Drill Cards by Category Accordions (Collapsed by default so all sections are not expanded) */}
+          <div className="space-y-4">
+            {groupedCardDrills.map((group) => {
+              const isSectionCollapsed = query
+                ? false
+                : selectedCategory !== 'all'
+                ? false
+                : (collapsedCardSections[group.category] !== undefined
+                  ? collapsedCardSections[group.category]
+                  : true);
 
               return (
                 <div
-                  key={drill.id || cardId}
-                  className="bg-slate-900/95 border border-slate-800 hover:border-indigo-500/50 rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col justify-between gap-2.5 transition-all group"
+                  key={group.category}
+                  className="border border-slate-800/90 rounded-3xl bg-slate-900/70 shadow-lg overflow-hidden transition-all"
                 >
-                  <div className="space-y-2">
-                    {/* Card Header: Title + Category Badge + Action Buttons */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400/90 block mb-0.5 truncate">
-                          {topCategory && topCategory !== folderName ? `${topCategory} • ${folderName}` : folderName}
-                        </span>
-                        <h3 className="font-black text-sm text-slate-100 group-hover:text-indigo-300 transition-colors leading-snug">
-                          {drill.name || 'Untitled Drill'}
-                        </h3>
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        {onNavigateToWhiteboard && (
-                          <button
-                            type="button"
-                            onClick={() => onNavigateToWhiteboard(drill.id, topCategory)}
-                            title="Open in Tactical Chalkboard"
-                            className="p-1.5 rounded-xl bg-blue-950/60 hover:bg-blue-900 border border-blue-500/40 text-blue-300 hover:text-white transition-all cursor-pointer"
-                          >
-                            <PenTool className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleCopyDrill(drill, folderName, cardId)}
-                          title="Copy Drill to Clipboard"
-                          className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-indigo-300 transition-all cursor-pointer"
-                        >
-                          {isCopied ? (
-                            <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5" />
-                          )}
-                        </button>
-                      </div>
+                  {/* Category Section Header Button */}
+                  <button
+                    type="button"
+                    onClick={() => toggleCardSection(group.category)}
+                    className="w-full px-5 py-3.5 flex items-center justify-between gap-3 bg-slate-950/80 hover:bg-slate-900 border-b border-slate-800/80 transition-colors text-left cursor-pointer select-none"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-lg shrink-0">{group.icon}</span>
+                      <h2 className="font-black text-sm sm:text-base text-slate-100 tracking-tight truncate">
+                        {group.category}
+                      </h2>
+                      <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-800 text-indigo-300 border border-slate-700 shrink-0">
+                        {group.drills.length} {group.drills.length === 1 ? 'drill' : 'drills'}
+                      </span>
                     </div>
 
-                    {/* Setup & Instructions (Collapsible in compact mode) */}
-                    {drill.desc && (
-                      <div className="bg-slate-950/60 rounded-xl p-2.5 border border-slate-800">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                            📋 Setup &amp; Execution:
-                          </span>
-                          {isCompactCardMode && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setExpandedCardIds((prev) => ({
-                                  ...prev,
-                                  [cardId]: !prev[cardId],
-                                }))
-                              }
-                              className="text-[10.5px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-0.5 cursor-pointer"
+                    <div className="flex items-center gap-2 text-slate-400 shrink-0">
+                      <span className="text-xs font-semibold hidden sm:inline text-slate-400">
+                        {isSectionCollapsed ? 'Click to view' : 'Click to collapse'}
+                      </span>
+                      {isSectionCollapsed ? (
+                        <ChevronRight className="w-4 h-4 text-indigo-400" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-indigo-400" />
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Section Drill Cards */}
+                  {!isSectionCollapsed && (
+                    <div className="p-3.5 sm:p-4 bg-slate-950/40">
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                        {group.drills.map(({ drill, folderName, topCategory, pathKey, drillIdx }) => {
+                          const cardId = `${pathKey}_${drillIdx}`;
+                          const isCopied = copiedDrillId === cardId;
+                          const isExpanded = !isCompactCardMode || Boolean(expandedCardIds[cardId]);
+
+                          return (
+                            <div
+                              key={drill.id || cardId}
+                              className="bg-slate-900/95 border border-slate-800 hover:border-indigo-500/50 rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col justify-between gap-2.5 transition-all group"
                             >
-                              <span>{isExpanded ? 'Hide' : 'Details'}</span>
-                              {isExpanded ? (
-                                <ChevronUp className="w-3 h-3" />
-                              ) : (
-                                <ChevronDown className="w-3 h-3" />
+                              <div className="space-y-2">
+                                {/* Card Header: Title + Category Badge + Action Buttons */}
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400/90 block mb-0.5 truncate">
+                                      {topCategory && topCategory !== folderName ? `${topCategory} • ${folderName}` : folderName}
+                                    </span>
+                                    <h3 className="font-black text-sm text-slate-100 group-hover:text-indigo-300 transition-colors leading-snug">
+                                      {drill.name || 'Untitled Drill'}
+                                    </h3>
+                                  </div>
+
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    {onNavigateToWhiteboard && (
+                                      <button
+                                        type="button"
+                                        onClick={() => onNavigateToWhiteboard(drill.id, topCategory)}
+                                        title="Open in Tactical Chalkboard"
+                                        className="p-1.5 rounded-xl bg-blue-950/60 hover:bg-blue-900 border border-blue-500/40 text-blue-300 hover:text-white transition-all cursor-pointer"
+                                      >
+                                        <PenTool className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyDrill(drill, folderName, cardId)}
+                                      title="Copy Drill to Clipboard"
+                                      className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-indigo-300 transition-all cursor-pointer"
+                                    >
+                                      {isCopied ? (
+                                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                      ) : (
+                                        <Copy className="w-3.5 h-3.5" />
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Setup & Instructions (Collapsible in compact mode) */}
+                                {drill.desc && (
+                                  <div className="bg-slate-950/60 rounded-xl p-2.5 border border-slate-800">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                                        📋 Setup &amp; Execution:
+                                      </span>
+                                      {isCompactCardMode && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setExpandedCardIds((prev) => ({
+                                              ...prev,
+                                              [cardId]: !prev[cardId],
+                                            }))
+                                          }
+                                          className="text-[10.5px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-0.5 cursor-pointer"
+                                        >
+                                          <span>{isExpanded ? 'Hide' : 'Details'}</span>
+                                          {isExpanded ? (
+                                            <ChevronUp className="w-3 h-3" />
+                                          ) : (
+                                            <ChevronDown className="w-3 h-3" />
+                                          )}
+                                        </button>
+                                      )}
+                                    </div>
+                                    {isExpanded && (
+                                      <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap mt-1">
+                                        {drill.desc}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Key Coaching Cues */}
+                                {drill.key && (
+                                  <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-xl p-2.5">
+                                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1 mb-1">
+                                      <Zap className="w-3 h-3 text-emerald-400" />
+                                      <span>Key Coaching Focus:</span>
+                                    </span>
+                                    <p className="text-xs font-bold text-emerald-200/90 leading-relaxed">
+                                      {drill.key}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Card Footer Actions (Admin Controls) */}
+                              {userRole === 'admin' && (
+                                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                                  <select
+                                    value={pathKey}
+                                    onChange={(e) =>
+                                      onMoveDrillToFolder(pathKey, drillIdx, e.target.value)
+                                    }
+                                    className="bg-slate-950 border border-slate-800 text-[10px] font-bold text-slate-400 rounded-lg px-2 py-1 max-w-[140px] truncate focus:outline-none focus:border-indigo-400"
+                                    title="Move to category"
+                                  >
+                                    {allFolders.map((f) => (
+                                      <option key={f.path} value={f.path}>
+                                        {f.name}
+                                      </option>
+                                    ))}
+                                  </select>
+
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => onDeleteDrill(pathKey, drillIdx)}
+                                      className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
+                                      title="Delete Drill"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
                               )}
-                            </button>
-                          )}
-                        </div>
-                        {isExpanded && (
-                          <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap mt-1">
-                            {drill.desc}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Key Coaching Cues */}
-                    {drill.key && (
-                      <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-xl p-2.5">
-                        <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1 mb-1">
-                          <Zap className="w-3 h-3 text-emerald-400" />
-                          <span>Key Coaching Focus:</span>
-                        </span>
-                        <p className="text-xs font-bold text-emerald-200/90 leading-relaxed">
-                          {drill.key}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Card Footer Actions (Admin Controls) */}
-                  {userRole === 'admin' && (
-                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                      <select
-                        value={pathKey}
-                        onChange={(e) =>
-                          onMoveDrillToFolder(pathKey, drillIdx, e.target.value)
-                        }
-                        className="bg-slate-950 border border-slate-800 text-[10px] font-bold text-slate-400 rounded-lg px-2 py-1 max-w-[140px] truncate focus:outline-none focus:border-indigo-400"
-                        title="Move to category"
-                      >
-                        {allFolders.map((f) => (
-                          <option key={f.path} value={f.path}>
-                            {f.name}
-                          </option>
-                        ))}
-                      </select>
-
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => onDeleteDrill(pathKey, drillIdx)}
-                          className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
-                          title="Delete Drill"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

@@ -379,36 +379,49 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         {/* Clickable transparent background */}
         <rect id="fieldBackground" x="0" y="0" width="700" height="500" fill="transparent" />
 
-        {/* Yard Lines & Hash Marks */}
-        <g id="fieldLines" opacity="0.6">
-          <line x1="30" y1="80" x2="670" y2="80" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="8,6" />
-          <line x1="30" y1="160" x2="670" y2="160" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="8,6" />
-          {/* LOS Line of Scrimmage */}
-          <line x1="30" y1="240" x2="670" y2="240" stroke="#2563eb" strokeWidth="2.5" />
-          <line x1="30" y1="320" x2="670" y2="320" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="8,6" />
-          <line x1="30" y1="400" x2="670" y2="400" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="8,6" />
+        {/* Yard Lines & Hash Marks - Clean Minimalist Playbook Grid */}
+        <g id="fieldLines">
+          {/* Subtle Outer Boundary */}
+          <rect x="25" y="25" width="650" height="450" rx="8" fill="none" stroke="#e2e8f0" strokeWidth="1.5" />
+
+          {/* Clean Yard Lines */}
+          <line x1="25" y1="80" x2="675" y2="80" stroke="#e2e8f0" strokeWidth="1.2" strokeDasharray="6,6" />
+          <line x1="25" y1="160" x2="675" y2="160" stroke="#e2e8f0" strokeWidth="1.2" strokeDasharray="6,6" />
+
+          {/* Line of Scrimmage (LOS) */}
+          <line x1="25" y1="240" x2="675" y2="240" stroke="#3b82f6" strokeWidth="2.5" />
+
+          <line x1="25" y1="320" x2="675" y2="320" stroke="#e2e8f0" strokeWidth="1.2" strokeDasharray="6,6" />
+          <line x1="25" y1="400" x2="675" y2="400" stroke="#e2e8f0" strokeWidth="1.2" strokeDasharray="6,6" />
 
           {/* Hash Marks */}
-          <line x1="280" y1="60" x2="280" y2="440" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="4,8" />
-          <line x1="420" y1="60" x2="420" y2="440" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="4,8" />
+          <line x1="280" y1="40" x2="280" y2="460" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4,8" />
+          <line x1="420" y1="40" x2="420" y2="460" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4,8" />
 
-          {/* Yard Numbers on the field like authentic playbooks */}
-          <text x="560" y="168" fontFamily="'Space Grotesk', sans-serif" fontSize="30" fontWeight="900" fill="#cbd5e1" opacity="0.65">
+          {/* Subtle Yard Numbers (Clean Watermarks) */}
+          <text x="580" y="168" fontFamily="'Space Grotesk', sans-serif" fontSize="26" fontWeight="800" fill="#94a3b8" opacity="0.3">
             10
           </text>
-          <text x="560" y="328" fontFamily="'Space Grotesk', sans-serif" fontSize="30" fontWeight="900" fill="#cbd5e1" opacity="0.65">
+          <text x="580" y="328" fontFamily="'Space Grotesk', sans-serif" fontSize="26" fontWeight="800" fill="#94a3b8" opacity="0.3">
             20
           </text>
-          <text x="130" y="408" fontFamily="'Space Grotesk', sans-serif" fontSize="30" fontWeight="900" fill="#cbd5e1" opacity="0.65">
+          <text x="110" y="408" fontFamily="'Space Grotesk', sans-serif" fontSize="26" fontWeight="800" fill="#94a3b8" opacity="0.3">
             30
           </text>
 
-          <text x="40" y="232" fontFamily="'Space Grotesk', sans-serif" fontSize="12" fontWeight="800" fill="#2563eb">
-            LOS
-          </text>
-          <text x="635" y="232" fontFamily="'Space Grotesk', sans-serif" fontSize="12" fontWeight="800" fill="#2563eb">
-            LOS
-          </text>
+          {/* High-Contrast LOS Badges */}
+          <g>
+            <rect x="25" y="229" width="34" height="22" rx="6" fill="#2563eb" />
+            <text x="42" y="244" fontFamily="'Space Grotesk', -apple-system, sans-serif" fontSize="10" fontWeight="900" fill="#ffffff" textAnchor="middle">
+              LOS
+            </text>
+          </g>
+          <g>
+            <rect x="641" y="229" width="34" height="22" rx="6" fill="#2563eb" />
+            <text x="658" y="244" fontFamily="'Space Grotesk', -apple-system, sans-serif" fontSize="10" fontWeight="900" fill="#ffffff" textAnchor="middle">
+              LOS
+            </text>
+          </g>
         </g>
 
         {/* Optional Diagram Inset Coaching Card (Can be toggled via Coach Tools) */}

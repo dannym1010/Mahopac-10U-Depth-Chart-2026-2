@@ -96,7 +96,7 @@ import { VALID_UNITS, parseRouteHash, buildRouteHash } from './utils/routeUtils'
 import { Header } from './components/Header';
 import { NavigationTabs } from './components/NavigationTabs';
 import { SidebarNavigation } from './components/SidebarNavigation';
-import { DefensivePositionCategory } from './components/whiteboard/whiteboardDrillData';
+import { DefensivePositionCategory, loadEffectiveWhiteboardDrills } from './components/whiteboard/whiteboardDrillData';
 import { RosterSidebar } from './components/RosterSidebar';
 import { FormationsView } from './components/FormationsView';
 import { ScrimmageView } from './components/ScrimmageView';
@@ -119,6 +119,7 @@ import { StaffManagerView } from './components/StaffManagerView';
 import { ScheduleView } from './components/ScheduleView';
 import { PlayerHoursTracker } from './components/PlayerHoursTracker';
 import { MobileHubView } from './components/MobileHubView';
+import { HomeView } from './components/HomeView';
 import { RosterManagerModal } from './components/RosterManagerModal';
 import { PracticeWizardGeneratedResult } from './components/PracticeWizardModal';
 import { PreferencesModal } from './components/PreferencesModal';
@@ -312,7 +313,7 @@ export default function App() {
     return auto.activeWeek || '1';
   });
   const [dismissedCopyPrompts, setDismissedCopyPrompts] = useState<Set<string>>(new Set());
-  const isPopStateNavRef = useRef(false);
+  const isInternalNavRef = useRef(false);
   const modalOpenInHistoryRef = useRef<string | null>(null);
 
   const [_activeUnit, _setActiveUnitRaw] = useState<UnitType>(() => {
@@ -324,7 +325,7 @@ export default function App() {
     if (savedDefault && VALID_UNITS.has(savedDefault)) return savedDefault;
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     if (isMobile) return 'mobile_hub';
-    return safeJSONParse('footballActiveUnit', 'schedule');
+    return safeJSONParse('footballActiveUnit', 'home');
   });
   const activeUnit = _activeUnit;
 
@@ -422,10 +423,18 @@ export default function App() {
           practiceId: options?.practiceId,
         };
 
-        if (options?.replace) {
+        if (window.location.hash !== hash) {
+          isInternalNavRef.current = true;
+          if (options?.replace) {
+            window.history.replaceState(stateObj, '', hash);
+          } else {
+            window.history.pushState(stateObj, '', hash);
+          }
+          setTimeout(() => {
+            isInternalNavRef.current = false;
+          }, 80);
+        } else if (options?.replace) {
           window.history.replaceState(stateObj, '', hash);
-        } else if (window.location.hash !== hash) {
-          window.history.pushState(stateObj, '', hash);
         }
       }
     },
@@ -435,50 +444,26 @@ export default function App() {
   // Wrapped setActiveUnit maintaining backward compatibility across the entire application
   const setActiveUnit = useCallback(
     (action: React.SetStateAction<UnitType>) => {
-      _setActiveUnitRaw((prev) => {
-        const next = typeof action === 'function' ? action(prev) : action;
-        if (next === prev) return prev;
-
-        if (!isPopStateNavRef.current) {
-          if (typeof window !== 'undefined') {
-            const effectiveSubUnit = ['offense', 'defense', 'st', 'groups', 'scrimmage'].includes(next)
-              ? (next as any)
-              : depthSubUnit;
-            const hash = buildRouteHash(next, {
-              subUnit: effectiveSubUnit,
-              drillId: next === 'whiteboard' ? activeWhiteboardDrillId : undefined,
-              drillCategory: next === 'whiteboard' ? activeWhiteboardCategory : undefined,
-              practiceId: next === 'practice' ? currentPracticeId || undefined : undefined,
-            });
-            if (window.location.hash !== hash) {
-              window.history.pushState(
-                {
-                  unit: next,
-                  subUnit: effectiveSubUnit,
-                  drillId: next === 'whiteboard' ? activeWhiteboardDrillId : undefined,
-                  drillCategory: next === 'whiteboard' ? activeWhiteboardCategory : undefined,
-                  practiceId: next === 'practice' ? currentPracticeId : undefined,
-                },
-                '',
-                hash
-              );
-            }
+      if (typeof action === 'function') {
+        _setActiveUnitRaw((prev) => {
+          const next = action(prev);
+          if (next !== prev) {
+            navigateToUnit(next);
           }
-        } else {
-          isPopStateNavRef.current = false;
-        }
-
-        safeJSONSet('footballActiveUnit', next);
-        return next;
-      });
+          return next;
+        });
+      } else {
+        navigateToUnit(action);
+      }
     },
-    [depthSubUnit, activeWhiteboardDrillId, activeWhiteboardCategory, currentPracticeId]
+    [navigateToUnit]
   );
 
   // Synchronize browser history Back and Forward buttons with internal unit and drill state
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    // 1. Ensure current route has valid hash on initial load
     const currentParsed = parseRouteHash(window.location.hash);
     if (!currentParsed.unit) {
       const initialHash = buildRouteHash(activeUnit, {
@@ -498,9 +483,21 @@ export default function App() {
         '',
         initialHash
       );
+    } else if (currentParsed.unit !== activeUnit && VALID_UNITS.has(currentParsed.unit)) {
+      _setActiveUnitRaw(currentParsed.unit as UnitType);
+      safeJSONSet('footballActiveUnit', currentParsed.unit);
+      if (currentParsed.subUnit) setDepthSubUnit(currentParsed.subUnit);
+      if (currentParsed.drillId) setActiveWhiteboardDrillId(currentParsed.drillId);
+      if (currentParsed.drillCategory) setActiveWhiteboardCategory(currentParsed.drillCategory);
+      if (currentParsed.practiceId) setCurrentPracticeId(currentParsed.practiceId);
     }
 
-    const handlePopState = (e: PopStateEvent) => {
+    const handleUrlChange = (e?: PopStateEvent) => {
+      // If triggered by our own pushState/replaceState, ignore
+      if (isInternalNavRef.current) {
+        return;
+      }
+
       // 1. If mobile navigation drawer was open, close it on back
       if (modalOpenInHistoryRef.current === 'mobile_nav') {
         modalOpenInHistoryRef.current = null;
@@ -509,43 +506,44 @@ export default function App() {
       }
 
       // 2. Parse destination from history state or URL hash
-      const stateUnit = e.state?.unit;
+      const stateUnit = e?.state?.unit;
       const parsed = parseRouteHash(window.location.hash);
       const targetUnit = (stateUnit && VALID_UNITS.has(stateUnit) ? stateUnit : parsed.unit) as UnitType | null;
 
-      if (targetUnit) {
-        isPopStateNavRef.current = true;
+      if (targetUnit && VALID_UNITS.has(targetUnit)) {
         _setActiveUnitRaw(targetUnit);
         safeJSONSet('footballActiveUnit', targetUnit);
 
-        const targetSubUnit = e.state?.subUnit || parsed.subUnit;
+        const targetSubUnit = e?.state?.subUnit || parsed.subUnit;
         if (targetSubUnit) {
           setDepthSubUnit(targetSubUnit);
         } else if (['offense', 'defense', 'st', 'groups', 'scrimmage'].includes(targetUnit)) {
           setDepthSubUnit(targetUnit as any);
         }
 
-        const targetDrillId = e.state?.drillId || parsed.drillId;
+        const targetDrillId = e?.state?.drillId || parsed.drillId;
         if (targetDrillId) {
           setActiveWhiteboardDrillId(targetDrillId);
         }
-        const targetDrillCat = e.state?.drillCategory || parsed.drillCategory;
+        const targetDrillCat = e?.state?.drillCategory || parsed.drillCategory;
         if (targetDrillCat) {
           setActiveWhiteboardCategory(targetDrillCat);
         }
 
-        const targetPracticeId = e.state?.practiceId || parsed.practiceId;
+        const targetPracticeId = e?.state?.practiceId || parsed.practiceId;
         if (targetPracticeId) {
           setCurrentPracticeId(targetPracticeId);
         }
       }
     };
 
-    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('popstate', handleUrlChange);
+    window.addEventListener('hashchange', handleUrlChange);
     return () => {
-      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('hashchange', handleUrlChange);
     };
-  }, [activeUnit, depthSubUnit, activeWhiteboardDrillId, activeWhiteboardCategory, currentPracticeId]);
+  }, []);
 
   // Filter & Search States
   const [rosterSearchTerm, setRosterSearchTerm] = useState('');
@@ -6193,6 +6191,7 @@ function mergeRemoteWeeklyData(
         onRoleChange={setUserRole}
         syncStatus={syncStatus}
         activeUnit={activeUnit}
+        onNavigateToHome={() => navigateToUnit('home')}
         onNavigateToSchedule={() => setActiveUnit('schedule')}
         onNavigateToMobileHub={() => setActiveUnit('mobile_hub')}
         onSignOut={() => {
@@ -6232,6 +6231,42 @@ function mergeRemoteWeeklyData(
         <div className="flex flex-col lg:flex-row gap-6 items-start">
           {/* Main Board / Panel Column */}
           <div className="flex-1 min-w-0 w-full">
+            {/* 0.0. PC / Desktop Clean Home Splash Screen */}
+            {activeUnit === 'home' && (
+              <HomeView
+                activeTeam={currentActiveTeam}
+                teams={teams}
+                onSelectTeam={setActiveTeamId}
+                currentWeek={currentWeek}
+                seasonConfig={seasonConfig}
+                scheduleEvents={activeTeamScheduleEvents}
+                practicePlans={activeTeamPracticeData.length > 0 ? activeTeamPracticeData : practiceData}
+                roster={activeTeamRoster}
+                userRole={userRole}
+                onNavigateToUnit={(unit, options) => {
+                  if (options?.week) {
+                    setCurrentWeek(options.week);
+                    ensureWeekExists(options.week);
+                  }
+                  if (options?.practiceId) {
+                    setCurrentPracticeId(options.practiceId);
+                    safeJSONSet('footballCurrentPracticeId', options.practiceId);
+                  }
+                  if (unit === 'depth_chart') {
+                    setDepthSubUnit(options?.subUnit || 'offense');
+                    setActiveUnit((options?.subUnit || 'offense') as any);
+                  } else {
+                    setActiveUnit(unit);
+                  }
+                }}
+                onSelectPractice={(id) => {
+                  setCurrentPracticeId(id);
+                  safeJSONSet('footballCurrentPracticeId', id);
+                }}
+                onOpenPrintPractice={() => triggerPrint()}
+              />
+            )}
+
             {/* 0. Mobile Starting Screen & Coach Hub */}
             {activeUnit === 'mobile_hub' && (
               <MobileHubView
@@ -6284,6 +6319,7 @@ function mergeRemoteWeeklyData(
                 activeGuideSub={activeGuideSub}
                 onSelectGuideMain={setActiveGuideMain}
                 onSelectGuideSub={setActiveGuideSub}
+                whiteboardDrills={loadEffectiveWhiteboardDrills()}
                 onOpenWhiteboardDrill={(drillId, cat) => {
                   navigateToUnit('whiteboard', {
                     drillId,
@@ -6958,10 +6994,13 @@ function mergeRemoteWeeklyData(
                   setActiveUnit('whiteboard');
                 }}
                 onToggleFolder={(pathKey) => {
-                  setCollapsedFolders((prev) => ({
-                    ...prev,
-                    [pathKey]: !prev[pathKey],
-                  }));
+                  setCollapsedFolders((prev) => {
+                    const isCurrentlyCollapsed = prev[pathKey] !== undefined ? prev[pathKey] : true;
+                    return {
+                      ...prev,
+                      [pathKey]: !isCurrentlyCollapsed,
+                    };
+                  });
                 }}
                 onAddTopFolder={handleAddTopDrillFolder}
                 onAddSubfolder={handleAddSubfolder}
@@ -7179,7 +7218,7 @@ function mergeRemoteWeeklyData(
           </div>
 
           {/* Master Roster Sidebar (Shown on Depth Charts and Scrimmage) */}
-          {!['mobile_hub', 'game_day', 'wristband', 'drills', 'scouting', 'guide', 'practice', 'users', 'schedule', 'compliance', 'call_sheet', 'whiteboard'].includes(
+          {!['home', 'mobile_hub', 'game_day', 'wristband', 'drills', 'scouting', 'guide', 'practice', 'users', 'schedule', 'compliance', 'call_sheet', 'whiteboard'].includes(
             activeUnit
           ) && (
             <RosterSidebar

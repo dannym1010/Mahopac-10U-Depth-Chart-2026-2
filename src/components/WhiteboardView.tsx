@@ -56,6 +56,7 @@ import { AddWhiteboardDrillModal } from './whiteboard/AddWhiteboardDrillModal';
 import { WhiteboardDrillDescriptionView } from './whiteboard/WhiteboardDrillDescriptionView';
 import { WhiteboardDrillPickerModal } from './whiteboard/WhiteboardDrillPickerModal';
 import { findDrillInPracticePlans } from '../utils/drillPlanLinking';
+import { safeJSONParse, safeJSONSet } from '../services/storageService';
 
 interface WhiteboardViewProps {
   userRole?: UserRole;
@@ -329,7 +330,9 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
   // Whiteboard readability toggles (prevent clutter and overlapping labels)
   const [showLabels, setShowLabels] = useState<boolean>(true);
   const [showCoachingInset, setShowCoachingInset] = useState<boolean>(false);
-  const [spreadMode, setSpreadMode] = useState<WhiteboardSpreadMode>('spread');
+  const [spreadMode, setSpreadMode] = useState<WhiteboardSpreadMode>(() => {
+    return safeJSONParse<WhiteboardSpreadMode>('footballWhiteboardSpacing', 'standard');
+  });
   const [zoneShadeMode, setZoneShadeMode] = useState<'dim' | 'soft' | 'outline' | 'standard'>('dim');
 
   // Custom Objective / Notes state
@@ -571,6 +574,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
   // Diagram Spacing / Spread Mode handler
   const handleSetSpreadMode = (mode: WhiteboardSpreadMode) => {
     setSpreadMode(mode);
+    safeJSONSet('footballWhiteboardSpacing', mode);
     if (isCustomMode) {
       const spread = spreadDiagramElements(tokens, arrows, zones, mode);
       setTokens(spread.tokens);
@@ -1368,57 +1372,57 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           {/* =========================================================================
           SECTION 2: FULL-WIDTH WHITEBOARD CANVAS & TOOLBAR
           ========================================================================= */}
-      <div className="w-full max-w-7xl bg-slate-400/90 p-0 sm:p-4 rounded-none sm:rounded-2xl shadow-2xl border-x-0 sm:border-2 border-y border-slate-300 flex flex-col relative">
+      <div className="w-full max-w-7xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2.5 sm:p-5 flex flex-col relative">
         {/* Canvas Quick Controls Bar (Declutter, Labels, Coaching Inset, Print) */}
-        <div className="flex items-center justify-between gap-2 mb-2 sm:mb-2.5 px-2 sm:px-1 pt-2 sm:pt-0 flex-wrap">
+        <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3 px-1 flex-wrap">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-black uppercase text-slate-800 tracking-wide flex items-center gap-1.5 bg-slate-200/80 px-2.5 py-1 rounded-lg border border-slate-300">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="text-xs font-black uppercase text-slate-200 tracking-wide flex items-center gap-2 bg-slate-950/90 px-3 py-1.5 rounded-xl border border-slate-800 shadow-inner">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               Tactical Chalkboard
             </span>
-            <span className="text-[11px] font-semibold text-slate-700 hidden sm:inline">
-              Clear routes & high-contrast alignment
+            <span className="text-[11px] font-semibold text-slate-400 hidden md:inline">
+              High-contrast alignment & routes
             </span>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Diagram Spacing Level Selector */}
-            <div className="flex items-center bg-slate-200/90 rounded-lg p-0.5 border border-slate-300 shadow-xs">
-              <span className="text-[10px] font-extrabold uppercase text-slate-600 px-1.5 flex items-center gap-1">
-                <Maximize2 className="w-3 h-3 text-slate-700" />
+            <div className="flex items-center bg-slate-950/90 rounded-xl p-1 border border-slate-800 shadow-inner">
+              <span className="text-[10px] font-black uppercase text-slate-400 px-2 flex items-center gap-1">
+                <Maximize2 className="w-3 h-3 text-slate-400" />
                 Spacing:
               </span>
               <button
                 type="button"
                 onClick={() => handleSetSpreadMode('standard')}
-                className={`px-2 py-0.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   spreadMode === 'standard'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
                 }`}
-                title="Standard compact spacing"
+                title="Standard spacing (Default)"
               >
-                Standard
+                Standard (Default)
               </button>
               <button
                 type="button"
                 onClick={() => handleSetSpreadMode('spread')}
-                className={`px-2 py-0.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   spreadMode === 'spread'
                     ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
                 }`}
-                title="Spread out diagram for better spacing and readability (Default)"
+                title="Spread out diagram (1.25x)"
               >
                 Spread (1.25x)
               </button>
               <button
                 type="button"
                 onClick={() => handleSetSpreadMode('wide')}
-                className={`px-2 py-0.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   spreadMode === 'wide'
                     ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
                 }`}
                 title="Wide spread diagram across the full whiteboard width"
               >
@@ -1427,18 +1431,18 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             </div>
 
             {/* Zone Shade Dimmer Selector */}
-            <div className="flex items-center bg-slate-200/90 rounded-lg p-0.5 border border-slate-300 shadow-xs">
-              <span className="text-[10px] font-extrabold uppercase text-slate-600 px-1.5 flex items-center gap-1">
-                <SunMedium className="w-3 h-3 text-slate-700" />
-                Zone Shade:
+            <div className="flex items-center bg-slate-950/90 rounded-xl p-1 border border-slate-800 shadow-inner">
+              <span className="text-[10px] font-black uppercase text-slate-400 px-2 flex items-center gap-1">
+                <SunMedium className="w-3 h-3 text-slate-400" />
+                Shade:
               </span>
               <button
                 type="button"
                 onClick={() => setZoneShadeMode('dim')}
-                className={`px-2 py-0.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   zoneShadeMode === 'dim'
                     ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
                 }`}
                 title="Dim shade: soft translucent wash (Default per coach preference)"
               >
@@ -1447,10 +1451,10 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               <button
                 type="button"
                 onClick={() => setZoneShadeMode('soft')}
-                className={`px-2 py-0.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   zoneShadeMode === 'soft'
                     ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
                 }`}
                 title="Soft shade: subtle tint"
               >
@@ -1459,10 +1463,10 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               <button
                 type="button"
                 onClick={() => setZoneShadeMode('outline')}
-                className={`px-2 py-0.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   zoneShadeMode === 'outline'
                     ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
                 }`}
                 title="Outline only: dashed boundary without fill tint"
               >
@@ -1474,10 +1478,10 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             <button
               type="button"
               onClick={() => setShowLabels(!showLabels)}
-              className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
+              className={`px-2.5 py-1 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
                 showLabels
                   ? 'bg-slate-800 hover:bg-slate-750 text-sky-300 border-slate-700'
-                  : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300'
+                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
               }`}
               title={showLabels ? 'Hide arrow and zone labels for clean uncluttered view' : 'Show all diagram labels'}
             >
@@ -1490,15 +1494,15 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowCoachingInset(!showCoachingInset)}
-                className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
+                className={`px-2.5 py-1 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
                   showCoachingInset
-                    ? 'bg-blue-600 text-white border-blue-700'
-                    : 'bg-slate-200 hover:bg-slate-300 text-slate-700 border-slate-300'
+                    ? 'bg-indigo-600 text-white border-indigo-500'
+                    : 'bg-slate-800 hover:bg-slate-750 text-slate-300 border-slate-700'
                 }`}
                 title="Toggle the coaching keys inset card overlay on the whiteboard"
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>Playbook Keys: {showCoachingInset ? 'ON' : 'OFF'}</span>
+                <span>Keys: {showCoachingInset ? 'ON' : 'OFF'}</span>
               </button>
             )}
 
@@ -1509,14 +1513,14 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                   <button
                     type="button"
                     onClick={() => onNavigateToPracticePlan(matchingPracticePlanInfo?.plan.id, currentDrill.title)}
-                    className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg border border-emerald-300 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                    className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-bold rounded-xl border border-emerald-500/40 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
                     title={
                       matchingPracticePlanInfo
                         ? `Open in ${matchingPracticePlanInfo.plan.title} (Period ${matchingPracticePlanInfo.periodNumber})`
                         : 'Open in Practice Plan'
                     }
                   >
-                    <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                    <Calendar className="w-3.5 h-3.5 text-emerald-400" />
                     <span>
                       {matchingPracticePlanInfo
                         ? `Plan (P${matchingPracticePlanInfo.periodNumber})`
@@ -1527,10 +1531,10 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 <button
                   type="button"
                   onClick={() => printDrillSheet(currentDrill, activePhaseIdx)}
-                  className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-850 text-xs font-bold rounded-lg border border-slate-300 shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
                   title="Print this isolated drill sheet"
                 >
-                  <Printer className="w-3.5 h-3.5 text-blue-600" />
+                  <Printer className="w-3.5 h-3.5 text-blue-400" />
                   <span>Print Drill</span>
                 </button>
               </div>
@@ -1539,7 +1543,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
         </div>
 
         {/* Full-Width Canvas Container */}
-        <div className="w-full bg-slate-50 rounded-none sm:rounded-xl border-x-0 sm:border border-slate-300 overflow-hidden shadow-inner relative min-h-[520px] sm:min-h-[620px]">
+        <div className="w-full bg-white rounded-xl border border-slate-700/80 overflow-hidden shadow-2xl relative min-h-[520px] sm:min-h-[620px]">
           <WhiteboardCanvas
             tokens={tokens}
             arrows={arrows}
@@ -1567,7 +1571,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
         </div>
 
         {/* Whiteboard Lower Toolbar */}
-        <div className="mt-1.5 sm:mt-3 p-2 sm:p-3 bg-slate-600/90 rounded-none sm:rounded-xl shadow-md flex flex-wrap justify-between items-center gap-2 sm:gap-3">
+        <div className="mt-3 p-3 bg-slate-950 border border-slate-800 rounded-xl shadow-xl flex flex-wrap justify-between items-center gap-3">
           {/* Left: Phase controls for Drills */}
           <div className="flex items-center gap-2 flex-wrap">
             {!isCustomMode ? (
@@ -1575,27 +1579,27 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 <button
                   type="button"
                   onClick={handlePrevPhase}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-white text-slate-800 text-xs font-bold rounded-lg border border-slate-400 shadow transition-all active:translate-y-0.5 cursor-pointer"
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white text-xs font-bold rounded-lg border border-slate-700 shadow-xs transition-all active:translate-y-0.5 cursor-pointer"
                 >
                   ◀ Prev Phase
                 </button>
-                <div className="px-3.5 py-1.5 bg-slate-900 text-sky-400 text-xs font-mono font-bold rounded-lg border border-slate-700 shadow-inner">
+                <div className="px-3.5 py-1.5 bg-blue-950/80 text-sky-300 text-xs font-mono font-black rounded-lg border border-blue-800/60 shadow-inner">
                   {currentDrill.phases[activePhaseIdx]?.name || 'PHASE 1'}
                 </div>
                 <button
                   type="button"
                   onClick={handleNextPhase}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-white text-slate-800 text-xs font-bold rounded-lg border border-slate-400 shadow transition-all active:translate-y-0.5 cursor-pointer"
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white text-xs font-bold rounded-lg border border-slate-700 shadow-xs transition-all active:translate-y-0.5 cursor-pointer"
                 >
                   Next Phase ▶
                 </button>
                 <button
                   type="button"
                   onClick={toggleAutoPlay}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg border shadow transition-all flex items-center gap-1 cursor-pointer ${
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg border shadow-xs transition-all flex items-center gap-1.5 cursor-pointer ${
                     isAutoPlaying
-                      ? 'bg-rose-600 text-white border-rose-700 animate-pulse'
-                      : 'bg-blue-600 hover:bg-blue-500 text-white border-blue-700'
+                      ? 'bg-rose-600 text-white border-rose-500 animate-pulse'
+                      : 'bg-blue-600 hover:bg-blue-500 text-white border-blue-500'
                   }`}
                 >
                   {isAutoPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
@@ -1619,8 +1623,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           </div>
 
           {/* Center: Stamp X's, O's, Blitz, Zones */}
-          <div className="flex items-center gap-1.5 bg-slate-700/80 p-1 rounded-xl border border-slate-500 flex-wrap">
-            <span className="text-[10px] font-black uppercase text-slate-300 px-1">Stamp:</span>
+          <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-xl border border-slate-800 flex-wrap">
+            <span className="text-[10px] font-black uppercase text-slate-400 px-1">Stamp:</span>
 
             {/* Add X (Defense) */}
             <button
@@ -1631,8 +1635,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               }}
               className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                 stampMode === 'X'
-                  ? 'bg-blue-600 text-white ring-2 ring-blue-300'
-                  : 'bg-slate-800 hover:bg-slate-750 text-blue-300 border border-slate-600'
+                  ? 'bg-blue-600 text-white ring-2 ring-blue-400'
+                  : 'bg-slate-800 hover:bg-slate-750 text-blue-300 border border-slate-700'
               }`}
             >
               + X (Def)
@@ -1643,7 +1647,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               <select
                 value={stampLabel}
                 onChange={(e) => setStampLabel(e.target.value)}
-                className="bg-slate-900 text-white text-xs font-bold px-1.5 py-1 rounded border border-slate-600"
+                className="bg-slate-900 text-white text-xs font-bold px-1.5 py-1 rounded border border-slate-700"
               >
                 {['DE', 'DT', 'NT', 'MLB', 'OLB', 'CB', 'FS', 'SS', 'X'].map((pos) => (
                   <option key={pos} value={pos}>
@@ -1662,8 +1666,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               }}
               className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                 stampMode === 'O'
-                  ? 'bg-slate-900 text-amber-400 ring-2 ring-amber-300'
-                  : 'bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-600'
+                  ? 'bg-amber-500 text-slate-950 font-black ring-2 ring-amber-300'
+                  : 'bg-slate-800 hover:bg-slate-750 text-amber-300 border border-slate-700'
               }`}
             >
               + O (Off)
@@ -1674,7 +1678,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               <select
                 value={stampLabel}
                 onChange={(e) => setStampLabel(e.target.value)}
-                className="bg-slate-900 text-white text-xs font-bold px-1.5 py-1 rounded border border-slate-600"
+                className="bg-slate-900 text-white text-xs font-bold px-1.5 py-1 rounded border border-slate-700"
               >
                 {['C', 'LG', 'RG', 'LT', 'RT', 'QB', 'RB', 'FB', 'TE', 'WR', 'O'].map((pos) => (
                   <option key={pos} value={pos}>
@@ -1693,8 +1697,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               }}
               className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                 stampMode === 'blitz'
-                  ? 'bg-rose-600 text-white ring-2 ring-rose-300'
-                  : 'bg-slate-800 hover:bg-slate-750 text-rose-300 border border-slate-600'
+                  ? 'bg-rose-600 text-white ring-2 ring-rose-400'
+                  : 'bg-slate-800 hover:bg-slate-750 text-rose-300 border border-slate-700'
               }`}
             >
               + Blitz Arrow
@@ -1709,8 +1713,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               }}
               className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                 stampMode === 'zone'
-                  ? 'bg-sky-600 text-white ring-2 ring-sky-300'
-                  : 'bg-slate-800 hover:bg-slate-750 text-sky-300 border border-slate-600'
+                  ? 'bg-sky-600 text-white ring-2 ring-sky-400'
+                  : 'bg-slate-800 hover:bg-slate-750 text-sky-300 border border-slate-700'
               }`}
             >
               + Zone Bubble
@@ -1720,7 +1724,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               <select
                 value={stampLabel}
                 onChange={(e) => setStampLabel(e.target.value)}
-                className="bg-slate-900 text-white text-xs font-bold px-1.5 py-1 rounded border border-slate-600"
+                className="bg-slate-900 text-white text-xs font-bold px-1.5 py-1 rounded border border-slate-700"
               >
                 {['DEEP 1/3', 'DEEP 1/2', 'FLAT', 'HOOK/CURL', 'ROBBER', 'ZONE'].map((z) => (
                   <option key={z} value={z}>
@@ -1732,8 +1736,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           </div>
 
           {/* Right: Dry-Erase Markers Tray */}
-          <div className="flex items-center gap-2 bg-slate-200 p-1.5 rounded-xl border border-slate-300 shadow-inner">
-            <span className="text-[10px] font-black uppercase text-slate-700 mr-1">Dry Erase:</span>
+          <div className="flex items-center gap-2 bg-slate-900 p-1.5 px-2.5 rounded-xl border border-slate-800 shadow-inner">
+            <span className="text-[10px] font-black uppercase text-slate-400 mr-1">Dry Erase:</span>
             {[
               { color: '#1a1a24', label: 'Black' },
               { color: '#0052cc', label: 'Blue' },
@@ -1749,8 +1753,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                   setIsDrawingMode(true);
                   setStampMode('none');
                 }}
-                className={`w-5 h-5 rounded-full border-2 border-white shadow transition-transform cursor-pointer ${
-                  penColor === pen.color && isDrawingMode ? 'scale-125 ring-2 ring-slate-900' : 'hover:scale-110'
+                className={`w-5 h-5 rounded-full border-2 border-slate-600 shadow transition-transform cursor-pointer ${
+                  penColor === pen.color && isDrawingMode ? 'scale-125 ring-2 ring-white' : 'hover:scale-110'
                 }`}
                 style={{ backgroundColor: pen.color }}
                 title={`${pen.label} Marker`}
@@ -1763,10 +1767,10 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 setIsDrawingMode(!isDrawingMode);
                 if (!isDrawingMode) setStampMode('none');
               }}
-              className={`px-2.5 py-1 rounded text-xs font-bold border transition-all cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
                 isDrawingMode
-                  ? 'bg-emerald-600 text-white border-emerald-700'
-                  : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-100'
+                  ? 'bg-emerald-600 text-white border-emerald-500'
+                  : 'bg-slate-800 hover:bg-slate-750 text-slate-300 border-slate-700'
               }`}
             >
               {isDrawingMode ? '✏️ Drawing ON' : '✏️ Draw'}
@@ -1775,7 +1779,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             <button
               type="button"
               onClick={handleWipeBoard}
-              className="px-2 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300 rounded text-xs font-bold transition-colors cursor-pointer"
+              className="px-2.5 py-1 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/80 rounded-lg text-xs font-bold transition-colors cursor-pointer"
             >
               Wipe Board
             </button>

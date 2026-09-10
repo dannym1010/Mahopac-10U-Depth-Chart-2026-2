@@ -2,6 +2,7 @@ import { UnitType } from '../types';
 import { DefensivePositionCategory } from '../components/whiteboard/whiteboardDrillData';
 
 export const VALID_UNITS: Set<string> = new Set([
+  'home',
   'mobile_hub',
   'game_day',
   'depth_chart',

@@ -43,6 +43,7 @@ interface HeaderProps {
   onResetData: () => void;
   onOpenCopyWeekModal: () => void;
   activeUnit?: string;
+  onNavigateToHome?: () => void;
   onNavigateToSchedule?: () => void;
   onNavigateToMobileHub?: () => void;
   seasonConfig?: SeasonConfig;
@@ -78,6 +79,7 @@ export const Header: React.FC<HeaderProps> = ({
   onResetData,
   onOpenCopyWeekModal,
   activeUnit,
+  onNavigateToHome,
   onNavigateToSchedule,
   onNavigateToMobileHub,
   seasonConfig,
@@ -238,13 +240,17 @@ export const Header: React.FC<HeaderProps> = ({
           ========================================================================= */}
       <div className="hidden md:flex max-w-[1700px] mx-auto px-4 py-3 items-center justify-between gap-4 border-b border-slate-800">
         {/* Left: Team & Program Identity */}
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-indigo-500/30 border border-indigo-400 ring-1 ring-white/10 shrink-0">
+        <div
+          onClick={onNavigateToHome}
+          className={`flex items-center gap-3 min-w-0 ${onNavigateToHome ? 'cursor-pointer group hover:opacity-95 transition-opacity' : ''}`}
+          title={onNavigateToHome ? 'Go to Home Splash Dashboard' : undefined}
+        >
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-indigo-500/30 border border-indigo-400 ring-1 ring-white/10 shrink-0 group-hover:scale-105 transition-transform">
             <span className="text-xl select-none">🏈</span>
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="font-black text-base md:text-lg tracking-tight bg-gradient-to-r from-slate-100 via-indigo-200 to-indigo-400 bg-clip-text text-transparent truncate">
+              <h1 className="font-black text-base md:text-lg tracking-tight bg-gradient-to-r from-slate-100 via-indigo-200 to-indigo-400 bg-clip-text text-transparent truncate group-hover:from-white group-hover:to-indigo-300 transition-colors">
                 {activeTeam ? activeTeam.name : 'Football Operations Manager'}
               </h1>
               {activeTeam?.ageGroup && (

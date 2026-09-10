@@ -32,6 +32,7 @@ import {
   ArrowRight,
   Filter,
   Camera,
+  Home as HomeIcon,
 } from 'lucide-react';
 import { CustomTabGroup, UnitType, UserRole, Team } from '../types';
 import { safeJSONParse, safeJSONSet } from '../services/storageService';
@@ -79,6 +80,14 @@ export interface NavItemConfig {
 }
 
 export const MAIN_NAV_ITEMS: NavItemConfig[] = [
+  {
+    id: 'home',
+    label: 'Home & Upcoming Events',
+    shortLabel: 'Home',
+    icon: HomeIcon,
+    description: 'Main splash dashboard showing upcoming practice info and links, and upcoming game info and links',
+    badgeText: 'Dashboard',
+  },
   {
     id: 'depth_chart',
     label: 'Depth Chart & Formations',
