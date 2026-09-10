@@ -372,6 +372,13 @@ export default function App() {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState<boolean>(() =>
     safeJSONParse('footballSidebarExpanded', false)
   );
+  const [autoOpenTakeAttendance, setAutoOpenTakeAttendance] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const parsed = parseRouteHash(window.location.hash);
+      return Boolean(parsed.openTakeAttendance);
+    }
+    return false;
+  });
 
   // Centralized route navigator supporting browser history, Back/Forward buttons, and deep links
   const navigateToUnit = useCallback(
@@ -382,6 +389,7 @@ export default function App() {
         drillId?: string;
         drillCategory?: DefensivePositionCategory | 'ALL';
         practiceId?: string;
+        openTakeAttendance?: boolean;
         replace?: boolean;
       }
     ) => {
@@ -403,6 +411,9 @@ export default function App() {
       if (options?.practiceId) {
         setCurrentPracticeId(options.practiceId);
       }
+      if (options?.openTakeAttendance) {
+        setAutoOpenTakeAttendance(true);
+      }
 
       _setActiveUnitRaw(unit);
       safeJSONSet('footballActiveUnit', unit);
@@ -413,6 +424,7 @@ export default function App() {
           drillId: options?.drillId || (unit === 'whiteboard' ? activeWhiteboardDrillId : undefined),
           drillCategory: options?.drillCategory || (unit === 'whiteboard' ? activeWhiteboardCategory : undefined),
           practiceId: options?.practiceId || (unit === 'practice' ? currentPracticeId || undefined : undefined),
+          openTakeAttendance: options?.openTakeAttendance,
         });
 
         const stateObj = {
@@ -421,6 +433,7 @@ export default function App() {
           drillId: options?.drillId,
           drillCategory: options?.drillCategory,
           practiceId: options?.practiceId,
+          openTakeAttendance: options?.openTakeAttendance,
         };
 
         if (window.location.hash !== hash) {
@@ -533,6 +546,10 @@ export default function App() {
         const targetPracticeId = e?.state?.practiceId || parsed.practiceId;
         if (targetPracticeId) {
           setCurrentPracticeId(targetPracticeId);
+        }
+
+        if (e?.state?.openTakeAttendance || parsed.openTakeAttendance) {
+          setAutoOpenTakeAttendance(true);
         }
       }
     };
@@ -7191,6 +7208,8 @@ function mergeRemoteWeeklyData(
                 scheduleEvents={activeTeamScheduleEvents}
                 seasonConfig={seasonConfig}
                 attendanceLogs={attendanceLogs}
+                initialOpenTakeAttendance={autoOpenTakeAttendance}
+                onClearInitialOpenTakeAttendance={() => setAutoOpenTakeAttendance(false)}
                 onUpdatePlayer={handleUpdatePlayerInRoster}
                 onUpdateRoster={handleUpdateRoster}
                 onAddScheduleEvent={handleAddScheduleEvent}

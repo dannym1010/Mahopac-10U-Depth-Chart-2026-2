@@ -17,6 +17,7 @@ import {
   Calendar,
   Layers,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   Plus,
   Minus,
@@ -56,6 +57,8 @@ interface PlayerHoursTrackerProps {
   scheduleEvents?: ScheduleEvent[];
   seasonConfig?: SeasonConfig;
   attendanceLogs?: AttendanceRecord[];
+  initialOpenTakeAttendance?: boolean;
+  onClearInitialOpenTakeAttendance?: () => void;
   onUpdatePlayer: (updatedPlayer: RosterPlayer) => void;
   onUpdateRoster: (updatedRoster: RosterPlayer[]) => void;
   onOpenAddPlayerModal: () => void;
@@ -75,6 +78,8 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
   scheduleEvents = [],
   seasonConfig,
   attendanceLogs = [],
+  initialOpenTakeAttendance = false,
+  onClearInitialOpenTakeAttendance,
   onUpdatePlayer,
   onUpdateRoster,
   onOpenAddPlayerModal,
@@ -106,6 +111,8 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
   const [logSessionLocation, setLogSessionLocation] = useState<string>('Crane Road');
   const [logSessionNotes, setLogSessionNotes] = useState<string>('');
   const [selectedScheduleEventId, setSelectedScheduleEventId] = useState<string>('');
+  const [showPracticeDetails, setShowPracticeDetails] = useState(false);
+  const [rollCallSearchTerm, setRollCallSearchTerm] = useState('');
 
   const [playerAttendanceStatus, setPlayerAttendanceStatus] = useState<
     Record<string, 'present' | 'absent' | 'excused'>
@@ -129,6 +136,8 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
       init[p.num] = 'present';
     });
     setPlayerAttendanceStatus(init);
+    setRollCallSearchTerm('');
+    setShowPracticeDetails(false);
     setShowLogAttendanceModal(true);
   };
 
@@ -149,6 +158,26 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
       }
     }
   };
+
+  // Automatically open Take Practice Attendance modal if initiated from quick link
+  React.useEffect(() => {
+    if (initialOpenTakeAttendance) {
+      handleOpenAttendanceModal();
+      const todayStr = new Date().toISOString().split('T')[0];
+      const matchingEvt = (scheduleEvents || []).find(
+        (e) =>
+          (e.date === todayStr || new Date(e.date).getTime() >= new Date().setHours(0, 0, 0, 0)) &&
+          (e.type === 'practice' || e.type === 'walkthrough' || e.type === 'scrimmage') &&
+          !e.isCancelled
+      );
+      if (matchingEvt) {
+        handleSelectScheduleEvent(matchingEvt.id);
+      }
+      if (onClearInitialOpenTakeAttendance) {
+        onClearInitialOpenTakeAttendance();
+      }
+    }
+  }, [initialOpenTakeAttendance]);
 
   // Calculate high-level compliance metrics
   const complianceStats = useMemo(() => {
@@ -210,6 +239,18 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
       return true;
     });
   }, [roster, searchTerm, statusFilter]);
+
+  // Filtered players for Roll Call modal
+  const filteredRollCallRoster = useMemo(() => {
+    if (!rollCallSearchTerm.trim()) return roster;
+    const term = rollCallSearchTerm.toLowerCase().trim();
+    return roster.filter((player) => {
+      const matchesName = `${player.firstName} ${player.lastName}`.toLowerCase().includes(term);
+      const matchesNum = player.num.toLowerCase().includes(term);
+      const matchesPos = (player.primaryPosition || '').toLowerCase().includes(term);
+      return matchesName || matchesNum || matchesPos;
+    });
+  }, [roster, rollCallSearchTerm]);
 
   // Quick incremental hours adjustment
   const handleQuickAdjustHours = (player: RosterPlayer, type: 'conditioning' | 'padded', delta: number) => {
@@ -1129,197 +1170,210 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
             </div>
 
             {/* Modal Body */}
-            <div className="p-5 overflow-y-auto space-y-4 max-h-[60vh]">
-              {/* Optional Schedule Event Quick Pick */}
-              {scheduleEvents.filter((e) => e.type === 'practice' || e.type === 'scrimmage').length > 0 && (
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1 text-[11px]">
-                    Auto-Fill From Scheduled Practice Event (Optional):
-                  </label>
-                  <select
-                    value={selectedScheduleEventId}
-                    onChange={(e) => handleSelectScheduleEvent(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 focus:outline-none focus:border-amber-400 cursor-pointer"
-                  >
-                    <option value="">-- Choose Scheduled Practice --</option>
-                    {scheduleEvents
-                      .filter((e) => e.type === 'practice' || e.type === 'scrimmage')
-                      .map((evt) => (
-                        <option key={evt.id} value={evt.id}>
-                          {evt.date} • {evt.title} ({evt.location || 'Crane Road'})
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              )}
+            <div className="p-5 overflow-y-auto space-y-4 max-h-[70vh]">
+              {/* Practice Session Quick Controls Strip */}
+              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3 space-y-2.5">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  {/* Category Toggle */}
+                  <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setLogSessionType('conditioning')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+                        logSessionType === 'conditioning'
+                          ? 'bg-amber-500 text-slate-950 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>⚡ Conditioning</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogSessionType('padded')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+                        logSessionType === 'padded'
+                          ? 'bg-sky-500 text-slate-950 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <Shield className="w-3.5 h-3.5" />
+                      <span>🛡️ Full Pads</span>
+                    </button>
+                  </div>
 
-              {/* Title & Date */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1 text-[11px]">
-                    Practice Title / Description:
-                  </label>
-                  <input
-                    type="text"
-                    value={logSessionTitle}
-                    onChange={(e) => setLogSessionTitle(e.target.value)}
-                    placeholder="e.g. Preseason Conditioning Practice"
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-amber-400"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1 text-[11px]">
-                    Date:
-                  </label>
-                  <input
-                    type="date"
-                    value={logSessionDate}
-                    onChange={(e) => setLogSessionDate(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-amber-400"
-                  />
-                </div>
-              </div>
-
-              {/* Session Type Picker */}
-              <div>
-                <label className="block font-bold text-slate-300 mb-1.5 text-[11px]">
-                  Select Acclimatization Category:
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setLogSessionType('conditioning')}
-                    className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition-all ${
-                      logSessionType === 'conditioning'
-                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-lg shadow-amber-500/10'
-                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <Zap className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="font-black text-xs">⚡ Conditioning (Helmets / Shorts)</div>
-                      <div className="text-[10px] text-slate-300 mt-0.5">
-                        Counts toward 10h Conditioning requirement
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setLogSessionType('padded')}
-                    className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition-all ${
-                      logSessionType === 'padded'
-                        ? 'bg-sky-500/20 border-sky-500 text-sky-300 shadow-lg shadow-sky-500/10'
-                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <Shield className="w-4 h-4 text-sky-400 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="font-black text-xs">🛡️ Full Pads / Shells</div>
-                      <div className="text-[10px] text-slate-300 mt-0.5">
-                        Counts toward 10h Padded requirement before scrimmage
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Hours Duration & Target Week */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1 text-[11px]">
-                    Practice Duration (Hours):
-                  </label>
-                  <select
-                    value={logSessionHours}
-                    onChange={(e) => setLogSessionHours(Number(e.target.value))}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-amber-400 cursor-pointer"
-                  >
-                    <option value={0.5}>0.5 Hour (30 mins)</option>
-                    <option value={1.0}>1.0 Hour (60 mins)</option>
-                    <option value={1.5}>1.5 Hours (90 mins - Standard)</option>
-                    <option value={2.0}>2.0 Hours (120 mins)</option>
-                    <option value={2.5}>2.5 Hours</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1 text-[11px]">
-                    Assign to Season Week:
-                  </label>
-                  <select
-                    value={selectedWeekForLog}
-                    onChange={(e) => setSelectedWeekForLog(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-amber-400 focus:outline-none focus:border-amber-400 cursor-pointer"
-                  >
-                    {getSeasonWeekList(seasonConfig).map((w) => (
-                      <option key={w.key} value={w.key}>
-                        {w.label}
-                      </option>
+                  {/* Duration Selector */}
+                  <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                    {[1.0, 1.5, 2.0].map((hrs) => (
+                      <button
+                        key={hrs}
+                        type="button"
+                        onClick={() => setLogSessionHours(hrs)}
+                        className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                          logSessionHours === hrs
+                            ? 'bg-slate-700 text-amber-300 shadow-xs'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {hrs}h
+                      </button>
                     ))}
-                  </select>
+                  </div>
+
+                  {/* Toggle Practice Details */}
+                  <button
+                    type="button"
+                    onClick={() => setShowPracticeDetails(!showPracticeDetails)}
+                    className="px-2.5 py-1.5 rounded-xl border border-slate-800 bg-slate-900 text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ml-auto"
+                  >
+                    <span>⚙️ {showPracticeDetails ? 'Hide Details' : 'Practice Details'}</span>
+                    {showPracticeDetails ? (
+                      <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </button>
                 </div>
+
+                {/* Collapsible Practice Details Drawer */}
+                {showPracticeDetails && (
+                  <div className="pt-3 border-t border-slate-850 space-y-3 animate-in fade-in duration-150">
+                    {scheduleEvents.filter((e) => e.type === 'practice' || e.type === 'scrimmage').length > 0 && (
+                      <div>
+                        <label className="block font-bold text-slate-400 mb-1 text-[11px]">
+                          Auto-Fill From Scheduled Practice:
+                        </label>
+                        <select
+                          value={selectedScheduleEventId}
+                          onChange={(e) => handleSelectScheduleEvent(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-200 focus:outline-none focus:border-amber-400 cursor-pointer"
+                        >
+                          <option value="">-- Choose Scheduled Practice --</option>
+                          {scheduleEvents
+                            .filter((e) => e.type === 'practice' || e.type === 'scrimmage')
+                            .map((evt) => (
+                              <option key={evt.id} value={evt.id}>
+                                {evt.date} • {evt.title} ({evt.location || 'Crane Road'})
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <div className="sm:col-span-2">
+                        <label className="block font-bold text-slate-400 mb-1 text-[11px]">
+                          Practice Description / Title:
+                        </label>
+                        <input
+                          type="text"
+                          value={logSessionTitle}
+                          onChange={(e) => setLogSessionTitle(e.target.value)}
+                          placeholder="e.g. Preseason Practice"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-slate-400 mb-1 text-[11px]">
+                          Date:
+                        </label>
+                        <input
+                          type="date"
+                          value={logSessionDate}
+                          onChange={(e) => setLogSessionDate(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-100 focus:outline-none focus:border-amber-400"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Player Checkboxes with Present / Absent / Excused */}
-              <div className="space-y-2 pt-2 border-t border-slate-800">
-                <div className="flex items-center justify-between">
-                  <label className="font-bold text-slate-200 text-xs">
-                    Player Roll Call ({Object.values(playerAttendanceStatus).filter((s) => s === 'present').length} / {roster.length} Present):
-                  </label>
+              {/* DIRECT PLAYER ROLL CALL */}
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const all: Record<string, 'present' | 'absent' | 'excused'> = {};
-                        roster.forEach((p) => (all[p.num] = 'present'));
-                        setPlayerAttendanceStatus(all);
-                      }}
-                      className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 underline"
-                    >
-                      All Present
-                    </button>
-                    <span className="text-slate-600">•</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const all: Record<string, 'present' | 'absent' | 'excused'> = {};
-                        roster.forEach((p) => (all[p.num] = 'absent'));
-                        setPlayerAttendanceStatus(all);
-                      }}
-                      className="text-[10px] font-bold text-rose-400 hover:text-rose-300 underline"
-                    >
-                      All Absent
-                    </button>
+                    <span className="font-black text-slate-100 text-sm">
+                      Player Roll Call:
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      {Object.values(playerAttendanceStatus).filter((s) => s === 'present').length} / {roster.length} Present
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {/* Quick filter search */}
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search player..."
+                        value={rollCallSearchTerm}
+                        onChange={(e) => setRollCallSearchTerm(e.target.value)}
+                        className="pl-8 pr-2.5 py-1 bg-slate-950 border border-slate-800 rounded-xl text-xs font-medium text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-36 sm:w-44"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const all: Record<string, 'present' | 'absent' | 'excused'> = {};
+                          roster.forEach((p) => (all[p.num] = 'present'));
+                          setPlayerAttendanceStatus(all);
+                        }}
+                        className="px-2 py-0.5 text-[11px] font-black text-emerald-400 hover:text-white rounded-lg hover:bg-emerald-950/60 transition-colors"
+                      >
+                        All Present
+                      </button>
+                      <span className="text-slate-700">|</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const all: Record<string, 'present' | 'absent' | 'excused'> = {};
+                          roster.forEach((p) => (all[p.num] = 'absent'));
+                          setPlayerAttendanceStatus(all);
+                        }}
+                        className="px-2 py-0.5 text-[11px] font-black text-rose-400 hover:text-white rounded-lg hover:bg-rose-950/60 transition-colors"
+                      >
+                        All Absent
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto p-2 bg-slate-950/60 border border-slate-800 rounded-2xl no-scrollbar">
-                  {roster.map((player) => {
+                {/* Player Cards Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto p-2 bg-slate-950/80 border border-slate-800 rounded-2xl">
+                  {filteredRollCallRoster.map((player) => {
                     const status = playerAttendanceStatus[player.num] || 'present';
 
                     return (
                       <div
                         key={player.num}
-                        className={`flex items-center justify-between p-2 rounded-xl border transition-all ${
+                        className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${
                           status === 'present'
-                            ? 'bg-slate-800/90 border-indigo-500/40 text-slate-100'
+                            ? 'bg-slate-900/90 border-emerald-500/40 text-slate-100 shadow-xs'
                             : status === 'excused'
                             ? 'bg-amber-950/30 border-amber-600/40 text-amber-200'
-                            : 'bg-slate-900/60 border-slate-800 text-slate-500 opacity-60'
+                            : 'bg-slate-950/70 border-slate-800 text-slate-500 opacity-70'
                         }`}
                       >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-mono font-black text-indigo-400 text-xs">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 font-mono font-black text-indigo-400 text-xs flex items-center justify-center shrink-0">
                             #{player.num}
                           </span>
-                          <span className="font-bold text-xs truncate">
-                            {player.firstName} {player.lastName}
-                          </span>
+                          <div className="truncate">
+                            <div className="font-bold text-xs truncate text-white">
+                              {player.firstName} {player.lastName}
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-medium">
+                              {player.primaryPosition || 'Athlete'}
+                            </div>
+                          </div>
                         </div>
 
                         {/* Status Toggle Buttons */}
-                        <div className="flex items-center gap-1 shrink-0">
+                        <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             type="button"
                             onClick={() =>
@@ -1328,13 +1382,13 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
                                 [player.num]: 'present',
                               }))
                             }
-                            className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                            className={`px-3 py-1 rounded-xl text-xs font-black transition-all cursor-pointer ${
                               status === 'present'
-                                ? 'bg-emerald-500 text-slate-950 font-black shadow-xs'
-                                : 'bg-slate-900 text-slate-400 hover:text-white'
+                                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 ring-1 ring-emerald-400'
+                                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                             }`}
                           >
-                            Present
+                            ✓ Present
                           </button>
                           <button
                             type="button"
@@ -1344,35 +1398,40 @@ export const PlayerHoursTracker: React.FC<PlayerHoursTrackerProps> = ({
                                 [player.num]: 'absent',
                               }))
                             }
-                            className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                            className={`px-3 py-1 rounded-xl text-xs font-black transition-all cursor-pointer ${
                               status === 'absent'
-                                ? 'bg-rose-500 text-white font-black shadow-xs'
-                                : 'bg-slate-900 text-slate-400 hover:text-white'
+                                ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20 ring-1 ring-rose-400'
+                                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                             }`}
                           >
-                            Absent
+                            ✗ Absent
                           </button>
                         </div>
                       </div>
                     );
                   })}
+                  {filteredRollCallRoster.length === 0 && (
+                    <div className="col-span-full py-8 text-center text-slate-500 text-xs">
+                      No players match "{rollCallSearchTerm}"
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-slate-800 bg-slate-850 flex items-center justify-end gap-2">
+            <div className="p-4 border-t border-slate-800 bg-slate-850 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setShowLogAttendanceModal(false)}
-                className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200"
+                className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSubmitAttendanceSession}
-                className="px-5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 shadow-md active:scale-95"
+                className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl flex items-center gap-2 shadow-md active:scale-95 cursor-pointer transition-all"
               >
                 <Check className="w-4 h-4" />
                 <span>Save Roll Call &amp; Credit {logSessionHours} hrs to {Object.values(playerAttendanceStatus).filter((s) => s === 'present').length} Players</span>

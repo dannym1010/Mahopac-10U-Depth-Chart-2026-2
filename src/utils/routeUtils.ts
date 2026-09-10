@@ -31,12 +31,14 @@ export interface RouteState {
   drillId?: string;
   drillCategory?: DefensivePositionCategory | 'ALL';
   practiceId?: string;
+  openTakeAttendance?: boolean;
 }
 
 /**
  * Parses current URL hash into route state.
  * e.g.: #whiteboard?drill=krausko-blitz-master&cat=LB
  *       #practice?practice=plan_1
+ *       #compliance?action=take_attendance
  *       #mobile_hub
  */
 export function parseRouteHash(hashStr: string): RouteState {
@@ -63,6 +65,10 @@ export function parseRouteHash(hashStr: string): RouteState {
     if (cat) result.drillCategory = cat as DefensivePositionCategory | 'ALL';
     const practice = params.get('practice') || params.get('id');
     if (practice) result.practiceId = practice;
+    const action = params.get('action');
+    if (action === 'take_attendance' || params.get('take_attendance') === 'true') {
+      result.openTakeAttendance = true;
+    }
   }
 
   if (['offense', 'defense', 'st', 'groups', 'scrimmage'].includes(unit)) {
@@ -82,6 +88,7 @@ export function buildRouteHash(
     drillId?: string;
     drillCategory?: DefensivePositionCategory | 'ALL';
     practiceId?: string;
+    openTakeAttendance?: boolean;
   }
 ): string {
   let hash = `#${unit}`;
@@ -98,6 +105,9 @@ export function buildRouteHash(
   }
   if (options?.practiceId && unit === 'practice') {
     params.set('practice', options.practiceId);
+  }
+  if (options?.openTakeAttendance && unit === 'compliance') {
+    params.set('action', 'take_attendance');
   }
 
   const qs = params.toString();

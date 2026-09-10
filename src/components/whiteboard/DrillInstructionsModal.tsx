@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   Layers,
-  Printer,
   PenTool,
   Calendar,
   Users,
@@ -18,7 +17,6 @@ import {
   Shield,
 } from 'lucide-react';
 import { WhiteboardDrill, DEFENSIVE_POSITION_GROUPS } from './whiteboardDrillData';
-import { printDrillSheet } from './drillPrintHelper';
 
 export interface DrillInstructionsModalProps {
   isOpen: boolean;
@@ -187,40 +185,26 @@ export const DrillInstructionsModal: React.FC<DrillInstructionsModalProps> = ({
             </button>
           </div>
 
-          {/* Quick Action Buttons */}
-          <div className="flex items-center gap-1.5">
-            {drill && (
-              <button
-                type="button"
-                onClick={() => printDrillSheet(drill, activePhaseIndex)}
-                className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer"
-                title="Print single drill card sheet"
-              >
-                <Printer className="w-3.5 h-3.5 text-indigo-400" />
-                <span className="hidden sm:inline">Print Sheet</span>
-              </button>
-            )}
-
-            {onOpenWhiteboard && (
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  if (drill) {
-                    onOpenWhiteboard(drill.id, drill.category);
-                  } else if (stationName) {
-                    onOpenWhiteboard(stationName);
-                  }
-                }}
-                className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-black rounded-xl shadow-md flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
-                title="Open this drill in interactive animated whiteboard"
-              >
-                <PenTool className="w-3.5 h-3.5 text-blue-200" />
-                <span>Open Full Whiteboard</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
+          {/* Single clean action button on top right */}
+          {onOpenWhiteboard && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                if (drill) {
+                  onOpenWhiteboard(drill.id, drill.category);
+                } else if (stationName) {
+                  onOpenWhiteboard(stationName);
+                }
+              }}
+              className="px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-black rounded-xl shadow-md flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shrink-0"
+              title="Open this drill in interactive animated whiteboard"
+            >
+              <PenTool className="w-3.5 h-3.5 text-blue-200" />
+              <span>Open Full Whiteboard</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Modal Scrollable Body */}
@@ -485,16 +469,30 @@ export const DrillInstructionsModal: React.FC<DrillInstructionsModalProps> = ({
                           markerEnd={`url(#${markerId})`}
                         />
                         {arrow.label && (
-                          <text
-                            x={(arrow.startX + arrow.endX) / 2}
-                            y={(arrow.startY + arrow.endY) / 2 - 6}
-                            fill="#e2e8f0"
-                            fontSize="10"
-                            fontWeight="800"
-                            textAnchor="middle"
-                          >
-                            {arrow.label}
-                          </text>
+                          <g transform={`translate(${(arrow.startX + arrow.endX) / 2}, ${(arrow.startY + arrow.endY) / 2 - 12})`}>
+                            <rect
+                              x={-(arrow.label.length * 3.6 + 8)}
+                              y={-8}
+                              width={arrow.label.length * 7.2 + 16}
+                              height={17}
+                              rx={6}
+                              fill="#090d16"
+                              fillOpacity={0.94}
+                              stroke="#334155"
+                              strokeWidth={1}
+                            />
+                            <text
+                              x={0}
+                              y={4}
+                              fill="#f8fafc"
+                              fontSize="9.5"
+                              fontWeight="800"
+                              textAnchor="middle"
+                              fontFamily="sans-serif"
+                            >
+                              {arrow.label}
+                            </text>
+                          </g>
                         )}
                       </g>
                     );
@@ -539,6 +537,31 @@ export const DrillInstructionsModal: React.FC<DrillInstructionsModalProps> = ({
                       return (
                         <g key={token.id} transform={`translate(${token.x}, ${token.y})`}>
                           <polygon points="0,-14 12,10 -12,10" fill="#f97316" stroke="#c2410c" strokeWidth={1.5} />
+                          {token.label && (
+                            <g transform="translate(0, 20)">
+                              <rect
+                                x={-(token.label.length * 2.8 + 6)}
+                                y={-7}
+                                width={token.label.length * 5.6 + 12}
+                                height={14}
+                                rx={4}
+                                fill="#090d16"
+                                fillOpacity={0.92}
+                                stroke="#1e293b"
+                                strokeWidth={0.8}
+                              />
+                              <text
+                                x={0}
+                                y={3.5}
+                                textAnchor="middle"
+                                fill="#fdba74"
+                                fontSize="8"
+                                fontWeight="800"
+                              >
+                                {token.label}
+                              </text>
+                            </g>
+                          )}
                         </g>
                       );
                     }
@@ -553,6 +576,7 @@ export const DrillInstructionsModal: React.FC<DrillInstructionsModalProps> = ({
 
                     // Standard Player / X / O / Coach token
                     const fillColor = isDefensive ? '#ef4444' : isOffensive ? '#3b82f6' : '#6366f1';
+                    const subLabelOffset = isDefensive ? -22 : 23;
                     return (
                       <g key={token.id} transform={`translate(${token.x}, ${token.y})`}>
                         <circle cx={0} cy={0} r={15} fill={fillColor} stroke="#ffffff" strokeWidth={1.8} />
@@ -568,44 +592,36 @@ export const DrillInstructionsModal: React.FC<DrillInstructionsModalProps> = ({
                           {token.label || (isDefensive ? 'X' : 'O')}
                         </text>
                         {token.subLabel && (
-                          <text
-                            x={0}
-                            y={23}
-                            textAnchor="middle"
-                            fill="#94a3b8"
-                            fontSize="8"
-                            fontWeight="800"
-                          >
-                            {token.subLabel}
-                          </text>
+                          <g transform={`translate(0, ${subLabelOffset})`}>
+                            <rect
+                              x={-(token.subLabel.length * 2.8 + 6)}
+                              y={-7}
+                              width={token.subLabel.length * 5.6 + 12}
+                              height={14}
+                              rx={4}
+                              fill="#090d16"
+                              fillOpacity={0.92}
+                              stroke="#1e293b"
+                              strokeWidth={0.8}
+                            />
+                            <text
+                              x={0}
+                              y={3.5}
+                              textAnchor="middle"
+                              fill="#cbd5e1"
+                              fontSize="8"
+                              fontWeight="800"
+                              fontFamily="sans-serif"
+                            >
+                              {token.subLabel}
+                            </text>
+                          </g>
                         )}
                       </g>
                     );
                   })}
                 </svg>
               </div>
-
-              {/* Bottom prompt to open interactive whiteboard */}
-              {onOpenWhiteboard && (
-                <div className="pt-1 flex items-center justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClose();
-                      if (drill) {
-                        onOpenWhiteboard(drill.id, drill.category);
-                      } else if (stationName) {
-                        onOpenWhiteboard(stationName);
-                      }
-                    }}
-                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98"
-                  >
-                    <PenTool className="w-4 h-4" />
-                    <span>Open in Full Interactive Whiteboard (Draw & Animate)</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>

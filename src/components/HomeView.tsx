@@ -237,18 +237,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
             {/* Direct Attendance Shortcut in Header */}
             <button
               type="button"
-              onClick={() => onNavigateToUnit('compliance')}
+              onClick={() => onNavigateToUnit('compliance', { openTakeAttendance: true })}
               className="bg-slate-950/80 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 rounded-2xl px-4 py-2.5 flex items-center gap-3 shadow-md transition-all cursor-pointer group"
-              title="Open Player Attendance & Hours Compliance Tracker"
+              title="Open Take Practice Attendance Roll Call"
             >
               <div className="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <ClipboardCheck className="w-4 h-4" />
               </div>
               <div className="text-left">
                 <div className="text-xs font-black text-white group-hover:text-emerald-300 transition-colors">
-                  Attendance
+                  Take Attendance
                 </div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Check-In & Hours</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Practice Roll Call</div>
               </div>
             </button>
           </div>
@@ -376,42 +376,26 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <button
               type="button"
               onClick={() => handleOpenPracticePlan(practiceEventData?.plan?.id)}
-              className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs sm:text-sm rounded-2xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98"
+              className="w-full py-3.5 px-4 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs sm:text-sm rounded-2xl border border-amber-300/80 shadow-lg shadow-amber-400/20 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98"
             >
-              <ClipboardList className="w-4 h-4" />
+              <ClipboardList className="w-4 h-4 text-slate-950" />
               <span>Open Practice Plan & Drill Script</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 text-slate-950" />
             </button>
 
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => onNavigateToUnit('compliance')}
-                className="py-2.5 px-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                title="Practice Attendance & Player Check-In"
-              >
-                <ClipboardCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Attendance</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onNavigateToUnit('whiteboard')}
-                className="py-2.5 px-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-              >
-                <PenTool className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Whiteboard</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onNavigateToUnit('schedule')}
-                className="py-2.5 px-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-              >
-                <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                <span>Schedule</span>
-              </button>
-            </div>
+            {/* Single direct action button for Player Roll Call & Attendance */}
+            <button
+              type="button"
+              onClick={() => onNavigateToUnit('compliance', { openTakeAttendance: true })}
+              className="w-full py-2.5 px-4 bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 text-slate-200 hover:text-white rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md group"
+              title="Open Player Roll Call & Practice Attendance"
+            >
+              <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <ClipboardCheck className="w-3.5 h-3.5" />
+              </div>
+              <span>Take Practice Attendance • Player Roll Call</span>
+              <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all" />
+            </button>
           </div>
         </div>
 
@@ -582,17 +566,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
           {/* Attendance & Compliance Hours */}
           <button
             type="button"
-            onClick={() => onNavigateToUnit('compliance')}
+            onClick={() => onNavigateToUnit('compliance', { openTakeAttendance: true })}
             className="p-4 bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 rounded-2xl flex flex-col items-center text-center gap-2 transition-all group cursor-pointer shadow-md"
+            title="Open Practice Attendance Roll Call"
           >
             <div className="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-300 flex items-center justify-center group-hover:scale-110 transition-transform">
               <ClipboardCheck className="w-5 h-5" />
             </div>
             <div>
               <div className="text-xs font-black text-slate-100 group-hover:text-emerald-300 transition-colors">
-                Attendance
+                Take Attendance
               </div>
-              <div className="text-[10px] text-slate-400 font-medium mt-0.5">Check-In & Hours</div>
+              <div className="text-[10px] text-slate-400 font-medium mt-0.5">Roll Call & Hours</div>
             </div>
           </button>
 

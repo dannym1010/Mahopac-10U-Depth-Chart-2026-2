@@ -26,7 +26,6 @@ import {
   ArrowUpDown,
   Filter,
   Eye,
-  Maximize2,
   SunMedium,
   X as CloseIcon,
   Flag,
@@ -1386,50 +1385,6 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Diagram Spacing Level Selector */}
-            <div className="flex items-center bg-slate-950/90 rounded-xl p-1 border border-slate-800 shadow-inner">
-              <span className="text-[10px] font-black uppercase text-slate-400 px-2 flex items-center gap-1">
-                <Maximize2 className="w-3 h-3 text-slate-400" />
-                Spacing:
-              </span>
-              <button
-                type="button"
-                onClick={() => handleSetSpreadMode('standard')}
-                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  spreadMode === 'standard'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
-                }`}
-                title="Standard spacing (Default)"
-              >
-                Standard (Default)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSetSpreadMode('spread')}
-                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  spreadMode === 'spread'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
-                }`}
-                title="Spread out diagram (1.25x)"
-              >
-                Spread (1.25x)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSetSpreadMode('wide')}
-                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  spreadMode === 'wide'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
-                }`}
-                title="Wide spread diagram across the full whiteboard width"
-              >
-                Wide (1.4x)
-              </button>
-            </div>
-
             {/* Zone Shade Dimmer Selector */}
             <div className="flex items-center bg-slate-950/90 rounded-xl p-1 border border-slate-800 shadow-inner">
               <span className="text-[10px] font-black uppercase text-slate-400 px-2 flex items-center gap-1">
