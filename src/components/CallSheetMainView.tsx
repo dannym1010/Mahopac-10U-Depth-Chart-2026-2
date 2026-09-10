@@ -16,6 +16,9 @@ import {
   BookmarkCheck,
   History,
   X,
+  Trash2,
+  Eraser,
+  ChevronDown,
 } from 'lucide-react';
 import {
   CallSheetFullData,
@@ -974,6 +977,78 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
     });
   };
 
+  // Reset & Clear menu state
+  const [isResetMenuOpen, setIsResetMenuOpen] = useState(false);
+  const resetMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (resetMenuRef.current && !resetMenuRef.current.contains(e.target as Node)) {
+        setIsResetMenuOpen(false);
+      }
+    };
+    if (isResetMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isResetMenuOpen]);
+
+  // Update section group title
+  const handleUpdateGroupTitle = (
+    groupKey: 'topSituationsTitle' | 'redZoneTitle' | 'tempoTitle' | 'customTitle',
+    newTitle: string
+  ) => {
+    applyCallSheetUpdate((prev) => ({
+      ...prev,
+      [groupKey]: newTitle,
+    }));
+  };
+
+  // Delete ALL tables for active unit (wipe call sheet to blank canvas)
+  const handleDeleteAllTables = () => {
+    const confirm = window.confirm(
+      `Delete ALL tables on the ${activeUnit.toUpperCase()} call sheet? This removes all tables so you can create a completely custom sheet from scratch. You can restore starter tables at any time.`
+    );
+    if (!confirm) return;
+
+    applyCallSheetUpdate((prev) => {
+      const next = { ...prev };
+      if (activeUnit === 'offense') {
+        next.offenseSections = [];
+      } else {
+        next.defenseSections = [];
+      }
+      return next;
+    });
+    setIsResetMenuOpen(false);
+  };
+
+  // Clear ALL plays from active unit tables and script
+  const handleClearAllPlays = () => {
+    const confirm = window.confirm(
+      `Clear ALL plays from the ${activeUnit.toUpperCase()} call sheet? All tables, headers, and column structures will be kept, but play assignments will be emptied.`
+    );
+    if (!confirm) return;
+
+    applyCallSheetUpdate((prev) => {
+      const next = { ...prev };
+      const sectionsKey = activeUnit === 'offense' ? 'offenseSections' : 'defenseSections';
+      next[sectionsKey] = (next[sectionsKey] || []).map((sec) => ({
+        ...sec,
+        plays: Array(sec.slotsCount).fill(null),
+      }));
+      if (activeUnit === 'offense') {
+        next.offenseScript = (next.offenseScript || []).map(() => null);
+      } else {
+        next.defenseScript = (next.defenseScript || []).map(() => null);
+      }
+      return next;
+    });
+    setIsResetMenuOpen(false);
+  };
+
   // Reset to default
   const handleReset = () => {
     const confirm = window.confirm(
@@ -990,6 +1065,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
       }
       return next;
     });
+    setIsResetMenuOpen(false);
   };
 
   // Print Call Sheet
@@ -1215,15 +1291,65 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
               <span>Print</span>
             </button>
 
-            {/* Reset to defaults */}
-            <button
-              type="button"
-              onClick={handleReset}
-              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-750 transition-colors cursor-pointer"
-              title="Reset sheet to default"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-            </button>
+            {/* Clear / Delete / Reset Menu */}
+            <div className="relative" ref={resetMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsResetMenuOpen(!isResetMenuOpen)}
+                className="px-2 py-1.5 rounded-xl text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-750 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                title="Clear plays, delete tables, or reset sheet"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+                <span className="hidden xl:inline text-[11px]">Clear / Reset</span>
+                <ChevronDown className="w-3 h-3 text-slate-400" />
+              </button>
+
+              {isResetMenuOpen && (
+                <div className="absolute right-0 mt-1 w-64 bg-slate-900 border border-slate-750 rounded-xl shadow-2xl py-1.5 z-50 animate-fade-in text-xs">
+                  <div className="px-3 py-1 text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 mb-1">
+                    Manage {activeUnit.toUpperCase()} Call Sheet
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleClearAllPlays}
+                    className="w-full px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-white flex items-start gap-2.5 cursor-pointer transition-colors"
+                  >
+                    <Eraser className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold text-slate-200">Clear All Plays</div>
+                      <div className="text-[10px] text-slate-400">Empties all play slots, preserves table layouts &amp; columns</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDeleteAllTables}
+                    className="w-full px-3 py-2 text-left text-rose-300 hover:bg-rose-950/40 hover:text-rose-200 flex items-start gap-2.5 cursor-pointer transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold text-rose-300">Delete All Tables</div>
+                      <div className="text-[10px] text-rose-400/80">Delete everything on this sheet to start from scratch</div>
+                    </div>
+                  </button>
+
+                  <div className="my-1 border-t border-slate-800" />
+
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    className="w-full px-3 py-2 text-left text-slate-300 hover:bg-slate-800 hover:text-white flex items-start gap-2.5 cursor-pointer transition-colors"
+                  >
+                    <RotateCcw className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold text-slate-200">Restore Default Starter Sheet</div>
+                      <div className="text-[10px] text-slate-400">Restores standard balanced 4-column tables</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -1316,6 +1442,8 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
               onToggleScriptHighlight={handleToggleScriptHighlight}
               onToggleTimeoutsHighlight={handleToggleTimeoutsHighlight}
               onChangeTimeoutsCount={handleChangeTimeoutsCount}
+              onUpdateGroupTitle={handleUpdateGroupTitle}
+              onResetToDefault={handleReset}
             />
           ) : (
             <MobileCallSheetView

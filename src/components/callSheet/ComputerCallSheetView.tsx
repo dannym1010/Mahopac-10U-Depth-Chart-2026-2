@@ -8,6 +8,11 @@ import {
   ArrowDown,
   GripVertical,
   RefreshCw,
+  Edit2,
+  Check,
+  X,
+  Eraser,
+  RotateCcw,
 } from 'lucide-react';
 import {
   CallSheetFullData,
@@ -46,6 +51,11 @@ interface ComputerCallSheetViewProps {
   onToggleScriptHighlight?: () => void;
   onToggleTimeoutsHighlight?: () => void;
   onChangeTimeoutsCount?: (cnt: number) => void;
+  onUpdateGroupTitle?: (
+    groupKey: 'topSituationsTitle' | 'redZoneTitle' | 'tempoTitle' | 'customTitle',
+    newTitle: string
+  ) => void;
+  onResetToDefault?: () => void;
 }
 
 export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
@@ -69,11 +79,34 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
   onToggleScriptHighlight,
   onToggleTimeoutsHighlight,
   onChangeTimeoutsCount,
+  onUpdateGroupTitle,
+  onResetToDefault,
 }) => {
   const sections =
     unit === 'offense' ? callSheetData.offenseSections : callSheetData.defenseSections;
   const scriptPlays =
     unit === 'offense' ? callSheetData.offenseScript : callSheetData.defenseScript;
+
+  // Inline header editing state for group titles
+  const [editingGroupKey, setEditingGroupKey] = useState<
+    'topSituationsTitle' | 'redZoneTitle' | 'tempoTitle' | 'customTitle' | null
+  >(null);
+  const [tempGroupTitle, setTempGroupTitle] = useState('');
+
+  const handleStartEditingGroup = (
+    key: 'topSituationsTitle' | 'redZoneTitle' | 'tempoTitle' | 'customTitle',
+    currentVal: string
+  ) => {
+    setEditingGroupKey(key);
+    setTempGroupTitle(currentVal);
+  };
+
+  const handleSaveGroupTitle = () => {
+    if (editingGroupKey && onUpdateGroupTitle) {
+      onUpdateGroupTitle(editingGroupKey, tempGroupTitle.trim());
+    }
+    setEditingGroupKey(null);
+  };
 
   // Filter sections by group for dynamic auto-formatting
   const topSections = sections.filter(
@@ -309,6 +342,37 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
   // Remove empty row
   const handleRemoveRow = (rowIndex: number) => {
     setEmptyRowIndices((prev) => prev.filter((idx) => idx !== rowIndex));
+  };
+
+  // Clear all plays from a given row
+  const handleClearRowPlays = (rowIndex: number) => {
+    const row = situationalRows.find((r) => r.rowIndex === rowIndex);
+    if (!row || row.sections.length === 0) return;
+    const confirm = window.confirm(
+      `Clear all play assignments in Row ${rowIndex + 1}? All table titles, slots, and column structures will be kept.`
+    );
+    if (!confirm) return;
+
+    row.sections.forEach((sec) => {
+      onUpdateSection({
+        ...sec,
+        plays: Array(sec.slotsCount).fill(null),
+      });
+    });
+  };
+
+  // Delete all tables from a given row and remove row
+  const handleDeleteRowWithTables = (rowIndex: number) => {
+    const row = situationalRows.find((r) => r.rowIndex === rowIndex);
+    if (!row) return;
+    if (row.sections.length > 0) {
+      const confirm = window.confirm(
+        `Delete Row ${rowIndex + 1} and all ${row.sections.length} table(s) inside it? Remaining tables will resize to fit better.`
+      );
+      if (!confirm) return;
+      row.sections.forEach((sec) => onDeleteSection(sec.id));
+    }
+    handleRemoveRow(rowIndex);
   };
 
   // Reset all situational tables to an even row count (e.g. 4 or 3 across)
@@ -717,9 +781,53 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
         {/* Header Bar */}
         <div className="flex items-center justify-between px-1 flex-wrap gap-2 print:hidden">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
-              Situational &amp; Down-and-Distance
-            </span>
+            {editingGroupKey === 'topSituationsTitle' ? (
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={tempGroupTitle}
+                  onChange={(e) => setTempGroupTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveGroupTitle();
+                    if (e.key === 'Escape') setEditingGroupKey(null);
+                  }}
+                  autoFocus
+                  className="px-2 py-0.5 text-xs font-black uppercase rounded bg-white dark:bg-slate-900 border-2 border-indigo-500 text-slate-800 dark:text-slate-100 outline-none shadow-xs"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveGroupTitle}
+                  className="p-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                  title="Save title"
+                >
+                  <Check className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingGroupKey(null)}
+                  className="p-1 rounded bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 cursor-pointer"
+                  title="Cancel"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <div
+                className="group flex items-center gap-1.5 cursor-pointer"
+                onClick={() =>
+                  handleStartEditingGroup(
+                    'topSituationsTitle',
+                    callSheetData.topSituationsTitle || 'Situational & Down-and-Distance'
+                  )
+                }
+                title="Click to edit section title"
+              >
+                <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  {callSheetData.topSituationsTitle || 'Situational & Down-and-Distance'}
+                </span>
+                <Edit2 className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            )}
             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-mono">
               {topSections.length} Tables in {situationalRows.length} {situationalRows.length === 1 ? 'Row' : 'Rows'}
             </span>
@@ -780,6 +888,41 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
           </div>
         </div>
 
+        {/* Empty State when user has deleted all situational tables */}
+        {situationalRows.length === 0 && (
+          <div className="border-2 border-dashed border-slate-300 dark:border-slate-800 rounded-lg p-6 text-center bg-slate-50/60 dark:bg-slate-900/40">
+            <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-500">
+              <LayoutGrid className="w-5 h-5" />
+            </div>
+            <h4 className="text-xs font-black uppercase text-slate-700 dark:text-slate-200 mb-1">
+              No Situational Tables On Call Sheet
+            </h4>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-sm mx-auto mb-3">
+              Tables were deleted. Add custom tables below, or restore defaults. Columns automatically expand to fill your printed page.
+            </p>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => onAddSection('top_situations')}
+                className="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black flex items-center gap-1 cursor-pointer shadow-xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Add Table</span>
+              </button>
+              {onResetToDefault && (
+                <button
+                  type="button"
+                  onClick={onResetToDefault}
+                  className="px-3 py-1 rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Restore Starter Tables</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Multi-Row Situational Layout */}
         <div className="space-y-3.5">
           {situationalRows.map((row, rowIdx) => {
@@ -839,17 +982,27 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
                       </button>
                     )}
 
-                    {/* Delete Row if empty */}
-                    {tableCount === 0 && (
+                    {/* Clear Plays in this Row */}
+                    {tableCount > 0 && (
                       <button
                         type="button"
-                        onClick={() => handleRemoveRow(row.rowIndex)}
-                        className="p-0.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded cursor-pointer ml-1"
-                        title="Remove empty row"
+                        onClick={() => handleClearRowPlays(row.rowIndex)}
+                        className="px-1.5 py-0.2 text-[9.5px] font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded flex items-center gap-0.5 cursor-pointer ml-1"
+                        title={`Clear all play assignments in Row ${rowIdx + 1} tables`}
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Eraser className="w-2.5 h-2.5" /> Clear
                       </button>
                     )}
+
+                    {/* Delete Row & its tables */}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteRowWithTables(row.rowIndex)}
+                      className="p-0.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded cursor-pointer ml-1"
+                      title={tableCount > 0 ? `Delete Row ${rowIdx + 1} and its ${tableCount} table(s)` : 'Remove empty row'}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
                   </div>
                 </div>
 
@@ -1049,9 +1202,51 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
       >
         {/* Giant Red Zone Header Bar */}
         <div className="bg-red-600 text-white font-black text-center text-sm sm:text-base tracking-widest py-1 px-4 mb-2 shadow-xs uppercase flex items-center justify-between">
-          <span className="flex-1 text-center font-black">
-            {unit === 'offense' ? 'RED ZONE' : 'RED ZONE DEFENSE'}
-          </span>
+          {editingGroupKey === 'redZoneTitle' ? (
+            <div className="flex items-center justify-center gap-1 flex-1">
+              <input
+                type="text"
+                value={tempGroupTitle}
+                onChange={(e) => setTempGroupTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveGroupTitle();
+                  if (e.key === 'Escape') setEditingGroupKey(null);
+                }}
+                autoFocus
+                className="px-2 py-0.5 text-xs font-black uppercase rounded bg-white text-red-700 outline-none shadow-xs text-center"
+              />
+              <button
+                type="button"
+                onClick={handleSaveGroupTitle}
+                className="p-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                title="Save title"
+              >
+                <Check className="w-3 h-3" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingGroupKey(null)}
+                className="p-1 rounded bg-red-800 hover:bg-red-900 text-white cursor-pointer"
+                title="Cancel"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <div
+              className="flex-1 text-center font-black flex items-center justify-center gap-1.5 cursor-pointer group"
+              onClick={() =>
+                handleStartEditingGroup(
+                  'redZoneTitle',
+                  callSheetData.redZoneTitle || (unit === 'offense' ? 'RED ZONE' : 'RED ZONE DEFENSE')
+                )
+              }
+              title="Click to edit Red Zone header"
+            >
+              <span>{callSheetData.redZoneTitle || (unit === 'offense' ? 'RED ZONE' : 'RED ZONE DEFENSE')}</span>
+              <Edit2 className="w-3 h-3 opacity-0 group-hover:opacity-80 transition-opacity" />
+            </div>
+          )}
           <button
             type="button"
             onClick={() => onAddSection('red_zone')}
@@ -1062,8 +1257,11 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
           </button>
         </div>
 
-        {/* Auto-Formatting Red Zone Grid */}
-        <div className={getStandardGridClass()}>
+        {/* Auto-Formatting Red Zone Grid with Adaptive Column Widths */}
+        <div
+          className={getRowGridConfig(rzSections).className}
+          style={getRowGridConfig(rzSections).style}
+        >
           {rzSections.map((sec, rzIdx) => {
             const isDragTargetThis = dragOverTarget?.sectionId === sec.id;
             const isDraggingThis = draggingSectionId === sec.id;
@@ -1116,9 +1314,51 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
       {tempoSections.length > 0 && (
         <div className="space-y-2 callsheet-tempo-container">
           <div className="flex items-center justify-between px-1 print:hidden">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
-              Tempo, Clock &amp; Specials ({tempoSections.length} Tables)
-            </span>
+            {editingGroupKey === 'tempoTitle' ? (
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={tempGroupTitle}
+                  onChange={(e) => setTempGroupTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveGroupTitle();
+                    if (e.key === 'Escape') setEditingGroupKey(null);
+                  }}
+                  autoFocus
+                  className="px-2 py-0.5 text-xs font-black uppercase rounded bg-white dark:bg-slate-900 border-2 border-indigo-500 text-slate-800 dark:text-slate-100 outline-none shadow-xs"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveGroupTitle}
+                  className="p-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                >
+                  <Check className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingGroupKey(null)}
+                  className="p-1 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <div
+                className="group flex items-center gap-1.5 cursor-pointer"
+                onClick={() =>
+                  handleStartEditingGroup(
+                    'tempoTitle',
+                    callSheetData.tempoTitle || 'Tempo, Clock & Specials'
+                  )
+                }
+                title="Click to edit Tempo header"
+              >
+                <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 transition-colors">
+                  {callSheetData.tempoTitle || 'Tempo, Clock & Specials'} ({tempoSections.length} Tables)
+                </span>
+                <Edit2 className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            )}
             <button
               type="button"
               onClick={() => onAddSection('tempo_game_mgmt')}
@@ -1129,7 +1369,10 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
             </button>
           </div>
 
-          <div className={getStandardGridClass()}>
+          <div
+            className={getRowGridConfig(tempoSections).className}
+            style={getRowGridConfig(tempoSections).style}
+          >
             {tempoSections.map((sec, tIdx) => {
               const isDragTargetThis = dragOverTarget?.sectionId === sec.id;
               const isDraggingThis = draggingSectionId === sec.id;
@@ -1180,9 +1423,51 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
       {customSections.length > 0 && (
         <div className="space-y-2 pt-1 callsheet-custom-container">
           <div className="flex items-center justify-between px-1 print:hidden">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
-              Custom Sections ({customSections.length} Tables)
-            </span>
+            {editingGroupKey === 'customTitle' ? (
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={tempGroupTitle}
+                  onChange={(e) => setTempGroupTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveGroupTitle();
+                    if (e.key === 'Escape') setEditingGroupKey(null);
+                  }}
+                  autoFocus
+                  className="px-2 py-0.5 text-xs font-black uppercase rounded bg-white dark:bg-slate-900 border-2 border-indigo-500 text-slate-800 dark:text-slate-100 outline-none shadow-xs"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveGroupTitle}
+                  className="p-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                >
+                  <Check className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingGroupKey(null)}
+                  className="p-1 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <div
+                className="group flex items-center gap-1.5 cursor-pointer"
+                onClick={() =>
+                  handleStartEditingGroup(
+                    'customTitle',
+                    callSheetData.customTitle || 'Custom Situations'
+                  )
+                }
+                title="Click to edit Custom header"
+              >
+                <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 transition-colors">
+                  {callSheetData.customTitle || 'Custom Situations'} ({customSections.length} Tables)
+                </span>
+                <Edit2 className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            )}
             <button
               type="button"
               onClick={() => onAddSection('custom')}
@@ -1193,7 +1478,10 @@ export const ComputerCallSheetView: React.FC<ComputerCallSheetViewProps> = ({
             </button>
           </div>
 
-          <div className={getStandardGridClass()}>
+          <div
+            className={getRowGridConfig(customSections).className}
+            style={getRowGridConfig(customSections).style}
+          >
             {customSections.map((sec, cIdx) => {
               const isDragTargetThis = dragOverTarget?.sectionId === sec.id;
               const isDraggingThis = draggingSectionId === sec.id;

@@ -214,20 +214,6 @@ body {
     display: none !important;
   }
 
-  /* Column parity in direct print */
-  body.callsheet-cols-2 .callsheet-row-container {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
-  body.callsheet-cols-3 .callsheet-row-container {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  }
-  body.callsheet-cols-4 .callsheet-row-container {
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  }
-  body.callsheet-cols-5 .callsheet-row-container {
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-  }
-
   /* When empty slots are kept in print, suppress all placeholder text and edit buttons */
   .callsheet-slot-empty span,
   .callsheet-slot-empty button,

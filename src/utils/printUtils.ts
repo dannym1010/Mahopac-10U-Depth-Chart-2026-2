@@ -2772,6 +2772,22 @@ export function generateCallSheetPrintHTML(
     const cardBodyClass = innerCols > 1 ? 'card-body card-body-grid' : 'card-body';
     const cardBodyStyle = innerCols > 1 ? `display: grid; grid-template-columns: repeat(${innerCols}, 1fr);` : '';
 
+    const subHeadersHtml =
+      innerCols > 1 && sec.columnHeaders && sec.columnHeaders.length > 0
+        ? `
+          <div class="sub-headers-row" style="display: grid; grid-template-columns: repeat(${innerCols}, 1fr); background: #f1f5f9; border-bottom: 1px solid #cbd5e1; font-size: ${badgeFontSize}; font-weight: 800; text-align: center; text-transform: uppercase;">
+            ${Array.from({ length: innerCols })
+              .map(
+                (_, i) =>
+                  `<div style="padding: 1px 2px; border-right: ${
+                    i < innerCols - 1 ? '1px solid #cbd5e1' : 'none'
+                  };">${sec.columnHeaders?.[i] || `Col ${i + 1}`}</div>`
+              )
+              .join('')}
+          </div>
+        `
+        : '';
+
     const rowsHtml = playsToRender
       .map((play, idx) => {
         if (!play || !play.name || !play.name.trim()) {
@@ -2832,6 +2848,7 @@ export function generateCallSheetPrintHTML(
           <span class="card-title">${sec.title}</span>
           <span class="card-count">${validPlays.length}/${sec.slotsCount}</span>
         </div>
+        ${subHeadersHtml}
         <div class="${cardBodyClass}" ${cardBodyStyle ? `style="${cardBodyStyle}"` : ''}>
           ${rowsHtml || '<div class="callsheet-cell empty-slot"><span class="slot-empty-text">No plays assigned</span></div>'}
         </div>
@@ -2839,11 +2856,27 @@ export function generateCallSheetPrintHTML(
     `;
   };
 
+  // Dynamically calculate grid columns template so rows with fewer tables (or multi-column tables) expand proportionally across the page
+  const getSectionListGridTemplate = (sectionList: CallSheetSection[], maxCols = printColumns) => {
+    if (!sectionList || sectionList.length === 0) return `repeat(${maxCols}, 1fr)`;
+    const totalSpan = sectionList.reduce(
+      (acc, s) => acc + (s.colSpan || (s.columnsCount && s.columnsCount > 1 ? s.columnsCount : 1)),
+      0
+    );
+    if (totalSpan <= maxCols) {
+      return sectionList
+        .map((s) => `${s.colSpan || (s.columnsCount && s.columnsCount > 1 ? s.columnsCount : 1)}fr`)
+        .join(' ');
+    }
+    return `repeat(${maxCols}, 1fr)`;
+  };
+
   const renderSectionGrid = (sectionList: CallSheetSection[], cols = printColumns) => {
     if (!sectionList || sectionList.length === 0) return '';
     const cards = sectionList.map((sec) => renderSectionCard(sec)).join('');
+    const template = getSectionListGridTemplate(sectionList, cols);
     return `
-      <div class="cards-grid" style="grid-template-columns: repeat(${cols}, 1fr); gap: ${gridGap};">
+      <div class="cards-grid" style="grid-template-columns: ${template}; gap: ${gridGap};">
         ${cards}
       </div>
     `;
@@ -2868,8 +2901,9 @@ export function generateCallSheetPrintHTML(
           const rowSecs = (rowMap.get(rIdx) || []).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
           if (rowSecs.length === 0) return '';
           const rowCards = rowSecs.map((sec) => renderSectionCard(sec)).join('');
+          const rowTemplate = getSectionListGridTemplate(rowSecs, printColumns);
           return `
-            <div class="cards-grid situational-row" style="grid-template-columns: repeat(${printColumns}, 1fr); gap: ${gridGap}; margin-bottom: ${gridGap}; page-break-inside: avoid; break-inside: avoid;">
+            <div class="cards-grid situational-row" style="grid-template-columns: ${rowTemplate}; gap: ${gridGap}; margin-bottom: ${gridGap}; page-break-inside: avoid; break-inside: avoid;">
               ${rowCards}
             </div>
           `;
@@ -2884,8 +2918,9 @@ export function generateCallSheetPrintHTML(
       rowsHtml = rows
         .map((rowSecs) => {
           const rowCards = rowSecs.map((sec) => renderSectionCard(sec)).join('');
+          const rowTemplate = getSectionListGridTemplate(rowSecs, printColumns);
           return `
-            <div class="cards-grid situational-row" style="grid-template-columns: repeat(${printColumns}, 1fr); gap: ${gridGap}; margin-bottom: ${gridGap}; page-break-inside: avoid; break-inside: avoid;">
+            <div class="cards-grid situational-row" style="grid-template-columns: ${rowTemplate}; gap: ${gridGap}; margin-bottom: ${gridGap}; page-break-inside: avoid; break-inside: avoid;">
               ${rowCards}
             </div>
           `;
@@ -2895,7 +2930,7 @@ export function generateCallSheetPrintHTML(
 
     topSituationsHtml = `
       <div class="section-group">
-        <div class="group-banner">SITUATIONAL CALLS &amp; DOWN-AND-DISTANCE</div>
+        <div class="group-banner">${callSheetData.topSituationsTitle || 'SITUATIONAL CALLS &amp; DOWN-AND-DISTANCE'}</div>
         ${rowsHtml}
       </div>
     `;
@@ -2905,7 +2940,7 @@ export function generateCallSheetPrintHTML(
   if (filter.redZone && redZone.length > 0) {
     redZoneHtml = `
       <div class="section-group redzone-group ${fitMode === '2page' ? 'page-break-before' : ''}">
-        <div class="group-banner redzone-banner">${isOffense ? 'RED ZONE &amp; GOAL LINE (INSIDE 20)' : 'RED ZONE DEFENSE &amp; GOAL LINE'}</div>
+        <div class="group-banner redzone-banner">${callSheetData.redZoneTitle || (isOffense ? 'RED ZONE &amp; GOAL LINE (INSIDE 20)' : 'RED ZONE DEFENSE &amp; GOAL LINE')}</div>
         ${renderSectionGrid(redZone, printColumns)}
       </div>
     `;
@@ -2915,7 +2950,7 @@ export function generateCallSheetPrintHTML(
   if (filter.tempo && tempo.length > 0) {
     tempoHtml = `
       <div class="section-group">
-        <div class="group-banner">TEMPO, CLOCK &amp; SPECIALS</div>
+        <div class="group-banner">${callSheetData.tempoTitle || 'TEMPO, CLOCK &amp; SPECIALS'}</div>
         ${renderSectionGrid(tempo, printColumns)}
       </div>
     `;
@@ -2925,7 +2960,7 @@ export function generateCallSheetPrintHTML(
   if (filter.custom && custom.length > 0) {
     customHtml = `
       <div class="section-group">
-        <div class="group-banner">CUSTOM SITUATIONS</div>
+        <div class="group-banner">${callSheetData.customTitle || 'CUSTOM SITUATIONS'}</div>
         ${renderSectionGrid(custom, printColumns)}
       </div>
     `;

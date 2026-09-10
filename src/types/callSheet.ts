@@ -56,6 +56,7 @@ export interface CallSheetSection {
   group: 'top_situations' | 'red_zone' | 'tempo_game_mgmt' | 'script' | 'custom';
   slotsCount: number; // number of rows/slots
   columnsCount?: number; // 1, 2, 3, or 4 columns within the section table
+  columnHeaders?: string[]; // Optional sub-column headers for multi-column tables
   colSpan?: number; // Number of columns this section card spans in the outer grid (1, 2, 3, or 4)
   wristbandId?: string; // Linked wristband ID if generated from wristband preset
   wristbandPresetMode?: 'full_two_col' | 'col_1' | 'col_2' | 'col_both_split';
@@ -86,6 +87,10 @@ export interface TimeoutsState {
 export interface CallSheetFullData {
   teamId?: string;
   title: string;
+  topSituationsTitle?: string;
+  redZoneTitle?: string;
+  tempoTitle?: string;
+  customTitle?: string;
   opponent?: string;
   gameDate?: string;
   desktopGridColumns?: number; // 2, 3, 4, or 5 columns on desktop grid

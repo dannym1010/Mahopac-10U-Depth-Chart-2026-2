@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Plus,
   Minus,
@@ -8,6 +8,9 @@ import {
   Sparkles,
   Edit2,
   Check,
+  X,
+  Sliders,
+  Eraser,
   ChevronDown,
   ChevronUp,
   GripVertical,
@@ -126,8 +129,22 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
   rowIndex,
   availableRowIndices = [],
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [editTitle, setEditTitle] = useState(section.title);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setEditTitle(section.title);
+  }, [section.title]);
+
+  useEffect(() => {
+    if (isEditingTitle) {
+      titleInputRef.current?.focus();
+      titleInputRef.current?.select();
+    }
+  }, [isEditingTitle]);
 
   const columnsCount = section.columnsCount || 1;
   const isHighlighted = section.highlightEnabled ?? isRedZoneParent;
@@ -136,14 +153,19 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
 
   const filledCount = section.plays.filter(Boolean).length;
 
-  const handleSaveHeader = () => {
+  const handleSaveTitle = () => {
     if (onUpdateSection && editTitle.trim()) {
       onUpdateSection({
         ...section,
         title: editTitle.trim(),
       });
     }
-    setIsEditing(false);
+    setIsEditingTitle(false);
+  };
+
+  const handleCancelEditTitle = () => {
+    setEditTitle(section.title);
+    setIsEditingTitle(false);
   };
 
   const handleSelectColor = (color: string) => {
@@ -190,10 +212,26 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
 
   const handleSetColumns = (newCols: number) => {
     if (onUpdateSection) {
+      const existingHeaders = section.columnHeaders || [];
+      const newHeaders = Array.from({ length: newCols }).map(
+        (_, i) => existingHeaders[i] || `Col ${i + 1}`
+      );
       onUpdateSection({
         ...section,
         columnsCount: newCols,
+        columnHeaders: newHeaders,
         colSpan: newCols >= 2 ? Math.min(newCols, 3) : 1,
+      });
+    }
+  };
+
+  const handleUpdateColumnHeader = (colIdx: number, text: string) => {
+    if (onUpdateSection) {
+      const current = [...(section.columnHeaders || Array.from({ length: columnsCount }).map((_, i) => `Col ${i + 1}`))];
+      current[colIdx] = text;
+      onUpdateSection({
+        ...section,
+        columnHeaders: current,
       });
     }
   };
@@ -217,13 +255,20 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
     }
   };
 
+  const handleClearTablePlays = () => {
+    if (onUpdateSection) {
+      onUpdateSection({
+        ...section,
+        plays: Array(section.slotsCount).fill(null),
+      });
+    }
+  };
+
   const handleDelete = () => {
     if (onDeleteSection) {
-      const confirmed = window.confirm(`Delete the "${section.title}" table from the call sheet?`);
-      if (confirmed) {
-        onDeleteSection(section.id);
-      }
+      onDeleteSection(section.id);
     }
+    setIsConfirmingDelete(false);
   };
 
   // Determine container styling based on highlight status
@@ -262,9 +307,9 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
     >
       {/* 1. Header Bar */}
       <div
-        draggable={isDraggable && !isEditing}
+        draggable={isDraggable && !isEditingTitle}
         onDragStart={(e) => {
-          if (isEditing) return;
+          if (isEditingTitle) return;
           (window as any).__activeCallSheetTableDrag = section.id;
           e.dataTransfer.setData('application/callsheet-table-drag', section.id);
           e.dataTransfer.setData('text/plain', section.id);
@@ -276,14 +321,14 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
           onDragEndTable?.(e);
         }}
         className={`py-1 px-2 flex items-center justify-between font-black text-xs uppercase tracking-wider select-none relative transition-colors ${
-          isDraggable && !isEditing ? 'cursor-grab active:cursor-grabbing' : ''
+          isDraggable && !isEditingTitle ? 'cursor-grab active:cursor-grabbing' : ''
         }`}
         style={{
           backgroundColor: section.headerBgColor,
           color: section.headerTextColor,
         }}
       >
-        {!isEditing ? (
+        {!isEditingTitle ? (
           <div className="flex items-center justify-between w-full min-w-0">
             <div className="flex items-center gap-1.5 min-w-0 flex-1">
               {isDraggable && (
@@ -296,8 +341,8 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
               )}
               <span
                 className="truncate cursor-pointer hover:underline text-[11.5px] sm:text-xs"
-                onClick={() => setIsEditing(true)}
-                title="Click to edit table settings (title, rows, columns, highlight, colors)"
+                onClick={() => setIsEditingTitle(true)}
+                title="Click to edit table title (or click settings icon for layout & rows)"
               >
                 {section.title}
               </span>
@@ -358,15 +403,17 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
                   </button>
                 )}
               </div>
-              {/* Quick edit button */}
+              {/* Quick edit drawer toggle button */}
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setIsEditing(true);
+                  setIsDrawerOpen(!isDrawerOpen);
                 }}
-                className="opacity-0 group-hover:opacity-100 hover:scale-110 p-0.5 rounded text-inherit transition-opacity print:hidden cursor-pointer"
-                title="Table options & layout"
+                className={`hover:scale-110 p-0.5 rounded text-inherit transition-all print:hidden cursor-pointer ${
+                  isDrawerOpen ? 'bg-black/30 opacity-100' : 'opacity-70 group-hover:opacity-100'
+                }`}
+                title="Table options & layout settings"
               >
                 <Edit2 className="w-3 h-3" />
               </button>
@@ -375,16 +422,20 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
         ) : (
           <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
             <input
+              ref={titleInputRef}
               type="text"
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSaveHeader()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveTitle();
+                if (e.key === 'Escape') handleCancelEditTitle();
+              }}
               className="px-1.5 py-0.5 bg-black/40 text-white rounded text-xs font-bold border border-white/40 focus:outline-none w-full"
               autoFocus
             />
             <button
               type="button"
-              onClick={handleSaveHeader}
+              onClick={handleSaveTitle}
               className="px-1.5 py-0.5 rounded bg-white text-black text-[10px] font-black cursor-pointer shrink-0"
             >
               Done
@@ -394,7 +445,7 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
       </div>
 
       {/* 2. Interactive Editing Drawer (Rows, Columns, Highlight, Color, Delete, Row Position) */}
-      {isEditing && (
+      {isDrawerOpen && (
         <div className="p-2 bg-slate-850 dark:bg-slate-950 border-b border-slate-700 text-slate-200 text-xs space-y-2 print:hidden animate-in fade-in duration-150">
           {/* Top Row: Rows, Columns, Highlight, and Delete */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -582,6 +633,30 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
               />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Sub-column headers when multi-column */}
+      {columnsCount > 1 && (
+        <div
+          className="bg-slate-100 dark:bg-slate-800/90 border-b border-slate-300 dark:border-slate-700 divide-x divide-slate-300 dark:divide-slate-700 print:bg-slate-100"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${columnsCount}, minmax(0, 1fr))`,
+          }}
+        >
+          {Array.from({ length: columnsCount }).map((_, colIdx) => (
+            <div key={colIdx} className="px-1 py-0.5 flex items-center justify-between min-w-0">
+              <input
+                type="text"
+                value={section.columnHeaders?.[colIdx] ?? `Col ${colIdx + 1}`}
+                onChange={(e) => handleUpdateColumnHeader(colIdx, e.target.value)}
+                placeholder={`Col ${colIdx + 1}`}
+                className="w-full text-[10px] font-black uppercase text-center bg-transparent border-0 focus:outline-none focus:bg-white/50 dark:focus:bg-black/30 rounded text-slate-700 dark:text-slate-200 tracking-wider"
+                title={`Click to edit header for Column ${colIdx + 1}`}
+              />
+            </div>
+          ))}
         </div>
       )}
 
