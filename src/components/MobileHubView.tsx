@@ -10,6 +10,7 @@ import {
   BookOpen,
   Dumbbell,
   ClipboardList,
+  ClipboardCheck,
   Calendar,
   Users,
   MapPin,
@@ -44,6 +45,8 @@ import {
   Layers,
   Printer,
   PenTool,
+  Trophy,
+  Shirt,
 } from 'lucide-react';
 import {
   generatePlaybookGuidePrintHTML,
@@ -250,7 +253,7 @@ interface MobileHubViewProps {
   depthChart: Record<string, any>;
   defaultScreen: UnitType;
   onSetDefaultScreen: (screen: UnitType) => void;
-  onNavigateToUnit: (unit: UnitType, subUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage') => void;
+  onNavigateToUnit: (unit: UnitType, optionsOrSubUnit?: any) => void;
   onQuickAttendanceSave?: (record: AttendanceRecord) => void;
   attendanceLogs?: AttendanceRecord[];
   onSelectPractice?: (id: string) => void;
@@ -668,11 +671,102 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
     return sorted[sorted.length - 1] || null;
   }, [scheduleEvents, todayPracticeInfo, todayStr]);
 
+  const formattedToday = useMemo(() => {
+    return new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  }, []);
+
+  const formatDateLabel = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        return d.toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+        });
+      }
+    } catch {
+      // fallback
+    }
+    return dateStr;
+  };
+
+  // 1. Determine Upcoming Practice
+  const practiceEventData = useMemo(() => {
+    const now = new Date();
+    const teamPractices = (scheduleEvents || [])
+      .filter((e) => e && (e.type === 'practice' || e.type === 'walkthrough') && !e.isCancelled && (!e.teamId || e.teamId === activeTeam.id))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    if (teamPractices.length === 0) return null;
+
+    const upcoming = teamPractices.filter((e) => {
+      const eventEnd = new Date(`${e.date}T${e.endTime || e.startTime || '23:59'}:00`);
+      return eventEnd.getTime() >= now.getTime();
+    });
+
+    const selectedEvent = upcoming.length > 0 ? upcoming[0] : teamPractices[teamPractices.length - 1];
+    if (!selectedEvent) return null;
+
+    const isToday = selectedEvent.date === todayStr;
+
+    let linkedPlan: PracticePlan | null = null;
+    if (selectedEvent.linkedPracticePlanId) {
+      linkedPlan = (practicePlans || []).find((p) => p.id === selectedEvent.linkedPracticePlanId) || null;
+    }
+    if (!linkedPlan) {
+      linkedPlan = (practicePlans || []).find(
+        (p) => p.date === selectedEvent.date || (p.weekFolder && (p.weekFolder === selectedEvent.week || p.weekFolder.includes(selectedEvent.week)))
+      ) || null;
+    }
+    if (!linkedPlan && practicePlans && practicePlans.length > 0) {
+      linkedPlan = practicePlans[0];
+    }
+
+    return {
+      event: selectedEvent,
+      plan: linkedPlan,
+      isToday,
+    };
+  }, [scheduleEvents, practicePlans, todayStr, activeTeam.id]);
+
+  // 2. Determine Upcoming Game or Scrimmage
+  const gameEventData = useMemo(() => {
+    const now = new Date();
+    const teamGames = (scheduleEvents || [])
+      .filter((e) => e && (e.type === 'game' || e.type === 'scrimmage') && !e.isCancelled && (!e.teamId || e.teamId === activeTeam.id))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    if (teamGames.length === 0) return null;
+
+    const upcoming = teamGames.filter((e) => {
+      const eventEnd = new Date(`${e.date}T${e.endTime || e.startTime || '23:59'}:00`);
+      return eventEnd.getTime() >= now.getTime();
+    });
+
+    const selectedEvent = upcoming.length > 0 ? upcoming[0] : teamGames[teamGames.length - 1];
+    if (!selectedEvent) return null;
+
+    const isToday = selectedEvent.date === todayStr;
+
+    return {
+      event: selectedEvent,
+      isToday,
+    };
+  }, [scheduleEvents, todayStr, activeTeam.id]);
+
   // Handler to jump directly to a practice plan or open mobile reader
   const handleOpenPracticePlan = (planId?: string) => {
     let target = planId ? (practicePlans || []).find((p) => p.id === planId) : null;
     if (!target) {
-      target = todayPracticeInfo?.plan || (practicePlans && practicePlans.length > 0 ? practicePlans[0] : null);
+      target = practiceEventData?.plan || todayPracticeInfo?.plan || (practicePlans && practicePlans.length > 0 ? practicePlans[0] : null);
     }
     if (target) {
       if (planId && onSelectPractice) {
@@ -869,390 +963,497 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
   }, [attendanceLogs, attendanceDate, activeTeam.id]);
 
   return (
-    <div className="space-y-4 pb-24 md:pb-8 max-w-xl mx-auto text-slate-100">
+    <div className="space-y-4 sm:space-y-6 pb-28 md:pb-12 max-w-7xl mx-auto px-1 sm:px-2 md:px-0 text-slate-100">
       {/* =========================================================================
-          1. PRACTICE PLAN / UPCOMING EVENT HERO CARD
+          1. HEADER / SPLASH SECTION (Mimics PC Home Screen)
           ========================================================================= */}
-      {todayPracticeInfo && !todayPracticeInfo.isOver ? (
-        // SHOW TODAY'S PRACTICE PLAN HERO (UNTIL PRACTICE IS OVER)
-        <div className="bg-gradient-to-br from-slate-900 via-emerald-950/60 to-slate-900 rounded-3xl border border-emerald-500/40 p-4 shadow-2xl relative overflow-hidden space-y-3">
-          {/* Top Status Strip */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span
-                className={`px-2.5 py-1 rounded-xl text-[11px] font-black tracking-wider uppercase flex items-center gap-1.5 shadow-xs ${
-                  todayPracticeInfo.isLiveNow
-                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse'
-                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                }`}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/70 to-slate-900 rounded-3xl border border-indigo-500/30 p-4 sm:p-6 shadow-2xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3.5">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 flex items-center gap-1 shadow-xs">
+                <Sparkles className="w-3 h-3 text-indigo-400" />
+                <span>Football Command Center</span>
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
+                Week {currentWeek}
+              </span>
+              <span className="text-[11px] font-semibold text-slate-400 hidden sm:inline-flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                <span>{formattedToday}</span>
+              </span>
+            </div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
+              {activeTeam?.name || 'Football Command Center'}
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium">
+              Welcome back, Coach. Here is your team&apos;s upcoming schedule, practice scripts, and game day preparation hub.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
+            {/* Team Switcher */}
+            {teams && teams.length > 1 && (
+              <select
+                value={activeTeam?.id || ''}
+                onChange={(e) => onSelectTeam(e.target.value)}
+                aria-label="Select Team"
+                className="bg-slate-900/90 border border-slate-750 hover:border-indigo-500/60 text-slate-200 text-xs font-bold rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 cursor-pointer shadow-sm transition-all"
               >
-                {todayPracticeInfo.isLiveNow ? (
-                  <>
-                    <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping inline-block" />
-                    <span>LIVE PRACTICE NOW</span>
-                  </>
-                ) : (
-                  <>
-                    <ClipboardList className="w-3.5 h-3.5" />
-                    <span>TODAY&apos;S PRACTICE PLAN</span>
-                  </>
-                )}
-              </span>
-              <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
-                {activeTeam.name}
-              </span>
-            </div>
-
-            <div className="text-xs font-black text-amber-300 flex items-center gap-1 bg-slate-900/90 px-2.5 py-1 rounded-xl border border-slate-800">
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
-              <span>{todayPracticeInfo.timeStr}</span>
-            </div>
-          </div>
-
-          {/* Practice Title & Info */}
-          <div>
-            <h2 className="text-lg font-black text-white tracking-tight flex items-center gap-1.5">
-              <span>{todayPracticeInfo.plan?.title || todayPracticeInfo.event?.title || `Practice • ${formatFullDateLabel(todayStr)}`}</span>
-            </h2>
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-300 mt-1 flex-wrap">
-              <span className="text-emerald-400 font-bold">{formatFullDateLabel(todayStr)}</span>
-              <span>&bull;</span>
-              <span>{todayPracticeInfo.durationMinutes} Min Session</span>
-              {todayPracticeInfo.event?.attireCategory && (
-                <>
-                  <span>&bull;</span>
-                  <span className="px-1.5 py-0.2 bg-slate-800 rounded text-[10px] font-black text-amber-300 uppercase">
-                    {todayPracticeInfo.event.attireCategory}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Drill Periods Summary if available */}
-          {todayPracticeInfo.plan?.periods && todayPracticeInfo.plan.periods.length > 0 && (
-            <div className="bg-slate-950/70 rounded-2xl p-2.5 border border-slate-800/80 space-y-1.5">
-              <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400">
-                <span>{todayPracticeInfo.plan.periods.length} Planned Periods</span>
-                <span className="text-emerald-400">
-                  {todayPracticeInfo.plan.periods.reduce((sum, p) => sum + (p.durationMinutes || p.duration || 0), 0) || todayPracticeInfo.durationMinutes} Min Total
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
-                {todayPracticeInfo.plan.periods.slice(0, 5).map((period, pIdx) => (
-                  <span
-                    key={pIdx}
-                    className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-800 text-slate-300 whitespace-nowrap border border-slate-700/60 shrink-0"
-                  >
-                    {period.name || period.title || `Period ${pIdx + 1}`}
-                  </span>
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
                 ))}
-                {todayPracticeInfo.plan.periods.length > 5 && (
-                  <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap px-1">
-                    +{todayPracticeInfo.plan.periods.length - 5} more
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
+              </select>
+            )}
 
-          {/* Primary Action Button: Open Today's Practice Plan in Reader */}
-          <button
-            type="button"
-            onClick={() => handleOpenPracticePlan(todayPracticeInfo.plan?.id)}
-            className="w-full py-3 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs sm:text-sm rounded-2xl shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer border border-emerald-400/40"
-          >
-            <Eye className="w-4 h-4" />
-            <span>Open Today&apos;s Practice Plan (Sideline View)</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-
-          {/* Location details (without directions link) */}
-          {todayPracticeInfo.event?.location && (
-            <div className="flex items-center gap-1.5 pt-1 border-t border-slate-800/80 text-xs text-slate-400">
-              <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span className="truncate font-medium">{todayPracticeInfo.event.location}</span>
+            {/* Active Roster count */}
+            <div className="px-3 py-2 bg-slate-900/90 rounded-xl border border-slate-750 text-xs font-bold text-slate-300 shadow-sm flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-indigo-400" />
+              <span>{roster.length} Players</span>
+              <span className="text-[10px] text-slate-500 font-medium hidden sm:inline">&bull; Active Roster</span>
             </div>
-          )}
+
+            {/* Single Attendance Button on top right */}
+            <button
+              type="button"
+              onClick={() => onNavigateToUnit('compliance', { openTakeAttendance: true })}
+              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-md shadow-emerald-600/25 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+              title="Open Practice Attendance Roll Call"
+            >
+              <ClipboardCheck className="w-3.5 h-3.5" />
+              <span>Take Attendance</span>
+            </button>
+          </div>
         </div>
-      ) : nextUpcomingEvent ? (
-        // SHOW NEXT SCHEDULE EVENT (OR TODAY'S PRACTICE OVER NOTICE + NEXT EVENT)
-        <div className="space-y-2.5">
-          {todayPracticeInfo && todayPracticeInfo.isOver && (
-            <div className="bg-slate-900/90 rounded-2xl border border-slate-800 px-3.5 py-2.5 flex items-center justify-between gap-2 shadow-md">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-slate-500" />
-                <div>
-                  <div className="text-xs font-bold text-slate-200">Today&apos;s Practice is Complete</div>
-                  <div className="text-[10px] text-slate-400">{todayPracticeInfo.timeStr} Session Ended</div>
+      </div>
+
+      {/* =========================================================================
+          2. UPCOMING HERO CARDS (Practice & Game - Mimics PC Home Screen)
+          ========================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        {/* Practice Hero Card */}
+        {practiceEventData ? (
+          <div className="bg-gradient-to-br from-slate-900 via-emerald-950/40 to-slate-900 rounded-3xl border border-emerald-500/40 p-4 sm:p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-black tracking-wider uppercase flex items-center gap-1.5 shadow-xs ${
+                      practiceEventData.isToday
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        : 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30'
+                    }`}
+                  >
+                    <ClipboardList className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>{practiceEventData.isToday ? "TODAY'S PRACTICE" : 'UPCOMING PRACTICE'}</span>
+                  </span>
+
+                  {practiceEventData.event.attireCategory && (
+                    <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-800 text-amber-300 border border-slate-700">
+                      {practiceEventData.event.attireCategory}
+                    </span>
+                  )}
+                </div>
+
+                <div className="text-xs font-black text-amber-300 flex items-center gap-1 bg-slate-900/90 px-2.5 py-1 rounded-xl border border-slate-800">
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{practiceEventData.event.time || practiceEventData.event.startTime || '5:30 PM'}</span>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => handleOpenPracticePlan(todayPracticeInfo.plan?.id)}
-                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer transition-all active:scale-95"
-              >
-                <ClipboardList className="w-3.5 h-3.5" />
-                <span>Review Plan</span>
-              </button>
-            </div>
-          )}
 
-          <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950/80 rounded-3xl border border-indigo-500/30 p-4 shadow-xl relative overflow-hidden space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`px-2.5 py-1 rounded-xl text-[11px] font-black tracking-wider uppercase flex items-center gap-1 ${
-                    nextUpcomingEvent.type === 'game'
-                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                      : nextUpcomingEvent.type === 'scrimmage'
-                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                  }`}
-                >
-                  {nextUpcomingEvent.type === 'game' ? '🏈 NEXT GAME' : nextUpcomingEvent.type === 'scrimmage' ? '⚡ NEXT SCRIMMAGE' : '📋 NEXT PRACTICE'}
-                </span>
-                {nextUpcomingEvent.locationType && (
-                  <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
-                    {nextUpcomingEvent.locationType}
-                  </span>
-                )}
+              <div>
+                <h2 className="text-lg sm:text-xl font-black text-white tracking-tight flex items-center gap-2">
+                  <span>{practiceEventData.plan?.title || practiceEventData.event.title || 'Team Practice'}</span>
+                </h2>
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-300 mt-1 flex-wrap">
+                  <span className="text-emerald-400 font-bold">{formatDateLabel(practiceEventData.event.date)}</span>
+                  <span>&bull;</span>
+                  <span>Week {practiceEventData.event.week || currentWeek}</span>
+                  {practiceEventData.event.durationMinutes && (
+                    <>
+                      <span>&bull;</span>
+                      <span>{practiceEventData.event.durationMinutes} Min Session</span>
+                    </>
+                  )}
+                </div>
               </div>
-              <span className="text-xs font-black text-amber-300 flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-xl border border-slate-800">
-                <Clock className="w-3.5 h-3.5 text-amber-400" />
-                <span>{nextUpcomingEvent.time || '10:00 AM'}</span>
-              </span>
-            </div>
 
-            <div>
-              <h2 className="text-lg font-black text-white tracking-tight">
-                {nextUpcomingEvent.opponent ? `vs ${nextUpcomingEvent.opponent}` : nextUpcomingEvent.title}
-              </h2>
-              <p className="text-xs font-semibold text-slate-300 mt-0.5">
-                {formatFullDateLabel(nextUpcomingEvent.date)}
-              </p>
-            </div>
-
-            {/* Action button if practice */}
-            {nextUpcomingEvent.type === 'practice' ? (
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => handleOpenPracticePlan(nextUpcomingEvent.linkedPracticePlanId)}
-                  className="w-full py-3 bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-black text-xs sm:text-sm rounded-2xl shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98"
-                >
-                  <Eye className="w-4 h-4" />
-                  <span>Open Practice Plan (Sideline View)</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-                {nextUpcomingEvent.location && (
-                  <div className="flex items-center gap-1.5 pt-1 border-t border-slate-800 text-xs text-slate-400">
-                    <MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    <span className="truncate font-medium">{nextUpcomingEvent.location}</span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              nextUpcomingEvent.location && (
-                <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800">
-                  <div className="flex items-center gap-1.5 min-w-0 text-xs text-slate-300">
-                    <MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    <span className="truncate font-medium">{nextUpcomingEvent.location}</span>
+              {practiceEventData.event.location && (
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80 text-xs text-slate-400">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span className="truncate font-medium">{practiceEventData.event.location}</span>
                   </div>
                   <a
-                    href={`https://maps.google.com/?q=${encodeURIComponent(nextUpcomingEvent.location)}`}
+                    href={`https://maps.google.com/?q=${encodeURIComponent(practiceEventData.event.location)}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[11px] rounded-xl flex items-center gap-1 shrink-0 active:scale-95 transition-all shadow-xs"
+                    className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold flex items-center gap-1 transition-all shrink-0 cursor-pointer"
+                  >
+                    <span>Maps</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
+
+              {practiceEventData.plan?.periods && practiceEventData.plan.periods.length > 0 && (
+                <div className="bg-slate-950/70 rounded-2xl p-2.5 border border-slate-800/80 space-y-1.5">
+                  <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    <span>Practice Script • {practiceEventData.plan.periods.length} Periods</span>
+                    <span className="text-emerald-400">
+                      {practiceEventData.plan.periods.reduce((sum, p) => sum + (p.durationMinutes || (p as any).duration || 0), 0)} Min Total
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+                    {practiceEventData.plan.periods.slice(0, 4).map((period, pIdx) => (
+                      <span
+                        key={pIdx}
+                        className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-800 text-slate-300 whitespace-nowrap border border-slate-700/60 shrink-0"
+                      >
+                        {period.name || (period as any).title || `Period ${pIdx + 1}`}
+                      </span>
+                    ))}
+                    {practiceEventData.plan.periods.length > 4 && (
+                      <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap px-1">
+                        +{practiceEventData.plan.periods.length - 4} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-slate-800/80">
+              {/* Action 1: Open Practice Plan & Drill Script in Gold */}
+              <button
+                type="button"
+                onClick={() => handleOpenPracticePlan(practiceEventData.plan?.id)}
+                className="w-full py-3 sm:py-3.5 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs sm:text-sm rounded-2xl shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer border border-amber-300"
+              >
+                <ClipboardList className="w-4 h-4 text-slate-950" />
+                <span>Open Practice Plan &amp; Drill Script</span>
+                <ArrowRight className="w-4 h-4 text-slate-950" />
+              </button>
+
+              {/* Action 2: Single direct attendance link */}
+              <button
+                type="button"
+                onClick={() => onNavigateToUnit('compliance', { openTakeAttendance: true })}
+                className="w-full py-2.5 bg-slate-850 hover:bg-slate-800 active:bg-slate-750 text-emerald-300 font-bold text-xs rounded-xl border border-emerald-500/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-98"
+                title="Open Practice Attendance Roll Call"
+              >
+                <ClipboardCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Take Practice Attendance • Player Roll Call</span>
+                <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-slate-900/90 rounded-3xl border border-slate-800 p-6 flex flex-col items-center justify-center text-center space-y-3 min-h-[220px]">
+            <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-slate-500">
+              <ClipboardList className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-slate-200">No Upcoming Practice Scheduled</h3>
+              <p className="text-xs text-slate-400 mt-0.5">Check back later or schedule a new practice session.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onNavigateToUnit('practice')}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
+            >
+              Open Practice Planner
+            </button>
+          </div>
+        )}
+
+        {/* Game Hero Card */}
+        {gameEventData ? (
+          <div className="bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 rounded-3xl border border-indigo-500/40 p-4 sm:p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-black tracking-wider uppercase flex items-center gap-1.5 shadow-xs ${
+                      gameEventData.event.type === 'game'
+                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                        : 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                    }`}
+                  >
+                    <Trophy className="w-3.5 h-3.5" />
+                    <span>
+                      {gameEventData.isToday
+                        ? "TODAY'S GAME"
+                        : gameEventData.event.type === 'game'
+                        ? 'UPCOMING GAME'
+                        : 'NEXT SCRIMMAGE'}
+                    </span>
+                  </span>
+
+                  {gameEventData.event.locationType && (
+                    <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
+                      {gameEventData.event.locationType}
+                    </span>
+                  )}
+                </div>
+
+                <div className="text-xs font-black text-amber-300 flex items-center gap-1 bg-slate-900/90 px-2.5 py-1 rounded-xl border border-slate-800">
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{gameEventData.event.time || gameEventData.event.startTime || '10:00 AM Kickoff'}</span>
+                </div>
+              </div>
+
+              <div>
+                <h2 className="text-lg sm:text-xl font-black text-white tracking-tight flex items-center gap-2">
+                  <span>
+                    {gameEventData.event.opponent
+                      ? `vs ${gameEventData.event.opponent}`
+                      : gameEventData.event.title || 'Game Day'}
+                  </span>
+                </h2>
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-300 mt-1 flex-wrap">
+                  <span className="text-indigo-400 font-bold">{formatDateLabel(gameEventData.event.date)}</span>
+                  <span>&bull;</span>
+                  <span>Week {gameEventData.event.week || currentWeek}</span>
+                  {(gameEventData.event as any).gameType && (
+                    <>
+                      <span>&bull;</span>
+                      <span className="capitalize">{(gameEventData.event as any).gameType}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {gameEventData.event.location && (
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80 text-xs text-slate-400">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                    <span className="truncate font-medium">{gameEventData.event.location}</span>
+                  </div>
+                  <a
+                    href={`https://maps.google.com/?q=${encodeURIComponent(gameEventData.event.location)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold flex items-center gap-1 transition-all shrink-0 cursor-pointer"
                   >
                     <span>Directions</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
-              )
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="bg-slate-900/90 rounded-3xl border border-slate-700/80 p-4 text-center space-y-1.5 shadow-lg">
-          <p className="text-xs font-black text-indigo-300 uppercase tracking-wider">
-            {activeTeam.name} • {formatWeekLabel(currentWeek)}
-          </p>
-          <p className="text-sm font-bold text-white">Ready for Practice &amp; Game Day</p>
-          <button
-            type="button"
-            onClick={() => handleOpenPracticePlan()}
-            className="mt-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-emerald-300 text-xs font-bold rounded-xl inline-flex items-center gap-1.5 cursor-pointer"
-          >
-            <Eye className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Open Practice Plans</span>
-          </button>
-        </div>
-      )}
+              )}
 
-      {/* =========================================================================
-          2. CORE LAUNCH PAD TILES (Depth Chart, Practice Plan, Call Sheet, Playbook Guides, Wristband)
-          ========================================================================= */}
-      <div className="grid grid-cols-2 gap-2.5">
-        {/* 1. Depth Chart (Mobile View) */}
-        <button
-          type="button"
-          onClick={() => onNavigateToUnit('depth_chart', 'offense')}
-          className="bg-gradient-to-br from-indigo-950/90 via-slate-900 to-slate-900 border border-indigo-500/40 hover:border-indigo-400 p-3.5 rounded-2xl text-left shadow-lg active:scale-98 transition-all group cursor-pointer relative overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center">
-              <Shield className="w-4 h-4" />
+              {Boolean((gameEventData.event as any).arrivalWarmupTime || (gameEventData.event as any).jerseyColor || (gameEventData.event as any).pantsColor) && (
+                <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
+                  {(gameEventData.event as any).arrivalWarmupTime && (
+                    <div className="bg-slate-950/70 p-2 rounded-xl border border-slate-800/80">
+                      <span className="text-[10px] text-slate-400 block uppercase font-bold">Arrival &amp; Warmups</span>
+                      <span className="font-bold text-amber-300">{(gameEventData.event as any).arrivalWarmupTime}</span>
+                    </div>
+                  )}
+                  {Boolean((gameEventData.event as any).jerseyColor || (gameEventData.event as any).pantsColor) && (
+                    <div className="bg-slate-950/70 p-2 rounded-xl border border-slate-800/80">
+                      <span className="text-[10px] text-slate-400 block uppercase font-bold">Uniform</span>
+                      <span className="font-bold text-slate-200 flex items-center gap-1">
+                        <Shirt className="w-3 h-3 text-indigo-400" />
+                        <span>{(gameEventData.event as any).jerseyColor || 'Standard'} / {(gameEventData.event as any).pantsColor || 'Pants'}</span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-              Mobile View
-            </span>
-          </div>
-          <div className="text-sm font-black text-white group-hover:text-indigo-200">
-            Depth Chart
-          </div>
-          <div className="text-[11px] text-slate-400 font-medium truncate">
-            Pocket Chart &amp; Matrix
-          </div>
-        </button>
 
-        {/* 2. Practice Plan (Mobile View) */}
-        <button
-          type="button"
-          onClick={() => handleOpenPracticePlan(todayPracticeInfo?.plan?.id)}
-          className="bg-gradient-to-br from-emerald-950/90 via-slate-900 to-slate-900 border border-emerald-500/40 hover:border-emerald-400 p-3.5 rounded-2xl text-left shadow-lg active:scale-98 transition-all group cursor-pointer relative overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center justify-center">
-              <ClipboardList className="w-4 h-4" />
-            </div>
-            <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              Mobile View
-            </span>
-          </div>
-          <div className="text-sm font-black text-white group-hover:text-emerald-200">
-            Practice Plan
-          </div>
-          <div className="text-[11px] text-slate-400 font-medium truncate">
-            Periods, Stations &amp; Timer
-          </div>
-        </button>
+            <div className="space-y-2 pt-2 border-t border-slate-800/80">
+              <button
+                type="button"
+                onClick={() => onNavigateToUnit('game_day')}
+                className="w-full py-3 sm:py-3.5 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-black text-xs sm:text-sm rounded-2xl shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer border border-indigo-400/40"
+              >
+                <Trophy className="w-4 h-4" />
+                <span>Launch Game Day Sideline Hub</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
 
-        {/* 3. Call Sheet (NEW: Offense & Defense Sideline Call Sheet) */}
-        <button
-          type="button"
-          onClick={() => onNavigateToUnit('call_sheet')}
-          className="bg-gradient-to-br from-rose-950/90 via-slate-900 to-slate-900 border border-rose-500/40 hover:border-rose-400 p-3.5 rounded-2xl text-left shadow-lg active:scale-98 transition-all group cursor-pointer relative overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center justify-center">
-              <FileSpreadsheet className="w-4 h-4" />
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onNavigateToUnit('call_sheet')}
+                  className="py-2 px-2 bg-slate-850 hover:bg-slate-800 active:bg-slate-750 text-slate-200 text-xs font-bold rounded-xl border border-slate-750 text-center transition-all cursor-pointer active:scale-95"
+                >
+                  Call Sheet
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigateToUnit('wristband')}
+                  className="py-2 px-2 bg-slate-850 hover:bg-slate-800 active:bg-slate-750 text-slate-200 text-xs font-bold rounded-xl border border-slate-750 text-center transition-all cursor-pointer active:scale-95"
+                >
+                  Wristbands
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigateToUnit('depth_chart', 'offense')}
+                  className="py-2 px-2 bg-slate-850 hover:bg-slate-800 active:bg-slate-750 text-slate-200 text-xs font-bold rounded-xl border border-slate-750 text-center transition-all cursor-pointer active:scale-95"
+                >
+                  Depth Chart
+                </button>
+              </div>
             </div>
-            <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30">
-              Interactive
-            </span>
           </div>
-          <div className="text-sm font-black text-white group-hover:text-rose-200">
-            Call Sheet
-          </div>
-          <div className="text-[11px] text-slate-400 font-medium truncate">
-            Situations, 2-Pt &amp; Timeouts
-          </div>
-        </button>
-
-        {/* 4. Wristband Plays */}
-        <button
-          type="button"
-          onClick={() => onNavigateToUnit('wristband')}
-          className="bg-gradient-to-br from-amber-950/80 via-slate-900 to-slate-900 border border-amber-500/40 hover:border-amber-400 p-3.5 rounded-2xl text-left shadow-lg active:scale-98 transition-all group cursor-pointer relative overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center justify-center">
-              <Watch className="w-4 h-4" />
+        ) : (
+          <div className="bg-slate-900/90 rounded-3xl border border-slate-800 p-6 flex flex-col items-center justify-center text-center space-y-3 min-h-[220px]">
+            <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-slate-500">
+              <Trophy className="w-6 h-6" />
             </div>
-            <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
-              Wristband
-            </span>
-          </div>
-          <div className="text-sm font-black text-white group-hover:text-amber-200">
-            Wristband Plays
-          </div>
-          <div className="text-[11px] text-slate-400 font-medium truncate">
-            Color Grid &amp; Callout
-          </div>
-        </button>
-
-        {/* 5. Playbook Guides (Replaces Drills on main HUD) */}
-        <button
-          type="button"
-          onClick={() => onNavigateToUnit('guide')}
-          className="bg-gradient-to-br from-cyan-950/90 via-slate-900 to-slate-900 border border-cyan-500/40 hover:border-cyan-400 p-3.5 rounded-2xl text-left shadow-lg active:scale-98 transition-all group cursor-pointer relative overflow-hidden col-span-2 sm:col-span-1"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center justify-center">
-              <BookOpen className="w-4 h-4" />
+            <div>
+              <h3 className="text-base font-black text-slate-200">No Upcoming Game Scheduled</h3>
+              <p className="text-xs text-slate-400 mt-0.5">Check schedule for season matchup details.</p>
             </div>
-            <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-              {totalGuidesCount} Docs
-            </span>
+            <button
+              type="button"
+              onClick={() => onNavigateToUnit('schedule')}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
+            >
+              View Full Schedule
+            </button>
           </div>
-          <div className="text-sm font-black text-white group-hover:text-cyan-200">
-            Playbook Guides
-          </div>
-          <div className="text-[11px] text-slate-400 font-medium truncate">
-            Schemes, Plays &amp; Installs
-          </div>
-        </button>
+        )}
       </div>
 
       {/* =========================================================================
-          COACHING SHORTCUTS STRIP (Drills, Schedule, Hours, Scouting, Playbook Studio)
+          3. CLEAN QUICK NAVIGATION LAUNCHPAD (Mimics PC Home Screen)
           ========================================================================= */}
-      <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 pt-0.5">
-        <button
-          type="button"
-          onClick={() => onNavigateToUnit('drills')}
-          className="bg-slate-900/90 border border-slate-800 hover:border-cyan-500/40 p-2.5 rounded-2xl flex flex-col items-center text-center gap-1 active:scale-95 transition-all cursor-pointer group shadow-xs"
-        >
-          <Dumbbell className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
-          <span className="text-[10px] font-bold text-slate-300">Drills</span>
-        </button>
+      <div className="space-y-3 pt-1 sm:pt-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Coaching Tools Quick Launch</span>
+          </h3>
+          <span className="text-[11px] font-semibold text-slate-500">Quick Navigation</span>
+        </div>
 
-        <button
-          type="button"
-          onClick={() => onNavigateToUnit('schedule')}
-          className="bg-slate-900/90 border border-slate-800 hover:border-purple-500/40 p-2.5 rounded-2xl flex flex-col items-center text-center gap-1 active:scale-95 transition-all cursor-pointer group shadow-xs"
-        >
-          <Calendar className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
-          <span className="text-[10px] font-bold text-slate-300">Schedule</span>
-        </button>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5 sm:gap-3">
+          {/* Attendance & Compliance Hours */}
+          <button
+            type="button"
+            onClick={() => onNavigateToUnit('compliance', { openTakeAttendance: true })}
+            className="p-3 sm:p-4 bg-slate-900/80 hover:bg-slate-850 active:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 rounded-2xl flex flex-col items-center text-center gap-2 transition-all group cursor-pointer shadow-md active:scale-98"
+            title="Open Practice Attendance Roll Call"
+          >
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-600/20 text-emerald-300 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-black text-slate-100 group-hover:text-emerald-300 transition-colors">
+                Take Attendance
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium mt-0.5">Roll Call &amp; Hours</div>
+            </div>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => onNavigateToUnit('compliance')}
-          className="bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 p-2.5 rounded-2xl flex flex-col items-center text-center gap-1 active:scale-95 transition-all cursor-pointer group shadow-xs"
-        >
-          <Zap className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
-          <span className="text-[10px] font-bold text-slate-300">Hours</span>
-        </button>
+          {/* Depth Chart */}
+          <button
+            type="button"
+            onClick={() => onNavigateToUnit('depth_chart', 'offense')}
+            className="p-3 sm:p-4 bg-slate-900/80 hover:bg-slate-850 active:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 rounded-2xl flex flex-col items-center text-center gap-2 transition-all group cursor-pointer shadow-md active:scale-98"
+          >
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-indigo-600/20 text-indigo-300 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-black text-slate-100 group-hover:text-indigo-300 transition-colors">
+                Depth Chart
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium mt-0.5">Offense &amp; Defense</div>
+            </div>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => onNavigateToUnit('scouting')}
-          className="bg-slate-900/90 border border-slate-800 hover:border-rose-500/40 p-2.5 rounded-2xl flex flex-col items-center text-center gap-1 active:scale-95 transition-all cursor-pointer group shadow-xs"
-        >
-          <Target className="w-4 h-4 text-rose-400 group-hover:scale-110 transition-transform" />
-          <span className="text-[10px] font-bold text-slate-300">Scouting</span>
-        </button>
+          {/* Practice Planner */}
+          <button
+            type="button"
+            onClick={() => onNavigateToUnit('practice')}
+            className="p-3 sm:p-4 bg-slate-900/80 hover:bg-slate-850 active:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 rounded-2xl flex flex-col items-center text-center gap-2 transition-all group cursor-pointer shadow-md active:scale-98"
+          >
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-600/20 text-emerald-300 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-black text-slate-100 group-hover:text-emerald-300 transition-colors">
+                Practice Plan
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium mt-0.5">Scripts &amp; Periods</div>
+            </div>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => onNavigateToUnit('guide')}
-          className="hidden sm:flex bg-slate-900/90 border border-slate-800 hover:border-indigo-500/40 p-2.5 rounded-2xl flex-col items-center text-center gap-1 active:scale-95 transition-all cursor-pointer group shadow-xs"
-        >
-          <BookOpen className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
-          <span className="text-[10px] font-bold text-slate-300">Studio</span>
-        </button>
+          {/* Drill Library */}
+          <button
+            type="button"
+            onClick={() => onNavigateToUnit('drills')}
+            className="p-3 sm:p-4 bg-slate-900/80 hover:bg-slate-850 active:bg-slate-800 border border-slate-800 hover:border-amber-500/50 rounded-2xl flex flex-col items-center text-center gap-2 transition-all group cursor-pointer shadow-md active:scale-98"
+          >
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-600/20 text-amber-300 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Dumbbell className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-black text-slate-100 group-hover:text-amber-300 transition-colors">
+                Drill Library
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium mt-0.5">Technique &amp; Cues</div>
+            </div>
+          </button>
+
+          {/* Whiteboard Playbook */}
+          <button
+            type="button"
+            onClick={() => onNavigateToUnit('whiteboard')}
+            className="p-3 sm:p-4 bg-slate-900/80 hover:bg-slate-850 active:bg-slate-800 border border-slate-800 hover:border-blue-500/50 rounded-2xl flex flex-col items-center text-center gap-2 transition-all group cursor-pointer shadow-md active:scale-98"
+          >
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-600/20 text-blue-300 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <PenTool className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-black text-slate-100 group-hover:text-blue-300 transition-colors">
+                Whiteboard
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium mt-0.5">2D Play Animator</div>
+            </div>
+          </button>
+
+          {/* Call Sheet */}
+          <button
+            type="button"
+            onClick={() => onNavigateToUnit('call_sheet')}
+            className="p-3 sm:p-4 bg-slate-900/80 hover:bg-slate-850 active:bg-slate-800 border border-slate-800 hover:border-rose-500/50 rounded-2xl flex flex-col items-center text-center gap-2 transition-all group cursor-pointer shadow-md active:scale-98"
+          >
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-rose-600/20 text-rose-300 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-black text-slate-100 group-hover:text-rose-300 transition-colors">
+                Call Sheet
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium mt-0.5">Down &amp; Distance</div>
+            </div>
+          </button>
+
+          {/* Playbook Guides */}
+          <button
+            type="button"
+            onClick={() => onNavigateToUnit('guide')}
+            className="p-3 sm:p-4 bg-slate-900/80 hover:bg-slate-850 active:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 rounded-2xl flex flex-col items-center text-center gap-2 transition-all group cursor-pointer shadow-md col-span-2 sm:col-span-1 active:scale-98"
+          >
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-cyan-600/20 text-cyan-300 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-black text-slate-100 group-hover:text-cyan-300 transition-colors">
+                Playbooks
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium mt-0.5">Schemes &amp; PDFs</div>
+            </div>
+          </button>
+        </div>
       </div>
 
       {/* =========================================================================

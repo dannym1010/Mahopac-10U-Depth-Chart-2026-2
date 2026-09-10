@@ -6269,12 +6269,10 @@ function mergeRemoteWeeklyData(
                     setCurrentPracticeId(options.practiceId);
                     safeJSONSet('footballCurrentPracticeId', options.practiceId);
                   }
-                  if (unit === 'depth_chart') {
-                    setDepthSubUnit(options?.subUnit || 'offense');
-                    setActiveUnit((options?.subUnit || 'offense') as any);
-                  } else {
-                    setActiveUnit(unit);
+                  if (options?.openTakeAttendance) {
+                    setAutoOpenTakeAttendance(true);
                   }
+                  navigateToUnit(unit, options as any);
                 }}
                 onSelectPractice={(id) => {
                   setCurrentPracticeId(id);
@@ -6304,12 +6302,23 @@ function mergeRemoteWeeklyData(
                 depthChart={currentDepthChart}
                 defaultScreen={defaultScreen}
                 onSetDefaultScreen={handleSetDefaultScreen}
-                onNavigateToUnit={(unit, subUnit) => {
-                  if (unit === 'depth_chart') {
-                    setDepthSubUnit(subUnit || 'offense');
-                    setActiveUnit((subUnit || 'offense') as any);
+                onNavigateToUnit={(unit, optionsOrSubUnit) => {
+                  if (typeof optionsOrSubUnit === 'object' && optionsOrSubUnit !== null) {
+                    if (optionsOrSubUnit.week) {
+                      setCurrentWeek(optionsOrSubUnit.week);
+                      ensureWeekExists(optionsOrSubUnit.week);
+                    }
+                    if (optionsOrSubUnit.practiceId) {
+                      setCurrentPracticeId(optionsOrSubUnit.practiceId);
+                      safeJSONSet('footballCurrentPracticeId', optionsOrSubUnit.practiceId);
+                    }
+                    if (optionsOrSubUnit.openTakeAttendance) {
+                      setAutoOpenTakeAttendance(true);
+                    }
+                    navigateToUnit(unit, optionsOrSubUnit);
                   } else {
-                    setActiveUnit(unit);
+                    const subUnit = optionsOrSubUnit;
+                    navigateToUnit(unit, subUnit ? { subUnit } : undefined);
                   }
                 }}
                 onQuickAttendanceSave={(rec) => {
