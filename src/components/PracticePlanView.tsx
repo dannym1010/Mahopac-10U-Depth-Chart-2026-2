@@ -32,6 +32,7 @@ import {
   Filter,
   Eye,
   PenTool,
+  BookOpen,
 } from 'lucide-react';
 import {
   PracticePlan,
@@ -58,9 +59,10 @@ import {
   openCleanPrintTab,
 } from '../utils/printUtils';
 import { WhiteboardDrill, WHITEBOARD_DRILLS } from './whiteboard/whiteboardDrillData';
-import { findMatchingWhiteboardDrill } from '../utils/drillPlanLinking';
+import { findMatchingWhiteboardDrill, createCustomDrillFromStation } from '../utils/drillPlanLinking';
 import { printDrillSheet } from './whiteboard/drillPrintHelper';
 import { PracticePlanPrintModal } from './PracticePlanPrintModal';
+import { DrillInstructionsModal } from './whiteboard/DrillInstructionsModal';
 
 interface PracticePlanViewProps {
   practices: PracticePlan[];
@@ -171,6 +173,18 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   const [viewFilterPeriod, setViewFilterPeriod] = useState<number | 'all'>('all');
   const [viewFontSize, setViewFontSize] = useState<'normal' | 'large'>('normal');
   const [activeViewingPeriodIdx, setActiveViewingPeriodIdx] = useState<number>(0);
+
+  // Drill Instructions & Diagram Preview Modal state
+  const [instructionsModalDrill, setInstructionsModalDrill] = useState<{
+    drill: WhiteboardDrill | null;
+    stationName: string;
+    stationDesc?: string;
+    stationFocus?: string;
+    stationCoach?: string;
+    periodName?: string;
+    periodNumber?: number;
+    periodDuration?: number;
+  } | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -2142,9 +2156,34 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                             </div>
                           )}
 
-                          {/* Drill Whiteboard Link & Print Drill (print:hidden) */}
+                          {/* Drill Whiteboard Link, Instructions & Print Drill (print:hidden) */}
                           {station.name && (
                             <div className="flex items-center gap-2 pt-1 flex-wrap print:hidden">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const matched = findMatchingWhiteboardDrill(station.name, effectiveWhiteboardDrills);
+                                  const drillObj =
+                                    matched ||
+                                    createCustomDrillFromStation(station, pIdx + 1, period.category || period.name);
+                                  setInstructionsModalDrill({
+                                    drill: drillObj,
+                                    stationName: station.name,
+                                    stationDesc: station.desc,
+                                    stationFocus: station.focus,
+                                    stationCoach: station.coach,
+                                    periodName: period.name || period.title,
+                                    periodNumber: pIdx + 1,
+                                    periodDuration: period.durationMinutes || period.duration,
+                                  });
+                                }}
+                                className="px-2.5 py-1 bg-indigo-600/25 hover:bg-indigo-600/40 text-indigo-200 hover:text-white text-xs font-bold rounded-lg border border-indigo-500/35 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                                title={`View instructions, cues, and diagram for ${station.name}`}
+                              >
+                                <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+                                <span>Instructions</span>
+                              </button>
+
                               {onOpenWhiteboardDrill && (
                                 <button
                                   type="button"
@@ -2565,9 +2604,34 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                             className="w-full bg-slate-900/90 border border-slate-700 rounded-xl p-2.5 text-xs font-medium text-slate-200 leading-relaxed focus:ring-1 focus:ring-indigo-500 resize-y disabled:bg-transparent disabled:border-transparent placeholder:text-slate-500 print:hidden"
                           />
 
-                          {/* Whiteboard Link & Print Drill Sheet (print:hidden) */}
+                          {/* Whiteboard Link, Instructions & Print Drill Sheet (print:hidden) */}
                           {safeStation.name && (
                             <div className="flex items-center gap-2 pt-1 print:hidden flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const matched = findMatchingWhiteboardDrill(safeStation.name, effectiveWhiteboardDrills);
+                                  const drillObj =
+                                    matched ||
+                                    createCustomDrillFromStation(safeStation, pIdx + 1, row.category || row.name);
+                                  setInstructionsModalDrill({
+                                    drill: drillObj,
+                                    stationName: safeStation.name,
+                                    stationDesc: safeStation.desc,
+                                    stationFocus: safeStation.focus,
+                                    stationCoach: safeStation.coach,
+                                    periodName: row.name || row.title,
+                                    periodNumber: pIdx + 1,
+                                    periodDuration: row.durationMinutes || row.duration,
+                                  });
+                                }}
+                                className="px-2 py-0.5 bg-indigo-600/20 hover:bg-indigo-600/35 text-indigo-300 hover:text-indigo-100 text-[10px] font-bold rounded-md border border-indigo-500/30 flex items-center gap-1 transition-all cursor-pointer"
+                                title={`View instructions, cues, and diagram for ${safeStation.name}`}
+                              >
+                                <BookOpen className="w-2.5 h-2.5 text-indigo-400" />
+                                <span>Instructions</span>
+                              </button>
+
                               {onOpenWhiteboardDrill && (
                                 <button
                                   type="button"
@@ -2963,6 +3027,26 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
           onOpenWhiteboardDrill={onOpenWhiteboardDrill}
         />
       )}
+
+      {/* Drill Instructions & Whiteboard Preview Modal */}
+      <DrillInstructionsModal
+        isOpen={!!instructionsModalDrill}
+        onClose={() => setInstructionsModalDrill(null)}
+        drill={instructionsModalDrill?.drill || null}
+        stationName={instructionsModalDrill?.stationName}
+        stationDesc={instructionsModalDrill?.stationDesc}
+        stationFocus={instructionsModalDrill?.stationFocus}
+        stationCoach={instructionsModalDrill?.stationCoach}
+        periodName={instructionsModalDrill?.periodName}
+        periodNumber={instructionsModalDrill?.periodNumber}
+        periodDuration={instructionsModalDrill?.periodDuration}
+        onOpenWhiteboard={(drillId, cat) => {
+          setInstructionsModalDrill(null);
+          if (onOpenWhiteboardDrill) {
+            onOpenWhiteboardDrill(drillId, cat);
+          }
+        }}
+      />
     </div>
   );
 };

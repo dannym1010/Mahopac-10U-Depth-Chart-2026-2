@@ -6079,6 +6079,11 @@ function mergeRemoteWeeklyData(
                 activeGuideSub={activeGuideSub}
                 onSelectGuideMain={setActiveGuideMain}
                 onSelectGuideSub={setActiveGuideSub}
+                onOpenWhiteboardDrill={(drillId, cat) => {
+                  if (drillId) setActiveWhiteboardDrillId(drillId);
+                  if (cat) setActiveWhiteboardCategory(cat as any);
+                  setActiveUnit('whiteboard');
+                }}
               />
             )}
 

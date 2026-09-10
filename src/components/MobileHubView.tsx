@@ -43,11 +43,15 @@ import {
   FileCode,
   Layers,
   Printer,
+  PenTool,
 } from 'lucide-react';
 import {
   generatePlaybookGuidePrintHTML,
   printCleanHTML,
 } from '../utils/printUtils';
+import { WhiteboardDrill, loadEffectiveWhiteboardDrills } from './whiteboard/whiteboardDrillData';
+import { findMatchingWhiteboardDrill, createCustomDrillFromStation } from '../utils/drillPlanLinking';
+import { DrillInstructionsModal } from './whiteboard/DrillInstructionsModal';
 import {
   Team,
   UnitType,
@@ -260,6 +264,9 @@ interface MobileHubViewProps {
   activeGuideSub?: string;
   onSelectGuideMain?: (main: string) => void;
   onSelectGuideSub?: (sub: string) => void;
+  // Whiteboard Drill integration
+  onOpenWhiteboardDrill?: (drillId: string, category?: string) => void;
+  whiteboardDrills?: WhiteboardDrill[];
 }
 
 const getPlayerFullName = (p: RosterPlayer): string => {
@@ -342,9 +349,30 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
   activeGuideSub = 'Full Playbook',
   onSelectGuideMain,
   onSelectGuideSub,
+  onOpenWhiteboardDrill,
+  whiteboardDrills,
 }) => {
   // Mobile Hub active tab: 'starters' | 'roster' | 'attendance'
   const [hubTab, setHubTab] = useState<'starters' | 'roster' | 'attendance'>('starters');
+
+  // Drill Instructions & Whiteboard preview modal state
+  const [instructionsModalDrill, setInstructionsModalDrill] = useState<{
+    drill: WhiteboardDrill | null;
+    stationName: string;
+    stationDesc?: string;
+    stationFocus?: string;
+    stationCoach?: string;
+    periodName?: string;
+    periodNumber?: number;
+    periodDuration?: number;
+  } | null>(null);
+
+  // Memoize effective whiteboard drills
+  const effectiveWhiteboardDrills = useMemo(() => {
+    return whiteboardDrills && whiteboardDrills.length > 0
+      ? whiteboardDrills
+      : loadEffectiveWhiteboardDrills();
+  }, [whiteboardDrills]);
   
   // Starters state: Unit, Team String & Formation
   const [starterUnit, setStarterUnit] = useState<'offense' | 'defense' | 'st'>('offense');
@@ -2799,40 +2827,109 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                     {/* Stations / Drills Display */}
                     {stations.length > 0 ? (
                       <div className="space-y-2 pt-1">
-                        {stations.map((stn, sIdx) => (
-                          <div
-                            key={sIdx}
-                            className="bg-slate-950/80 rounded-xl border border-slate-800 p-2.5 space-y-1.5"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs font-black text-indigo-300">
-                                {stn.name || `Station ${sIdx + 1}`}
-                              </span>
-                              {stn.coach && (
-                                <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-indigo-950 text-indigo-300 border border-indigo-700/50">
-                                  👤 {stn.coach}
-                                </span>
-                              )}
-                            </div>
+                        {stations.map((stn, sIdx) => {
+                          const matchedDrill = stn.name
+                            ? findMatchingWhiteboardDrill(stn.name, effectiveWhiteboardDrills)
+                            : null;
 
-                            {stn.desc && (
-                              <p
-                                className={`text-slate-200 font-semibold leading-relaxed ${
-                                  mobilePlanFontSize === 'large' ? 'text-sm' : 'text-xs'
-                                }`}
-                              >
-                                {stn.desc}
-                              </p>
-                            )}
+                          const handleOpenInstructions = () => {
+                            const drillObj =
+                              matchedDrill ||
+                              createCustomDrillFromStation(stn, pIdx + 1, period.category || period.name);
+                            setInstructionsModalDrill({
+                              drill: drillObj,
+                              stationName: stn.name || `Station ${sIdx + 1}`,
+                              stationDesc: stn.desc,
+                              stationFocus: stn.focus,
+                              stationCoach: stn.coach,
+                              periodName: period.name || period.title,
+                              periodNumber: pIdx + 1,
+                              periodDuration: duration,
+                            });
+                          };
 
-                            {stn.focus && (
-                              <div className="flex items-start gap-1.5 pt-1 text-[11px] text-amber-300/90 font-medium">
-                                <span className="font-bold shrink-0 text-amber-400">Key Focus:</span>
-                                <span>{stn.focus}</span>
+                          const handleOpenWhiteboard = () => {
+                            if (onOpenWhiteboardDrill) {
+                              if (matchedDrill) {
+                                onOpenWhiteboardDrill(matchedDrill.id, matchedDrill.category);
+                              } else {
+                                onOpenWhiteboardDrill(stn.name);
+                              }
+                            } else {
+                              onNavigateToUnit('whiteboard');
+                            }
+                          };
+
+                          return (
+                            <div
+                              key={sIdx}
+                              className="bg-slate-950/85 rounded-2xl border border-slate-800 p-3 space-y-2 hover:border-slate-700 transition-all shadow-xs"
+                            >
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
+                                <button
+                                  type="button"
+                                  onClick={handleOpenInstructions}
+                                  className="flex items-center gap-1.5 text-left group cursor-pointer"
+                                  title="View drill instructions and coaching cues"
+                                >
+                                  <span className="text-xs sm:text-sm font-black text-indigo-300 group-hover:text-indigo-200 transition-colors">
+                                    {stn.name || `Station ${sIdx + 1}`}
+                                  </span>
+                                  {matchedDrill && (
+                                    <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black uppercase bg-blue-900/60 text-blue-300 border border-blue-700/50">
+                                      Playbook
+                                    </span>
+                                  )}
+                                </button>
+                                {stn.coach && (
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-indigo-950 text-indigo-300 border border-indigo-700/50">
+                                    👤 {stn.coach}
+                                  </span>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        ))}
+
+                              {stn.desc && (
+                                <p
+                                  className={`text-slate-200 font-semibold leading-relaxed ${
+                                    mobilePlanFontSize === 'large' ? 'text-sm' : 'text-xs'
+                                  }`}
+                                >
+                                  {stn.desc}
+                                </p>
+                              )}
+
+                              {stn.focus && (
+                                <div className="flex items-start gap-1.5 pt-0.5 text-[11px] text-amber-300/90 font-medium">
+                                  <span className="font-bold shrink-0 text-amber-400">Key Focus:</span>
+                                  <span>{stn.focus}</span>
+                                </div>
+                              )}
+
+                              {/* Drill Whiteboard Link & Instructions Actions */}
+                              <div className="flex items-center gap-2 pt-1.5 border-t border-slate-800/80">
+                                <button
+                                  type="button"
+                                  onClick={handleOpenInstructions}
+                                  className="flex-1 py-1.5 px-2.5 bg-indigo-600/25 hover:bg-indigo-600/40 text-indigo-200 hover:text-white text-xs font-bold rounded-xl border border-indigo-500/35 flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-98"
+                                  title="Open drill instructions and coaching points"
+                                >
+                                  <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+                                  <span>Instructions &amp; Cues</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={handleOpenWhiteboard}
+                                  className="py-1.5 px-3 bg-blue-600/25 hover:bg-blue-600/40 text-blue-200 hover:text-white text-xs font-bold rounded-xl border border-blue-500/35 flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-98"
+                                  title="Open drill in interactive whiteboard"
+                                >
+                                  <PenTool className="w-3.5 h-3.5 text-blue-400" />
+                                  <span>Whiteboard</span>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="text-xs text-slate-400 italic bg-slate-950/40 p-2.5 rounded-xl border border-slate-800/60">
@@ -2848,6 +2945,28 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Drill Instructions & Whiteboard Preview Modal */}
+      <DrillInstructionsModal
+        isOpen={!!instructionsModalDrill}
+        onClose={() => setInstructionsModalDrill(null)}
+        drill={instructionsModalDrill?.drill || null}
+        stationName={instructionsModalDrill?.stationName}
+        stationDesc={instructionsModalDrill?.stationDesc}
+        stationFocus={instructionsModalDrill?.stationFocus}
+        stationCoach={instructionsModalDrill?.stationCoach}
+        periodName={instructionsModalDrill?.periodName}
+        periodNumber={instructionsModalDrill?.periodNumber}
+        periodDuration={instructionsModalDrill?.periodDuration}
+        onOpenWhiteboard={(drillId, cat) => {
+          setInstructionsModalDrill(null);
+          if (onOpenWhiteboardDrill) {
+            onOpenWhiteboardDrill(drillId, cat);
+          } else {
+            onNavigateToUnit('whiteboard');
+          }
+        }}
+      />
     </div>
   );
 };
