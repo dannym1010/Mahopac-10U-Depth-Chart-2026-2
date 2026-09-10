@@ -190,13 +190,13 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
         const primaryColor = selectedWb.columns?.[0]?.color || '#2563eb';
         setHeaderColor(primaryColor);
       } else if (presetLayoutMode === 'col_1') {
-        setTableTitle(`${selectedWb.title} • ${col1Name}`);
+        setTableTitle(col1Name);
         setHeaderColor(selectedWb.columns?.[0]?.color || '#facc15');
       } else if (presetLayoutMode === 'col_2') {
-        setTableTitle(`${selectedWb.title} • ${col2Name}`);
+        setTableTitle(col2Name);
         setHeaderColor(selectedWb.columns?.[1]?.color || '#3b82f6');
       } else if (presetLayoutMode === 'col_both_split') {
-        setTableTitle(`${selectedWb.title} (Both Columns as 2 Tables)`);
+        setTableTitle(`${col1Name} & ${col2Name}`);
         setHeaderColor(selectedWb.columns?.[0]?.color || '#2563eb');
       }
     }
@@ -331,6 +331,7 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
           group,
           slotsCount: interleavedPlays.length,
           columnsCount: 2,
+          columnHeaders: [col1.name?.trim() || 'Column 1', col2.name?.trim() || 'Column 2'],
           colSpan: 2, // 2 columns wide so full play name is visible!
           wristbandId: selectedWb.id,
           wristbandPresetMode: 'full_two_col',
@@ -346,7 +347,7 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
       return [
         {
           id: `wb_table_${selectedWb.id}_c1_${Date.now()}`,
-          title: tableTitle.trim() || `${selectedWb.title} • ${col1.name || 'Column 1'}`,
+          title: tableTitle.trim() || col1.name || 'Column 1',
           headerBgColor: headerColor || col1.color,
           headerTextColor: !isDarkColor(headerColor || col1.color) ? '#000000' : '#ffffff',
           targetUnit,
@@ -369,7 +370,7 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
       return [
         {
           id: `wb_table_${selectedWb.id}_c2_${Date.now()}`,
-          title: tableTitle.trim() || `${selectedWb.title} • ${col2.name || 'Column 2'}`,
+          title: tableTitle.trim() || col2.name || 'Column 2',
           headerBgColor: headerColor || col2.color,
           headerTextColor: !isDarkColor(headerColor || col2.color) ? '#000000' : '#ffffff',
           targetUnit,
@@ -393,7 +394,7 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
 
     const sec1: CallSheetSection = {
       id: `wb_table_${selectedWb.id}_split1_${Date.now()}`,
-      title: `${selectedWb.title} • ${col1.name || 'Column 1'}`,
+      title: col1.name || 'Column 1',
       headerBgColor: col1.color || '#facc15',
       headerTextColor: !isDarkColor(col1.color || '#facc15') ? '#000000' : '#ffffff',
       targetUnit,
@@ -411,7 +412,7 @@ export const AddTableModal: React.FC<AddTableModalProps> = ({
 
     const sec2: CallSheetSection = {
       id: `wb_table_${selectedWb.id}_split2_${Date.now()}`,
-      title: `${selectedWb.title} • ${col2.name || 'Column 2'}`,
+      title: col2.name || 'Column 2',
       headerBgColor: col2.color || '#3b82f6',
       headerTextColor: !isDarkColor(col2.color || '#3b82f6') ? '#000000' : '#ffffff',
       targetUnit,

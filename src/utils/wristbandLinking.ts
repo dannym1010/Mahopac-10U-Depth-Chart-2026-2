@@ -554,7 +554,7 @@ export function createSectionFromWristband(
 
   return {
     id: `sec_wb_${wb.id}_${Date.now()}`,
-    title: wb.title ? `⌚ ${wb.title.toUpperCase()}` : '⌚ WRISTBAND INSERT PLAYS',
+    title: wb.title ? wb.title : 'WRISTBAND PLAYS',
     subtitle: wb.subtitle || `Cards 1 - ${playsList.length}`,
     headerBgColor: wb.columns[0]?.color ? (isDarkColor(wb.columns[0].color) ? '#1e3a8a' : wb.columns[0].color) : '#1e3a8a',
     headerTextColor: '#ffffff',
@@ -562,6 +562,7 @@ export function createSectionFromWristband(
     group,
     slotsCount: playsList.length,
     columnsCount: cols.length > 1 ? 2 : 1,
+    columnHeaders: cols.length > 1 ? cols.map((c, idx) => c.name?.trim() || `Column ${idx + 1}`) : undefined,
     colSpan: cols.length > 1 ? 2 : 1,
     wristbandId: wb.id,
     wristbandPresetMode: cols.length > 1 ? 'full_two_col' : 'col_1',
@@ -758,12 +759,18 @@ export function syncWristbandToCallSheet(
   };
 
   const syncSection = (sec: CallSheetSection): CallSheetSection => {
+    const titleMatchesWb = wristbands.some(
+      (w) =>
+        Boolean(w.title && (sec.title.includes(w.title) || w.title.includes(sec.title))) ||
+        (w.columns || []).some((col) => col.name && sec.title.includes(col.name))
+    );
     const isWbPreset =
       Boolean(sec.wristbandId) ||
       Boolean(sec.wristbandPresetMode) ||
       sec.id.startsWith('wb_table_') ||
       sec.id.startsWith('sec_wb_') ||
-      sec.title.toLowerCase().includes('wristband');
+      sec.title.toLowerCase().includes('wristband') ||
+      titleMatchesWb;
 
     let wb: SingleWristband | undefined;
     if (sec.wristbandId) {
@@ -775,8 +782,19 @@ export function syncWristbandToCallSheet(
         wb = wbMap.get(match[1]) || wristbands.find((w) => w.id === match[1]);
       }
     }
-    if (!wb && isWbPreset) {
-      wb = wristbands.find((w) => sec.title.toLowerCase().includes((w.title || '').toLowerCase()));
+    if (!wb) {
+      wb = wristbands.find((w) =>
+        (w.title && sec.title.toLowerCase().includes(w.title.toLowerCase())) ||
+        (w.title && w.title.toLowerCase().includes(sec.title.toLowerCase())) ||
+        (w.columns || []).some((col) => col.name && sec.title.toLowerCase().includes(col.name.toLowerCase()))
+      );
+    }
+    if (!wb) {
+      const firstWbPlay = (sec.plays || []).find((p) => p?.wristbandId || p?.wristbandSlotMatch?.wristbandId);
+      const playWbId = firstWbPlay?.wristbandId || firstWbPlay?.wristbandSlotMatch?.wristbandId;
+      if (playWbId) {
+        wb = wbMap.get(playWbId) || wristbands.find((w) => w.id === playWbId);
+      }
     }
     if (!wb && isWbPreset && wristbands.length > 0) {
       wb = wristbands[0];
@@ -902,6 +920,10 @@ export function syncWristbandToCallSheet(
         return {
           ...sec,
           title: wbFullTitle,
+          columnHeaders: [
+            col1.name?.trim() || 'Column 1',
+            col2.name?.trim() || 'Column 2',
+          ],
           wristbandId: wb.id,
           wristbandPresetMode: 'full_two_col',
           columnsCount: 2,
@@ -910,12 +932,47 @@ export function syncWristbandToCallSheet(
           plays: interleaved,
         };
       } else {
-        const colIdx =
-          sec.wristbandColIdx !== undefined
-            ? sec.wristbandColIdx
-            : mode === 'col_2' || sec.id.includes('_c2_') || sec.title.includes('Column 2')
-            ? 1
-            : 0;
+        let colIdx = sec.wristbandColIdx;
+        if (colIdx === undefined) {
+          if (
+            mode === 'col_2' ||
+            sec.id.includes('_c2_') ||
+            sec.id.includes('split2') ||
+            sec.title.includes('Column 2') ||
+            (col2.name && sec.title.includes(col2.name))
+          ) {
+            colIdx = 1;
+          } else if (
+            mode === 'col_1' ||
+            sec.id.includes('_c1_') ||
+            sec.id.includes('split1') ||
+            sec.title.includes('Column 1') ||
+            (col1.name && sec.title.includes(col1.name))
+          ) {
+            colIdx = 0;
+          } else {
+            // Inspect plays to determine which wristband column this table holds
+            const populatedPlays = (sec.plays || []).filter(Boolean) as CallSheetPlay[];
+            let col0Count = 0;
+            let col1Count = 0;
+            populatedPlays.forEach((p) => {
+              if (p.wristbandSlotMatch?.colIdx === 0) col0Count++;
+              else if (p.wristbandSlotMatch?.colIdx === 1) col1Count++;
+              else if (p.wristbandNum !== undefined) {
+                const num = Number(p.wristbandNum);
+                if (wb!.labelingMode === 'same_per_card') {
+                  if (num <= rows) col0Count++;
+                  else col1Count++;
+                } else {
+                  if (num < wbStart + rows) col0Count++;
+                  else col1Count++;
+                }
+              }
+            });
+            colIdx = col1Count > col0Count ? 1 : 0;
+          }
+        }
+
         const targetCol = colIdx === 1 ? col2 : col1;
         const targetPlays = targetCol.plays || [];
         const plays: (CallSheetPlay | null)[] = targetPlays.map((p, r) => {
@@ -957,14 +1014,35 @@ export function syncWristbandToCallSheet(
           };
         });
 
-        const wbBaseTitle = (wb.title && wb.title.trim()) ? wb.title.trim() : 'Wristband';
-        const colTitle = `${wbBaseTitle} • ${targetCol.name || (colIdx === 1 ? 'Column 2' : 'Column 1')}`;
+        // The column header should match the wristband label
+        const colLabel = (targetCol.name && targetCol.name.trim())
+          ? targetCol.name.trim()
+          : (colIdx === 1 ? 'Column 2' : 'Column 1');
+
+        // Check if title should be updated to match the wristband label
+        const shouldUpdateTitle =
+          !sec.title ||
+          sec.title.trim() === '' ||
+          sec.title.includes(wb.title) ||
+          wb.title.includes(sec.title) ||
+          sec.title.includes('•') ||
+          sec.title.toLowerCase().includes('wristband') ||
+          sec.title.toLowerCase().includes('column 1') ||
+          sec.title.toLowerCase().includes('column 2') ||
+          (col1.name && sec.title === col1.name) ||
+          (col2.name && sec.title === col2.name);
+
+        const colTitle = shouldUpdateTitle ? colLabel : sec.title;
+        const headerBg = sec.headerBgColor || targetCol.color || (colIdx === 1 ? '#38bdf8' : '#facc15');
+        const headerText = sec.headerTextColor || (!isDarkColor(headerBg) ? '#000000' : '#ffffff');
 
         return {
           ...sec,
           title: colTitle,
+          headerBgColor: headerBg,
+          headerTextColor: headerText,
           wristbandId: wb.id,
-          wristbandPresetMode: mode,
+          wristbandPresetMode: colIdx === 1 ? 'col_2' : 'col_1',
           wristbandColIdx: colIdx,
           slotsCount: plays.length,
           plays,
@@ -972,16 +1050,9 @@ export function syncWristbandToCallSheet(
       }
     }
 
-    // If section explicitly links to a wristband or is named like a wristband table, keep title synced
-    const matchedWbForSec = sec.wristbandId ? wbMap.get(sec.wristbandId) : undefined;
-    const syncedTitle = (matchedWbForSec && matchedWbForSec.title && matchedWbForSec.title.trim())
-      ? matchedWbForSec.title.trim()
-      : sec.title;
-
-    // Default for regular (situational/custom) sections: sync individual plays
+    // Default for regular (situational/custom) sections: sync individual plays without overriding custom table titles
     return {
       ...sec,
-      title: syncedTitle,
       plays: (sec.plays || []).map(syncPlay),
     };
   };
