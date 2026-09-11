@@ -131,11 +131,42 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const svgContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Field size & zoom controls
   const [fieldViewMode, setFieldViewMode] = useState<'standard' | 'wide' | 'jumbo' | 'stadium'>(fieldSizePreset);
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  // Measure actual DOM dimensions of the SVG viewing area so viewBox matches exact aspect ratio
+  const [svgDimensions, setSvgDimensions] = useState<{ width: number; height: number }>({
+    width: 1100,
+    height: 600,
+  });
+
+  useEffect(() => {
+    const el = svgContainerRef.current;
+    if (!el) return;
+
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 50 && rect.height > 50) {
+        setSvgDimensions({
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        });
+      }
+    };
+
+    measure();
+    const ro = new ResizeObserver(() => measure());
+    ro.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
 
   // Play Animation Engine State
   const [isAnimationMode, setIsAnimationMode] = useState<boolean>(false);
@@ -173,23 +204,41 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   // Freehand drawing state
   const [isDrawing, setIsDrawing] = useState(false);
 
-  // Field viewBox bounds calculation
-  const baseView =
-    fieldViewMode === 'standard'
-      ? { minX: 0, minY: 0, width: 700, height: 500 }
-      : fieldViewMode === 'wide'
-      ? { minX: -60, minY: -30, width: 820, height: 560 }
-      : fieldViewMode === 'jumbo'
-      ? { minX: -110, minY: -50, width: 920, height: 600 }
-      : { minX: -220, minY: -80, width: 1140, height: 680 }; // 'stadium' full field arena
+  // Center of football play action (LOS is y=200, Center is x=350)
+  const centerX = 350;
+  const centerY = 230;
 
-  const centerX = Math.round(baseView.minX + baseView.width / 2);
-  const centerY = Math.round(baseView.minY + baseView.height / 2);
-  const scaledWidth = Math.round(baseView.width / zoomLevel);
-  const scaledHeight = Math.round(baseView.height / zoomLevel);
-  const viewBoxMinX = Math.round(centerX - scaledWidth / 2);
-  const viewBoxMinY = Math.round(centerY - scaledHeight / 2);
-  const viewBoxStr = `${viewBoxMinX} ${viewBoxMinY} ${scaledWidth} ${scaledHeight}`;
+  // Base height per preset mode:
+  const baseTargetHeight =
+    fieldViewMode === 'standard'
+      ? 500
+      : fieldViewMode === 'wide'
+      ? 560
+      : fieldViewMode === 'jumbo'
+      ? 620
+      : 700;
+
+  // Maintain aspect ratio matching the exact container viewing dimensions
+  const aspect =
+    svgDimensions.width > 0 && svgDimensions.height > 0
+      ? svgDimensions.width / svgDimensions.height
+      : 1.65;
+
+  // ViewBox height and width scaled inversely by zoomLevel
+  const viewBoxHeight = Math.round(baseTargetHeight / zoomLevel);
+  const viewBoxWidth = Math.round(viewBoxHeight * aspect);
+
+  const viewBoxMinX = Math.round(centerX - viewBoxWidth / 2);
+  const viewBoxMinY = Math.round(centerY - viewBoxHeight / 2);
+  const viewBoxStr = `${viewBoxMinX} ${viewBoxMinY} ${viewBoxWidth} ${viewBoxHeight}`;
+
+  // Dynamic field boundaries extending to the full visible canvas (with neat margin)
+  const fieldLeft = viewBoxMinX + 16;
+  const fieldRight = viewBoxMinX + viewBoxWidth - 16;
+  const fieldTop = viewBoxMinY + 14;
+  const fieldBottom = viewBoxMinY + viewBoxHeight - 14;
+  const fieldWidth = fieldRight - fieldLeft;
+  const fieldHeight = fieldBottom - fieldTop;
 
   // Animation Loop via requestAnimationFrame
   useEffect(() => {
@@ -301,11 +350,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       pt.y = clientY;
       const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
       return {
-        x: Math.round(Math.max(viewBoxMinX + 8, Math.min(viewBoxMinX + scaledWidth - 8, svgP.x))),
-        y: Math.round(Math.max(viewBoxMinY + 8, Math.min(viewBoxMinY + scaledHeight - 8, svgP.y))),
+        x: Math.round(Math.max(fieldLeft + 4, Math.min(fieldRight - 4, svgP.x))),
+        y: Math.round(Math.max(fieldTop + 4, Math.min(fieldBottom - 4, svgP.y))),
       };
     },
-    [viewBoxMinX, viewBoxMinY, scaledWidth, scaledHeight]
+    [fieldLeft, fieldRight, fieldTop, fieldBottom]
   );
 
   // Handle escape key to exit fullscreen
@@ -1271,10 +1320,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       />
 
       {/* Main Professional Football Field SVG Layer */}
-      <div className="relative flex-1 w-full h-full min-h-[500px] overflow-hidden bg-white">
+      <div ref={svgContainerRef} className="relative flex-1 w-full h-full min-h-[500px] overflow-hidden bg-white">
         <svg
           ref={svgRef}
           viewBox={viewBoxStr}
+          preserveAspectRatio="none"
           className="w-full h-full block relative z-10"
           onClick={handleSvgClick}
           onPointerMove={handlePointerMove}
@@ -1333,117 +1383,148 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           </defs>
 
           {/* Clickable broad field background */}
-          <rect id="fieldBackground" x="-300" y="-200" width="1600" height="1200" fill="#ffffff" />
+          <rect
+            id="fieldBackground"
+            x={viewBoxMinX - 100}
+            y={viewBoxMinY - 100}
+            width={viewBoxWidth + 200}
+            height={viewBoxHeight + 200}
+            fill="#ffffff"
+          />
 
-          {/* Professional Football Field Markings - Grid Lines, Hashes & Numbers */}
+          {/* Professional Football Field Markings - Dynamic Grid Lines, Hashes & Yard Numbers spanning full canvas */}
           <g id="fieldLines" className="select-none pointer-events-none">
-            {/* Subtle Outer Boundary Box */}
+            {/* Outer Field Boundary Box */}
             <rect
-              x={baseView.minX + 22}
-              y={baseView.minY + 16}
-              width={baseView.width - 44}
-              height={baseView.height - 32}
+              x={fieldLeft}
+              y={fieldTop}
+              width={fieldWidth}
+              height={fieldHeight}
               rx="6"
               fill="none"
               stroke="#94a3b8"
-              strokeWidth="1.8"
+              strokeWidth="2"
             />
 
-            {/* Subtle 5-yard grid lines */}
-            {[60, 100, 140, 180, 240, 280, 320, 360, 400, 440, 480].map((yLine) => (
-              <line
-                key={`grid-${yLine}`}
-                x1={baseView.minX + 22}
-                y1={yLine}
-                x2={baseView.minX + baseView.width - 22}
-                y2={yLine}
-                stroke={yLine % 80 === 0 ? '#cbd5e1' : '#f1f5f9'}
-                strokeWidth="1"
-                strokeDasharray={yLine % 80 === 0 ? '4,4' : undefined}
-              />
-            ))}
+            {/* Dynamic 5-Yard & 10-Yard Grid Lines across entire visible field */}
+            {(() => {
+              const lines: React.ReactNode[] = [];
+              const startY = Math.floor((fieldTop + 20) / 40) * 40;
+              const endY = Math.ceil((fieldBottom - 20) / 40) * 40;
+
+              for (let yLine = startY; yLine <= endY; yLine += 40) {
+                if (yLine === 200) continue; // LOS is drawn separately as solid blue line
+                const isMajor = (yLine - 200) % 80 === 0;
+                lines.push(
+                  <line
+                    key={`grid-${yLine}`}
+                    x1={fieldLeft}
+                    y1={yLine}
+                    x2={fieldRight}
+                    y2={yLine}
+                    stroke={isMajor ? '#cbd5e1' : '#f1f5f9'}
+                    strokeWidth={isMajor ? 1.2 : 1}
+                    strokeDasharray={isMajor ? '4,4' : undefined}
+                  />
+                );
+              }
+              return lines;
+            })()}
 
             {/* Blue Line of Scrimmage (LOS) at y: 200 */}
             <line
-              x1={baseView.minX + 22}
+              x1={fieldLeft}
               y1="200"
-              x2={baseView.minX + baseView.width - 22}
+              x2={fieldRight}
               y2="200"
               stroke="#2563eb"
-              strokeWidth="3"
+              strokeWidth="3.2"
             />
 
-            {/* Hash Marks Columns - Inbounds Hashes across the field */}
-            <line x1="270" y1={baseView.minY + 20} x2="270" y2={baseView.minY + baseView.height - 20} stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,7" />
-            <line x1="430" y1={baseView.minY + 20} x2="430" y2={baseView.minY + baseView.height - 20} stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,7" />
+            {/* Inbounds Hash Marks Columns across the full vertical field */}
+            <line
+              x1="270"
+              y1={fieldTop + 6}
+              x2="270"
+              y2={fieldBottom - 6}
+              stroke="#cbd5e1"
+              strokeWidth="1.2"
+              strokeDasharray="3,7"
+            />
+            <line
+              x1="430"
+              y1={fieldTop + 6}
+              x2="430"
+              y2={fieldBottom - 6}
+              stroke="#cbd5e1"
+              strokeWidth="1.2"
+              strokeDasharray="3,7"
+            />
 
-            {/* Sideline Hash Ticks */}
-            {[40, 60, 80, 100, 120, 140, 160, 180, 220, 240, 260, 280, 300, 320, 340, 360, 380, 400, 420, 440, 460, 480, 500].map(
-              (yVal) => (
-                <g key={`hash-${yVal}`}>
-                  <line x1={baseView.minX + 22} y1={yVal} x2={baseView.minX + 31} y2={yVal} stroke="#94a3b8" strokeWidth="1" />
-                  <line x1={baseView.minX + baseView.width - 31} y1={yVal} x2={baseView.minX + baseView.width - 22} y2={yVal} stroke="#94a3b8" strokeWidth="1" />
-                  <line x1="266" y1={yVal} x2="274" y2={yVal} stroke="#cbd5e1" strokeWidth="1" />
-                  <line x1="426" y1={yVal} x2="434" y2={yVal} stroke="#cbd5e1" strokeWidth="1" />
-                </g>
-              )
-            )}
+            {/* Sideline Hash Ticks & Inbounds Hash Crosses */}
+            {(() => {
+              const hashes: React.ReactNode[] = [];
+              const startY = Math.floor((fieldTop + 10) / 20) * 20;
+              const endY = Math.ceil((fieldBottom - 10) / 20) * 20;
 
-            {/* Authentic College/Pro Sideline Numbers (Watermarked) */}
-            <g transform={`translate(${baseView.minX + baseView.width - 48}, 100) rotate(90)`} opacity="0.35">
-              <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
-                10
-              </text>
-            </g>
-            <g transform={`translate(${baseView.minX + 48}, 100) rotate(-90)`} opacity="0.35">
-              <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
-                10
-              </text>
-            </g>
+              for (let yVal = startY; yVal <= endY; yVal += 20) {
+                hashes.push(
+                  <g key={`hash-${yVal}`}>
+                    {/* Sideline Left Hash Tick */}
+                    <line x1={fieldLeft} y1={yVal} x2={fieldLeft + 9} y2={yVal} stroke="#94a3b8" strokeWidth="1.2" />
+                    {/* Sideline Right Hash Tick */}
+                    <line x1={fieldRight - 9} y1={yVal} x2={fieldRight} y2={yVal} stroke="#94a3b8" strokeWidth="1.2" />
+                    {/* College/Pro Inbounds Hashes */}
+                    <line x1="266" y1={yVal} x2="274" y2={yVal} stroke="#cbd5e1" strokeWidth="1.2" />
+                    <line x1="426" y1={yVal} x2="434" y2={yVal} stroke="#cbd5e1" strokeWidth="1.2" />
+                  </g>
+                );
+              }
+              return hashes;
+            })()}
 
-            <g transform={`translate(${baseView.minX + baseView.width - 48}, 280) rotate(90)`} opacity="0.35">
-              <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
-                10
-              </text>
-            </g>
-            <g transform={`translate(${baseView.minX + 48}, 280) rotate(-90)`} opacity="0.35">
-              <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
-                10
-              </text>
-            </g>
+            {/* Sideline Yard Numbers (10, 20, 30, 40, 50, etc.) placed automatically along both sidelines */}
+            {(() => {
+              const numbers: React.ReactNode[] = [];
+              const startY = Math.floor((fieldTop + 30) / 80) * 80;
+              const endY = Math.ceil((fieldBottom - 30) / 80) * 80;
 
-            <g transform={`translate(${baseView.minX + baseView.width - 48}, 360) rotate(90)`} opacity="0.35">
-              <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
-                20
-              </text>
-            </g>
-            <g transform={`translate(${baseView.minX + 48}, 360) rotate(-90)`} opacity="0.35">
-              <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
-                20
-              </text>
-            </g>
+              for (let yVal = startY; yVal <= endY; yVal += 80) {
+                const distYards = Math.round(Math.abs(yVal - 200) / 8);
+                if (distYards === 0) continue; // Skip LOS
+                const numLabel = distYards <= 50 ? distYards : 100 - distYards;
+                if (numLabel <= 0) continue;
 
-            <g transform={`translate(${baseView.minX + baseView.width - 48}, 440) rotate(90)`} opacity="0.35">
-              <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
-                30
-              </text>
-            </g>
-            <g transform={`translate(${baseView.minX + 48}, 440) rotate(-90)`} opacity="0.35">
-              <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
-                30
-              </text>
-            </g>
+                numbers.push(
+                  <React.Fragment key={`num-${yVal}`}>
+                    {/* Right Sideline Yard Number */}
+                    <g transform={`translate(${fieldRight - 44}, ${yVal}) rotate(90)`} opacity="0.40">
+                      <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
+                        {numLabel}
+                      </text>
+                    </g>
+                    {/* Left Sideline Yard Number */}
+                    <g transform={`translate(${fieldLeft + 44}, ${yVal}) rotate(-90)`} opacity="0.40">
+                      <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
+                        {numLabel}
+                      </text>
+                    </g>
+                  </React.Fragment>
+                );
+              }
+              return numbers;
+            })()}
 
-            {/* High-Contrast LOS Badges */}
-            <g>
-              <rect x={baseView.minX + 22} y="189" width="34" height="22" rx="4" fill="#2563eb" />
-              <text x={baseView.minX + 39} y="204" fontFamily="'Space Grotesk', sans-serif" fontSize="10" fontWeight="900" fill="#ffffff" textAnchor="middle">
+            {/* High-Contrast LOS Badges pinned to sidelines */}
+            <g transform={`translate(${fieldLeft + 2}, 189)`}>
+              <rect width="32" height="22" rx="4" fill="#2563eb" />
+              <text x="16" y="15" fontFamily="'Space Grotesk', sans-serif" fontSize="10" fontWeight="900" fill="#ffffff" textAnchor="middle">
                 LOS
               </text>
             </g>
-            <g>
-              <rect x={baseView.minX + baseView.width - 56} y="189" width="34" height="22" rx="4" fill="#2563eb" />
-              <text x={baseView.minX + baseView.width - 39} y="204" fontFamily="'Space Grotesk', sans-serif" fontSize="10" fontWeight="900" fill="#ffffff" textAnchor="middle">
+            <g transform={`translate(${fieldRight - 34}, 189)`}>
+              <rect width="32" height="22" rx="4" fill="#2563eb" />
+              <text x="16" y="15" fontFamily="'Space Grotesk', sans-serif" fontSize="10" fontWeight="900" fill="#ffffff" textAnchor="middle">
                 LOS
               </text>
             </g>
