@@ -34,6 +34,10 @@ import {
   Calendar,
   Upload,
   Type,
+  Circle,
+  Square,
+  Triangle,
+  Star,
 } from 'lucide-react';
 import { WhiteboardToken, WhiteboardArrow, WhiteboardZoneBubble, WhiteboardTextElement, Team, UserRole, PracticePlan } from '../types';
 import {
@@ -335,8 +339,13 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
   const [selectedType, setSelectedType] = useState<'token' | 'arrow' | 'zone' | 'text' | null>(null);
 
   // Stamping / Tool mode
-  const [stampMode, setStampMode] = useState<'none' | 'O' | 'X' | 'blitz' | 'zone' | 'text'>('none');
+  const [stampMode, setStampMode] = useState<
+    'none' | 'O' | 'X' | 'square' | 'triangle' | 'diamond' | 'star' | 'blitz' | 'zone' | 'circle_zone' | 'text'
+  >('none');
   const [stampLabel, setStampLabel] = useState<string>('DE');
+  const [stampColor, setStampColor] = useState<string>('#1d4ed8');
+  const [stampFillMode, setStampFillMode] = useState<'fill' | 'nofill'>('fill');
+  const [stampZoneShape, setStampZoneShape] = useState<'circle' | 'ellipse' | 'rect'>('circle');
 
   // Drawing Canvas State
   const [isDrawingMode, setIsDrawingMode] = useState<boolean>(false);
@@ -1555,6 +1564,9 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             penWidth={penWidth}
             stampMode={stampMode}
             stampLabel={stampLabel}
+            stampColor={stampColor}
+            stampFillMode={stampFillMode}
+            stampZoneShape={stampZoneShape}
             onUpdateTokens={setTokens}
             onUpdateArrows={setArrows}
             onUpdateZones={setZones}
@@ -1625,134 +1637,287 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             )}
           </div>
 
-          {/* Center: Stamp X's, O's, Blitz, Zones */}
-          <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-xl border border-slate-800 flex-wrap">
-            <span className="text-[10px] font-black uppercase text-slate-400 px-1">Stamp:</span>
+          {/* Center: Comprehensive Stamp Controls for Shapes, Text, Fill, Colors, & Circle Zones */}
+          <div className="flex items-center gap-2 bg-slate-900 p-2 rounded-xl border border-slate-800 flex-wrap">
+            {/* Shape Selectors */}
+            <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800">
+              <span className="text-[10px] font-black uppercase text-slate-400 px-1">Shapes:</span>
 
-            {/* Add X (Defense) */}
-            <button
-              type="button"
-              onClick={() => {
-                setIsDrawingMode(false);
-                setStampMode(stampMode === 'X' ? 'none' : 'X');
-              }}
-              className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                stampMode === 'X'
-                  ? 'bg-blue-600 text-white ring-2 ring-blue-400'
-                  : 'bg-slate-800 hover:bg-slate-750 text-blue-300 border border-slate-700'
-              }`}
-            >
-              + X (Def)
-            </button>
+              {/* Circle (O) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDrawingMode(false);
+                  setStampMode(stampMode === 'O' ? 'none' : 'O');
+                }}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  stampMode === 'O'
+                    ? 'bg-blue-600 text-white ring-2 ring-blue-400 shadow-md'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                }`}
+                title="Stamp Circle Token"
+              >
+                <Circle className="w-3.5 h-3.5" />
+                <span className="text-[11px]">Circle</span>
+              </button>
 
-            {/* Position Picker for X */}
-            {stampMode === 'X' && (
+              {/* Square */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDrawingMode(false);
+                  setStampMode(stampMode === 'square' ? 'none' : 'square');
+                }}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  stampMode === 'square'
+                    ? 'bg-blue-600 text-white ring-2 ring-blue-400 shadow-md'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                }`}
+                title="Stamp Square Token (e.g. Center / Lineman)"
+              >
+                <Square className="w-3.5 h-3.5" />
+                <span className="text-[11px]">Square</span>
+              </button>
+
+              {/* Triangle */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDrawingMode(false);
+                  setStampMode(stampMode === 'triangle' ? 'none' : 'triangle');
+                }}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  stampMode === 'triangle'
+                    ? 'bg-blue-600 text-white ring-2 ring-blue-400 shadow-md'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                }`}
+                title="Stamp Triangle Token (e.g. Safety / Edge)"
+              >
+                <Triangle className="w-3.5 h-3.5" />
+                <span className="text-[11px]">Triangle</span>
+              </button>
+
+              {/* Diamond */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDrawingMode(false);
+                  setStampMode(stampMode === 'diamond' ? 'none' : 'diamond');
+                }}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  stampMode === 'diamond'
+                    ? 'bg-blue-600 text-white ring-2 ring-blue-400 shadow-md'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                }`}
+                title="Stamp Diamond Token (e.g. Hybrid / H-Back / Star)"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span className="text-[11px]">Diamond</span>
+              </button>
+
+              {/* Star */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDrawingMode(false);
+                  setStampMode(stampMode === 'star' ? 'none' : 'star');
+                }}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  stampMode === 'star'
+                    ? 'bg-blue-600 text-white ring-2 ring-blue-400 shadow-md'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                }`}
+                title="Stamp Star Token (e.g. Impact Player / Key Defender)"
+              >
+                <Star className="w-3.5 h-3.5" />
+                <span className="text-[11px]">Star</span>
+              </button>
+
+              {/* X Token */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDrawingMode(false);
+                  setStampMode(stampMode === 'X' ? 'none' : 'X');
+                }}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  stampMode === 'X'
+                    ? 'bg-red-600 text-white ring-2 ring-red-400 shadow-md'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                }`}
+                title="Stamp X Token (Defense)"
+              >
+                <CloseIcon className="w-3.5 h-3.5" />
+                <span className="text-[11px]">X</span>
+              </button>
+            </div>
+
+            {/* Fill Mode Toggle: Fill vs No Fill */}
+            <div className="flex items-center bg-slate-950/80 p-1 rounded-lg border border-slate-800">
+              <span className="text-[10px] font-black uppercase text-slate-400 px-1">Style:</span>
+              <button
+                type="button"
+                onClick={() => setStampFillMode('fill')}
+                className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer transition-colors ${
+                  stampFillMode === 'fill' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                }`}
+                title="Solid Fill"
+              >
+                Fill
+              </button>
+              <button
+                type="button"
+                onClick={() => setStampFillMode('nofill')}
+                className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer transition-colors ${
+                  stampFillMode === 'nofill' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                }`}
+                title="No Fill (Crisp Outline only)"
+              >
+                No Fill
+              </button>
+            </div>
+
+            {/* Color Swatches for Shapes & Zones */}
+            <div className="flex items-center gap-1 bg-slate-950/80 p-1.5 rounded-lg border border-slate-800">
+              <span className="text-[10px] font-black uppercase text-slate-400 px-1">Color:</span>
+              {[
+                { color: '#1d4ed8', title: 'Royal Blue' },
+                { color: '#dc2626', title: 'Crimson Red' },
+                { color: '#16a34a', title: 'Emerald Green' },
+                { color: '#d97706', title: 'Gold Amber' },
+                { color: '#7c3aed', title: 'Purple' },
+                { color: '#ea580c', title: 'Orange' },
+                { color: '#0f172a', title: 'Slate Black' },
+                { color: '#ffffff', title: 'White' },
+              ].map((c) => (
+                <button
+                  key={c.color}
+                  type="button"
+                  onClick={() => setStampColor(c.color)}
+                  title={c.title}
+                  className={`w-4 h-4 rounded-full border cursor-pointer transition-transform ${
+                    stampColor === c.color ? 'scale-125 border-white ring-2 ring-blue-400' : 'border-slate-600 hover:scale-110'
+                  }`}
+                  style={{ backgroundColor: c.color }}
+                />
+              ))}
+              <input
+                type="color"
+                value={stampColor}
+                onChange={(e) => setStampColor(e.target.value)}
+                title="Custom Color"
+                className="w-4 h-4 rounded cursor-pointer bg-transparent border-0 p-0"
+              />
+            </div>
+
+            {/* Label Input for Placed Shape */}
+            <div className="flex items-center bg-slate-950/80 p-1 px-1.5 rounded-lg border border-slate-800">
+              <span className="text-[10px] font-bold text-slate-400 mr-1.5">Text/Pos:</span>
+              <input
+                type="text"
+                value={stampLabel}
+                onChange={(e) => setStampLabel(e.target.value)}
+                placeholder="Label"
+                className="bg-slate-800 text-white font-black text-xs px-2 py-0.5 rounded border border-slate-700 w-16 focus:w-20 transition-all outline-none"
+              />
               <select
                 value={stampLabel}
                 onChange={(e) => setStampLabel(e.target.value)}
-                className="bg-slate-900 text-white text-xs font-bold px-1.5 py-1 rounded border border-slate-700"
+                className="bg-slate-800 text-white text-[11px] font-bold px-1 py-0.5 rounded border border-slate-700 ml-1 cursor-pointer"
               >
-                {['DE', 'DT', 'NT', 'MLB', 'OLB', 'CB', 'FS', 'SS', 'X'].map((pos) => (
-                  <option key={pos} value={pos}>
-                    {pos}
-                  </option>
-                ))}
+                <optgroup label="Offense">
+                  {['C', 'QB', 'RB', 'FB', 'TE', 'WR', 'LT', 'LG', 'RG', 'RT', 'X', 'Z', 'Y'].map((pos) => (
+                    <option key={pos} value={pos}>
+                      {pos}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Defense">
+                  {['DE', 'DT', 'NT', 'MLB', 'OLB', 'CB', 'FS', 'SS', 'M', 'W', 'S', 'R', 'E'].map((pos) => (
+                    <option key={pos} value={pos}>
+                      {pos}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
-            )}
+            </div>
 
-            {/* Add O (Offense) */}
-            <button
-              type="button"
-              onClick={() => {
-                setIsDrawingMode(false);
-                setStampMode(stampMode === 'O' ? 'none' : 'O');
-              }}
-              className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                stampMode === 'O'
-                  ? 'bg-amber-500 text-slate-950 font-black ring-2 ring-amber-300'
-                  : 'bg-slate-800 hover:bg-slate-750 text-amber-300 border border-slate-700'
-              }`}
-            >
-              + O (Off)
-            </button>
-
-            {/* Position Picker for O */}
-            {stampMode === 'O' && (
-              <select
-                value={stampLabel}
-                onChange={(e) => setStampLabel(e.target.value)}
-                className="bg-slate-900 text-white text-xs font-bold px-1.5 py-1 rounded border border-slate-700"
+            {/* Tactical Zones & Movable Text */}
+            <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800">
+              {/* Circle Zone */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDrawingMode(false);
+                  setStampMode(stampMode === 'circle_zone' ? 'none' : 'circle_zone');
+                  setStampZoneShape('circle');
+                }}
+                className={`p-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  stampMode === 'circle_zone'
+                    ? 'bg-sky-600 text-white ring-2 ring-sky-400 shadow-md'
+                    : 'bg-slate-800 hover:bg-slate-700 text-sky-300'
+                }`}
+                title="Stamp Circular Zone Bubble"
               >
-                {['C', 'LG', 'RG', 'LT', 'RT', 'QB', 'RB', 'FB', 'TE', 'WR', 'O'].map((pos) => (
-                  <option key={pos} value={pos}>
-                    {pos}
-                  </option>
-                ))}
-              </select>
-            )}
+                <Target className="w-3.5 h-3.5 text-sky-300" />
+                <span className="text-[11px]">Circle Zone</span>
+              </button>
 
-            {/* Add Blitz Arrow */}
-            <button
-              type="button"
-              onClick={() => {
-                setIsDrawingMode(false);
-                setStampMode(stampMode === 'blitz' ? 'none' : 'blitz');
-              }}
-              className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                stampMode === 'blitz'
-                  ? 'bg-rose-600 text-white ring-2 ring-rose-400'
-                  : 'bg-slate-800 hover:bg-slate-750 text-rose-300 border border-slate-700'
-              }`}
-            >
-              + Blitz Arrow
-            </button>
-
-            {/* Add Zone Coverage Bubble */}
-            <button
-              type="button"
-              onClick={() => {
-                setIsDrawingMode(false);
-                setStampMode(stampMode === 'zone' ? 'none' : 'zone');
-              }}
-              className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                stampMode === 'zone'
-                  ? 'bg-sky-600 text-white ring-2 ring-sky-400'
-                  : 'bg-slate-800 hover:bg-slate-750 text-sky-300 border border-slate-700'
-              }`}
-            >
-              + Zone Bubble
-            </button>
-
-            {stampMode === 'zone' && (
-              <select
-                value={stampLabel}
-                onChange={(e) => setStampLabel(e.target.value)}
-                className="bg-slate-900 text-white text-xs font-bold px-1.5 py-1 rounded border border-slate-700"
+              {/* Oval Zone */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDrawingMode(false);
+                  setStampMode(stampMode === 'zone' ? 'none' : 'zone');
+                  setStampZoneShape('ellipse');
+                }}
+                className={`p-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  stampMode === 'zone'
+                    ? 'bg-sky-600 text-white ring-2 ring-sky-400 shadow-md'
+                    : 'bg-slate-800 hover:bg-slate-700 text-sky-300'
+                }`}
+                title="Stamp Oval Zone Bubble"
               >
-                {['DEEP 1/3', 'DEEP 1/2', 'FLAT', 'HOOK/CURL', 'ROBBER', 'ZONE'].map((z) => (
-                  <option key={z} value={z}>
-                    {z}
-                  </option>
-                ))}
-              </select>
-            )}
+                <Shield className="w-3.5 h-3.5 text-sky-300" />
+                <span className="text-[11px]">Oval Zone</span>
+              </button>
 
-            {/* Add Movable Text Note */}
-            <button
-              type="button"
-              onClick={() => {
-                setIsDrawingMode(false);
-                setStampMode(stampMode === 'text' ? 'none' : 'text');
-              }}
-              className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1 ${
-                stampMode === 'text'
-                  ? 'bg-emerald-600 text-white ring-2 ring-emerald-400'
-                  : 'bg-slate-800 hover:bg-slate-750 text-emerald-300 border border-slate-700'
-              }`}
-            >
-              <Type className="w-3 h-3" />
-              <span>+ Text Note</span>
-            </button>
+              {/* Blitz Arrow */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDrawingMode(false);
+                  setStampMode(stampMode === 'blitz' ? 'none' : 'blitz');
+                }}
+                className={`p-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  stampMode === 'blitz'
+                    ? 'bg-rose-600 text-white ring-2 ring-rose-400 shadow-md'
+                    : 'bg-slate-800 hover:bg-slate-700 text-rose-300'
+                }`}
+                title="Stamp Blitz Arrow"
+              >
+                <span className="text-sm">⚡</span>
+                <span className="text-[11px]">Blitz</span>
+              </button>
+
+              {/* Movable Text Note */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDrawingMode(false);
+                  setStampMode(stampMode === 'text' ? 'none' : 'text');
+                }}
+                className={`p-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  stampMode === 'text'
+                    ? 'bg-emerald-600 text-white ring-2 ring-emerald-400 shadow-md'
+                    : 'bg-slate-800 hover:bg-slate-700 text-emerald-300'
+                }`}
+                title="Stamp Coaching Text Note on Canvas"
+              >
+                <Type className="w-3.5 h-3.5 text-emerald-300" />
+                <span className="text-[11px]">Text</span>
+              </button>
+            </div>
           </div>
 
           {/* Right: Dry-Erase Markers Tray */}

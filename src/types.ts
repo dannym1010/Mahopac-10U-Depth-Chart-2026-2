@@ -499,11 +499,13 @@ export interface PlayResponsibility {
 
 export interface WhiteboardToken {
   id: string;
-  type: 'X' | 'O' | 'ball' | 'cone' | 'bag' | 'square' | 'letter' | 'target' | 'text';
+  type: 'X' | 'O' | 'ball' | 'cone' | 'bag' | 'square' | 'letter' | 'target' | 'text' | 'triangle' | 'diamond' | 'star';
   label: string;
   x: number;
   y: number;
+  shape?: 'circle' | 'square' | 'triangle' | 'diamond' | 'star';
   color?: string;
+  fillMode?: 'fill' | 'nofill'; // 'fill' = solid colored background, 'nofill' = transparent center with colored outline
   radius?: number;
   subLabel?: string;
   isSquare?: boolean;
@@ -539,6 +541,8 @@ export interface WhiteboardZoneBubble {
   opacity?: number;
   labelX?: number;
   labelY?: number;
+  shape?: 'ellipse' | 'circle' | 'rect';
+  fillMode?: 'fill' | 'nofill';
 }
 
 export interface WhiteboardPlay {

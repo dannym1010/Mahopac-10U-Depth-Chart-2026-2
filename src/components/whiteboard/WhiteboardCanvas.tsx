@@ -16,7 +16,30 @@ import {
   Shield,
   CircleDot,
   Zap,
+  Play,
+  Pause,
+  Repeat,
+  Square,
+  Circle,
+  Triangle,
+  Star,
+  Copy,
+  Palette,
 } from 'lucide-react';
+
+export function isColorLight(colorHex?: string): boolean {
+  if (!colorHex) return false;
+  if (colorHex === '#ffffff' || colorHex.toLowerCase() === 'white') return true;
+  const hex = colorHex.replace('#', '');
+  if (hex.length === 6) {
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.65;
+  }
+  return false;
+}
 
 export function isDefenseToken(token: WhiteboardToken): boolean {
   if (token.type === 'letter' || token.type === 'X') return true;
@@ -56,8 +79,11 @@ interface WhiteboardCanvasProps {
   isDrawingMode: boolean;
   penColor: string;
   penWidth: number;
-  stampMode: 'none' | 'O' | 'X' | 'letter' | 'blitz' | 'zone' | 'text' | 'square';
+  stampMode: 'none' | 'O' | 'X' | 'letter' | 'blitz' | 'zone' | 'text' | 'square' | 'triangle' | 'diamond' | 'circle_zone' | 'star';
   stampLabel: string;
+  stampColor?: string;
+  stampFillMode?: 'fill' | 'nofill';
+  stampZoneShape?: 'ellipse' | 'circle' | 'rect';
   onUpdateTokens: (tokens: WhiteboardToken[]) => void;
   onUpdateArrows: (arrows: WhiteboardArrow[]) => void;
   onUpdateZones: (zones: WhiteboardZoneBubble[]) => void;
@@ -71,7 +97,7 @@ interface WhiteboardCanvasProps {
   showLabels?: boolean;
   zoneShadeMode?: 'dim' | 'soft' | 'outline' | 'standard';
   fieldTheme?: 'professional_hudl' | 'classic_chalk' | 'grass';
-  fieldSizePreset?: 'standard' | 'wide' | 'jumbo';
+  fieldSizePreset?: 'standard' | 'wide' | 'jumbo' | 'stadium';
   readOnly?: boolean;
 }
 
@@ -85,6 +111,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   penWidth,
   stampMode,
   stampLabel,
+  stampColor,
+  stampFillMode = 'fill',
+  stampZoneShape = 'circle',
   onUpdateTokens,
   onUpdateArrows,
   onUpdateZones,
@@ -104,9 +133,19 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Field size & zoom controls
-  const [fieldViewMode, setFieldViewMode] = useState<'standard' | 'wide' | 'jumbo'>(fieldSizePreset);
+  const [fieldViewMode, setFieldViewMode] = useState<'standard' | 'wide' | 'jumbo' | 'stadium'>(fieldSizePreset);
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  // Play Animation Engine State
+  const [isAnimationMode, setIsAnimationMode] = useState<boolean>(false);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [animProgress, setAnimProgress] = useState<number>(0);
+  const [animSpeed, setAnimSpeed] = useState<number>(1.0);
+  const [isLooping, setIsLooping] = useState<boolean>(true);
+  const [showTrails, setShowTrails] = useState<boolean>(true);
+  const animFrameRef = useRef<number | null>(null);
+  const lastTimestampRef = useRef<number | null>(null);
 
   // Editing text inline
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
@@ -138,17 +177,119 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const baseView =
     fieldViewMode === 'standard'
       ? { minX: 0, minY: 0, width: 700, height: 500 }
+      : fieldViewMode === 'wide'
+      ? { minX: -60, minY: -30, width: 820, height: 560 }
       : fieldViewMode === 'jumbo'
-      ? { minX: -90, minY: -45, width: 880, height: 590 }
-      : { minX: -55, minY: -30, width: 810, height: 560 };
+      ? { minX: -110, minY: -50, width: 920, height: 600 }
+      : { minX: -220, minY: -80, width: 1140, height: 680 }; // 'stadium' full field arena
 
-  const centerX = 350;
-  const centerY = 220;
+  const centerX = Math.round(baseView.minX + baseView.width / 2);
+  const centerY = Math.round(baseView.minY + baseView.height / 2);
   const scaledWidth = Math.round(baseView.width / zoomLevel);
   const scaledHeight = Math.round(baseView.height / zoomLevel);
   const viewBoxMinX = Math.round(centerX - scaledWidth / 2);
-  const viewBoxMinY = Math.round(centerY - (centerY - baseView.minY) / zoomLevel);
+  const viewBoxMinY = Math.round(centerY - scaledHeight / 2);
   const viewBoxStr = `${viewBoxMinX} ${viewBoxMinY} ${scaledWidth} ${scaledHeight}`;
+
+  // Animation Loop via requestAnimationFrame
+  useEffect(() => {
+    if (!isPlaying) {
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+      lastTimestampRef.current = null;
+      return;
+    }
+
+    const loop = (timestamp: number) => {
+      if (lastTimestampRef.current === null) {
+        lastTimestampRef.current = timestamp;
+      }
+      const elapsed = timestamp - lastTimestampRef.current;
+      lastTimestampRef.current = timestamp;
+
+      const duration = 2800 / animSpeed;
+      const delta = elapsed / duration;
+
+      setAnimProgress((prev) => {
+        const next = prev + delta;
+        if (next >= 1.0) {
+          if (isLooping) {
+            return 0;
+          } else {
+            setIsPlaying(false);
+            return 1.0;
+          }
+        }
+        return next;
+      });
+
+      animFrameRef.current = requestAnimationFrame(loop);
+    };
+
+    animFrameRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+      }
+    };
+  }, [isPlaying, animSpeed, isLooping]);
+
+  // Spacebar to toggle Play/Pause when in Animation Mode
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && isAnimationMode && document.activeElement?.tagName !== 'INPUT') {
+        e.preventDefault();
+        setIsPlaying((p) => !p);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isAnimationMode]);
+
+  // Helper to get animated coordinates and matching arrow for a token
+  const getAnimatedTokenInfo = useCallback(
+    (token: WhiteboardToken) => {
+      if (!isAnimationMode || animProgress === 0) {
+        return { currentX: token.x, currentY: token.y, matchingArrow: null };
+      }
+
+      let closestArrow: WhiteboardArrow | null = null;
+      let minDistance = 50;
+
+      for (const arrow of arrows) {
+        const dx = arrow.startX - token.x;
+        const dy = arrow.startY - token.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestArrow = arrow;
+        }
+      }
+
+      if (!closestArrow) {
+        if (isDefenseToken(token) && token.y < 200) {
+          return { currentX: token.x, currentY: token.y + animProgress * 15, matchingArrow: null };
+        }
+        return { currentX: token.x, currentY: token.y, matchingArrow: null };
+      }
+
+      const t = animProgress;
+      if (closestArrow.controlX !== undefined && closestArrow.controlY !== undefined) {
+        const u = 1 - t;
+        const curX = u * u * closestArrow.startX + 2 * u * t * closestArrow.controlX + t * t * closestArrow.endX;
+        const curY = u * u * closestArrow.startY + 2 * u * t * closestArrow.controlY + t * t * closestArrow.endY;
+        return { currentX: curX, currentY: curY, matchingArrow: closestArrow };
+      } else {
+        const curX = closestArrow.startX + t * (closestArrow.endX - closestArrow.startX);
+        const curY = closestArrow.startY + t * (closestArrow.endY - closestArrow.startY);
+        return { currentX: curX, currentY: curY, matchingArrow: closestArrow };
+      }
+    },
+    [isAnimationMode, animProgress, arrows]
+  );
 
   // Helper to get SVG coordinates from mouse or touch
   const getSvgCoordinates = useCallback(
@@ -291,14 +432,66 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
     const { x, y } = getSvgCoordinates(e.clientX, e.clientY);
 
-    if (stampMode === 'O') {
+    if (stampMode === 'triangle') {
+      const newToken: WhiteboardToken = {
+        id: `tri-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        type: 'triangle',
+        label: stampLabel || 'S',
+        x,
+        y,
+        color: stampColor || '#dc2626',
+        fillMode: stampFillMode || 'fill',
+      };
+      onUpdateTokens([...tokens, newToken]);
+      onSelectElement('token', newToken.id);
+    } else if (stampMode === 'diamond') {
+      const newToken: WhiteboardToken = {
+        id: `dia-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        type: 'diamond',
+        label: stampLabel || 'H',
+        x,
+        y,
+        color: stampColor || '#1d4ed8',
+        fillMode: stampFillMode || 'fill',
+      };
+      onUpdateTokens([...tokens, newToken]);
+      onSelectElement('token', newToken.id);
+    } else if (stampMode === 'star') {
+      const newToken: WhiteboardToken = {
+        id: `star-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        type: 'star',
+        label: stampLabel || '*',
+        x,
+        y,
+        color: stampColor || '#d97706',
+        fillMode: stampFillMode || 'fill',
+      };
+      onUpdateTokens([...tokens, newToken]);
+      onSelectElement('token', newToken.id);
+    } else if (stampMode === 'circle_zone') {
+      const newZone: WhiteboardZoneBubble = {
+        id: `zone-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        name: stampLabel || 'ZONE',
+        cx: x,
+        cy: y,
+        rx: 52,
+        ry: 52,
+        shape: 'circle',
+        fillMode: stampFillMode || 'fill',
+        color: stampColor || '#0284c7',
+        opacity: 0.22,
+      };
+      onUpdateZones([...zones, newZone]);
+      onSelectElement('zone', newZone.id);
+    } else if (stampMode === 'O') {
       const newToken: WhiteboardToken = {
         id: `o-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         type: 'O',
         label: stampLabel || '',
         x,
         y,
-        color: '#0f172a',
+        color: stampColor || (stampLabel === 'C' ? '#1d4ed8' : '#1d4ed8'),
+        fillMode: stampFillMode || 'fill',
       };
       onUpdateTokens([...tokens, newToken]);
       onSelectElement('token', newToken.id);
@@ -309,7 +502,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         label: stampLabel || 'C',
         x,
         y,
-        color: '#0f172a',
+        color: stampColor || '#1d4ed8',
+        fillMode: stampFillMode || 'fill',
         isSquare: true,
       };
       onUpdateTokens([...tokens, newToken]);
@@ -317,11 +511,12 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     } else if (stampMode === 'letter' || stampMode === 'X') {
       const newToken: WhiteboardToken = {
         id: `def-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        type: 'letter',
-        label: stampLabel || 'M',
+        type: stampMode === 'X' ? 'X' : 'letter',
+        label: stampLabel || (stampMode === 'X' ? 'X' : 'M'),
         x,
         y,
-        color: '#0f172a',
+        color: stampColor || '#dc2626',
+        fillMode: stampFillMode || 'fill',
       };
       onUpdateTokens([...tokens, newToken]);
       onSelectElement('token', newToken.id);
@@ -332,7 +527,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         x,
         y,
         fontSize: 11,
-        color: '#0f172a',
+        color: stampColor || '#0f172a',
         fontWeight: '700',
         align: 'left',
       };
@@ -348,7 +543,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         startY: y,
         endX: x,
         endY: Math.max(40, y - 70),
-        color: '#0f172a',
+        color: stampColor || '#dc2626',
         label: stampLabel || '',
       };
       onUpdateArrows([...arrows, newArrow]);
@@ -361,7 +556,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         cy: y,
         rx: 75,
         ry: 35,
-        color: '#0284c7',
+        shape: stampZoneShape || 'ellipse',
+        fillMode: stampFillMode || 'fill',
+        color: stampColor || '#0284c7',
         opacity: 0.18,
       };
       onUpdateZones([...zones, newZone]);
@@ -444,11 +641,18 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     } else if (dragState.type === 'zone-resize') {
       const zone = zones.find((z) => z.id === dragState.id);
       if (zone) {
-        const newRx = Math.max(25, Math.abs(x - zone.cx));
-        const newRy = Math.max(18, Math.abs(y - zone.cy));
-        onUpdateZones(
-          zones.map((z) => (z.id === dragState.id ? { ...z, rx: newRx, ry: newRy } : z))
-        );
+        if (zone.shape === 'circle') {
+          const radius = Math.max(25, Math.round(Math.sqrt((x - zone.cx) ** 2 + (y - zone.cy) ** 2)));
+          onUpdateZones(
+            zones.map((z) => (z.id === dragState.id ? { ...z, rx: radius, ry: radius } : z))
+          );
+        } else {
+          const newRx = Math.max(25, Math.abs(x - zone.cx));
+          const newRy = Math.max(18, Math.abs(y - zone.cy));
+          onUpdateZones(
+            zones.map((z) => (z.id === dragState.id ? { ...z, rx: newRx, ry: newRy } : z))
+          );
+        }
       }
     }
   };
@@ -524,8 +728,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           </div>
         </div>
 
-        {/* Right: Field View Selector + Zoom + Fullscreen */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* Right: Field View Selector + Extended Zoom + Animate Play + Fullscreen */}
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           {/* Field Size Presets */}
           <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700">
             <button
@@ -558,14 +762,24 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             >
               Jumbo
             </button>
+            <button
+              type="button"
+              onClick={() => setFieldViewMode('stadium')}
+              title="Stadium Arena (Extended field filling the whole area)"
+              className={`px-2.5 py-0.5 rounded text-[10.5px] font-bold transition-colors ${
+                fieldViewMode === 'stadium' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Stadium
+            </button>
           </div>
 
-          {/* Zoom Controls */}
+          {/* Extended Zoom Controls */}
           <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700">
             <button
               type="button"
-              onClick={() => setZoomLevel((z) => Math.max(0.75, Math.round((z - 0.15) * 100) / 100))}
-              title="Zoom Out"
+              onClick={() => setZoomLevel((z) => Math.max(0.40, Math.round((z - 0.15) * 100) / 100))}
+              title="Zoom Out (Down to 40%)"
               className="p-1 text-slate-300 hover:text-white rounded hover:bg-slate-700 cursor-pointer"
             >
               <ZoomOut className="w-3.5 h-3.5" />
@@ -575,8 +789,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             </span>
             <button
               type="button"
-              onClick={() => setZoomLevel((z) => Math.min(1.75, Math.round((z + 0.15) * 100) / 100))}
-              title="Zoom In"
+              onClick={() => setZoomLevel((z) => Math.min(2.0, Math.round((z + 0.15) * 100) / 100))}
+              title="Zoom In (Up to 200%)"
               className="p-1 text-slate-300 hover:text-white rounded hover:bg-slate-700 cursor-pointer"
             >
               <ZoomIn className="w-3.5 h-3.5" />
@@ -592,6 +806,30 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
               </button>
             )}
           </div>
+
+          {/* Dedicated Play Animation Button */}
+          <button
+            type="button"
+            onClick={() => {
+              const next = !isAnimationMode;
+              setIsAnimationMode(next);
+              if (next) {
+                setIsPlaying(true);
+              } else {
+                setIsPlaying(false);
+                setAnimProgress(0);
+              }
+            }}
+            title="Animate the play movements along routes and assignments"
+            className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all flex items-center gap-1.5 cursor-pointer border ${
+              isAnimationMode
+                ? 'bg-emerald-600 border-emerald-400 text-white shadow-md ring-2 ring-emerald-400/40'
+                : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200 hover:text-white'
+            }`}
+          >
+            <Play className={`w-3.5 h-3.5 ${isAnimationMode && isPlaying ? 'fill-amber-300 text-amber-300 animate-pulse' : 'fill-current'}`} />
+            <span>{isAnimationMode ? (isPlaying ? 'Playing...' : 'Paused') : 'Animate Play'}</span>
+          </button>
 
           {/* Fullscreen Toggle */}
           <button
@@ -615,12 +853,275 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         </div>
       </div>
 
-      {/* Floating Action Controls on Canvas for Selected Item */}
+      {/* Floating Comprehensive Inspector for Selected Item */}
       {selectedId && !readOnly && !isDrawingMode && (
-        <div className="absolute top-14 right-3 z-30 flex items-center gap-1.5 bg-slate-900/90 text-white px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm border border-slate-700 text-xs animate-in fade-in">
-          <span className="font-semibold text-slate-300 capitalize text-[11px] mr-1">
+        <div className="absolute top-14 right-3 z-30 flex items-center gap-2 flex-wrap bg-slate-900/95 text-white px-3 py-1.5 rounded-xl shadow-2xl backdrop-blur-md border border-slate-700 text-xs animate-in fade-in max-w-[95%]">
+          <span className="font-bold text-slate-300 capitalize text-[11px]">
             {selectedType}:
           </span>
+
+          {/* Token Customization Inspector */}
+          {selectedType === 'token' && (() => {
+            const token = tokens.find((t) => t.id === selectedId);
+            if (!token) return null;
+            return (
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Text / Label Input */}
+                <div className="flex items-center bg-slate-800 rounded px-1.5 py-0.5 border border-slate-700">
+                  <span className="text-[10px] text-slate-400 mr-1 font-bold">Text:</span>
+                  <input
+                    type="text"
+                    value={token.label}
+                    onChange={(e) => {
+                      const newLabel = e.target.value;
+                      onUpdateTokens(tokens.map((t) => (t.id === token.id ? { ...t, label: newLabel } : t)));
+                    }}
+                    placeholder="Label"
+                    className="bg-transparent text-white font-black text-xs w-14 focus:w-20 transition-all outline-none"
+                  />
+                </div>
+
+                {/* Shape Switcher */}
+                <div className="flex items-center bg-slate-800 rounded p-0.5 border border-slate-700">
+                  {[
+                    { shape: 'O', title: 'Circle', icon: Circle },
+                    { shape: 'square', title: 'Square', icon: Square },
+                    { shape: 'triangle', title: 'Triangle', icon: Triangle },
+                    { shape: 'diamond', title: 'Diamond', icon: Shield },
+                    { shape: 'star', title: 'Star', icon: Star },
+                    { shape: 'X', title: 'X', icon: X },
+                  ].map((s) => {
+                    const Icon = s.icon;
+                    const isActive =
+                      token.type === s.shape ||
+                      (s.shape === 'square' && token.isSquare) ||
+                      (s.shape === 'O' && token.type === 'O' && !token.isSquare);
+                    return (
+                      <button
+                        key={s.shape}
+                        type="button"
+                        onClick={() => {
+                          if (s.shape === 'square') {
+                            onUpdateTokens(tokens.map((t) => (t.id === token.id ? { ...t, type: 'square', isSquare: true } : t)));
+                          } else if (s.shape === 'O') {
+                            onUpdateTokens(tokens.map((t) => (t.id === token.id ? { ...t, type: 'O', isSquare: false } : t)));
+                          } else {
+                            onUpdateTokens(tokens.map((t) => (t.id === token.id ? { ...t, type: s.shape as any, isSquare: false } : t)));
+                          }
+                        }}
+                        title={s.title}
+                        className={`p-1 rounded cursor-pointer transition-colors ${
+                          isActive ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Fill Mode Toggle: Solid Fill vs No Fill */}
+                <div className="flex items-center bg-slate-800 rounded p-0.5 border border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdateTokens(tokens.map((t) => (t.id === token.id ? { ...t, fillMode: 'fill' } : t)));
+                    }}
+                    className={`px-2 py-0.5 rounded text-[10.5px] font-bold cursor-pointer transition-colors ${
+                      token.fillMode !== 'nofill' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
+                    title="Solid Fill Background"
+                  >
+                    Fill
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdateTokens(tokens.map((t) => (t.id === token.id ? { ...t, fillMode: 'nofill' } : t)));
+                    }}
+                    className={`px-2 py-0.5 rounded text-[10.5px] font-bold cursor-pointer transition-colors ${
+                      token.fillMode === 'nofill' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
+                    title="Hollow / No Fill (Outline only)"
+                  >
+                    No Fill
+                  </button>
+                </div>
+
+                {/* Color Swatches */}
+                <div className="flex items-center gap-1 bg-slate-800 p-1 rounded border border-slate-700">
+                  {[
+                    { color: '#1d4ed8', title: 'Royal Blue' },
+                    { color: '#dc2626', title: 'Crimson Red' },
+                    { color: '#16a34a', title: 'Emerald Green' },
+                    { color: '#d97706', title: 'Gold Amber' },
+                    { color: '#7c3aed', title: 'Purple' },
+                    { color: '#ea580c', title: 'Orange' },
+                    { color: '#0f172a', title: 'Slate Black' },
+                    { color: '#ffffff', title: 'Crisp White' },
+                  ].map((c) => (
+                    <button
+                      key={c.color}
+                      type="button"
+                      onClick={() => {
+                        onUpdateTokens(tokens.map((t) => (t.id === token.id ? { ...t, color: c.color } : t)));
+                      }}
+                      title={c.title}
+                      className={`w-4 h-4 rounded-full border cursor-pointer transition-transform ${
+                        token.color === c.color ? 'scale-125 border-white ring-2 ring-blue-400' : 'border-slate-500 hover:scale-110'
+                      }`}
+                      style={{ backgroundColor: c.color }}
+                    />
+                  ))}
+                  <input
+                    type="color"
+                    value={token.color || '#1d4ed8'}
+                    onChange={(e) => {
+                      const newCol = e.target.value;
+                      onUpdateTokens(tokens.map((t) => (t.id === token.id ? { ...t, color: newCol } : t)));
+                    }}
+                    title="Custom Color"
+                    className="w-4 h-4 rounded cursor-pointer bg-transparent border-0 p-0"
+                  />
+                </div>
+
+                {/* Duplicate */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const clone: WhiteboardToken = {
+                      ...token,
+                      id: `tok-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                      x: token.x + 24,
+                      y: token.y + 24,
+                    };
+                    onUpdateTokens([...tokens, clone]);
+                    onSelectElement('token', clone.id);
+                  }}
+                  title="Duplicate Element"
+                  className="p-1 rounded hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            );
+          })()}
+
+          {/* Zone Customization Inspector */}
+          {selectedType === 'zone' && (() => {
+            const zone = zones.find((z) => z.id === selectedId);
+            if (!zone) return null;
+            return (
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Zone Label Input */}
+                <div className="flex items-center bg-slate-800 rounded px-1.5 py-0.5 border border-slate-700">
+                  <span className="text-[10px] text-slate-400 mr-1 font-bold">Zone:</span>
+                  <input
+                    type="text"
+                    value={zone.name}
+                    onChange={(e) => {
+                      const newName = e.target.value;
+                      onUpdateZones(zones.map((z) => (z.id === zone.id ? { ...z, name: newName } : z)));
+                    }}
+                    placeholder="Zone Name"
+                    className="bg-transparent text-white font-black text-xs w-20 focus:w-28 transition-all outline-none"
+                  />
+                </div>
+
+                {/* Zone Shape: Circle vs Oval vs Rect */}
+                <div className="flex items-center bg-slate-800 rounded p-0.5 border border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const maxR = Math.max(zone.rx, zone.ry);
+                      onUpdateZones(zones.map((z) => (z.id === zone.id ? { ...z, shape: 'circle', rx: maxR, ry: maxR } : z)));
+                    }}
+                    className={`px-2 py-0.5 rounded text-[10.5px] font-bold cursor-pointer transition-colors ${
+                      zone.shape === 'circle' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Circle
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdateZones(zones.map((z) => (z.id === zone.id ? { ...z, shape: 'ellipse' } : z)));
+                    }}
+                    className={`px-2 py-0.5 rounded text-[10.5px] font-bold cursor-pointer transition-colors ${
+                      zone.shape !== 'circle' && zone.shape !== 'rect' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Oval
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdateZones(zones.map((z) => (z.id === zone.id ? { ...z, shape: 'rect' } : z)));
+                    }}
+                    className={`px-2 py-0.5 rounded text-[10.5px] font-bold cursor-pointer transition-colors ${
+                      zone.shape === 'rect' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Box
+                  </button>
+                </div>
+
+                {/* Zone Fill Mode */}
+                <div className="flex items-center bg-slate-800 rounded p-0.5 border border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdateZones(zones.map((z) => (z.id === zone.id ? { ...z, fillMode: 'fill' } : z)));
+                    }}
+                    className={`px-2 py-0.5 rounded text-[10.5px] font-bold cursor-pointer transition-colors ${
+                      zone.fillMode !== 'nofill' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Fill
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdateZones(zones.map((z) => (z.id === zone.id ? { ...z, fillMode: 'nofill' } : z)));
+                    }}
+                    className={`px-2 py-0.5 rounded text-[10.5px] font-bold cursor-pointer transition-colors ${
+                      zone.fillMode === 'nofill' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Outline
+                  </button>
+                </div>
+
+                {/* Color Swatches */}
+                <div className="flex items-center gap-1 bg-slate-800 p-1 rounded border border-slate-700">
+                  {['#0284c7', '#dc2626', '#16a34a', '#d97706', '#7c3aed', '#0f172a'].map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => {
+                        onUpdateZones(zones.map((z) => (z.id === zone.id ? { ...z, color: c } : z)));
+                      }}
+                      className={`w-4 h-4 rounded-full border cursor-pointer transition-transform ${
+                        zone.color === c ? 'scale-125 border-white ring-2 ring-blue-400' : 'border-slate-500 hover:scale-110'
+                      }`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                  <input
+                    type="color"
+                    value={zone.color || '#0284c7'}
+                    onChange={(e) => {
+                      const newCol = e.target.value;
+                      onUpdateZones(zones.map((z) => (z.id === zone.id ? { ...z, color: newCol } : z)));
+                    }}
+                    className="w-4 h-4 rounded cursor-pointer bg-transparent border-0 p-0"
+                  />
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Text Element Edit */}
           {selectedType === 'text' && (
             <button
               onClick={() => {
@@ -631,17 +1132,126 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                 }
               }}
               title="Edit text content"
-              className="p-1 rounded hover:bg-slate-700 text-blue-400 hover:text-blue-300 transition-colors"
+              className="p-1 rounded hover:bg-slate-700 text-blue-400 hover:text-blue-300 transition-colors cursor-pointer flex items-center gap-1"
             >
               <Edit2 className="w-3.5 h-3.5" />
+              <span>Edit Text</span>
             </button>
           )}
+
+          {/* Delete Action */}
           <button
             onClick={handleDeleteSelected}
             title="Delete element"
-            className="p-1 rounded hover:bg-red-900/60 text-red-400 hover:text-red-300 transition-colors"
+            className="p-1 rounded hover:bg-red-900/60 text-red-400 hover:text-red-300 transition-colors cursor-pointer ml-1"
           >
             <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Floating Play Animation Controller Dock */}
+      {isAnimationMode && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 bg-slate-950/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 select-none">
+          {/* Play / Pause Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsPlaying(!isPlaying)}
+            className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md ${
+              isPlaying
+                ? 'bg-amber-500 text-slate-950 hover:bg-amber-400'
+                : 'bg-emerald-600 text-white hover:bg-emerald-500 ring-2 ring-emerald-400/40'
+            }`}
+          >
+            {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+            <span className="text-xs">{isPlaying ? 'Pause' : 'Play'}</span>
+          </button>
+
+          {/* Reset to Pre-Snap */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsPlaying(false);
+              setAnimProgress(0);
+            }}
+            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer"
+            title="Reset to Pre-Snap Alignment (0%)"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+
+          {/* Timeline Scrub Slider */}
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-mono font-bold text-slate-400 min-w-[32px] text-right">
+              {Math.round(animProgress * 100)}%
+            </span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={animProgress}
+              onChange={(e) => {
+                setIsPlaying(false);
+                setAnimProgress(parseFloat(e.target.value));
+              }}
+              className="w-28 sm:w-44 accent-emerald-400 cursor-pointer"
+              title="Scrub play timeline"
+            />
+          </div>
+
+          {/* Speed Presets */}
+          <div className="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-800 text-[11px]">
+            {[0.5, 1.0, 1.5].map((speed) => (
+              <button
+                key={speed}
+                type="button"
+                onClick={() => setAnimSpeed(speed)}
+                className={`px-2 py-0.5 rounded font-bold transition-colors cursor-pointer ${
+                  animSpeed === speed ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {speed}x
+              </button>
+            ))}
+          </div>
+
+          {/* Loop Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsLooping(!isLooping)}
+            className={`p-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+              isLooping ? 'bg-blue-950 text-blue-300 border border-blue-700' : 'bg-slate-900 text-slate-500 hover:text-slate-300'
+            }`}
+            title={isLooping ? 'Loop is ON' : 'Loop is OFF'}
+          >
+            <Repeat className="w-4 h-4" />
+          </button>
+
+          {/* Motion Trails Toggle */}
+          <button
+            type="button"
+            onClick={() => setShowTrails(!showTrails)}
+            className={`px-2 py-1 rounded-lg text-[10.5px] font-bold transition-colors cursor-pointer ${
+              showTrails ? 'bg-indigo-950 text-indigo-300 border border-indigo-700' : 'bg-slate-900 text-slate-500'
+            }`}
+            title="Toggle Ghost Footsteps & Route Trails"
+          >
+            Trails
+          </button>
+
+          {/* Close Dock */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsPlaying(false);
+              setAnimProgress(0);
+              setIsAnimationMode(false);
+            }}
+            className="p-1 text-slate-400 hover:text-white rounded-md hover:bg-slate-800 ml-1 cursor-pointer"
+            title="Exit Animation Mode"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -1130,219 +1740,349 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             const isSelected = selectedType === 'token' && selectedId === token.id;
             const isDef = isDefenseToken(token);
             const isOff = isOffenseToken(token);
-            const isCenter = token.type === 'square' || token.isSquare || (token.type === 'O' && token.label === 'C');
+
+            // Compute animated position
+            const animInfo = isAnimationMode
+              ? getAnimatedTokenInfo(token)
+              : { currentX: token.x, currentY: token.y, matchingArrow: null };
+            const posX = animInfo.currentX;
+            const posY = animInfo.currentY;
+
+            // Determine Shape
+            const effectiveShape =
+              token.shape ||
+              (token.type === 'square' || token.isSquare || (token.type === 'O' && token.label === 'C')
+                ? 'square'
+                : token.type === 'triangle'
+                ? 'triangle'
+                : token.type === 'diamond'
+                ? 'diamond'
+                : token.type === 'star'
+                ? 'star'
+                : token.type === 'X'
+                ? 'X'
+                : token.type === 'letter'
+                ? 'letter'
+                : token.type === 'ball'
+                ? 'ball'
+                : token.type === 'bag'
+                ? 'bag'
+                : token.type === 'cone'
+                ? 'cone'
+                : 'circle');
+
+            // Determine Fill Mode & Colors
+            const isNoFill = token.fillMode === 'nofill';
+            const baseThemeColor = token.color || (isDef ? '#dc2626' : '#1d4ed8');
+
+            const fill = isNoFill
+              ? '#ffffff'
+              : token.color
+              ? token.color
+              : isDef
+              ? 'url(#wbDefenseGradient)'
+              : '#ffffff';
+
+            const fillOpacity = isNoFill ? 0.05 : 1;
+            const stroke = isNoFill ? baseThemeColor : token.color || (isDef ? '#991b1b' : '#1d4ed8');
+            const strokeWidth = isNoFill ? 3.2 : 2.6;
+
+            const textColor = isNoFill
+              ? baseThemeColor
+              : token.color
+              ? token.color.toLowerCase() === '#ffffff'
+                ? '#1d4ed8'
+                : '#ffffff'
+              : isDef
+              ? '#ffffff'
+              : '#1d4ed8';
 
             return (
-              <g
-                key={token.id}
-                transform={`translate(${token.x}, ${token.y})`}
-                className={readOnly ? 'pointer-events-none select-none' : 'cursor-grab active:cursor-grabbing select-none'}
-                onPointerDown={(e) => {
-                  if (readOnly) return;
-                  e.stopPropagation();
-                  onSelectElement('token', token.id);
-                  const { x, y } = getSvgCoordinates(e.clientX, e.clientY);
-                  setDragState({
-                    type: 'token',
-                    id: token.id,
-                    offsetX: x - token.x,
-                    offsetY: y - token.y,
-                  });
-                }}
-              >
-                {/* Selected Halo Ring */}
-                {isSelected && (
-                  <circle
-                    cx="0"
-                    cy="0"
-                    r="23"
-                    fill="none"
-                    stroke={isDef ? '#ef4444' : '#2563eb'}
-                    strokeWidth="2.8"
-                    strokeDasharray="4,3"
-                  />
-                )}
-
-                {/* Token Render by Football Archetype & Team Alignment */}
-                {isCenter ? (
-                  // Offensive Center: Crisp Square with Royal Blue Border on LOS
-                  <g filter="url(#wbOffenseShadow)">
-                    <rect
-                      x="-15"
-                      y="-15"
-                      width="30"
-                      height="30"
-                      rx="4"
-                      fill="#ffffff"
-                      stroke="#1d4ed8"
-                      strokeWidth="3.2"
+              <React.Fragment key={token.id}>
+                {/* Movement Trail during Animation */}
+                {isAnimationMode && showTrails && animProgress > 0.03 && (
+                  <g className="pointer-events-none select-none opacity-50">
+                    <line
+                      x1={token.x}
+                      y1={token.y}
+                      x2={posX}
+                      y2={posY}
+                      stroke={token.color || (isDef ? '#dc2626' : '#2563eb')}
+                      strokeWidth="2"
+                      strokeDasharray="4,4"
                     />
-                    <text
-                      x="0"
-                      y="5.5"
-                      fontFamily="'Space Grotesk', -apple-system, sans-serif"
-                      fontSize="14"
-                      fontWeight="900"
-                      textAnchor="middle"
-                      fill="#1d4ed8"
-                      className="pointer-events-none select-none"
-                    >
-                      {token.label || 'C'}
-                    </text>
-                  </g>
-                ) : isDef ? (
-                  // DEFENSIVE PLAYER TOKENS: High-Contrast Crimson Red Badges (E9, T3, T1, E5, S, M, W, R, C, FS)
-                  <g filter="url(#wbDefenseShadow)">
                     <circle
-                      cx="0"
-                      cy="0"
-                      r="17"
-                      fill="url(#wbDefenseGradient)"
-                      stroke="#991b1b"
-                      strokeWidth="2.4"
-                    />
-                    {/* Inner subtle rim highlight */}
-                    <circle
-                      cx="0"
-                      cy="0"
-                      r="14.5"
+                      cx={token.x}
+                      cy={token.y}
+                      r="4.5"
                       fill="none"
-                      stroke="#fca5a5"
-                      strokeWidth="0.8"
-                      strokeOpacity="0.6"
+                      stroke={token.color || (isDef ? '#dc2626' : '#2563eb')}
+                      strokeWidth="1.2"
                     />
-                    <text
-                      x="0"
-                      y={token.label && token.label.length > 2 ? '4.5' : '5.5'}
-                      fontFamily="'Space Grotesk', -apple-system, sans-serif"
-                      fontSize={token.label && token.label.length > 2 ? '11' : token.label && token.label.length === 2 ? '13' : '15'}
-                      fontWeight="900"
-                      textAnchor="middle"
-                      fill="#ffffff"
-                      className="pointer-events-none select-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
-                    >
-                      {token.label || 'D'}
-                    </text>
-                  </g>
-                ) : isOff || token.type === 'O' ? (
-                  // OFFENSIVE PLAYERS & LINEMEN: Crisp White Fill with Royal Blue Border
-                  <g filter="url(#wbOffenseShadow)">
-                    <circle
-                      cx="0"
-                      cy="0"
-                      r="16.5"
-                      fill="#ffffff"
-                      stroke="#1d4ed8"
-                      strokeWidth="3.2"
-                    />
-                    {token.label && token.label.trim() && token.label !== 'O' ? (
-                      <text
-                        x="0"
-                        y={token.label.length > 2 ? '4.5' : '5'}
-                        fontFamily="'Space Grotesk', sans-serif"
-                        fontSize={token.label.length > 2 ? '10.5' : '13'}
-                        fontWeight="900"
-                        textAnchor="middle"
-                        fill="#1d4ed8"
-                        className="pointer-events-none select-none"
-                      >
-                        {token.label}
-                      </text>
-                    ) : token.label === 'O' ? (
-                      <text
-                        x="0"
-                        y="5"
-                        fontFamily="'Space Grotesk', sans-serif"
-                        fontSize="13"
-                        fontWeight="900"
-                        textAnchor="middle"
-                        fill="#1d4ed8"
-                        className="pointer-events-none select-none"
-                      >
-                        O
-                      </text>
-                    ) : (
-                      // Unlabeled offensive lineman (blank circle with small interior center dot)
-                      <circle cx="0" cy="0" r="3.5" fill="#1d4ed8" />
-                    )}
-                  </g>
-                ) : token.type === 'letter' ? (
-                  // Generic Letter Token
-                  <g filter="url(#wbMarkerGlow)">
-                    <circle
-                      cx="0"
-                      cy="0"
-                      r="16"
-                      fill="#ffffff"
-                      stroke={token.color || '#0f172a'}
-                      strokeWidth="2.8"
-                    />
-                    <text
-                      x="0"
-                      y="5.5"
-                      fontFamily="'Space Grotesk', -apple-system, sans-serif"
-                      fontSize={token.label.length > 2 ? '11' : token.label.length === 2 ? '13' : '15'}
-                      fontWeight="900"
-                      textAnchor="middle"
-                      fill={token.color || '#0f172a'}
-                      className="pointer-events-none select-none"
-                    >
-                      {token.label}
-                    </text>
-                  </g>
-                ) : token.type === 'X' ? (
-                  // X Token
-                  <g>
-                    <circle cx="0" cy="0" r="16" fill="#0f172a" stroke="#0f172a" strokeWidth="2" />
-                    {token.label && token.label !== 'X' ? (
-                      <text
-                        x="0"
-                        y="5"
-                        fontFamily="'Space Grotesk', sans-serif"
-                        fontSize={token.label.length > 2 ? '10' : '12'}
-                        fontWeight="900"
-                        textAnchor="middle"
-                        fill="#ffffff"
-                        className="pointer-events-none select-none"
-                      >
-                        {token.label}
-                      </text>
-                    ) : (
-                      <>
-                        <line x1="-6" y1="-6" x2="6" y2="6" stroke="#ffffff" strokeWidth="2.8" strokeLinecap="round" />
-                        <line x1="6" y1="-6" x2="-6" y2="6" stroke="#ffffff" strokeWidth="2.8" strokeLinecap="round" />
-                      </>
-                    )}
-                  </g>
-                ) : token.type === 'ball' ? (
-                  // Football / Coach Token
-                  <g>
-                    <ellipse cx="0" cy="0" rx="14" ry="9" fill="#92400e" stroke="#451a03" strokeWidth="1.8" transform="rotate(-25)" />
-                    <line x1="-6" y1="0" x2="6" y2="0" stroke="#ffffff" strokeWidth="1.5" transform="rotate(-25)" />
-                    <line x1="-3" y1="-3" x2="-3" y2="3" stroke="#ffffff" strokeWidth="1.2" transform="rotate(-25)" />
-                    <line x1="0" y1="-3" x2="0" y2="3" stroke="#ffffff" strokeWidth="1.2" transform="rotate(-25)" />
-                    <line x1="3" y1="-3" x2="3" y2="3" stroke="#ffffff" strokeWidth="1.2" transform="rotate(-25)" />
-                  </g>
-                ) : token.type === 'bag' ? (
-                  // Agile Dummy / Bag
-                  <g>
-                    <rect x="-16" y="-28" width="32" height="56" rx="10" fill="#ef4444" stroke="#991b1b" strokeWidth="2.5" />
-                    <text x="0" y="4" fontFamily="'Space Grotesk', sans-serif" fontSize="10" textAnchor="middle" fill="#fff" fontWeight="bold">
-                      {token.label}
-                    </text>
-                  </g>
-                ) : (
-                  // Cone / Pylon
-                  <g>
-                    <polygon points="0,-14 10,10 -10,10" fill="#f97316" stroke="#c2410c" strokeWidth="2" />
-                    <text x="14" y="4" fontFamily="'Space Grotesk', sans-serif" fontSize="11" fill="#c2410c" fontWeight="bold">
-                      {token.label}
-                    </text>
                   </g>
                 )}
 
-                {/* SubLabel pill badge */}
-                {showLabels && token.subLabel && (
+                <g
+                  transform={`translate(${posX}, ${posY})`}
+                  className={readOnly ? 'pointer-events-none select-none' : 'cursor-grab active:cursor-grabbing select-none'}
+                  onPointerDown={(e) => {
+                    if (readOnly) return;
+                    e.stopPropagation();
+                    onSelectElement('token', token.id);
+                    const { x, y } = getSvgCoordinates(e.clientX, e.clientY);
+                    setDragState({
+                      type: 'token',
+                      id: token.id,
+                      offsetX: x - token.x,
+                      offsetY: y - token.y,
+                    });
+                  }}
+                >
+                  {/* Selected Halo Ring */}
+                  {isSelected && (
+                    <circle
+                      cx="0"
+                      cy="0"
+                      r="23"
+                      fill="none"
+                      stroke={isDef ? '#ef4444' : '#2563eb'}
+                      strokeWidth="2.8"
+                      strokeDasharray="4,3"
+                    />
+                  )}
+
+                  {/* Token Rendering based on Shape & Styling */}
+                  {effectiveShape === 'square' ? (
+                    // Square Token
+                    <g filter="url(#wbOffenseShadow)">
+                      <rect
+                        x="-15"
+                        y="-15"
+                        width="30"
+                        height="30"
+                        rx="4"
+                        fill={fill}
+                        fillOpacity={fillOpacity}
+                        stroke={stroke}
+                        strokeWidth={strokeWidth}
+                      />
+                      <text
+                        x="0"
+                        y="5"
+                        fontFamily="'Space Grotesk', -apple-system, sans-serif"
+                        fontSize={token.label && token.label.length > 2 ? '10.5' : '13.5'}
+                        fontWeight="900"
+                        textAnchor="middle"
+                        fill={textColor}
+                        className="pointer-events-none select-none"
+                      >
+                        {token.label || 'C'}
+                      </text>
+                    </g>
+                  ) : effectiveShape === 'triangle' ? (
+                    // Triangle Token
+                    <g filter="url(#wbDefenseShadow)">
+                      <polygon
+                        points="0,-18 17,14 -17,14"
+                        fill={fill}
+                        fillOpacity={fillOpacity}
+                        stroke={stroke}
+                        strokeWidth={strokeWidth}
+                        strokeLinejoin="round"
+                      />
+                      <text
+                        x="0"
+                        y="6"
+                        fontFamily="'Space Grotesk', -apple-system, sans-serif"
+                        fontSize={token.label && token.label.length > 2 ? '10' : '12'}
+                        fontWeight="900"
+                        textAnchor="middle"
+                        fill={textColor}
+                        className="pointer-events-none select-none"
+                      >
+                        {token.label || 'T'}
+                      </text>
+                    </g>
+                  ) : effectiveShape === 'diamond' ? (
+                    // Diamond Token
+                    <g filter="url(#wbOffenseShadow)">
+                      <polygon
+                        points="0,-18 16,0 0,18 -16,0"
+                        fill={fill}
+                        fillOpacity={fillOpacity}
+                        stroke={stroke}
+                        strokeWidth={strokeWidth}
+                        strokeLinejoin="round"
+                      />
+                      <text
+                        x="0"
+                        y="4.5"
+                        fontFamily="'Space Grotesk', -apple-system, sans-serif"
+                        fontSize={token.label && token.label.length > 2 ? '10' : '12.5'}
+                        fontWeight="900"
+                        textAnchor="middle"
+                        fill={textColor}
+                        className="pointer-events-none select-none"
+                      >
+                        {token.label || 'D'}
+                      </text>
+                    </g>
+                  ) : effectiveShape === 'star' ? (
+                    // Star Token
+                    <g filter="url(#wbOffenseShadow)">
+                      <polygon
+                        points="0,-18 5,-5 18,-4 8,5 11,18 0,10 -11,18 -8,5 -18,-4 -5,-5"
+                        fill={fill}
+                        fillOpacity={fillOpacity}
+                        stroke={stroke}
+                        strokeWidth="2.2"
+                        strokeLinejoin="round"
+                      />
+                      <text
+                        x="0"
+                        y="4.5"
+                        fontFamily="'Space Grotesk', -apple-system, sans-serif"
+                        fontSize={token.label && token.label.length > 2 ? '9.5' : '11.5'}
+                        fontWeight="900"
+                        textAnchor="middle"
+                        fill={textColor}
+                        className="pointer-events-none select-none"
+                      >
+                        {token.label || 'S'}
+                      </text>
+                    </g>
+                  ) : effectiveShape === 'X' ? (
+                    // Defensive X Token
+                    <g>
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r="16"
+                        fill={isNoFill ? '#ffffff' : (token.color || '#0f172a')}
+                        fillOpacity={isNoFill ? 0.05 : 1}
+                        stroke={token.color || '#0f172a'}
+                        strokeWidth={strokeWidth}
+                      />
+                      {token.label && token.label !== 'X' ? (
+                        <text
+                          x="0"
+                          y="5"
+                          fontFamily="'Space Grotesk', sans-serif"
+                          fontSize={token.label.length > 2 ? '10' : '12'}
+                          fontWeight="900"
+                          textAnchor="middle"
+                          fill={isNoFill ? (token.color || '#0f172a') : '#ffffff'}
+                          className="pointer-events-none select-none"
+                        >
+                          {token.label}
+                        </text>
+                      ) : (
+                        <>
+                          <line
+                            x1="-6"
+                            y1="-6"
+                            x2="6"
+                            y2="6"
+                            stroke={isNoFill ? (token.color || '#0f172a') : '#ffffff'}
+                            strokeWidth="2.8"
+                            strokeLinecap="round"
+                          />
+                          <line
+                            x1="6"
+                            y1="-6"
+                            x2="-6"
+                            y2="6"
+                            stroke={isNoFill ? (token.color || '#0f172a') : '#ffffff'}
+                            strokeWidth="2.8"
+                            strokeLinecap="round"
+                          />
+                        </>
+                      )}
+                    </g>
+                  ) : token.type === 'ball' ? (
+                    // Football Token
+                    <g>
+                      <ellipse cx="0" cy="0" rx="14" ry="9" fill="#92400e" stroke="#451a03" strokeWidth="1.8" transform="rotate(-25)" />
+                      <line x1="-6" y1="0" x2="6" y2="0" stroke="#ffffff" strokeWidth="1.5" transform="rotate(-25)" />
+                      <line x1="-3" y1="-3" x2="-3" y2="3" stroke="#ffffff" strokeWidth="1.2" transform="rotate(-25)" />
+                      <line x1="0" y1="-3" x2="0" y2="3" stroke="#ffffff" strokeWidth="1.2" transform="rotate(-25)" />
+                      <line x1="3" y1="-3" x2="3" y2="3" stroke="#ffffff" strokeWidth="1.2" transform="rotate(-25)" />
+                    </g>
+                  ) : token.type === 'bag' ? (
+                    // Agile Dummy / Bag
+                    <g>
+                      <rect x="-16" y="-28" width="32" height="56" rx="10" fill="#ef4444" stroke="#991b1b" strokeWidth="2.5" />
+                      <text x="0" y="4" fontFamily="'Space Grotesk', sans-serif" fontSize="10" textAnchor="middle" fill="#fff" fontWeight="bold">
+                        {token.label}
+                      </text>
+                    </g>
+                  ) : token.type === 'cone' ? (
+                    // Cone / Pylon
+                    <g>
+                      <polygon points="0,-14 10,10 -10,10" fill="#f97316" stroke="#c2410c" strokeWidth="2" />
+                      <text x="14" y="4" fontFamily="'Space Grotesk', sans-serif" fontSize="11" fill="#c2410c" fontWeight="bold">
+                        {token.label}
+                      </text>
+                    </g>
+                  ) : (
+                    // Circle Token (Default: Offense, Defense, Custom)
+                    <g filter={isDef && !token.color && !isNoFill ? 'url(#wbDefenseShadow)' : 'url(#wbOffenseShadow)'}>
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r="16.5"
+                        fill={fill}
+                        fillOpacity={fillOpacity}
+                        stroke={stroke}
+                        strokeWidth={strokeWidth}
+                      />
+                      {/* Inner rim highlight on defense gradient */}
+                      {isDef && !token.color && !isNoFill && (
+                        <circle
+                          cx="0"
+                          cy="0"
+                          r="14.5"
+                          fill="none"
+                          stroke="#fca5a5"
+                          strokeWidth="0.8"
+                          strokeOpacity="0.6"
+                        />
+                      )}
+                      {token.label && token.label.trim() && token.label !== 'O' ? (
+                        <text
+                          x="0"
+                          y={token.label.length > 2 ? '4.5' : '5'}
+                          fontFamily="'Space Grotesk', sans-serif"
+                          fontSize={token.label.length > 2 ? '10.5' : '13'}
+                          fontWeight="900"
+                          textAnchor="middle"
+                          fill={textColor}
+                          className="pointer-events-none select-none"
+                        >
+                          {token.label}
+                        </text>
+                      ) : token.label === 'O' ? (
+                        <text
+                          x="0"
+                          y="5"
+                          fontFamily="'Space Grotesk', sans-serif"
+                          fontSize="13"
+                          fontWeight="900"
+                          textAnchor="middle"
+                          fill={textColor}
+                          className="pointer-events-none select-none"
+                        >
+                          O
+                        </text>
+                      ) : (
+                        // Blank circle with center dot
+                        <circle cx="0" cy="0" r="3.5" fill={textColor} />
+                      )}
+                    </g>
+                  )}
+
+                  {/* SubLabel pill badge */}
+                  {showLabels && token.subLabel && (
                   <g transform="translate(0, 27)" className="pointer-events-none select-none">
                     <rect
                       x={-(token.subLabel.length * 3.5 + 8)}
@@ -1369,8 +2109,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   </g>
                 )}
               </g>
-            );
-          })}
+            </React.Fragment>
+          );
+        })}
         </g>
 
         {/* 4. MOVABLE TEXT & COACHING NOTES LAYER (Critical User Requirement) */}
