@@ -361,8 +361,8 @@ export const PlaybookInteractiveSheet: React.FC<PlaybookInteractiveSheetProps> =
       )}
 
       {/* 3. WHITEBOARD DIAGRAM AREA */}
-      <div className="w-full bg-white relative p-2 sm:p-4 border-b border-slate-300 flex justify-center">
-        <div className="w-full max-w-4xl aspect-[7/5] min-h-[440px] max-h-[560px] relative rounded-xl overflow-hidden shadow-sm">
+      <div className="w-full bg-slate-100/60 relative p-2 sm:p-4 lg:p-6 border-b border-slate-300 flex justify-center">
+        <div className="w-full max-w-5xl xl:max-w-6xl min-h-[540px] sm:min-h-[620px] xl:min-h-[680px] relative rounded-xl overflow-hidden shadow-md border border-slate-300/80">
           <WhiteboardCanvas
             tokens={tokens}
             arrows={arrows}

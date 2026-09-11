@@ -1,6 +1,52 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { WhiteboardToken, WhiteboardArrow, WhiteboardZoneBubble, WhiteboardTextElement } from '../../types';
-import { Trash2, Edit2, Move, Type, Plus, Check, X } from 'lucide-react';
+import {
+  Trash2,
+  Edit2,
+  Move,
+  Type,
+  Plus,
+  Check,
+  X,
+  Maximize2,
+  Minimize2,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Shield,
+  CircleDot,
+  Zap,
+} from 'lucide-react';
+
+export function isDefenseToken(token: WhiteboardToken): boolean {
+  if (token.type === 'letter' || token.type === 'X') return true;
+  const idLower = (token.id || '').toLowerCase();
+  if (idLower.startsWith('def-') || idLower.startsWith('d-') || idLower.includes('def')) return true;
+  if (token.type === 'square' || token.isSquare) return false;
+  const defLabels = [
+    'E', 'T', 'N', 'DE', 'DT', 'NT', 'E9', 'T3', 'T1', 'E5',
+    'MLB', 'OLB', 'ILB', 'M', 'W', 'S', 'R', 'FS', 'SS', 'CB',
+    'C1', 'C2', 'SAM', 'MIKE', 'WILL', 'ROV', 'BUCK', 'NB', 'DB', 'LB', 'DL', 'ROVER', 'FREE', 'STRONG'
+  ];
+  const lbl = (token.label || '').trim().toUpperCase();
+  if (defLabels.includes(lbl)) {
+    // If it's a Center with square or y < 200, check if offense
+    if (lbl === 'C' && token.y <= 200) return false;
+    return true;
+  }
+  return false;
+}
+
+export function isOffenseToken(token: WhiteboardToken): boolean {
+  if (token.type === 'square' || token.isSquare) return true;
+  if (token.type === 'O') return true;
+  const idLower = (token.id || '').toLowerCase();
+  if (idLower.startsWith('off-') || idLower.startsWith('o-') || idLower.includes('off')) return true;
+  const offLabels = ['C', 'LG', 'RG', 'LT', 'RT', 'TE', 'WR', 'QB', 'FB', 'TB', 'HB', 'RB', 'SB', 'Z', 'Y', 'H', 'F', 'X', '1', '2', '3', '4'];
+  const lbl = (token.label || '').trim().toUpperCase();
+  if (offLabels.includes(lbl) && !isDefenseToken(token)) return true;
+  return false;
+}
 
 interface WhiteboardCanvasProps {
   tokens: WhiteboardToken[];
@@ -25,6 +71,7 @@ interface WhiteboardCanvasProps {
   showLabels?: boolean;
   zoneShadeMode?: 'dim' | 'soft' | 'outline' | 'standard';
   fieldTheme?: 'professional_hudl' | 'classic_chalk' | 'grass';
+  fieldSizePreset?: 'standard' | 'wide' | 'jumbo';
   readOnly?: boolean;
 }
 
@@ -50,10 +97,16 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   showCoachingInset = false,
   showLabels = true,
   zoneShadeMode = 'dim',
+  fieldSizePreset = 'wide',
   readOnly = false,
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Field size & zoom controls
+  const [fieldViewMode, setFieldViewMode] = useState<'standard' | 'wide' | 'jumbo'>(fieldSizePreset);
+  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
   // Editing text inline
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
@@ -81,6 +134,22 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   // Freehand drawing state
   const [isDrawing, setIsDrawing] = useState(false);
 
+  // Field viewBox bounds calculation
+  const baseView =
+    fieldViewMode === 'standard'
+      ? { minX: 0, minY: 0, width: 700, height: 500 }
+      : fieldViewMode === 'jumbo'
+      ? { minX: -90, minY: -45, width: 880, height: 590 }
+      : { minX: -55, minY: -30, width: 810, height: 560 };
+
+  const centerX = 350;
+  const centerY = 220;
+  const scaledWidth = Math.round(baseView.width / zoomLevel);
+  const scaledHeight = Math.round(baseView.height / zoomLevel);
+  const viewBoxMinX = Math.round(centerX - scaledWidth / 2);
+  const viewBoxMinY = Math.round(centerY - (centerY - baseView.minY) / zoomLevel);
+  const viewBoxStr = `${viewBoxMinX} ${viewBoxMinY} ${scaledWidth} ${scaledHeight}`;
+
   // Helper to get SVG coordinates from mouse or touch
   const getSvgCoordinates = useCallback(
     (clientX: number, clientY: number) => {
@@ -91,12 +160,23 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       pt.y = clientY;
       const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
       return {
-        x: Math.round(Math.max(10, Math.min(690, svgP.x))),
-        y: Math.round(Math.max(10, Math.min(490, svgP.y))),
+        x: Math.round(Math.max(viewBoxMinX + 8, Math.min(viewBoxMinX + scaledWidth - 8, svgP.x))),
+        y: Math.round(Math.max(viewBoxMinY + 8, Math.min(viewBoxMinY + scaledHeight - 8, svgP.y))),
       };
     },
-    []
+    [viewBoxMinX, viewBoxMinY, scaledWidth, scaledHeight]
   );
+
+  // Handle escape key to exit fullscreen
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
 
   // Handle Canvas Resize for Sketch Pad
   useEffect(() => {
@@ -404,14 +484,140 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full min-h-[500px] select-none overflow-hidden bg-slate-50 rounded-xl shadow-inner border border-slate-300"
+      className={`relative w-full h-full select-none overflow-hidden bg-white rounded-xl shadow-inner border border-slate-300 flex flex-col ${
+        isFullscreen
+          ? 'fixed inset-0 z-50 rounded-none border-none shadow-2xl bg-slate-950 flex flex-col p-3 sm:p-5'
+          : 'min-h-[560px] sm:min-h-[640px]'
+      }`}
       style={{
-        background: '#ffffff',
+        background: isFullscreen ? '#020617' : '#ffffff',
       }}
     >
+      {/* 0. PRO TOP FIELD TOOLBAR: Offense/Defense Legend + Field Zoom & View Controls */}
+      <div className="w-full bg-slate-900 text-white px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 z-30 text-xs select-none">
+        {/* Left: High-Contrast Legend Bar */}
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 bg-blue-950/80 border border-blue-600/70 px-2.5 py-1 rounded-md">
+            <span className="w-3.5 h-3.5 rounded-full bg-white border-2 border-blue-600 flex items-center justify-center font-bold text-[9px] text-blue-800">
+              O
+            </span>
+            <span className="font-extrabold tracking-wide text-blue-200 text-[11px]">
+              OFFENSE (Blue & White)
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 bg-red-950/80 border border-red-600/70 px-2.5 py-1 rounded-md">
+            <span className="w-3.5 h-3.5 rounded-full bg-red-600 border border-red-400 shadow-sm flex items-center justify-center font-bold text-[8px] text-white">
+              D
+            </span>
+            <span className="font-extrabold tracking-wide text-red-200 text-[11px]">
+              DEFENSE (Crimson Red)
+            </span>
+          </div>
+
+          <div className="hidden md:flex items-center gap-1 text-[11px] text-slate-400">
+            <Zap className="w-3 h-3 text-red-400" />
+            <span>Rush/Stunt</span>
+            <span className="mx-1 text-slate-600">•</span>
+            <Shield className="w-3 h-3 text-sky-400" />
+            <span>Zones</span>
+          </div>
+        </div>
+
+        {/* Right: Field View Selector + Zoom + Fullscreen */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Field Size Presets */}
+          <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700">
+            <button
+              type="button"
+              onClick={() => setFieldViewMode('standard')}
+              title="Standard Field (4:3)"
+              className={`px-2 py-0.5 rounded text-[10.5px] font-bold transition-colors ${
+                fieldViewMode === 'standard' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Standard
+            </button>
+            <button
+              type="button"
+              onClick={() => setFieldViewMode('wide')}
+              title="Pro Wide Field (More sideline and backfield space)"
+              className={`px-2.5 py-0.5 rounded text-[10.5px] font-bold transition-colors ${
+                fieldViewMode === 'wide' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Pro Wide
+            </button>
+            <button
+              type="button"
+              onClick={() => setFieldViewMode('jumbo')}
+              title="Jumbo Field (Maximum width for spread formations)"
+              className={`px-2 py-0.5 rounded text-[10.5px] font-bold transition-colors ${
+                fieldViewMode === 'jumbo' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Jumbo
+            </button>
+          </div>
+
+          {/* Zoom Controls */}
+          <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700">
+            <button
+              type="button"
+              onClick={() => setZoomLevel((z) => Math.max(0.75, Math.round((z - 0.15) * 100) / 100))}
+              title="Zoom Out"
+              className="p-1 text-slate-300 hover:text-white rounded hover:bg-slate-700 cursor-pointer"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-[10px] font-mono px-1.5 font-bold text-slate-300 min-w-[36px] text-center">
+              {Math.round(zoomLevel * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={() => setZoomLevel((z) => Math.min(1.75, Math.round((z + 0.15) * 100) / 100))}
+              title="Zoom In"
+              className="p-1 text-slate-300 hover:text-white rounded hover:bg-slate-700 cursor-pointer"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+            {zoomLevel !== 1.0 && (
+              <button
+                type="button"
+                onClick={() => setZoomLevel(1.0)}
+                title="Reset Zoom to 100%"
+                className="p-1 text-amber-400 hover:text-amber-300 rounded hover:bg-slate-700 cursor-pointer ml-0.5"
+              >
+                <RotateCcw className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Fullscreen Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsFullscreen((prev) => !prev)}
+            title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Expand Fullscreen Field'}
+            className="p-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+          >
+            {isFullscreen ? (
+              <>
+                <Minimize2 className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-[10.5px] font-bold text-amber-400 hidden sm:inline">Exit</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span className="text-[10.5px] font-bold hidden sm:inline">Expand</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
       {/* Floating Action Controls on Canvas for Selected Item */}
       {selectedId && !readOnly && !isDrawingMode && (
-        <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 bg-slate-900/90 text-white px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm border border-slate-700 text-xs animate-in fade-in">
+        <div className="absolute top-14 right-3 z-30 flex items-center gap-1.5 bg-slate-900/90 text-white px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm border border-slate-700 text-xs animate-in fade-in">
           <span className="font-semibold text-slate-300 capitalize text-[11px] mr-1">
             {selectedType}:
           </span>
@@ -455,150 +661,183 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       />
 
       {/* Main Professional Football Field SVG Layer */}
-      <svg
-        ref={svgRef}
-        viewBox="0 0 700 500"
-        className="w-full h-full block relative z-10"
-        onClick={handleSvgClick}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-      >
-        <defs>
-          <filter id="wbMarkerGlow" x="-15%" y="-15%" width="130%" height="130%">
-            <feGaussianBlur stdDeviation="0.2" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
+      <div className="relative flex-1 w-full h-full min-h-[500px] overflow-hidden bg-white">
+        <svg
+          ref={svgRef}
+          viewBox={viewBoxStr}
+          className="w-full h-full block relative z-10"
+          onClick={handleSvgClick}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+        >
+          <defs>
+            <filter id="wbMarkerGlow" x="-15%" y="-15%" width="130%" height="130%">
+              <feGaussianBlur stdDeviation="0.2" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
 
-          {/* Marker Arrowheads */}
-          <marker id="arrowhead-red" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-            <path d="M 0 1 L 10 5 L 0 9 z" fill="#d91b24" />
-          </marker>
-          <marker id="arrowhead-blue" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-            <path d="M 0 1 L 10 5 L 0 9 z" fill="#0052cc" />
-          </marker>
-          <marker id="arrowhead-green" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-            <path d="M 0 1 L 10 5 L 0 9 z" fill="#058538" />
-          </marker>
-          <marker id="arrowhead-black" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-            <path d="M 0 1 L 10 5 L 0 9 z" fill="#0f172a" />
-          </marker>
-          <marker id="arrowhead-orange" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-            <path d="M 0 1 L 10 5 L 0 9 z" fill="#e06c00" />
-          </marker>
-          <marker id="arrowhead-purple" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-            <path d="M 0 1 L 10 5 L 0 9 z" fill="#7c3aed" />
-          </marker>
+            {/* Defense Crimson Gradient */}
+            <linearGradient id="wbDefenseGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#ef4444" />
+              <stop offset="100%" stopColor="#b91c1c" />
+            </linearGradient>
 
-          {/* Blocker T-Bar */}
-          <marker id="t-bar-end" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-            <line x1="5" y1="0" x2="5" y2="10" stroke="#0f172a" strokeWidth="3.2" strokeLinecap="round" />
-          </marker>
-        </defs>
+            {/* Defense Crimson Drop Shadow */}
+            <filter id="wbDefenseShadow" x="-25%" y="-25%" width="150%" height="150%">
+              <feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="#b91c1c" floodOpacity="0.45" />
+            </filter>
 
-        {/* Clickable field background */}
-        <rect id="fieldBackground" x="0" y="0" width="700" height="500" fill="#ffffff" />
+            {/* Offense Royal Blue Drop Shadow */}
+            <filter id="wbOffenseShadow" x="-25%" y="-25%" width="150%" height="150%">
+              <feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="#1d4ed8" floodOpacity="0.30" />
+            </filter>
 
-        {/* Professional Football Field Markings - Grid Lines, Hashes & Numbers */}
-        <g id="fieldLines" className="select-none pointer-events-none">
-          {/* Subtle Outer Boundary Box */}
-          <rect x="25" y="20" width="650" height="460" rx="4" fill="none" stroke="#94a3b8" strokeWidth="1.5" />
+            {/* Marker Arrowheads */}
+            <marker id="arrowhead-red" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#dc2626" />
+            </marker>
+            <marker id="arrowhead-blue" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#1d4ed8" />
+            </marker>
+            <marker id="arrowhead-green" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#058538" />
+            </marker>
+            <marker id="arrowhead-black" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#0f172a" />
+            </marker>
+            <marker id="arrowhead-orange" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#e06c00" />
+            </marker>
+            <marker id="arrowhead-purple" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#7c3aed" />
+            </marker>
 
-          {/* Subtle 5-yard grid lines */}
-          <line x1="25" y1="60" x2="675" y2="60" stroke="#f1f5f9" strokeWidth="1" />
-          <line x1="25" y1="100" x2="675" y2="100" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="4,4" />
-          <line x1="25" y1="140" x2="675" y2="140" stroke="#f1f5f9" strokeWidth="1" />
-          <line x1="25" y1="180" x2="675" y2="180" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="4,4" />
+            {/* Blocker T-Bar */}
+            <marker id="t-bar-end" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+              <line x1="5" y1="0" x2="5" y2="10" stroke="#1d4ed8" strokeWidth="3.2" strokeLinecap="round" />
+            </marker>
+          </defs>
 
-          {/* Blue Line of Scrimmage (LOS) at y: 200 */}
-          <line x1="25" y1="200" x2="675" y2="200" stroke="#2563eb" strokeWidth="2.5" />
+          {/* Clickable broad field background */}
+          <rect id="fieldBackground" x="-300" y="-200" width="1600" height="1200" fill="#ffffff" />
 
-          {/* Defensive Backfield Yard Lines */}
-          <line x1="25" y1="240" x2="675" y2="240" stroke="#f1f5f9" strokeWidth="1" />
-          <line x1="25" y1="280" x2="675" y2="280" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="4,4" />
-          <line x1="25" y1="320" x2="675" y2="320" stroke="#f1f5f9" strokeWidth="1" />
-          <line x1="25" y1="360" x2="675" y2="360" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="4,4" />
-          <line x1="25" y1="400" x2="675" y2="400" stroke="#f1f5f9" strokeWidth="1" />
-          <line x1="25" y1="440" x2="675" y2="440" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="4,4" />
+          {/* Professional Football Field Markings - Grid Lines, Hashes & Numbers */}
+          <g id="fieldLines" className="select-none pointer-events-none">
+            {/* Subtle Outer Boundary Box */}
+            <rect
+              x={baseView.minX + 22}
+              y={baseView.minY + 16}
+              width={baseView.width - 44}
+              height={baseView.height - 32}
+              rx="6"
+              fill="none"
+              stroke="#94a3b8"
+              strokeWidth="1.8"
+            />
 
-          {/* Hash Marks Columns - Left and Right Hashes across the field */}
-          <line x1="270" y1="25" x2="270" y2="475" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,7" />
-          <line x1="430" y1="25" x2="430" y2="475" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,7" />
+            {/* Subtle 5-yard grid lines */}
+            {[60, 100, 140, 180, 240, 280, 320, 360, 400, 440, 480].map((yLine) => (
+              <line
+                key={`grid-${yLine}`}
+                x1={baseView.minX + 22}
+                y1={yLine}
+                x2={baseView.minX + baseView.width - 22}
+                y2={yLine}
+                stroke={yLine % 80 === 0 ? '#cbd5e1' : '#f1f5f9'}
+                strokeWidth="1"
+                strokeDasharray={yLine % 80 === 0 ? '4,4' : undefined}
+              />
+            ))}
 
-          {/* Sideline Hash Ticks */}
-          {[40, 60, 80, 100, 120, 140, 160, 180, 220, 240, 260, 280, 300, 320, 340, 360, 380, 400, 420, 440, 460].map(
-            (yVal) => (
-              <g key={`hash-${yVal}`}>
-                <line x1="25" y1={yVal} x2="33" y2={yVal} stroke="#94a3b8" strokeWidth="1" />
-                <line x1="667" y1={yVal} x2="675" y2={yVal} stroke="#94a3b8" strokeWidth="1" />
-                <line x1="266" y1={yVal} x2="274" y2={yVal} stroke="#cbd5e1" strokeWidth="1" />
-                <line x1="426" y1={yVal} x2="434" y2={yVal} stroke="#cbd5e1" strokeWidth="1" />
-              </g>
-            )
-          )}
+            {/* Blue Line of Scrimmage (LOS) at y: 200 */}
+            <line
+              x1={baseView.minX + 22}
+              y1="200"
+              x2={baseView.minX + baseView.width - 22}
+              y2="200"
+              stroke="#2563eb"
+              strokeWidth="3"
+            />
 
-          {/* Authentic College/Pro Sideline Numbers (Watermarked) */}
-          <g transform="translate(642, 100) rotate(90)" opacity="0.35">
-            <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
-              10
-            </text>
+            {/* Hash Marks Columns - Inbounds Hashes across the field */}
+            <line x1="270" y1={baseView.minY + 20} x2="270" y2={baseView.minY + baseView.height - 20} stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,7" />
+            <line x1="430" y1={baseView.minY + 20} x2="430" y2={baseView.minY + baseView.height - 20} stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,7" />
+
+            {/* Sideline Hash Ticks */}
+            {[40, 60, 80, 100, 120, 140, 160, 180, 220, 240, 260, 280, 300, 320, 340, 360, 380, 400, 420, 440, 460, 480, 500].map(
+              (yVal) => (
+                <g key={`hash-${yVal}`}>
+                  <line x1={baseView.minX + 22} y1={yVal} x2={baseView.minX + 31} y2={yVal} stroke="#94a3b8" strokeWidth="1" />
+                  <line x1={baseView.minX + baseView.width - 31} y1={yVal} x2={baseView.minX + baseView.width - 22} y2={yVal} stroke="#94a3b8" strokeWidth="1" />
+                  <line x1="266" y1={yVal} x2="274" y2={yVal} stroke="#cbd5e1" strokeWidth="1" />
+                  <line x1="426" y1={yVal} x2="434" y2={yVal} stroke="#cbd5e1" strokeWidth="1" />
+                </g>
+              )
+            )}
+
+            {/* Authentic College/Pro Sideline Numbers (Watermarked) */}
+            <g transform={`translate(${baseView.minX + baseView.width - 48}, 100) rotate(90)`} opacity="0.35">
+              <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
+                10
+              </text>
+            </g>
+            <g transform={`translate(${baseView.minX + 48}, 100) rotate(-90)`} opacity="0.35">
+              <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
+                10
+              </text>
+            </g>
+
+            <g transform={`translate(${baseView.minX + baseView.width - 48}, 280) rotate(90)`} opacity="0.35">
+              <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
+                10
+              </text>
+            </g>
+            <g transform={`translate(${baseView.minX + 48}, 280) rotate(-90)`} opacity="0.35">
+              <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
+                10
+              </text>
+            </g>
+
+            <g transform={`translate(${baseView.minX + baseView.width - 48}, 360) rotate(90)`} opacity="0.35">
+              <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
+                20
+              </text>
+            </g>
+            <g transform={`translate(${baseView.minX + 48}, 360) rotate(-90)`} opacity="0.35">
+              <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
+                20
+              </text>
+            </g>
+
+            <g transform={`translate(${baseView.minX + baseView.width - 48}, 440) rotate(90)`} opacity="0.35">
+              <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
+                30
+              </text>
+            </g>
+            <g transform={`translate(${baseView.minX + 48}, 440) rotate(-90)`} opacity="0.35">
+              <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
+                30
+              </text>
+            </g>
+
+            {/* High-Contrast LOS Badges */}
+            <g>
+              <rect x={baseView.minX + 22} y="189" width="34" height="22" rx="4" fill="#2563eb" />
+              <text x={baseView.minX + 39} y="204" fontFamily="'Space Grotesk', sans-serif" fontSize="10" fontWeight="900" fill="#ffffff" textAnchor="middle">
+                LOS
+              </text>
+            </g>
+            <g>
+              <rect x={baseView.minX + baseView.width - 56} y="189" width="34" height="22" rx="4" fill="#2563eb" />
+              <text x={baseView.minX + baseView.width - 39} y="204" fontFamily="'Space Grotesk', sans-serif" fontSize="10" fontWeight="900" fill="#ffffff" textAnchor="middle">
+                LOS
+              </text>
+            </g>
           </g>
-          <g transform="translate(58, 100) rotate(-90)" opacity="0.35">
-            <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
-              10
-            </text>
-          </g>
-
-          <g transform="translate(642, 280) rotate(90)" opacity="0.35">
-            <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
-              10
-            </text>
-          </g>
-          <g transform="translate(58, 280) rotate(-90)" opacity="0.35">
-            <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
-              10
-            </text>
-          </g>
-
-          <g transform="translate(642, 360) rotate(90)" opacity="0.35">
-            <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
-              20
-            </text>
-          </g>
-          <g transform="translate(58, 360) rotate(-90)" opacity="0.35">
-            <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
-              20
-            </text>
-          </g>
-
-          <g transform="translate(642, 440) rotate(90)" opacity="0.35">
-            <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
-              30
-            </text>
-          </g>
-          <g transform="translate(58, 440) rotate(-90)" opacity="0.35">
-            <text fontFamily="'Space Grotesk', sans-serif" fontSize="18" fontWeight="800" fill="#64748b" textAnchor="middle">
-              30
-            </text>
-          </g>
-
-          {/* High-Contrast LOS Badges */}
-          <g>
-            <rect x="25" y="189" width="34" height="22" rx="4" fill="#2563eb" />
-            <text x="42" y="204" fontFamily="'Space Grotesk', sans-serif" fontSize="10" fontWeight="900" fill="#ffffff" textAnchor="middle">
-              LOS
-            </text>
-          </g>
-          <g>
-            <rect x="641" y="189" width="34" height="22" rx="4" fill="#2563eb" />
-            <text x="658" y="204" fontFamily="'Space Grotesk', sans-serif" fontSize="10" fontWeight="900" fill="#ffffff" textAnchor="middle">
-              LOS
-            </text>
-          </g>
-        </g>
 
         {/* 1. Zone Coverage Bubbles Layer */}
         <g id="zoneBubblesLayer">
@@ -889,6 +1128,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         <g id="tokensLayer">
           {tokens.map((token) => {
             const isSelected = selectedType === 'token' && selectedId === token.id;
+            const isDef = isDefenseToken(token);
+            const isOff = isOffenseToken(token);
+            const isCenter = token.type === 'square' || token.isSquare || (token.type === 'O' && token.label === 'C');
 
             return (
               <g
@@ -910,40 +1152,123 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
               >
                 {/* Selected Halo Ring */}
                 {isSelected && (
-                  <circle cx="0" cy="0" r="21" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeDasharray="4,3" />
+                  <circle
+                    cx="0"
+                    cy="0"
+                    r="23"
+                    fill="none"
+                    stroke={isDef ? '#ef4444' : '#2563eb'}
+                    strokeWidth="2.8"
+                    strokeDasharray="4,3"
+                  />
                 )}
 
-                {/* Token Render by Football Archetype */}
-                {token.type === 'square' || token.isSquare || (token.type === 'O' && token.label === 'C') ? (
-                  // Offensive Center: Crisp Square right on the LOS
-                  <g>
+                {/* Token Render by Football Archetype & Team Alignment */}
+                {isCenter ? (
+                  // Offensive Center: Crisp Square with Royal Blue Border on LOS
+                  <g filter="url(#wbOffenseShadow)">
                     <rect
-                      x="-14"
-                      y="-14"
-                      width="28"
-                      height="28"
-                      rx="3"
+                      x="-15"
+                      y="-15"
+                      width="30"
+                      height="30"
+                      rx="4"
                       fill="#ffffff"
-                      stroke={token.color || '#0f172a'}
-                      strokeWidth="2.6"
-                      filter="url(#wbMarkerGlow)"
+                      stroke="#1d4ed8"
+                      strokeWidth="3.2"
                     />
                     <text
                       x="0"
-                      y="5"
+                      y="5.5"
                       fontFamily="'Space Grotesk', -apple-system, sans-serif"
-                      fontSize="13"
+                      fontSize="14"
                       fontWeight="900"
                       textAnchor="middle"
-                      fill={token.color || '#0f172a'}
-                      className="pointer-events-none"
+                      fill="#1d4ed8"
+                      className="pointer-events-none select-none"
                     >
                       {token.label || 'C'}
                     </text>
                   </g>
+                ) : isDef ? (
+                  // DEFENSIVE PLAYER TOKENS: High-Contrast Crimson Red Badges (E9, T3, T1, E5, S, M, W, R, C, FS)
+                  <g filter="url(#wbDefenseShadow)">
+                    <circle
+                      cx="0"
+                      cy="0"
+                      r="17"
+                      fill="url(#wbDefenseGradient)"
+                      stroke="#991b1b"
+                      strokeWidth="2.4"
+                    />
+                    {/* Inner subtle rim highlight */}
+                    <circle
+                      cx="0"
+                      cy="0"
+                      r="14.5"
+                      fill="none"
+                      stroke="#fca5a5"
+                      strokeWidth="0.8"
+                      strokeOpacity="0.6"
+                    />
+                    <text
+                      x="0"
+                      y={token.label && token.label.length > 2 ? '4.5' : '5.5'}
+                      fontFamily="'Space Grotesk', -apple-system, sans-serif"
+                      fontSize={token.label && token.label.length > 2 ? '11' : token.label && token.label.length === 2 ? '13' : '15'}
+                      fontWeight="900"
+                      textAnchor="middle"
+                      fill="#ffffff"
+                      className="pointer-events-none select-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
+                    >
+                      {token.label || 'D'}
+                    </text>
+                  </g>
+                ) : isOff || token.type === 'O' ? (
+                  // OFFENSIVE PLAYERS & LINEMEN: Crisp White Fill with Royal Blue Border
+                  <g filter="url(#wbOffenseShadow)">
+                    <circle
+                      cx="0"
+                      cy="0"
+                      r="16.5"
+                      fill="#ffffff"
+                      stroke="#1d4ed8"
+                      strokeWidth="3.2"
+                    />
+                    {token.label && token.label.trim() && token.label !== 'O' ? (
+                      <text
+                        x="0"
+                        y={token.label.length > 2 ? '4.5' : '5'}
+                        fontFamily="'Space Grotesk', sans-serif"
+                        fontSize={token.label.length > 2 ? '10.5' : '13'}
+                        fontWeight="900"
+                        textAnchor="middle"
+                        fill="#1d4ed8"
+                        className="pointer-events-none select-none"
+                      >
+                        {token.label}
+                      </text>
+                    ) : token.label === 'O' ? (
+                      <text
+                        x="0"
+                        y="5"
+                        fontFamily="'Space Grotesk', sans-serif"
+                        fontSize="13"
+                        fontWeight="900"
+                        textAnchor="middle"
+                        fill="#1d4ed8"
+                        className="pointer-events-none select-none"
+                      >
+                        O
+                      </text>
+                    ) : (
+                      // Unlabeled offensive lineman (blank circle with small interior center dot)
+                      <circle cx="0" cy="0" r="3.5" fill="#1d4ed8" />
+                    )}
+                  </g>
                 ) : token.type === 'letter' ? (
-                  // Defensive Player Tokens: Crisp Bold Typography (E9, T3, T1, E5, S, M, W, R, C, FS)
-                  <g>
+                  // Generic Letter Token
+                  <g filter="url(#wbMarkerGlow)">
                     <circle
                       cx="0"
                       cy="0"
@@ -951,7 +1276,6 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                       fill="#ffffff"
                       stroke={token.color || '#0f172a'}
                       strokeWidth="2.8"
-                      filter="url(#wbMarkerGlow)"
                     />
                     <text
                       x="0"
@@ -965,33 +1289,6 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                     >
                       {token.label}
                     </text>
-                  </g>
-                ) : token.type === 'O' ? (
-                  // Offensive Players / Linemen Circles
-                  <g>
-                    <circle
-                      cx="0"
-                      cy="0"
-                      r="16"
-                      fill="#ffffff"
-                      stroke={token.color || '#0f172a'}
-                      strokeWidth="2.8"
-                      filter="url(#wbMarkerGlow)"
-                    />
-                    {token.label && token.label.trim() && (
-                      <text
-                        x="0"
-                        y="5"
-                        fontFamily="'Space Grotesk', sans-serif"
-                        fontSize={token.label.length > 2 ? '10' : '12'}
-                        fontWeight="900"
-                        textAnchor="middle"
-                        fill={token.color || '#0f172a'}
-                        className="pointer-events-none"
-                      >
-                        {token.label}
-                      </text>
-                    )}
                   </g>
                 ) : token.type === 'X' ? (
                   // X Token
@@ -1020,12 +1317,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                 ) : token.type === 'ball' ? (
                   // Football / Coach Token
                   <g>
-                    <circle cx="0" cy="0" r="16" fill="#f8fafc" stroke="#0f172a" strokeWidth="2.5" />
-                    <text x="0" y="5" fontFamily="'Space Grotesk', sans-serif" fontSize="10" textAnchor="middle" fill="#0f172a">
-                      {token.label}
-                    </text>
-                    <line x1="0" y1="0" x2="-45" y2="35" stroke="#78350f" strokeWidth="3.5" strokeLinecap="round" />
-                    <ellipse cx="-45" cy="35" rx="11" ry="7" fill="#92400e" stroke="#451a03" strokeWidth="1.8" transform="rotate(-30 -45 35)" />
+                    <ellipse cx="0" cy="0" rx="14" ry="9" fill="#92400e" stroke="#451a03" strokeWidth="1.8" transform="rotate(-25)" />
+                    <line x1="-6" y1="0" x2="6" y2="0" stroke="#ffffff" strokeWidth="1.5" transform="rotate(-25)" />
+                    <line x1="-3" y1="-3" x2="-3" y2="3" stroke="#ffffff" strokeWidth="1.2" transform="rotate(-25)" />
+                    <line x1="0" y1="-3" x2="0" y2="3" stroke="#ffffff" strokeWidth="1.2" transform="rotate(-25)" />
+                    <line x1="3" y1="-3" x2="3" y2="3" stroke="#ffffff" strokeWidth="1.2" transform="rotate(-25)" />
                   </g>
                 ) : token.type === 'bag' ? (
                   // Agile Dummy / Bag
@@ -1159,6 +1455,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           })}
         </g>
       </svg>
+      </div>
 
       {/* Inline Text Editor Overlay when double-clicked */}
       {editingTextId && (

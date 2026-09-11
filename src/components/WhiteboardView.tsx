@@ -1544,7 +1544,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
         </div>
 
         {/* Full-Width Canvas Container */}
-        <div className="w-full bg-white rounded-xl border border-slate-700/80 overflow-hidden shadow-2xl relative min-h-[520px] sm:min-h-[620px]">
+        <div className="w-full bg-white rounded-xl border border-slate-700/80 overflow-hidden shadow-2xl relative min-h-[580px] sm:min-h-[660px] xl:min-h-[720px]">
           <WhiteboardCanvas
             tokens={tokens}
             arrows={arrows}
