@@ -169,12 +169,17 @@ export default function App() {
       safeJSONParse('footballCascadingDrills', DEFAULT_CASCADING_DRILLS)
     )
   );
-  const [guideTree, setGuideTree] = useState<PlaybookGuideTree>(() =>
-    safeJSONParse('footballPdfGuidesTree', DEFAULT_GUIDES_TREE)
-  );
-  const [guideOrder, setGuideOrder] = useState<PlaybookGuideOrder>(() =>
-    safeJSONParse('footballPdfGuidesOrder', DEFAULT_GUIDES_ORDER)
-  );
+  const [guideTree, setGuideTree] = useState<PlaybookGuideTree>(() => {
+    const saved = safeJSONParse<PlaybookGuideTree>('footballPdfGuidesTree', DEFAULT_GUIDES_TREE);
+    return { ...DEFAULT_GUIDES_TREE, ...saved };
+  });
+  const [guideOrder, setGuideOrder] = useState<PlaybookGuideOrder>(() => {
+    const saved = safeJSONParse<PlaybookGuideOrder>('footballPdfGuidesOrder', DEFAULT_GUIDES_ORDER);
+    if (!saved || !saved.main || !saved.main.includes('📋 Defensive Schemes & Shells')) {
+      return DEFAULT_GUIDES_ORDER;
+    }
+    return saved;
+  });
   const [savedCoaches, setSavedCoaches] = useState<string[]>(() =>
     safeJSONParse('footballSavedCoaches', DEFAULT_SAVED_COACHES)
   );

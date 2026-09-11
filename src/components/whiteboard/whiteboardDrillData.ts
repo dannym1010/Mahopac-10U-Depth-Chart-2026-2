@@ -1,4 +1,4 @@
-import { WhiteboardToken, WhiteboardArrow, WhiteboardZoneBubble } from '../../types';
+import { WhiteboardToken, WhiteboardArrow, WhiteboardZoneBubble, WhiteboardTextElement, PlayResponsibility } from '../../types';
 import { SCHEME_DRILLS } from './drillsSchemes';
 import { TEAM_CIRCUIT_DRILLS } from './drillsTeam';
 import { EXTRA_YOUTH_DRILLS } from './drillsExtraYouth';
@@ -42,7 +42,13 @@ export interface WhiteboardDrill {
     tokens: WhiteboardToken[];
     arrows: WhiteboardArrow[];
     zones: WhiteboardZoneBubble[];
+    textElements?: WhiteboardTextElement[];
   }[];
+  responsibilities?: PlayResponsibility[];
+  notes?: string[];
+  videoUrl?: string;
+  hudlPlaybookName?: string;
+  formationName?: string;
 }
 
 export interface PositionGroupFilter {

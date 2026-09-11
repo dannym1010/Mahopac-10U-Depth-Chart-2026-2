@@ -31,6 +31,11 @@ import {
   generatePlaybookBinderPrintHTML,
 } from '../utils/printUtils';
 import { FullDocumentViewer } from './common/FullDocumentViewer';
+import { PlaybookInteractiveSheet } from './whiteboard/PlaybookInteractiveSheet';
+import { HudlPlaybookUploadModal } from './whiteboard/HudlPlaybookUploadModal';
+import { SCHEME_DRILLS } from './whiteboard/drillsSchemes';
+import { DEFENSIVE_DRILLS, WhiteboardDrill, getCustomWhiteboardDrills, saveCustomWhiteboardDrills } from './whiteboard/whiteboardDrillData';
+import { HUDL_10U_DEFENSE_INSTALL_PLAYS } from '../data/hudl10UDefenseData';
 
 interface PlaybookGuidesViewProps {
   guideTree: PlaybookGuideTree;
@@ -480,6 +485,51 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
   const [selectedPrintSubTabs, setSelectedPrintSubTabs] = useState<Record<string, boolean>>({});
   const [isPrintingLoading, setIsPrintingLoading] = useState(false);
 
+  // Hudl and Interactive Playbook Sheet State
+  const [isHudlUploadOpen, setIsHudlUploadOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'sheet' | 'doc'>('sheet');
+  const [customPlays, setCustomPlays] = useState<WhiteboardDrill[]>(() => getCustomWhiteboardDrills());
+
+  const allAvailablePlays = useMemo(() => {
+    return [...customPlays, ...HUDL_10U_DEFENSE_INSTALL_PLAYS, ...SCHEME_DRILLS, ...DEFENSIVE_DRILLS];
+  }, [customPlays]);
+
+  const matchingPlay = useMemo(() => {
+    const normSub = activeSub.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const directMatch = allAvailablePlays.find(
+      (p) =>
+        p.id === activeSub ||
+        p.title.toLowerCase().replace(/[^a-z0-9]/g, '') === normSub ||
+        normSub.includes(p.title.toLowerCase().replace(/[^a-z0-9]/g, '')) ||
+        p.title.toLowerCase().replace(/[^a-z0-9]/g, '').includes(normSub)
+    );
+    if (directMatch) return directMatch;
+
+    if (activeMain.includes('Schemes') || activeMain.includes('Hudl') || activeMain.includes('Defense')) {
+      return HUDL_10U_DEFENSE_INSTALL_PLAYS[0];
+    }
+    return null;
+  }, [activeMain, activeSub, allAvailablePlays]);
+
+  const handleImportFromHudl = (plays: WhiteboardDrill[], folderName: string) => {
+    const updatedCustom = [...customPlays, ...plays];
+    setCustomPlays(updatedCustom);
+    saveCustomWhiteboardDrills(updatedCustom);
+
+    if (!guideTree[folderName]) {
+      onAddMainFolder(folderName);
+    }
+    plays.forEach((play) => {
+      onAddSubTab(folderName, play.title);
+    });
+
+    onSelectMain(folderName);
+    if (plays.length > 0) {
+      onSelectSub(plays[0].title);
+    }
+    setViewMode('sheet');
+  };
+
   const mainCategories =
     guideOrder.main && guideOrder.main.length > 0
       ? guideOrder.main
@@ -895,6 +945,43 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {/* View Mode Toggle: Interactive Play Sheet vs Document / PDF */}
+            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-700">
+              <button
+                type="button"
+                onClick={() => setViewMode('sheet')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === 'sheet'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                📋 Whiteboard Play Sheet
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('doc')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === 'doc'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                📄 Document / PDF View
+              </button>
+            </div>
+
+            {/* Upload from Hudl Button */}
+            <button
+              type="button"
+              onClick={() => setIsHudlUploadOpen(true)}
+              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md shadow-blue-500/20 cursor-pointer transition-colors"
+              title="Upload PDF or text playbook from Hudl and auto-redraw in interactive whiteboard"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Upload from Hudl</span>
+            </button>
+
             {canManageDocs && (
               <>
                 {/* HTML Code Editor / Creator Button */}
@@ -986,8 +1073,23 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
           </div>
         </div>
 
-        {/* Document Frame / Full Page Continuous Viewer */}
-        {currentDocUrl ? (
+        {/* Document Frame / Interactive Whiteboard Sheet Viewer */}
+        {viewMode === 'sheet' && matchingPlay ? (
+          <PlaybookInteractiveSheet
+            drill={matchingPlay}
+            allPlays={allAvailablePlays}
+            onSelectPlay={(p) => onSelectSub(p.title)}
+            onBackToInstall={() => onSelectMain(activeMain)}
+            onUpdateDrill={(updatedDrill) => {
+              const updated = customPlays.map((p) => (p.id === updatedDrill.id ? updatedDrill : p));
+              if (!updated.some((p) => p.id === updatedDrill.id)) {
+                updated.push(updatedDrill);
+              }
+              setCustomPlays(updated);
+              saveCustomWhiteboardDrills(updated);
+            }}
+          />
+        ) : currentDocUrl ? (
           <FullDocumentViewer
             content={currentDocUrl}
             title={`${activeMain} - ${activeSub}`}
@@ -1005,12 +1107,35 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                 No Document or HTML in [{activeMain} &gt; {activeSub}]
               </p>
               <p className="text-xs text-slate-400 max-w-md mx-auto">
-                Upload a PDF playbook, offensive install sheet, wristband card, or write / paste custom HTML code with interactive play diagrams and video embeds.
+                Open the interactive whiteboard play sheet, upload a PDF playbook from Hudl to auto-redraw, or paste custom HTML code with responsive diagrams.
               </p>
             </div>
 
+            <div className="flex items-center gap-3 pt-2 flex-wrap justify-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode('sheet');
+                  if (!matchingPlay && allAvailablePlays.length > 0) {
+                    onSelectSub(allAvailablePlays[0].title);
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md shadow-blue-600/30 cursor-pointer"
+              >
+                <span>📋 Open Whiteboard Play Sheet</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsHudlUploadOpen(true)}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-600/30 cursor-pointer"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Upload from Hudl</span>
+              </button>
+
               {userRole === 'admin' && (
-                <div className="flex items-center gap-3 pt-2">
+                <>
                   <button
                     type="button"
                     onClick={handleOpenHtmlEditor}
@@ -1020,7 +1145,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                     <span>+ Create HTML Playbook</span>
                   </button>
 
-                  <label className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-600/30 cursor-pointer">
+                  <label className="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md border border-slate-700 cursor-pointer">
                     <Upload className="w-4 h-4" />
                     <span>Upload PDF / File</span>
                     <input
@@ -1034,11 +1159,12 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                       }}
                     />
                   </label>
-                </div>
+                </>
               )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+      </div>
 
       {/* HTML Code Editor & Starter Template Modal */}
       {isHtmlEditorOpen && (
@@ -1803,6 +1929,13 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
           </div>
         </div>
       )}
+      {/* Hudl Playbook Upload & Auto-Redraw Modal */}
+      <HudlPlaybookUploadModal
+        isOpen={isHudlUploadOpen}
+        onClose={() => setIsHudlUploadOpen(false)}
+        onImportPlays={handleImportFromHudl}
+        existingFolders={mainCategories}
+      />
     </div>
   );
 };

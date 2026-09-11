@@ -32,8 +32,10 @@ import {
   ListOrdered,
   Dumbbell,
   Calendar,
+  Upload,
+  Type,
 } from 'lucide-react';
-import { WhiteboardToken, WhiteboardArrow, WhiteboardZoneBubble, Team, UserRole, PracticePlan } from '../types';
+import { WhiteboardToken, WhiteboardArrow, WhiteboardZoneBubble, WhiteboardTextElement, Team, UserRole, PracticePlan } from '../types';
 import {
   DLINE_DRILLS,
   DEFENSIVE_DRILLS,
@@ -48,6 +50,7 @@ import {
   saveDeletedWhiteboardDrillIds,
 } from './whiteboard/whiteboardDrillData';
 import { WhiteboardCanvas } from './whiteboard/WhiteboardCanvas';
+import { HudlPlaybookUploadModal } from './whiteboard/HudlPlaybookUploadModal';
 import { printCleanHTML } from '../utils/printUtils';
 import { printDrillSheet } from './whiteboard/drillPrintHelper';
 import { spreadDiagramElements, WhiteboardSpreadMode } from './whiteboard/whiteboardSpreadHelper';
@@ -273,6 +276,19 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
     return () => window.removeEventListener('football_whiteboard_drills_updated', handleUpdate);
   }, []);
 
+  const handleHudlImport = (importedPlays: WhiteboardDrill[]) => {
+    const existingCustom = getCustomWhiteboardDrills();
+    const updatedCustom = [...existingCustom, ...importedPlays];
+    saveCustomWhiteboardDrills(updatedCustom);
+    refreshDrills();
+    if (importedPlays.length > 0) {
+      setActiveDrillId(importedPlays[0].id);
+      setActivePhaseIdx(0);
+      setIsCustomMode(false);
+    }
+    showToast(`Successfully imported and redrew ${importedPlays.length} plays from Hudl!`);
+  };
+
   // Active Drill by ID or Custom Mode
   const [activeDrillId, setActiveDrillId] = useState<string>(() => {
     if (externalDrillId) return externalDrillId;
@@ -307,17 +323,19 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
     }
   }, [externalCategory]);
 
-  // Active Tokens, Arrows, and Zones on the board
+  // Active Tokens, Arrows, Zones, and Text on the board
   const [tokens, setTokens] = useState<WhiteboardToken[]>([]);
   const [arrows, setArrows] = useState<WhiteboardArrow[]>([]);
   const [zones, setZones] = useState<WhiteboardZoneBubble[]>([]);
+  const [textElements, setTextElements] = useState<WhiteboardTextElement[]>([]);
+  const [isHudlModalOpen, setIsHudlModalOpen] = useState<boolean>(false);
 
   // Selection state
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedType, setSelectedType] = useState<'token' | 'arrow' | 'zone' | null>(null);
+  const [selectedType, setSelectedType] = useState<'token' | 'arrow' | 'zone' | 'text' | null>(null);
 
   // Stamping / Tool mode
-  const [stampMode, setStampMode] = useState<'none' | 'O' | 'X' | 'blitz' | 'zone'>('none');
+  const [stampMode, setStampMode] = useState<'none' | 'O' | 'X' | 'blitz' | 'zone' | 'text'>('none');
   const [stampLabel, setStampLabel] = useState<string>('DE');
 
   // Drawing Canvas State
@@ -558,6 +576,24 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
         setTokens(spread.tokens);
         setArrows(spread.arrows);
         setZones(spread.zones);
+        setTextElements(
+          phase.textElements && phase.textElements.length > 0
+            ? phase.textElements
+            : drill.notes && drill.notes.length > 0
+            ? [
+                {
+                  id: `txt-note-${drill.id}`,
+                  text: drill.notes.slice(0, 4).join('\n'),
+                  x: 35,
+                  y: 350,
+                  fontSize: 10.5,
+                  color: '#1e293b',
+                  fontWeight: '700',
+                  align: 'left',
+                },
+              ]
+            : []
+        );
         setSelectedId(null);
         setSelectedType(null);
       }
@@ -565,6 +601,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
       setTokens([]);
       setArrows([]);
       setZones([]);
+      setTextElements([]);
       setSelectedId(null);
       setSelectedType(null);
     }
@@ -1485,6 +1522,15 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 )}
                 <button
                   type="button"
+                  onClick={() => setIsHudlModalOpen(true)}
+                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl border border-blue-500 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                  title="Upload playbook PDF or text from Hudl to auto-redraw"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Upload from Hudl</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => printDrillSheet(currentDrill, activePhaseIdx)}
                   className="px-2.5 py-1 bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
                   title="Print this isolated drill sheet"
@@ -1503,6 +1549,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             tokens={tokens}
             arrows={arrows}
             zones={zones}
+            textElements={textElements}
             isDrawingMode={isDrawingMode}
             penColor={penColor}
             penWidth={penWidth}
@@ -1511,6 +1558,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             onUpdateTokens={setTokens}
             onUpdateArrows={setArrows}
             onUpdateZones={setZones}
+            onUpdateTextElements={setTextElements}
             onSelectElement={(type, id) => {
               setSelectedType(type);
               setSelectedId(id);
@@ -1688,6 +1736,23 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 ))}
               </select>
             )}
+
+            {/* Add Movable Text Note */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsDrawingMode(false);
+                setStampMode(stampMode === 'text' ? 'none' : 'text');
+              }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1 ${
+                stampMode === 'text'
+                  ? 'bg-emerald-600 text-white ring-2 ring-emerald-400'
+                  : 'bg-slate-800 hover:bg-slate-750 text-emerald-300 border border-slate-700'
+              }`}
+            >
+              <Type className="w-3 h-3" />
+              <span>+ Text Note</span>
+            </button>
           </div>
 
           {/* Right: Dry-Erase Markers Tray */}
@@ -2198,6 +2263,13 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           handleSelectCategory(cat);
         }}
         onNavigateToDrills={onNavigateToDrills}
+      />
+      {/* Hudl Playbook Upload & Auto-Redraw Modal */}
+      <HudlPlaybookUploadModal
+        isOpen={isHudlModalOpen}
+        onClose={() => setIsHudlModalOpen(false)}
+        onImportPlays={handleHudlImport}
+        existingFolders={['SCHEME', 'DL', 'DE', 'LB', 'DB', 'TEAM', 'CUSTOM']}
       />
     </div>
   );

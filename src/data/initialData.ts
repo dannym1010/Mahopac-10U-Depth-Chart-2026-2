@@ -1604,31 +1604,102 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
 };
 
 export const DEFAULT_GUIDES_TREE: PlaybookGuideTree = {
-  "Offense": {
+  "📋 Defensive Schemes & Shells": {
+    "4-4 Base Stack Liz vs 21 L": "",
+    "4-4 Base Stack Rip vs 21 R": "",
+    "4-4 Base Stack Liz vs 22 Twins R": "",
+    "4-4 Base Stack Liz vs 11 Trick Trips Laser": "",
+    "4-4 Base Stack Blow Sting Liz": "",
+    "4-4 Double Dog 0 Liz": "",
+    "4-4 Stunts Cross": "",
+    "4-4 Stunts Fan": "",
+    "4-4 Stunts Pinch": "",
+    "5-3 Overshift Liz": "",
+    "6-2 Goal Line Wall": ""
+  },
+  "🏈 Offense": {
     "Full Playbook": "",
     "Quarterbacks": "",
     "Running Backs": "",
-    "Wide Receivers": "",
-    "Offensive Line": ""
+    "Wide Receivers & TEs": "",
+    "Offensive Line": "",
+    "Team Offense & Install": ""
   },
-  "Defense": {
+  "🛡️ Defense": {
     "Full Playbook": "",
-    "Defensive Line": "",
-    "Linebackers": "",
-    "Secondary": ""
+    "Defensive Tackles (DL)": "",
+    "Defensive Ends (DE)": "",
+    "Linebackers (LB)": "",
+    "Defensive Backs (DB)": "",
+    "Team Tackling & Circuits": ""
   },
-  "Specials": {
-    "Special Teams": "",
+  "🥋 Form Fit Tackling": {
+    "Form Fit & Strike": "",
+    "Angle & Open Field Pursuit": ""
+  },
+  "🧱 Blocking Technique": {
+    "Drive & Reach Blocking": "",
+    "Pass Protection Fundamentals": ""
+  },
+  "🌟 Special Teams": {
+    "Special Teams (Kick/Punt)": "",
     "Kicking & Punting": ""
+  },
+  "🏃 Warm-Up & Conditioning": {
+    "Dynamic Warm-Up": "",
+    "Agility & Conditioning Circuits": ""
+  },
+  "📥 Hudl Installs": {
+    "10U Defense • Mahopac Indians": ""
   }
 };
 
 export const DEFAULT_GUIDES_ORDER: PlaybookGuideOrder = {
-  main: ["Offense", "Defense", "Specials"],
+  main: [
+    "📋 Defensive Schemes & Shells",
+    "🏈 Offense",
+    "🛡️ Defense",
+    "🥋 Form Fit Tackling",
+    "🧱 Blocking Technique",
+    "🌟 Special Teams",
+    "🏃 Warm-Up & Conditioning",
+    "📥 Hudl Installs"
+  ],
   sub: {
-    "Offense": ["Full Playbook", "Quarterbacks", "Running Backs", "Wide Receivers", "Offensive Line"],
-    "Defense": ["Full Playbook", "Defensive Line", "Linebackers", "Secondary"],
-    "Specials": ["Special Teams", "Kicking & Punting"]
+    "📋 Defensive Schemes & Shells": [
+      "4-4 Base Stack Liz vs 21 L",
+      "4-4 Base Stack Rip vs 21 R",
+      "4-4 Base Stack Liz vs 22 Twins R",
+      "4-4 Base Stack Liz vs 11 Trick Trips Laser",
+      "4-4 Base Stack Blow Sting Liz",
+      "4-4 Double Dog 0 Liz",
+      "4-4 Stunts Cross",
+      "4-4 Stunts Fan",
+      "4-4 Stunts Pinch",
+      "5-3 Overshift Liz",
+      "6-2 Goal Line Wall"
+    ],
+    "🏈 Offense": [
+      "Full Playbook",
+      "Quarterbacks",
+      "Running Backs",
+      "Wide Receivers & TEs",
+      "Offensive Line",
+      "Team Offense & Install"
+    ],
+    "🛡️ Defense": [
+      "Full Playbook",
+      "Defensive Tackles (DL)",
+      "Defensive Ends (DE)",
+      "Linebackers (LB)",
+      "Defensive Backs (DB)",
+      "Team Tackling & Circuits"
+    ],
+    "🥋 Form Fit Tackling": ["Form Fit & Strike", "Angle & Open Field Pursuit"],
+    "🧱 Blocking Technique": ["Drive & Reach Blocking", "Pass Protection Fundamentals"],
+    "🌟 Special Teams": ["Special Teams (Kick/Punt)", "Kicking & Punting"],
+    "🏃 Warm-Up & Conditioning": ["Dynamic Warm-Up", "Agility & Conditioning Circuits"],
+    "📥 Hudl Installs": ["10U Defense • Mahopac Indians"]
   }
 };
 

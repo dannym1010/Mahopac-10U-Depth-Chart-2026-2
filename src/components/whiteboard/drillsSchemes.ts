@@ -1,6 +1,7 @@
 import { WhiteboardDrill } from './whiteboardDrillData';
+import { HUDL_10U_DEFENSE_INSTALL_PLAYS } from '../../data/hudl10UDefenseData';
 
-export const SCHEME_DRILLS: WhiteboardDrill[] = [
+const BASE_SCHEME_DRILLS: WhiteboardDrill[] = [
   {
     id: 'scheme-44-stack-liz',
     category: 'SCHEME',
@@ -292,3 +293,5 @@ export const SCHEME_DRILLS: WhiteboardDrill[] = [
     ],
   },
 ];
+
+export const SCHEME_DRILLS: WhiteboardDrill[] = [...HUDL_10U_DEFENSE_INSTALL_PLAYS, ...BASE_SCHEME_DRILLS];

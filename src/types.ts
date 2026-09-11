@@ -476,9 +476,30 @@ export interface SectionLock {
   expiresAt: number;
 }
 
+export interface WhiteboardTextElement {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  fontSize?: number;
+  color?: string;
+  backgroundColor?: string;
+  isBoxed?: boolean;
+  fontWeight?: string;
+  width?: number;
+  align?: 'left' | 'center' | 'right';
+}
+
+export interface PlayResponsibility {
+  position: string;
+  alignment: string;
+  runResponsibility: string;
+  passResponsibility: string;
+}
+
 export interface WhiteboardToken {
   id: string;
-  type: 'X' | 'O' | 'ball' | 'cone' | 'bag' | 'square' | 'letter' | 'target';
+  type: 'X' | 'O' | 'ball' | 'cone' | 'bag' | 'square' | 'letter' | 'target' | 'text';
   label: string;
   x: number;
   y: number;
@@ -486,6 +507,9 @@ export interface WhiteboardToken {
   radius?: number;
   subLabel?: string;
   isSquare?: boolean;
+  fontSize?: number;
+  fontWeight?: string;
+  isDraggable?: boolean;
 }
 
 export interface WhiteboardArrow {
@@ -500,6 +524,8 @@ export interface WhiteboardArrow {
   color: string;
   dashed?: boolean;
   label?: string;
+  labelX?: number;
+  labelY?: number;
 }
 
 export interface WhiteboardZoneBubble {
@@ -511,6 +537,8 @@ export interface WhiteboardZoneBubble {
   ry: number;
   color: string;
   opacity?: number;
+  labelX?: number;
+  labelY?: number;
 }
 
 export interface WhiteboardPlay {
@@ -522,6 +550,12 @@ export interface WhiteboardPlay {
   tokens: WhiteboardToken[];
   arrows: WhiteboardArrow[];
   zones: WhiteboardZoneBubble[];
+  textElements?: WhiteboardTextElement[];
+  responsibilities?: PlayResponsibility[];
+  notes?: string[];
+  videoUrl?: string;
+  hudlPlaybookName?: string;
+  formationName?: string;
   createdAt?: number;
 }
 
