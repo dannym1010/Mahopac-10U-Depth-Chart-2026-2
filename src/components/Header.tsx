@@ -23,6 +23,8 @@ import {
   Zap,
   Smartphone,
   Layers,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { UserRole, SeasonConfig, Team, formatWeekLabel } from '../types';
 import { getAutoActiveWeek, getSeasonWeekList, getWeekDisplayLabelWithOpponent } from '../utils/seasonWeekUtils';
@@ -61,6 +63,8 @@ interface HeaderProps {
   onForceSave?: () => void;
   onForceRefresh?: () => void;
   onOpenMobileNav?: () => void;
+  themeMode?: 'dark' | 'light';
+  onToggleThemeMode?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -97,6 +101,8 @@ export const Header: React.FC<HeaderProps> = ({
   onForceSave,
   onForceRefresh,
   onOpenMobileNav,
+  themeMode = 'dark',
+  onToggleThemeMode,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -352,6 +358,37 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Smartphone className="w-3.5 h-3.5 text-indigo-400" />
               <span>Mobile HUD</span>
+            </button>
+          )}
+
+          {/* Quick Light / Dark Theme Mode Toggle */}
+          {onToggleThemeMode && (
+            <button
+              type="button"
+              onClick={onToggleThemeMode}
+              title={
+                themeMode === 'light'
+                  ? 'Switch to Dark Mode (Night Stadium)'
+                  : 'Switch to Light Mode (Daylight Field)'
+              }
+              aria-label="Toggle site light and dark mode"
+              className={`px-3 py-1.5 text-xs font-black rounded-xl flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer border ${
+                themeMode === 'light'
+                  ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300 shadow-xs'
+                  : 'bg-slate-900 hover:bg-slate-800 text-amber-300 border-slate-700 hover:border-amber-400/50'
+              }`}
+            >
+              {themeMode === 'light' ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
+                  <span className="hidden sm:inline">Light</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-indigo-300 fill-indigo-400/30" />
+                  <span className="hidden sm:inline">Dark</span>
+                </>
+              )}
             </button>
           )}
 
@@ -622,6 +659,34 @@ export const Header: React.FC<HeaderProps> = ({
                     <span>Coach Preferences &amp; Defaults</span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-500" />
+                </button>
+              )}
+
+              {/* Quick Light / Dark Theme Mode Toggle (Mobile) */}
+              {onToggleThemeMode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onToggleThemeMode();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between p-3 rounded-xl font-bold border cursor-pointer transition-all ${
+                    themeMode === 'light'
+                      ? 'bg-amber-100/90 text-amber-950 border-amber-300'
+                      : 'bg-slate-900 hover:bg-slate-800 text-amber-300 border-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    {themeMode === 'light' ? (
+                      <Sun className="w-4 h-4 text-amber-600 fill-amber-500" />
+                    ) : (
+                      <Moon className="w-4 h-4 text-indigo-300 fill-indigo-400/30" />
+                    )}
+                    <span>Site Theme: {themeMode === 'light' ? 'Light Theme (Daylight)' : 'Dark Theme (Night)'}</span>
+                  </div>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-400/20 border border-amber-400/30">
+                    Switch to {themeMode === 'light' ? 'Dark' : 'Light'}
+                  </span>
                 </button>
               )}
 

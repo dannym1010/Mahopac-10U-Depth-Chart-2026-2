@@ -327,6 +327,8 @@ interface ThemeGalleryModalProps {
   onClose: () => void;
   selectedThemeId?: string;
   onSelectTheme?: (themeId: string) => void;
+  themeMode?: 'dark' | 'light';
+  onToggleThemeMode?: (mode: 'dark' | 'light') => void;
 }
 
 export const ThemeGalleryModal: React.FC<ThemeGalleryModalProps> = ({
@@ -334,6 +336,8 @@ export const ThemeGalleryModal: React.FC<ThemeGalleryModalProps> = ({
   onClose,
   selectedThemeId = 'electric_volt',
   onSelectTheme,
+  themeMode = 'dark',
+  onToggleThemeMode,
 }) => {
   const [activeTabThemeId, setActiveTabThemeId] = useState<string>(selectedThemeId);
   const [appliedThemeId, setAppliedThemeId] = useState<string>(selectedThemeId);
@@ -373,13 +377,47 @@ export const ThemeGalleryModal: React.FC<ThemeGalleryModalProps> = ({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Light / Dark Mode Quick Toggle */}
+            {onToggleThemeMode && (
+              <div className="flex items-center p-1 rounded-xl bg-slate-800 border border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => onToggleThemeMode('dark')}
+                  title="Dark Mode (Night Stadium)"
+                  className={`px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+                    themeMode === 'dark'
+                      ? 'bg-slate-900 text-indigo-300 shadow-xs border border-indigo-500/40'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Moon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Dark</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onToggleThemeMode('light')}
+                  title="Light Mode (Daylight Field)"
+                  className={`px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+                    themeMode === 'light'
+                      ? 'bg-amber-100 text-amber-900 shadow-xs border border-amber-300'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Sun className="w-3.5 h-3.5 text-amber-600" />
+                  <span className="hidden sm:inline">Light</span>
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Body: Two-Column Layout on Desktop, Scrollable on Mobile */}

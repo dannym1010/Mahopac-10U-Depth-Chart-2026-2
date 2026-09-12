@@ -4,11 +4,109 @@
   --print-font-size: 12px;
 }
 
+/* =========================================================================
+   LIGHT THEME SYSTEM: Inverse Slate Spectrum & Daylight Stadium Styling
+   ========================================================================= */
+html.theme-light,
+body.theme-light,
+.theme-light {
+  color-scheme: light;
+
+  /* Inverse Slate Spectrum for clean daylight UI */
+  --color-slate-950: #f1f5f9; /* Near-white soft panel / subtle bar */
+  --color-slate-900: #f8fafc; /* Canvas background: Crisp, bright light gray */
+  --color-slate-850: #ffffff; /* Card background */
+  --color-slate-800: #ffffff; /* Primary Card surface: Pure clean white */
+  --color-slate-750: #f1f5f9; /* Elevated inner pill / card surface */
+  --color-slate-700: #e2e8f0; /* Crisp light gray border */
+  --color-slate-650: #cbd5e1;
+  --color-slate-600: #94a3b8; /* Muted border & tertiary labels */
+  --color-slate-500: #64748b; /* Secondary helper text */
+  --color-slate-400: #475569; /* Darker slate for high contrast on light */
+  --color-slate-300: #334155; /* Charcoal body copy */
+  --color-slate-200: #1e293b; /* Deep slate headings */
+  --color-slate-100: #0f172a; /* Deep bold black/navy headings */
+  --color-slate-50:  #020617; /* Solid black */
+
+  /* High-Contrast Accent Adaptations for Light Mode */
+  --color-indigo-300: #4338ca; /* Darker indigo for readable text on white */
+  --color-indigo-400: #4f46e5;
+  --color-amber-300: #b45309;  /* Dark amber for readable text on white */
+  --color-emerald-300: #047857; /* Rich forest emerald readable on white */
+  --color-rose-300: #be123c;   /* Rich deep rose readable on white */
+  --color-blue-300: #1d4ed8;   /* Bold royal blue readable on white */
+}
+
 body {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-tap-highlight-color: transparent;
-  background-color: #0f172a;
-  color: #f8fafc;
+  background-color: var(--color-slate-900, #0f172a);
+  color: var(--color-slate-100, #f8fafc);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+body.theme-light {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* Light Mode Card Shadows & Elevation */
+.theme-light .bg-slate-800,
+.theme-light .bg-slate-800\/95,
+.theme-light .bg-slate-800\/90,
+.theme-light .bg-slate-900,
+.theme-light .bg-slate-900\/90 {
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+}
+
+.theme-light aside {
+  border-right-color: #e2e8f0 !important;
+  background-color: #ffffff !important;
+}
+
+.theme-light header {
+  border-bottom-color: #e2e8f0 !important;
+  background-color: #ffffff !important;
+}
+
+/* Light Mode Scrollbars */
+.theme-light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.theme-light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+.theme-light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Ensure headings with text-transparent bg-clip-text are sharp and readable */
+.theme-light h1.bg-clip-text {
+  background-image: linear-gradient(to right, #0f172a, #312e81, #4338ca) !important;
+}
+
+/* Inputs & selects inside light mode */
+.theme-light input:not([type="checkbox"]):not([type="radio"]),
+.theme-light select,
+.theme-light textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.theme-light input::placeholder,
+.theme-light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Buttons with white text on dark background stay crisp if they have a colored background */
+.theme-light button.bg-indigo-600,
+.theme-light button.bg-indigo-700,
+.theme-light button.bg-emerald-600,
+.theme-light button.bg-rose-600,
+.theme-light button.bg-blue-600,
+.theme-light [class*="bg-gradient-to-r from-indigo-"] {
+  color: #ffffff !important;
 }
 
 /* Custom Hide Scrollbar Utilities */

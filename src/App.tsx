@@ -616,6 +616,74 @@ export default function App() {
   const [activeThemeId, setActiveThemeId] = useState<string>(() =>
     safeJSONParse('footballActiveThemeId', 'electric_volt')
   );
+  // Site Display Theme Mode ('dark' | 'light') with account-based preference restoration
+  const [themeMode, setThemeMode] = useState<'dark' | 'light'>(() => {
+    try {
+      const lastUserKey = (localStorage.getItem('footballLastUserKey') || '').toLowerCase().trim();
+      const userThemes = safeJSONParse<Record<string, 'dark' | 'light'>>('footballUserThemePreferences', {});
+      if (lastUserKey && userThemes && userThemes[lastUserKey]) {
+        return userThemes[lastUserKey];
+      }
+      const saved = localStorage.getItem('footballThemeMode');
+      if (saved === 'light' || saved === 'dark') return saved;
+    } catch {
+      // ignore
+    }
+    return 'dark';
+  });
+
+  const handleToggleThemeMode = (specificMode?: 'dark' | 'light') => {
+    setThemeMode((prev) => (specificMode ? specificMode : prev === 'dark' ? 'light' : 'dark'));
+  };
+
+  // Synchronize themeMode class on document & body + persist to user map & local storage
+  useEffect(() => {
+    const root = document.documentElement;
+    if (themeMode === 'light') {
+      root.classList.add('theme-light');
+      document.body.classList.add('theme-light');
+      root.classList.remove('theme-dark');
+      document.body.classList.remove('theme-dark');
+    } else {
+      root.classList.remove('theme-light');
+      document.body.classList.remove('theme-light');
+      root.classList.add('theme-dark');
+      document.body.classList.add('theme-dark');
+    }
+
+    try {
+      localStorage.setItem('footballThemeMode', themeMode);
+    } catch {
+      // ignore
+    }
+
+    const userKey = (currentUser?.email || currentUser?.displayName || 'guest').toLowerCase().trim();
+    if (userKey) {
+      try {
+        localStorage.setItem('footballLastUserKey', userKey);
+      } catch {
+        // ignore
+      }
+      const userThemes = safeJSONParse<Record<string, 'dark' | 'light'>>('footballUserThemePreferences', {}) || {};
+      userThemes[userKey] = themeMode;
+      safeJSONSet('footballUserThemePreferences', userThemes);
+    }
+  }, [themeMode, currentUser?.email, currentUser?.displayName]);
+
+  // When user logs in or switches account, automatically load their saved Light / Dark theme preference!
+  useEffect(() => {
+    const userKey = (currentUser?.email || currentUser?.displayName || 'guest').toLowerCase().trim();
+    if (!userKey) return;
+    try {
+      localStorage.setItem('footballLastUserKey', userKey);
+    } catch {
+      // ignore
+    }
+    const userThemes = safeJSONParse<Record<string, 'dark' | 'light'>>('footballUserThemePreferences', {});
+    if (userThemes && userThemes[userKey] && (userThemes[userKey] === 'light' || userThemes[userKey] === 'dark')) {
+      setThemeMode(userThemes[userKey]);
+    }
+  }, [currentUser?.email, currentUser?.displayName]);
   const [isSeasonConfigModalOpen, setIsSeasonConfigModalOpen] = useState(false);
   const [isCopyWeekModalOpen, setIsCopyWeekModalOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -6035,7 +6103,7 @@ function mergeRemoteWeeklyData(
 
   if (shouldBlockAccess) {
     return (
-      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4 font-sans text-slate-100">
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans text-slate-100">
         <AuthModal
           isOpen={true}
           isPendingApproval={Boolean(currentUser && !isApproved)}
@@ -6129,7 +6197,7 @@ function mergeRemoteWeeklyData(
   }
 
   return (
-    <div className="min-h-screen bg-[#0f172a] print:bg-white print:text-black flex flex-row font-sans text-slate-100 selection:bg-indigo-600 selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-slate-900 print:bg-white print:text-black flex flex-row font-sans text-slate-100 selection:bg-indigo-600 selection:text-white overflow-x-hidden">
       {/* Hidden File Inputs for Import */}
       <input
         type="file"
@@ -6263,6 +6331,8 @@ function mergeRemoteWeeklyData(
         onOpenManageTeams={() => setActiveUnit('users')}
         onOpenPreferencesModal={() => setIsPreferencesModalOpen(true)}
         onOpenThemeGallery={() => setIsThemeGalleryOpen(true)}
+        themeMode={themeMode}
+        onToggleThemeMode={handleToggleThemeMode}
         onForceSave={handleForceSave}
         onForceRefresh={handleForceRefresh}
         onOpenMobileNav={() => setIsMobileNavOpen(true)}
@@ -7593,6 +7663,8 @@ function mergeRemoteWeeklyData(
         onResetData={handleResetData}
         onForceSave={handleForceSave}
         onForceRefresh={handleForceRefresh}
+        themeMode={themeMode}
+        onToggleThemeMode={handleToggleThemeMode}
       />
 
       <ThemeGalleryModal
@@ -7603,6 +7675,8 @@ function mergeRemoteWeeklyData(
           setActiveThemeId(id);
           safeJSONSet('footballActiveThemeId', id);
         }}
+        themeMode={themeMode}
+        onToggleThemeMode={handleToggleThemeMode}
       />
 
       <SeasonConfigModal

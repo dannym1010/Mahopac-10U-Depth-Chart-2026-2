@@ -25,6 +25,8 @@ import {
   Sliders,
   Copy,
   PenTool,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { UnitType, Team, UserRole } from '../types';
 
@@ -53,6 +55,8 @@ interface PreferencesModalProps {
   onResetData?: () => void;
   onForceSave?: () => void;
   onForceRefresh?: () => void;
+  themeMode?: 'dark' | 'light';
+  onToggleThemeMode?: (mode: 'dark' | 'light') => void;
 }
 
 interface ScreenOption {
@@ -201,6 +205,8 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
   onResetData,
   onForceSave,
   onForceRefresh,
+  themeMode = 'dark',
+  onToggleThemeMode,
 }) => {
   const [activeTab, setActiveTab] = useState<'screen' | 'team' | 'tools' | 'data'>('screen');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -519,7 +525,107 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
 
           {/* TAB 3: SEASON & THEMES QUICK TOOLS */}
           {activeTab === 'tools' && (
-            <div className="space-y-3">
+            <div className="space-y-4">
+              {/* Global Theme Mode (Light vs. Dark) */}
+              <div className="p-4 rounded-2xl bg-zinc-900/90 border border-zinc-800 flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-xs font-black text-zinc-100 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      <span>Display Theme &amp; Atmosphere (Light vs. Dark)</span>
+                    </h4>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                      Choose between bright daylight field clarity or midnight stadium dark mode. Automatically persists to your coach login ({currentUserEmail || 'your profile'}).
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 self-start sm:self-center font-mono">
+                    Active: {themeMode === 'light' ? 'Light Theme' : 'Dark Theme'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                  {/* Dark Mode Card */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onToggleThemeMode) {
+                        onToggleThemeMode('dark');
+                        showToast('Switched to Dark Mode (Night Stadium)');
+                      }
+                    }}
+                    className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all cursor-pointer active:scale-98 ${
+                      themeMode === 'dark'
+                        ? 'bg-slate-950 border-indigo-500 ring-2 ring-indigo-500/30 shadow-lg'
+                        : 'bg-zinc-900/60 hover:bg-zinc-900 border-zinc-800 text-zinc-400'
+                    }`}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        themeMode === 'dark'
+                          ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
+                          : 'bg-zinc-800 text-zinc-400'
+                      }`}
+                    >
+                      <Moon className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-zinc-100">Dark Mode (Night Stadium)</span>
+                        {themeMode === 'dark' && (
+                          <span className="text-[10px] font-black text-emerald-400 flex items-center gap-1">
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Active</span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-zinc-400 mt-1 leading-snug">
+                        Deep midnight slate canvas with high-contrast electric accents. Easy on the eyes during evening film review.
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* Light Mode Card */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onToggleThemeMode) {
+                        onToggleThemeMode('light');
+                        showToast('Switched to Light Mode (Daylight Field)');
+                      }
+                    }}
+                    className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all cursor-pointer active:scale-98 ${
+                      themeMode === 'light'
+                        ? 'bg-amber-500/10 border-amber-500 ring-2 ring-amber-500/30 shadow-lg'
+                        : 'bg-zinc-900/60 hover:bg-zinc-900 border-zinc-800 text-zinc-400'
+                    }`}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        themeMode === 'light'
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                          : 'bg-zinc-800 text-zinc-400'
+                      }`}
+                    >
+                      <Sun className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-zinc-100">Light Mode (Daylight Field)</span>
+                        {themeMode === 'light' && (
+                          <span className="text-[10px] font-black text-amber-400 flex items-center gap-1">
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Active</span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-zinc-400 mt-1 leading-snug">
+                        Crisp, clean daylight surfaces with maximum glare reduction for midday sidelines and sunny bleachers.
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {/* Season Configuration Tool */}
                 {onOpenSeasonConfigModal && (
