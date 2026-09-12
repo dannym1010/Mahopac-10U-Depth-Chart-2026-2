@@ -43,6 +43,9 @@ import { WhiteboardToken, WhiteboardArrow, WhiteboardZoneBubble, WhiteboardTextE
 import {
   DLINE_DRILLS,
   DEFENSIVE_DRILLS,
+  DEFENSIVE_SCHEMES,
+  TECHNIQUE_DRILLS,
+  isDefensiveScheme,
   DEFENSIVE_POSITION_GROUPS,
   DefensivePositionCategory,
   PRESET_SCHEMES,
@@ -281,23 +284,53 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
   }, []);
 
   const handleHudlImport = (importedPlays: WhiteboardDrill[]) => {
+    const formattedPlays = importedPlays.map((play) => ({
+      ...play,
+      category: 'SCHEME' as const,
+      categoryLabel: play.categoryLabel || 'Hudl Defensive Scheme',
+      phases: (play.phases || []).map((phase) => ({
+        ...phase,
+        tokens: phase.tokens.map((token) => {
+          const isDef =
+            token.id.startsWith('def-') ||
+            ['E9', 'E5', 'T3', 'T1', 'DT', 'NT', 'DE', 'M', 'W', 'S', 'R', 'C', 'CB', 'FS', 'SS'].includes(token.label);
+          if (isDef) {
+            return {
+              ...token,
+              color: '#ef4444',
+              fillMode: 'nofill' as const,
+            };
+          }
+          return token;
+        }),
+      })),
+    }));
+
     const existingCustom = getCustomWhiteboardDrills();
-    const updatedCustom = [...existingCustom, ...importedPlays];
+    const updatedCustom = [...existingCustom, ...formattedPlays];
     saveCustomWhiteboardDrills(updatedCustom);
     refreshDrills();
-    if (importedPlays.length > 0) {
-      setActiveDrillId(importedPlays[0].id);
+    if (formattedPlays.length > 0) {
+      setLibraryMode('schemes');
+      setSchemeSubFilter('all');
+      setSelectedCategory('SCHEME');
+      setActiveDrillId(formattedPlays[0].id);
       setActivePhaseIdx(0);
       setIsCustomMode(false);
     }
-    showToast(`Successfully imported and redrew ${importedPlays.length} plays from Hudl!`);
+    showToast(`Successfully imported and redrew ${formattedPlays.length} Hudl defensive schemes!`);
   };
+
+  // Primary Library Scope: Defensive Schemes (Hudl Plays) vs Technique Drills vs All
+  const [libraryMode, setLibraryMode] = useState<'schemes' | 'drills' | 'all'>('schemes');
+  const [schemeSubFilter, setSchemeSubFilter] = useState<'all' | 'base' | 'blitz' | 'stunts' | 'heavy'>('all');
 
   // Active Drill by ID or Custom Mode
   const [activeDrillId, setActiveDrillId] = useState<string>(() => {
     if (externalDrillId) return externalDrillId;
     const initial = loadEffectiveWhiteboardDrills();
-    return initial[0]?.id || 'drill-dl-ball-getoff';
+    const firstScheme = initial.find(isDefensiveScheme);
+    return firstScheme?.id || initial[0]?.id || 'drill-dl-ball-getoff';
   });
   const [activePhaseIdx, setActivePhaseIdx] = useState<number>(0);
   const [isCustomMode, setIsCustomMode] = useState<boolean>(false);

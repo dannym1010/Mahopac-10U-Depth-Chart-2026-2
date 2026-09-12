@@ -1853,19 +1853,19 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                 : 'circle');
 
             // Determine Fill Mode & Colors
-            const isNoFill = token.fillMode === 'nofill';
-            const baseThemeColor = token.color || (isDef ? '#dc2626' : '#1d4ed8');
+            const isNoFill = token.fillMode === 'nofill' || (isDef && (token.color === '#ef4444' || token.color === '#dc2626' || token.color === '#b91c1c'));
+            const baseThemeColor = token.color || (isDef ? '#ef4444' : '#1d4ed8');
 
             const fill = isNoFill
-              ? '#ffffff'
+              ? 'none'
               : token.color
               ? token.color
               : isDef
               ? 'url(#wbDefenseGradient)'
               : '#ffffff';
 
-            const fillOpacity = isNoFill ? 0.05 : 1;
-            const stroke = isNoFill ? baseThemeColor : token.color || (isDef ? '#991b1b' : '#1d4ed8');
+            const fillOpacity = isNoFill ? 0 : 1;
+            const stroke = isNoFill ? baseThemeColor : token.color || (isDef ? '#ef4444' : '#1d4ed8');
             const strokeWidth = isNoFill ? 3.2 : 2.6;
 
             const textColor = isNoFill
@@ -2039,9 +2039,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                         cx="0"
                         cy="0"
                         r="16"
-                        fill={isNoFill ? '#ffffff' : (token.color || '#0f172a')}
-                        fillOpacity={isNoFill ? 0.05 : 1}
-                        stroke={token.color || '#0f172a'}
+                        fill={isNoFill ? 'none' : (token.color || '#0f172a')}
+                        fillOpacity={isNoFill ? 0 : 1}
+                        stroke={token.color || (isDef ? '#ef4444' : '#0f172a')}
                         strokeWidth={strokeWidth}
                       />
                       {token.label && token.label !== 'X' ? (
@@ -2052,7 +2052,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                           fontSize={token.label.length > 2 ? '10' : '12'}
                           fontWeight="900"
                           textAnchor="middle"
-                          fill={isNoFill ? (token.color || '#0f172a') : '#ffffff'}
+                          fill={isNoFill ? (token.color || (isDef ? '#ef4444' : '#0f172a')) : '#ffffff'}
                           className="pointer-events-none select-none"
                         >
                           {token.label}
@@ -2064,7 +2064,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                             y1="-6"
                             x2="6"
                             y2="6"
-                            stroke={isNoFill ? (token.color || '#0f172a') : '#ffffff'}
+                            stroke={isNoFill ? (token.color || (isDef ? '#ef4444' : '#0f172a')) : '#ffffff'}
                             strokeWidth="2.8"
                             strokeLinecap="round"
                           />
@@ -2073,7 +2073,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                             y1="-6"
                             x2="-6"
                             y2="6"
-                            stroke={isNoFill ? (token.color || '#0f172a') : '#ffffff'}
+                            stroke={isNoFill ? (token.color || (isDef ? '#ef4444' : '#0f172a')) : '#ffffff'}
                             strokeWidth="2.8"
                             strokeLinecap="round"
                           />

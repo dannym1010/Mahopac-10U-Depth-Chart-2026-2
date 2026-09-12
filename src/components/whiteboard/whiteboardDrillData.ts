@@ -1460,6 +1460,15 @@ export const DLINE_DRILLS: WhiteboardDrill[] = [
   },
 ];
 
+export const DEFENSIVE_SCHEMES: WhiteboardDrill[] = SCHEME_DRILLS;
+
+export const TECHNIQUE_DRILLS: WhiteboardDrill[] = [
+  ...DLINE_DRILLS,
+  ...EXTRA_YOUTH_DRILLS,
+  ...TEAM_CIRCUIT_DRILLS,
+  ...DRILL_MATRIX_DRILLS,
+];
+
 export const DEFENSIVE_DRILLS: WhiteboardDrill[] = [
   ...SCHEME_DRILLS,
   ...DLINE_DRILLS,
@@ -1467,6 +1476,17 @@ export const DEFENSIVE_DRILLS: WhiteboardDrill[] = [
   ...TEAM_CIRCUIT_DRILLS,
   ...DRILL_MATRIX_DRILLS,
 ];
+
+export const isDefensiveScheme = (drill: WhiteboardDrill): boolean => {
+  return (
+    drill.category === 'SCHEME' ||
+    drill.id.startsWith('hudl-') ||
+    drill.id.startsWith('scheme-') ||
+    Boolean(drill.hudlPlaybookName) ||
+    Boolean(drill.formationName) ||
+    (Boolean(drill.categoryLabel) && drill.categoryLabel.toLowerCase().includes('scheme'))
+  );
+};
 
 export const WHITEBOARD_DRILLS: WhiteboardDrill[] = DEFENSIVE_DRILLS;
 

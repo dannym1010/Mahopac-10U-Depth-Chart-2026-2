@@ -28,6 +28,22 @@ body.theme-light,
   --color-slate-100: #0f172a; /* Deep bold black/navy headings */
   --color-slate-50:  #020617; /* Solid black */
 
+  /* Inverse Zinc Spectrum (used in modals, preferences, and cards) */
+  --color-zinc-950: #f1f5f9;
+  --color-zinc-900: #f8fafc;
+  --color-zinc-850: #ffffff;
+  --color-zinc-800: #ffffff;
+  --color-zinc-750: #f1f5f9;
+  --color-zinc-700: #e2e8f0;
+  --color-zinc-650: #cbd5e1;
+  --color-zinc-600: #94a3b8;
+  --color-zinc-500: #64748b;
+  --color-zinc-400: #475569;
+  --color-zinc-300: #334155;
+  --color-zinc-200: #1e293b;
+  --color-zinc-100: #0f172a;
+  --color-zinc-50:  #020617;
+
   /* High-Contrast Accent Adaptations for Light Mode */
   --color-indigo-300: #4338ca; /* Darker indigo for readable text on white */
   --color-indigo-400: #4f46e5;
@@ -85,6 +101,19 @@ body.theme-light {
   background-image: linear-gradient(to right, #0f172a, #312e81, #4338ca) !important;
 }
 
+/* Crisp light borders on cards and panels */
+.theme-light .border-slate-800,
+.theme-light .border-slate-800\/90,
+.theme-light .border-slate-800\/80,
+.theme-light .border-slate-800\/60,
+.theme-light .border-slate-800\/50,
+.theme-light .border-slate-700,
+.theme-light .border-slate-700\/80,
+.theme-light .border-zinc-800,
+.theme-light .border-zinc-700 {
+  border-color: #e2e8f0 !important;
+}
+
 /* Inputs & selects inside light mode */
 .theme-light input:not([type="checkbox"]):not([type="radio"]),
 .theme-light select,
@@ -94,19 +123,218 @@ body.theme-light {
   border-color: #cbd5e1 !important;
 }
 
+.theme-light select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
 .theme-light input::placeholder,
 .theme-light textarea::placeholder {
   color: #94a3b8 !important;
 }
 
-/* Buttons with white text on dark background stay crisp if they have a colored background */
-.theme-light button.bg-indigo-600,
-.theme-light button.bg-indigo-700,
-.theme-light button.bg-emerald-600,
-.theme-light button.bg-rose-600,
-.theme-light button.bg-blue-600,
-.theme-light [class*="bg-gradient-to-r from-indigo-"] {
+/* =========================================================================
+   LIGHT THEME: TEXT CONTRAST & READABILITY SYSTEM
+   Fixes "white on white" text across all views, modals, cards, and components
+   ========================================================================= */
+
+/* Default text-white on light mode surfaces becomes dark slate */
+.theme-light .text-white {
+  color: #0f172a;
+}
+.theme-light .text-white\/95,
+.theme-light .text-white\/90,
+.theme-light .text-white\/85,
+.theme-light .text-white\/80 {
+  color: #0f172a;
+}
+.theme-light .text-white\/75,
+.theme-light .text-white\/70,
+.theme-light .text-white\/65,
+.theme-light .text-white\/60 {
+  color: #334155;
+}
+.theme-light .text-white\/50,
+.theme-light .text-white\/40,
+.theme-light .text-white\/30 {
+  color: #64748b;
+}
+
+/* Hover States: Prevent hover:text-white from turning text invisible white on light backgrounds */
+.theme-light .hover\:text-white:hover,
+.theme-light .hover\:text-white\/90:hover,
+.theme-light .hover\:text-white\/80:hover {
+  color: #0f172a !important;
+}
+
+.theme-light .group:hover .group-hover\:text-white {
+  color: #0f172a !important;
+}
+
+.theme-light .group:hover .group-hover\:from-white {
+  --tw-gradient-from: #0f172a !important;
+}
+
+/* Zinc text adaptations in light mode */
+.theme-light .text-zinc-100,
+.theme-light .text-zinc-50 {
+  color: #0f172a;
+}
+.theme-light .text-zinc-200 {
+  color: #1e293b;
+}
+.theme-light .text-zinc-300 {
+  color: #334155;
+}
+.theme-light .text-zinc-400 {
+  color: #475569;
+}
+.theme-light .hover\:text-zinc-100:hover,
+.theme-light .hover\:text-zinc-200:hover {
+  color: #0f172a !important;
+}
+
+/* =========================================================================
+   PRESERVE WHITE TEXT ON SOLID COLORED BUTTONS & BADGES
+   ========================================================================= */
+.theme-light [class*="bg-indigo-500"],
+.theme-light [class*="bg-indigo-600"],
+.theme-light [class*="bg-indigo-700"],
+.theme-light [class*="bg-indigo-800"],
+.theme-light [class*="bg-blue-500"],
+.theme-light [class*="bg-blue-600"],
+.theme-light [class*="bg-blue-700"],
+.theme-light [class*="bg-blue-800"],
+.theme-light [class*="bg-emerald-500"],
+.theme-light [class*="bg-emerald-600"],
+.theme-light [class*="bg-emerald-700"],
+.theme-light [class*="bg-emerald-800"],
+.theme-light [class*="bg-green-600"],
+.theme-light [class*="bg-green-700"],
+.theme-light [class*="bg-red-500"],
+.theme-light [class*="bg-red-600"],
+.theme-light [class*="bg-red-700"],
+.theme-light [class*="bg-red-800"],
+.theme-light [class*="bg-rose-500"],
+.theme-light [class*="bg-rose-600"],
+.theme-light [class*="bg-rose-700"],
+.theme-light [class*="bg-rose-800"],
+.theme-light [class*="bg-purple-600"],
+.theme-light [class*="bg-purple-700"],
+.theme-light [class*="bg-violet-600"],
+.theme-light [class*="bg-amber-600"],
+.theme-light [class*="bg-amber-700"],
+.theme-light [class*="bg-cyan-600"],
+.theme-light [class*="bg-teal-600"],
+.theme-light [class*="bg-black"],
+.theme-light .bg-black,
+.theme-light [class*="from-indigo-600"],
+.theme-light [class*="from-indigo-500"],
+.theme-light [class*="from-rose-600"],
+.theme-light [class*="from-rose-500"],
+.theme-light [class*="from-purple-600"],
+.theme-light [class*="from-emerald-600"],
+.theme-light [class*="from-blue-600"],
+.theme-light [data-wristband-badge],
+.theme-light .wristband-number-badge,
+.theme-light .wrist-badge,
+.theme-light .has-dark-row-highlight,
+.theme-light [data-row-text-white="true"] {
   color: #ffffff !important;
+}
+
+.theme-light [class*="bg-indigo-500"] .text-white,
+.theme-light [class*="bg-indigo-600"] .text-white,
+.theme-light [class*="bg-indigo-700"] .text-white,
+.theme-light [class*="bg-indigo-800"] .text-white,
+.theme-light [class*="bg-blue-500"] .text-white,
+.theme-light [class*="bg-blue-600"] .text-white,
+.theme-light [class*="bg-blue-700"] .text-white,
+.theme-light [class*="bg-blue-800"] .text-white,
+.theme-light [class*="bg-emerald-500"] .text-white,
+.theme-light [class*="bg-emerald-600"] .text-white,
+.theme-light [class*="bg-emerald-700"] .text-white,
+.theme-light [class*="bg-emerald-800"] .text-white,
+.theme-light [class*="bg-green-600"] .text-white,
+.theme-light [class*="bg-green-700"] .text-white,
+.theme-light [class*="bg-red-500"] .text-white,
+.theme-light [class*="bg-red-600"] .text-white,
+.theme-light [class*="bg-red-700"] .text-white,
+.theme-light [class*="bg-red-800"] .text-white,
+.theme-light [class*="bg-rose-500"] .text-white,
+.theme-light [class*="bg-rose-600"] .text-white,
+.theme-light [class*="bg-rose-700"] .text-white,
+.theme-light [class*="bg-rose-800"] .text-white,
+.theme-light [class*="bg-purple-600"] .text-white,
+.theme-light [class*="bg-purple-700"] .text-white,
+.theme-light [class*="bg-violet-600"] .text-white,
+.theme-light [class*="bg-amber-600"] .text-white,
+.theme-light [class*="bg-amber-700"] .text-white,
+.theme-light [class*="bg-cyan-600"] .text-white,
+.theme-light [class*="bg-teal-600"] .text-white,
+.theme-light [class*="bg-black"] .text-white,
+.theme-light .bg-black .text-white,
+.theme-light [class*="from-indigo-600"] .text-white,
+.theme-light [class*="from-indigo-500"] .text-white,
+.theme-light [class*="from-rose-600"] .text-white,
+.theme-light [class*="from-rose-500"] .text-white,
+.theme-light [class*="from-purple-600"] .text-white,
+.theme-light [class*="from-emerald-600"] .text-white,
+.theme-light [class*="from-blue-600"] .text-white,
+.theme-light [data-wristband-badge] .text-white,
+.theme-light .wristband-number-badge .text-white,
+.theme-light .wrist-badge .text-white,
+.theme-light .has-dark-row-highlight .text-white,
+.theme-light [data-row-text-white="true"] .text-white {
+  color: #ffffff !important;
+}
+
+/* Hovering on colored buttons retains white text */
+.theme-light [class*="hover:bg-indigo-600"]:hover,
+.theme-light [class*="hover:bg-indigo-500"]:hover,
+.theme-light [class*="hover:bg-blue-600"]:hover,
+.theme-light [class*="hover:bg-blue-500"]:hover,
+.theme-light [class*="hover:bg-emerald-600"]:hover,
+.theme-light [class*="hover:bg-emerald-500"]:hover,
+.theme-light [class*="hover:bg-rose-600"]:hover,
+.theme-light [class*="hover:bg-rose-500"]:hover,
+.theme-light [class*="hover:bg-red-600"]:hover,
+.theme-light [class*="hover:bg-purple-600"]:hover {
+  color: #ffffff !important;
+}
+
+.theme-light [class*="hover:bg-indigo-600"]:hover *,
+.theme-light [class*="hover:bg-indigo-500"]:hover *,
+.theme-light [class*="hover:bg-blue-600"]:hover *,
+.theme-light [class*="hover:bg-blue-500"]:hover *,
+.theme-light [class*="hover:bg-emerald-600"]:hover *,
+.theme-light [class*="hover:bg-emerald-500"]:hover *,
+.theme-light [class*="hover:bg-rose-600"]:hover *,
+.theme-light [class*="hover:bg-rose-500"]:hover *,
+.theme-light [class*="hover:bg-red-600"]:hover *,
+.theme-light [class*="hover:bg-purple-600"]:hover * {
+  color: #ffffff !important;
+}
+
+/* Modal Dialogs in Light Mode: Crisp white elevated surface */
+.theme-light .fixed.inset-0.bg-slate-950\/85,
+.theme-light .fixed.inset-0.bg-slate-950\/80,
+.theme-light .fixed.inset-0.bg-black\/80,
+.theme-light .fixed.inset-0.bg-black\/75 {
+  background-color: rgba(15, 23, 42, 0.65) !important;
+}
+
+.theme-light .fixed.inset-0 > div:not(.absolute) {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a;
+}
+
+.theme-light .fixed.inset-0 > div:not(.absolute) h1,
+.theme-light .fixed.inset-0 > div:not(.absolute) h2,
+.theme-light .fixed.inset-0 > div:not(.absolute) h3,
+.theme-light .fixed.inset-0 > div:not(.absolute) h4 {
+  color: #0f172a !important;
 }
 
 /* Custom Hide Scrollbar Utilities */

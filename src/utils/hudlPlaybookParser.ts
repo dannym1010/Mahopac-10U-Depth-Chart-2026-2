@@ -79,59 +79,59 @@ function parseSinglePlaySection(sectionText: string, title: string, playbookName
 
   const finalResponsibilities = responsibilities.length >= 4 ? responsibilities : BASE_44_RESPONSIBILITIES;
 
-  // Base Offense (21 L / Pro-I)
+  // Base Offense (21 L / Pro-I) - Spaced Out Alignment
   const offensiveTokens: WhiteboardToken[] = [
     { id: `off-c-${id}`, type: 'square', label: 'C', x: 350, y: 195, color: '#0f172a', isSquare: true },
-    { id: `off-lg-${id}`, type: 'O', label: 'G', x: 318, y: 195, color: '#0f172a' },
-    { id: `off-rg-${id}`, type: 'O', label: 'G', x: 382, y: 195, color: '#0f172a' },
-    { id: `off-lt-${id}`, type: 'O', label: 'T', x: 286, y: 195, color: '#0f172a' },
-    { id: `off-rt-${id}`, type: 'O', label: 'T', x: 414, y: 195, color: '#0f172a' },
-    { id: `off-te-${id}`, type: 'O', label: 'Y', x: 254, y: 195, color: '#0f172a' },
-    { id: `off-wr-z-${id}`, type: 'O', label: 'Z', x: 130, y: 195, color: '#0f172a' },
-    { id: `off-wr-x-${id}`, type: 'O', label: 'X', x: 570, y: 195, color: '#0f172a' },
-    { id: `off-qb-${id}`, type: 'O', label: '1', x: 350, y: 155, color: '#0f172a' },
-    { id: `off-fb-${id}`, type: 'O', label: '2', x: 350, y: 115, color: '#0f172a' },
-    { id: `off-tb-${id}`, type: 'O', label: '3', x: 350, y: 75, color: '#0f172a' },
+    { id: `off-lg-${id}`, type: 'O', label: 'G', x: 306, y: 195, color: '#0f172a' },
+    { id: `off-rg-${id}`, type: 'O', label: 'G', x: 394, y: 195, color: '#0f172a' },
+    { id: `off-lt-${id}`, type: 'O', label: 'T', x: 262, y: 195, color: '#0f172a' },
+    { id: `off-rt-${id}`, type: 'O', label: 'T', x: 438, y: 195, color: '#0f172a' },
+    { id: `off-te-${id}`, type: 'O', label: 'Y', x: 218, y: 195, color: '#0f172a' },
+    { id: `off-wr-z-${id}`, type: 'O', label: 'Z', x: 110, y: 195, color: '#0f172a' },
+    { id: `off-wr-x-${id}`, type: 'O', label: 'X', x: 590, y: 195, color: '#0f172a' },
+    { id: `off-qb-${id}`, type: 'O', label: '1', x: 350, y: 150, color: '#0f172a' },
+    { id: `off-fb-${id}`, type: 'O', label: '2', x: 350, y: 105, color: '#0f172a' },
+    { id: `off-tb-${id}`, type: 'O', label: '3', x: 350, y: 60, color: '#0f172a' },
   ];
 
-  // Base Defense (4-4 Stack)
+  // Base Defense (4-4 Stack) - Spaced Out Red No-Fill Defensive Tokens
   const defensiveTokens: WhiteboardToken[] = [
-    { id: `def-e9-${id}`, type: 'letter', label: 'E9', x: 235, y: 220, color: '#0f172a' },
-    { id: `def-t3-${id}`, type: 'letter', label: 'T3', x: 300, y: 220, color: '#0f172a' },
-    { id: `def-t1-${id}`, type: 'letter', label: 'T1', x: 366, y: 220, color: '#0f172a' },
-    { id: `def-e5-${id}`, type: 'letter', label: 'E5', x: 432, y: 220, color: '#0f172a' },
-    { id: `def-s-${id}`, type: 'letter', label: 'S', x: 215, y: 260, color: '#0f172a' },
-    { id: `def-m-${id}`, type: 'letter', label: 'M', x: 300, y: 275, color: '#0f172a' },
-    { id: `def-w-${id}`, type: 'letter', label: 'W', x: 375, y: 275, color: '#0f172a' },
-    { id: `def-r-${id}`, type: 'letter', label: 'R', x: 460, y: 255, color: '#0f172a' },
-    { id: `def-cl-${id}`, type: 'letter', label: 'C', x: 130, y: 250, color: '#0f172a' },
-    { id: `def-cr-${id}`, type: 'letter', label: 'C', x: 570, y: 250, color: '#0f172a' },
-    { id: `def-fs-${id}`, type: 'letter', label: 'FS', x: 350, y: 360, color: '#0f172a' },
+    { id: `def-e9-${id}`, type: 'letter', label: 'E9', x: 190, y: 230, color: '#ef4444', fillMode: 'nofill' },
+    { id: `def-t3-${id}`, type: 'letter', label: 'T3', x: 285, y: 230, color: '#ef4444', fillMode: 'nofill' },
+    { id: `def-t1-${id}`, type: 'letter', label: 'T1', x: 380, y: 230, color: '#ef4444', fillMode: 'nofill' },
+    { id: `def-e5-${id}`, type: 'letter', label: 'E5', x: 495, y: 230, color: '#ef4444', fillMode: 'nofill' },
+    { id: `def-s-${id}`, type: 'letter', label: 'S', x: 190, y: 280, color: '#ef4444', fillMode: 'nofill' },
+    { id: `def-m-${id}`, type: 'letter', label: 'M', x: 295, y: 290, color: '#ef4444', fillMode: 'nofill' },
+    { id: `def-w-${id}`, type: 'letter', label: 'W', x: 395, y: 290, color: '#ef4444', fillMode: 'nofill' },
+    { id: `def-r-${id}`, type: 'letter', label: 'R', x: 505, y: 280, color: '#ef4444', fillMode: 'nofill' },
+    { id: `def-cl-${id}`, type: 'letter', label: 'C', x: 100, y: 260, color: '#ef4444', fillMode: 'nofill' },
+    { id: `def-cr-${id}`, type: 'letter', label: 'C', x: 600, y: 260, color: '#ef4444', fillMode: 'nofill' },
+    { id: `def-fs-${id}`, type: 'letter', label: 'FS', x: 350, y: 390, color: '#ef4444', fillMode: 'nofill' },
   ];
 
   // Stunt / Blitz arrows
   const arrows: WhiteboardArrow[] = [];
   if (isBlitz) {
     arrows.push(
-      { id: `a-blitz-s-${id}`, type: 'curved', startX: 215, startY: 260, endX: 200, endY: 180, controlX: 190, controlY: 215, color: '#0f172a' },
-      { id: `a-blitz-e9-${id}`, type: 'curved', startX: 235, startY: 220, endX: 270, endY: 180, controlX: 260, controlY: 195, color: '#0f172a' }
+      { id: `a-blitz-s-${id}`, type: 'curved', startX: 190, startY: 280, endX: 170, endY: 195, controlX: 175, controlY: 235, color: '#ef4444' },
+      { id: `a-blitz-e9-${id}`, type: 'curved', startX: 190, startY: 230, endX: 240, endY: 195, controlX: 220, controlY: 205, color: '#ef4444' }
     );
   } else if (isCross) {
     arrows.push(
-      { id: `a-t1-cross-${id}`, type: 'straight', startX: 366, startY: 220, endX: 334, endY: 180, color: '#0f172a' },
-      { id: `a-t3-cross-${id}`, type: 'curved', startX: 300, startY: 220, endX: 370, endY: 180, controlX: 335, controlY: 235, color: '#0f172a' }
+      { id: `a-t1-cross-${id}`, type: 'straight', startX: 380, startY: 230, endX: 330, endY: 195, color: '#ef4444' },
+      { id: `a-t3-cross-${id}`, type: 'curved', startX: 285, startY: 230, endX: 400, endY: 195, controlX: 340, controlY: 240, color: '#ef4444' }
     );
   } else if (isFan) {
     arrows.push(
-      { id: `a-t3-fan-${id}`, type: 'straight', startX: 300, startY: 220, endX: 285, endY: 180, color: '#0f172a' },
-      { id: `a-t1-fan-${id}`, type: 'straight', startX: 366, startY: 220, endX: 385, endY: 180, color: '#0f172a' }
+      { id: `a-t3-fan-${id}`, type: 'straight', startX: 285, startY: 230, endX: 260, endY: 195, color: '#ef4444' },
+      { id: `a-t1-fan-${id}`, type: 'straight', startX: 380, startY: 230, endX: 410, endY: 195, color: '#ef4444' }
     );
   } else if (isPinch) {
     arrows.push(
-      { id: `a-e5-pinch-${id}`, type: 'straight', startX: 268, startY: 220, endX: 290, endY: 185, color: '#0f172a' },
-      { id: `a-t1-pinch-${id}`, type: 'straight', startX: 334, startY: 220, endX: 345, endY: 185, color: '#0f172a' },
-      { id: `a-t3-pinch-${id}`, type: 'straight', startX: 400, startY: 220, endX: 365, endY: 185, color: '#0f172a' },
-      { id: `a-e9-pinch-${id}`, type: 'straight', startX: 465, startY: 220, endX: 440, endY: 185, color: '#0f172a' }
+      { id: `a-e5-pinch-${id}`, type: 'straight', startX: 495, startY: 230, endX: 460, endY: 195, color: '#ef4444' },
+      { id: `a-t1-pinch-${id}`, type: 'straight', startX: 380, startY: 230, endX: 360, endY: 195, color: '#ef4444' },
+      { id: `a-t3-pinch-${id}`, type: 'straight', startX: 285, startY: 230, endX: 310, endY: 195, color: '#ef4444' },
+      { id: `a-e9-pinch-${id}`, type: 'straight', startX: 190, startY: 230, endX: 225, endY: 195, color: '#ef4444' }
     );
   }
 

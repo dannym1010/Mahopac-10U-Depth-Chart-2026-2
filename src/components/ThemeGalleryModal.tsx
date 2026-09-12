@@ -355,23 +355,23 @@ export const ThemeGalleryModal: React.FC<ThemeGalleryModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in">
-      <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Modal Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between gap-3 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900">
+        <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50 dark:bg-gradient-to-r dark:from-slate-900 dark:via-slate-850 dark:to-slate-900">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center">
               <Palette className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black text-white tracking-tight">
+                <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
                   Sideline Visual Scheme Showcase
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30">
                   5 Trendy Themes
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-medium">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                 Compare athletic palettes optimized for sideline glare, phone screens, and high-contrast coaching.
               </p>
             </div>
@@ -380,7 +380,7 @@ export const ThemeGalleryModal: React.FC<ThemeGalleryModalProps> = ({
           <div className="flex items-center gap-2">
             {/* Light / Dark Mode Quick Toggle */}
             {onToggleThemeMode && (
-              <div className="flex items-center p-1 rounded-xl bg-slate-800 border border-slate-700">
+              <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                 <button
                   type="button"
                   onClick={() => onToggleThemeMode('dark')}
@@ -388,7 +388,7 @@ export const ThemeGalleryModal: React.FC<ThemeGalleryModalProps> = ({
                   className={`px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
                     themeMode === 'dark'
                       ? 'bg-slate-900 text-indigo-300 shadow-xs border border-indigo-500/40'
-                      : 'text-slate-400 hover:text-slate-200'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
                   <Moon className="w-3.5 h-3.5" />
@@ -401,7 +401,7 @@ export const ThemeGalleryModal: React.FC<ThemeGalleryModalProps> = ({
                   className={`px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
                     themeMode === 'light'
                       ? 'bg-amber-100 text-amber-900 shadow-xs border border-amber-300'
-                      : 'text-slate-400 hover:text-slate-200'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
                   <Sun className="w-3.5 h-3.5 text-amber-600" />
@@ -413,7 +413,7 @@ export const ThemeGalleryModal: React.FC<ThemeGalleryModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -435,22 +435,22 @@ export const ThemeGalleryModal: React.FC<ThemeGalleryModalProps> = ({
                   onClick={() => setActiveTabThemeId(scheme.id)}
                   className={`p-2.5 rounded-2xl border text-left transition-all relative overflow-hidden cursor-pointer ${
                     isActive
-                      ? 'bg-slate-800 border-indigo-400 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-400'
-                      : 'bg-slate-900/90 border-slate-800 hover:border-slate-700 opacity-80 hover:opacity-100'
+                      ? 'bg-slate-100 dark:bg-slate-800 border-indigo-500 dark:border-indigo-400 shadow-md shadow-indigo-500/10 ring-1 ring-indigo-500 dark:ring-indigo-400'
+                      : 'bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 opacity-90 hover:opacity-100'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
                       {scheme.category}
                     </span>
                     {isApplied && (
-                      <span className="w-4 h-4 rounded-full bg-emerald-500 text-black flex items-center justify-center text-[9px] font-black">
+                      <span className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-black">
                         ✓
                       </span>
                     )}
                   </div>
 
-                  <div className="text-xs font-black text-white line-clamp-1">
+                  <div className="text-xs font-black text-slate-900 dark:text-white line-clamp-1">
                     {scheme.name.split('&')[0].trim()}
                   </div>
 

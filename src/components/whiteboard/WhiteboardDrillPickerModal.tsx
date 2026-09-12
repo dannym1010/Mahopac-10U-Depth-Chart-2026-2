@@ -37,18 +37,59 @@ export const WhiteboardDrillPickerModal: React.FC<WhiteboardDrillPickerModalProp
   onNavigateToDrills,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [libraryMode, setLibraryMode] = useState<'schemes' | 'drills' | 'all'>(() => {
+    return selectedCategory === 'SCHEME' ? 'schemes' : 'all';
+  });
+  const [schemeFilter, setSchemeFilter] = useState<'all' | 'base' | 'blitz' | 'stunt' | 'heavy'>('all');
 
-  // Filtered drills based on category & search
+  const isSchemePlay = (d: WhiteboardDrill) =>
+    d.category === 'SCHEME' ||
+    d.id.startsWith('hudl-') ||
+    d.id.startsWith('scheme-') ||
+    Boolean(d.hudlPlaybookName) ||
+    Boolean(d.formationName) ||
+    (Boolean(d.categoryLabel) && d.categoryLabel.toLowerCase().includes('scheme'));
+
+  const schemeCount = useMemo(() => drills.filter(isSchemePlay).length, [drills]);
+  const drillCount = useMemo(() => drills.filter((d) => !isSchemePlay(d)).length, [drills]);
+
+  // Filtered drills based on mode, category & search
   const filteredDrills = useMemo(() => {
     return drills.filter((drill) => {
-      // Category match
-      if (selectedCategory !== 'ALL') {
-        if (selectedCategory === 'OFFENSE') {
-          if (!drill.category.startsWith('OFF')) return false;
-        } else if (selectedCategory === 'DEFENSE') {
-          if (!['DL', 'DE', 'LB', 'DB', 'SCHEME', 'DEFENSE'].includes(drill.category)) return false;
-        } else if (drill.category !== selectedCategory) {
-          return false;
+      const isScheme = isSchemePlay(drill);
+
+      // Primary Library Mode Filter
+      if (libraryMode === 'schemes') {
+        if (!isScheme) return false;
+        if (schemeFilter !== 'all') {
+          const t = (drill.title + ' ' + (drill.subtitle || '') + ' ' + (drill.formationName || '')).toLowerCase();
+          if (schemeFilter === 'base' && !t.includes('base') && !t.includes('stack')) return false;
+          if (schemeFilter === 'blitz' && !t.includes('sting') && !t.includes('dog') && !t.includes('blitz')) return false;
+          if (schemeFilter === 'stunt' && !t.includes('stunt') && !t.includes('cross') && !t.includes('fan') && !t.includes('pinch')) return false;
+          if (schemeFilter === 'heavy' && !t.includes('5-3') && !t.includes('6-2') && !t.includes('overshift') && !t.includes('goal line')) return false;
+        }
+      } else if (libraryMode === 'drills') {
+        if (isScheme) return false;
+        // Category match
+        if (selectedCategory !== 'ALL') {
+          if (selectedCategory === 'OFFENSE') {
+            if (!drill.category.startsWith('OFF')) return false;
+          } else if (selectedCategory === 'DEFENSE') {
+            if (!['DL', 'DE', 'LB', 'DB', 'DEFENSE'].includes(drill.category)) return false;
+          } else if (drill.category !== selectedCategory) {
+            return false;
+          }
+        }
+      } else {
+        // 'all' mode
+        if (selectedCategory !== 'ALL') {
+          if (selectedCategory === 'OFFENSE') {
+            if (!drill.category.startsWith('OFF')) return false;
+          } else if (selectedCategory === 'DEFENSE') {
+            if (!['DL', 'DE', 'LB', 'DB', 'SCHEME', 'DEFENSE'].includes(drill.category)) return false;
+          } else if (drill.category !== selectedCategory) {
+            return false;
+          }
         }
       }
 
@@ -61,10 +102,12 @@ export const WhiteboardDrillPickerModal: React.FC<WhiteboardDrillPickerModalProp
         drill.objective?.toLowerCase().includes(q) ||
         drill.category.toLowerCase().includes(q) ||
         (drill.categoryLabel && drill.categoryLabel.toLowerCase().includes(q)) ||
+        (drill.hudlPlaybookName && drill.hudlPlaybookName.toLowerCase().includes(q)) ||
+        (drill.formationName && drill.formationName.toLowerCase().includes(q)) ||
         (drill.cues && drill.cues.some((c) => c.toLowerCase().includes(q)))
       );
     });
-  }, [drills, selectedCategory, searchTerm]);
+  }, [drills, libraryMode, schemeFilter, selectedCategory, searchTerm]);
 
   // Count by category
   const categoryCounts = useMemo(() => {
@@ -135,6 +178,59 @@ export const WhiteboardDrillPickerModal: React.FC<WhiteboardDrillPickerModalProp
           </div>
         </div>
 
+        {/* Primary Scope Toggle: Defensive Schemes vs Drills vs All */}
+        <div className="p-2 border-b border-slate-800 bg-slate-950 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              setLibraryMode('schemes');
+              setSchemeFilter('all');
+              onSelectCategory('SCHEME');
+            }}
+            className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              libraryMode === 'schemes'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                : 'bg-slate-900/90 text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            <Shield className="w-3.5 h-3.5 text-indigo-300" />
+            <span className="truncate">Defensive Schemes</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-white/20 font-mono shrink-0">{schemeCount}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setLibraryMode('drills');
+              if (selectedCategory === 'SCHEME') onSelectCategory('ALL');
+            }}
+            className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              libraryMode === 'drills'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                : 'bg-slate-900/90 text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            <Dumbbell className="w-3.5 h-3.5 text-blue-300" />
+            <span className="truncate">Position Drills</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-white/20 font-mono shrink-0">{drillCount}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setLibraryMode('all');
+              onSelectCategory('ALL');
+            }}
+            className={`py-1.5 px-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition-all cursor-pointer shrink-0 ${
+              libraryMode === 'all'
+                ? 'bg-slate-700 text-white shadow-md'
+                : 'bg-slate-900/90 text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 text-slate-400" />
+            <span>All</span>
+            <span className="text-[10px] text-slate-400">({drills.length})</span>
+          </button>
+        </div>
+
         {/* Search Bar */}
         <div className="p-3 border-b border-slate-800/80 bg-slate-950/60">
           <div className="relative">
@@ -143,7 +239,11 @@ export const WhiteboardDrillPickerModal: React.FC<WhiteboardDrillPickerModalProp
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search drills, keys, cues (e.g. 'Get-off', 'Spill', 'Rip')..."
+              placeholder={
+                libraryMode === 'schemes'
+                  ? "Search schemes, blitzes, stunts (e.g. 'Stack Rip', 'Double Dog', 'Cross')..."
+                  : "Search drills, keys, cues (e.g. 'Get-off', 'Spill', 'Rip')..."
+              }
               className="w-full bg-slate-900 border border-slate-700/80 rounded-2xl pl-9 pr-8 py-2 text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-blue-400 shadow-inner"
               autoFocus
             />
@@ -159,42 +259,75 @@ export const WhiteboardDrillPickerModal: React.FC<WhiteboardDrillPickerModalProp
           </div>
         </div>
 
-        {/* Category Filter Chips */}
+        {/* Contextual Filter Chips */}
         <div className="px-3 py-2 border-b border-slate-800/60 bg-slate-900/40 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
-          <button
-            type="button"
-            onClick={() => onSelectCategory('ALL')}
-            className={`px-2.5 py-1 rounded-xl text-xs font-black whitespace-nowrap transition-all border cursor-pointer ${
-              selectedCategory === 'ALL'
-                ? 'bg-blue-600 text-white border-blue-500 shadow-xs'
-                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
-            }`}
-          >
-            All ({categoryCounts.ALL || 0})
-          </button>
-          {DEFENSIVE_POSITION_GROUPS.filter((g) => g.id !== 'ALL').map((group) => {
-            const count = categoryCounts[group.id] || 0;
-            if (count === 0 && !group.id.startsWith('OFF')) return null;
-            const isSelected = selectedCategory === group.id;
-            return (
+          {libraryMode === 'schemes' ? (
+            <>
+              {[
+                { id: 'all', label: 'All Schemes', count: schemeCount },
+                { id: 'base', label: '4-4 Base Fronts', count: drills.filter(d => isSchemePlay(d) && (d.title + ' ' + (d.subtitle || '')).toLowerCase().includes('base')).length },
+                { id: 'blitz', label: 'Blitz Packages', count: drills.filter(d => isSchemePlay(d) && ((d.title + ' ' + (d.subtitle || '')).toLowerCase().includes('sting') || (d.title + ' ' + (d.subtitle || '')).toLowerCase().includes('dog') || (d.title + ' ' + (d.subtitle || '')).toLowerCase().includes('blitz'))).length },
+                { id: 'stunt', label: 'Line Stunts', count: drills.filter(d => isSchemePlay(d) && (d.title + ' ' + (d.subtitle || '')).toLowerCase().includes('stunt')).length },
+                { id: 'heavy', label: 'Heavy / Goal Line', count: drills.filter(d => isSchemePlay(d) && ((d.title + ' ' + (d.subtitle || '')).toLowerCase().includes('5-3') || (d.title + ' ' + (d.subtitle || '')).toLowerCase().includes('6-2'))).length },
+              ].map((sub) => {
+                const isSelected = schemeFilter === sub.id;
+                return (
+                  <button
+                    key={sub.id}
+                    type="button"
+                    onClick={() => setSchemeFilter(sub.id as any)}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer flex items-center gap-1 ${
+                      isSelected
+                        ? 'bg-indigo-600 text-white border-indigo-500 font-black shadow-xs'
+                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                    }`}
+                  >
+                    <span>{sub.label}</span>
+                    <span className={`text-[10px] ${isSelected ? 'text-indigo-200 font-black' : 'text-slate-500'}`}>
+                      ({sub.count})
+                    </span>
+                  </button>
+                );
+              })}
+            </>
+          ) : (
+            <>
               <button
-                key={group.id}
                 type="button"
-                onClick={() => onSelectCategory(group.id as any)}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer flex items-center gap-1 ${
-                  isSelected
-                    ? 'bg-blue-600 text-white border-blue-500 font-black shadow-xs'
+                onClick={() => onSelectCategory('ALL')}
+                className={`px-2.5 py-1 rounded-xl text-xs font-black whitespace-nowrap transition-all border cursor-pointer ${
+                  selectedCategory === 'ALL'
+                    ? 'bg-blue-600 text-white border-blue-500 shadow-xs'
                     : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
                 }`}
               >
-                <span>{group.icon}</span>
-                <span>{group.shortLabel}</span>
-                <span className={`text-[10px] ${isSelected ? 'text-blue-200 font-black' : 'text-slate-500'}`}>
-                  ({count})
-                </span>
+                All ({libraryMode === 'drills' ? drillCount : categoryCounts.ALL || 0})
               </button>
-            );
-          })}
+              {DEFENSIVE_POSITION_GROUPS.filter((g) => g.id !== 'ALL' && (libraryMode === 'all' || g.id !== 'SCHEME')).map((group) => {
+                const count = categoryCounts[group.id] || 0;
+                if (count === 0 && !group.id.startsWith('OFF')) return null;
+                const isSelected = selectedCategory === group.id;
+                return (
+                  <button
+                    key={group.id}
+                    type="button"
+                    onClick={() => onSelectCategory(group.id as any)}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer flex items-center gap-1 ${
+                      isSelected
+                        ? 'bg-blue-600 text-white border-blue-500 font-black shadow-xs'
+                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                    }`}
+                  >
+                    <span>{group.icon}</span>
+                    <span>{group.shortLabel}</span>
+                    <span className={`text-[10px] ${isSelected ? 'text-blue-200 font-black' : 'text-slate-500'}`}>
+                      ({count})
+                    </span>
+                  </button>
+                );
+              })}
+            </>
+          )}
         </div>
 
         {/* Drill List */}

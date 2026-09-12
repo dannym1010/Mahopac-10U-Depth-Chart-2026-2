@@ -164,21 +164,21 @@ export const Header: React.FC<HeaderProps> = ({
   const autoWeekInfo = useMemo(() => getAutoActiveWeek(scheduleEvents), [scheduleEvents]);
 
   return (
-    <header className="bg-slate-950 border-b border-slate-800 text-slate-100 shadow-xl sticky top-0 z-40">
+    <header className="bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 shadow-xs dark:shadow-xl sticky top-0 z-40">
       {/* =========================================================================
           1. SLEEK COMPACT MOBILE HEADER (< md: 768px)
           ========================================================================= */}
-      <div className="md:hidden px-3 py-2.5 flex items-center justify-between gap-2 border-b border-slate-800/80">
+      <div className="md:hidden px-3 py-2.5 flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800/80">
         {/* Left: Team Selector Pill */}
-        <div className="flex items-center gap-1.5 min-w-0 bg-slate-900 border border-slate-700/80 px-2 py-1 rounded-xl shadow-inner">
+        <div className="flex items-center gap-1.5 min-w-0 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 px-2 py-1 rounded-xl shadow-inner">
           <span className="text-base select-none">🏈</span>
           <select
             value={activeTeamId || (accessibleTeams && accessibleTeams[0]?.id) || ''}
             onChange={(e) => onSelectTeam && onSelectTeam(e.target.value)}
-            className="bg-transparent font-black text-xs text-indigo-400 focus:outline-none cursor-pointer truncate max-w-[130px]"
+            className="bg-transparent font-black text-xs text-indigo-700 dark:text-indigo-400 focus:outline-none cursor-pointer truncate max-w-[130px]"
           >
             {(accessibleTeams || []).map((t) => (
-              <option key={t.id} value={t.id} className="bg-slate-900 text-slate-100 font-bold">
+              <option key={t.id} value={t.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-bold">
                 {t.name} {t.ageGroup ? `(${t.ageGroup})` : ''}
               </option>
             ))}
@@ -186,7 +186,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Center: Week Selector Pill */}
-        <div className="flex items-center gap-1 bg-slate-900 border border-slate-700/80 px-1.5 py-0.5 rounded-xl">
+        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 px-1.5 py-0.5 rounded-xl">
           <button
             type="button"
             onClick={handlePrevWeek}
@@ -195,7 +195,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
-          <span className="text-xs font-black text-indigo-300 px-1 whitespace-nowrap">
+          <span className="text-xs font-black text-indigo-700 dark:text-indigo-300 px-1 whitespace-nowrap">
             {formatWeekLabel(currentWeek)}
           </span>
           <button
@@ -217,7 +217,7 @@ export const Header: React.FC<HeaderProps> = ({
               className={`px-2 py-1 rounded-xl text-xs font-black flex items-center gap-1 transition-all cursor-pointer border active:scale-95 ${
                 activeUnit === 'mobile_hub'
                   ? 'bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-600/40'
-                  : 'bg-slate-900 text-indigo-300 border-slate-700 hover:border-indigo-500/50'
+                  : 'bg-slate-100 dark:bg-slate-900 text-indigo-700 dark:text-indigo-300 border-slate-200 dark:border-slate-700 hover:border-indigo-500/50'
               }`}
               title="Open Mobile Coach HUD"
             >
@@ -256,30 +256,30 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="font-black text-base md:text-lg tracking-tight bg-gradient-to-r from-slate-100 via-indigo-200 to-indigo-400 bg-clip-text text-transparent truncate group-hover:from-white group-hover:to-indigo-300 transition-colors">
+              <h1 className="font-black text-base md:text-lg tracking-tight text-slate-900 dark:text-transparent dark:bg-gradient-to-r dark:from-slate-100 dark:via-indigo-200 dark:to-indigo-400 dark:bg-clip-text truncate group-hover:text-indigo-600 dark:group-hover:from-white dark:group-hover:to-indigo-300 transition-colors">
                 {activeTeam ? activeTeam.name : 'Football Operations Manager'}
               </h1>
               {activeTeam?.ageGroup && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 shadow-xs">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-400/30 shadow-xs">
                   {activeTeam.ageGroup}
                 </span>
               )}
               {activeTeam?.season && (
-                <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-slate-900 text-slate-400 border border-slate-800">
+                <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800">
                   {activeTeam.season}
                 </span>
               )}
               {isCurrentTeamDefault && (
                 <span
                   title="This is your default startup team"
-                  className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-indigo-500 text-white shadow-xs font-mono"
+                  className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-indigo-600 text-white shadow-xs font-mono"
                 >
                   <Star className="w-2.5 h-2.5 fill-white" />
                   <span>Default Squad</span>
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block font-medium truncate">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block font-medium truncate">
               Mahopac Football Operations • Modern Varsity Operations Suite
             </p>
           </div>
@@ -289,19 +289,19 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2.5 shrink-0">
           {/* Active Squad Switcher */}
           {accessibleTeams.length > 1 && (
-            <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700/80 hover:border-indigo-500/50 px-2.5 py-1 rounded-2xl shadow-inner transition-colors">
-              <Users className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 hover:border-indigo-500/50 px-2.5 py-1 rounded-2xl shadow-xs dark:shadow-inner transition-colors">
+              <Users className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <select
                 value={activeTeamId || (accessibleTeams && accessibleTeams[0]?.id) || ''}
                 onChange={(e) => onSelectTeam && onSelectTeam(e.target.value)}
-                className="bg-transparent font-black text-xs text-slate-100 focus:outline-none cursor-pointer pr-1 py-0.5"
+                className="bg-transparent font-black text-xs text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer pr-1 py-0.5"
                 title="Switch Active Squad"
               >
                 {(accessibleTeams || []).map((t) => (
                   <option
                     key={t.id}
                     value={t.id}
-                    className="bg-slate-900 text-slate-100 font-bold"
+                    className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-bold"
                   >
                     {t.name} {t.ageGroup ? `(${t.ageGroup})` : ''} {t.id === defaultTeamId ? '★' : ''}
                   </option>
@@ -314,31 +314,31 @@ export const Header: React.FC<HeaderProps> = ({
           <div
             onClick={onForceSave}
             title="Click to force immediate cloud save & sync"
-            className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 hover:border-indigo-500/40 px-2.5 py-1.5 rounded-2xl shadow-inner cursor-pointer transition-all active:scale-95 group"
+            className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/40 px-2.5 py-1.5 rounded-2xl shadow-xs dark:shadow-inner cursor-pointer transition-all active:scale-95 group"
           >
             <span
               className="w-2 h-2 rounded-full shrink-0 animate-pulse shadow-xs"
               style={{ backgroundColor: syncStatus.color || '#6366f1' }}
             />
-            <span className="text-[11px] font-bold text-slate-300 group-hover:text-indigo-300 transition-colors hidden lg:inline">
+            <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors hidden lg:inline">
               {syncStatus.text}
             </span>
             {onForceSave && (
-              <Cloud className="w-3 h-3 text-slate-500 group-hover:text-indigo-400 transition-colors" />
+              <Cloud className="w-3 h-3 text-slate-400 dark:text-slate-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
             )}
           </div>
 
           {/* User Profile / Role Pill */}
-          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded-2xl shadow-inner">
-            <UserCheck className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="text-xs font-bold text-slate-200 truncate max-w-[110px] lg:max-w-[150px]">
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2.5 py-1.5 rounded-2xl shadow-xs dark:shadow-inner">
+            <UserCheck className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[110px] lg:max-w-[150px]">
               {userEmail}
             </span>
             <span
               className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${
                 userRole === 'admin'
-                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/40'
-                  : 'bg-slate-800 text-slate-300 border border-slate-700'
+                  ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-400/40'
+                  : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
               }`}
             >
               {userRole === 'admin' ? 'COACH ADMIN' : 'VIEWER'}
@@ -353,10 +353,10 @@ export const Header: React.FC<HeaderProps> = ({
               className={`px-3 py-1.5 text-xs font-black rounded-xl flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer border ${
                 activeUnit === 'mobile_hub'
                   ? 'bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-600/30'
-                  : 'bg-slate-900 hover:bg-slate-850 text-indigo-300 border-slate-700 hover:border-indigo-500/50'
+                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-850 text-indigo-700 dark:text-indigo-300 border-slate-200 dark:border-slate-700 hover:border-indigo-500/50'
               }`}
             >
-              <Smartphone className="w-3.5 h-3.5 text-indigo-400" />
+              <Smartphone className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               <span>Mobile HUD</span>
             </button>
           )}
@@ -408,7 +408,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={onSignOut}
             title="Sign Out"
-            className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-900 border border-slate-800 rounded-xl transition-all active:scale-95 cursor-pointer"
+            className="p-2 text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl transition-all active:scale-95 cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -418,16 +418,16 @@ export const Header: React.FC<HeaderProps> = ({
       {/* =========================================================================
           3. AUTOMATED GAME WEEK & MATCHUP BAR (md: and above)
           ========================================================================= */}
-      <div className="hidden md:flex w-full bg-slate-950 border-b border-slate-800">
-        <div className="max-w-[1700px] w-full mx-auto px-4 py-2 flex items-center justify-between gap-3 text-xs bg-slate-950">
+      <div className="hidden md:flex w-full bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
+        <div className="max-w-[1700px] w-full mx-auto px-4 py-2 flex items-center justify-between gap-3 text-xs bg-slate-50 dark:bg-slate-950">
         <div className="flex items-center gap-3 flex-wrap">
           {/* Week Selector with Stepper Buttons */}
-          <div className="flex items-center gap-1.5 bg-slate-900 p-1 px-2.5 rounded-2xl border border-slate-700/80 shadow-inner">
+          <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 p-1 px-2.5 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-xs dark:shadow-inner">
             <button
               type="button"
               onClick={handlePrevWeek}
               disabled={currentWeekIdx <= 0}
-              className="p-1 text-slate-400 hover:text-indigo-300 disabled:opacity-20 cursor-pointer transition-colors"
+              className="p-1 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 disabled:opacity-20 cursor-pointer transition-colors"
               title="Previous Week"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -436,7 +436,7 @@ export const Header: React.FC<HeaderProps> = ({
             <select
               value={currentWeek}
               onChange={(e) => onWeekChange(e.target.value)}
-              className="bg-slate-800/90 border border-slate-700 text-indigo-300 font-extrabold text-xs rounded-xl px-2.5 py-1 focus:outline-none focus:border-indigo-400 cursor-pointer hover:bg-slate-800 transition-colors max-w-[260px] truncate"
+              className="bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-indigo-700 dark:text-indigo-300 font-extrabold text-xs rounded-xl px-2.5 py-1 focus:outline-none focus:border-indigo-400 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors max-w-[260px] truncate"
               title="Change active depth chart & practice week"
             >
               {(() => {
@@ -492,7 +492,7 @@ export const Header: React.FC<HeaderProps> = ({
               type="button"
               onClick={handleNextWeek}
               disabled={currentWeekIdx >= allWeeks.length - 1}
-              className="p-1 text-slate-400 hover:text-indigo-300 disabled:opacity-20 cursor-pointer transition-colors"
+              className="p-1 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 disabled:opacity-20 cursor-pointer transition-colors"
               title="Next Week"
             >
               <ChevronRight className="w-4 h-4" />
@@ -504,15 +504,15 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={() => onWeekChange(autoWeekInfo.activeWeek)}
-              className="px-2.5 py-1 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-xs font-black flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+              className="px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/40 text-xs font-black flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
               title="Jump back to current automated calendar week"
             >
-              <Zap className="w-3 h-3 text-indigo-400" />
+              <Zap className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
               <span>Jump to Current ({formatWeekLabel(autoWeekInfo.activeWeek)})</span>
             </button>
           ) : matchedScheduledGame ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 text-xs font-semibold">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>
                 Game: {matchedScheduledGame.opponent ? `vs ${matchedScheduledGame.opponent}` : matchedScheduledGame.title} ({matchedScheduledGame.date})
               </span>
@@ -521,7 +521,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Opponent Input */}
           <div className="flex items-center gap-2">
-            <span className="text-slate-400 font-black uppercase tracking-wider text-[10px]">
+            <span className="text-slate-500 dark:text-slate-400 font-black uppercase tracking-wider text-[10px]">
               Opponent:
             </span>
             <input
@@ -530,7 +530,7 @@ export const Header: React.FC<HeaderProps> = ({
               onChange={(e) => onOpponentChange(e.target.value)}
               placeholder={matchedScheduledGame ? `e.g. ${matchedScheduledGame.opponent || matchedScheduledGame.title}` : 'e.g. vs. Somers / Homecoming'}
               disabled={userRole !== 'admin'}
-              className="bg-slate-900 border border-slate-700/80 text-slate-100 px-3 py-1 rounded-xl text-xs placeholder:text-slate-500 w-44 lg:w-56 focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed font-medium"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 text-slate-900 dark:text-slate-100 px-3 py-1 rounded-xl text-xs placeholder:text-slate-400 dark:placeholder:text-slate-500 w-44 lg:w-56 focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed font-medium shadow-xs"
             />
             {matchedScheduledGame && (
               <button
@@ -539,7 +539,7 @@ export const Header: React.FC<HeaderProps> = ({
                   const opp = matchedScheduledGame.opponent || matchedScheduledGame.title;
                   if (opp) onOpponentChange(opp);
                 }}
-                className="px-2 py-0.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                className="px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
                 title={`Click to fill opponent from schedule`}
               >
                 <span>⚡ Set "{matchedScheduledGame.opponent || matchedScheduledGame.title}"</span>
@@ -554,9 +554,9 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onOpenCopyWeekModal}
               title="Copy Depth Chart & Formations to another week"
-              className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-indigo-300 font-bold rounded-xl text-xs flex items-center gap-1.5 border border-indigo-500/30 hover:border-indigo-400 transition-all active:scale-95 cursor-pointer shadow-xs"
+              className="px-3 py-1 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-indigo-700 dark:text-indigo-300 font-bold rounded-xl text-xs flex items-center gap-1.5 border border-indigo-200 dark:border-indigo-500/30 hover:border-indigo-400 transition-all active:scale-95 cursor-pointer shadow-xs"
             >
-              <Copy className="w-3.5 h-3.5 text-indigo-400" />
+              <Copy className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               <span>Clone Week Lineup</span>
             </button>
           )}

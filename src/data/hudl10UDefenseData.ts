@@ -134,33 +134,33 @@ export const HUDL_10U_DEFENSE_INSTALL_PLAYS: WhiteboardDrill[] = [
         tokens: [
           // Offense (21 L): Center (square), LG, RG, LT, RT, TE left (Y), WR left (Z), WR right (X), QB (1), FB (2), TB (3)
           { id: 'off-c', type: 'square', label: 'C', x: 350, y: 195, color: '#0f172a', isSquare: true },
-          { id: 'off-lg', type: 'O', label: 'G', x: 318, y: 195, color: '#0f172a' },
-          { id: 'off-rg', type: 'O', label: 'G', x: 382, y: 195, color: '#0f172a' },
-          { id: 'off-lt', type: 'O', label: 'T', x: 286, y: 195, color: '#0f172a' },
-          { id: 'off-rt', type: 'O', label: 'T', x: 414, y: 195, color: '#0f172a' },
-          { id: 'off-te', type: 'O', label: 'Y', x: 254, y: 195, color: '#0f172a' },
-          { id: 'off-wr-z', type: 'O', label: 'Z', x: 130, y: 195, color: '#0f172a' },
-          { id: 'off-wr-x', type: 'O', label: 'X', x: 570, y: 195, color: '#0f172a' },
-          { id: 'off-qb', type: 'O', label: '1', x: 350, y: 155, color: '#0f172a' },
-          { id: 'off-fb', type: 'O', label: '2', x: 350, y: 115, color: '#0f172a' },
-          { id: 'off-tb', type: 'O', label: '3', x: 350, y: 75, color: '#0f172a' },
+          { id: 'off-lg', type: 'O', label: 'G', x: 306, y: 195, color: '#0f172a' },
+          { id: 'off-rg', type: 'O', label: 'G', x: 394, y: 195, color: '#0f172a' },
+          { id: 'off-lt', type: 'O', label: 'T', x: 262, y: 195, color: '#0f172a' },
+          { id: 'off-rt', type: 'O', label: 'T', x: 438, y: 195, color: '#0f172a' },
+          { id: 'off-te', type: 'O', label: 'Y', x: 218, y: 195, color: '#0f172a' },
+          { id: 'off-wr-z', type: 'O', label: 'Z', x: 110, y: 195, color: '#0f172a' },
+          { id: 'off-wr-x', type: 'O', label: 'X', x: 590, y: 195, color: '#0f172a' },
+          { id: 'off-qb', type: 'O', label: '1', x: 350, y: 150, color: '#0f172a' },
+          { id: 'off-fb', type: 'O', label: '2', x: 350, y: 105, color: '#0f172a' },
+          { id: 'off-tb', type: 'O', label: '3', x: 350, y: 60, color: '#0f172a' },
 
-          // Defense (LIZ - Strength Left): DL (E9, T3, T1, E5)
-          { id: 'def-e9', type: 'letter', label: 'E9', x: 235, y: 220, color: '#0f172a' },
-          { id: 'def-t3', type: 'letter', label: 'T3', x: 300, y: 220, color: '#0f172a' },
-          { id: 'def-t1', type: 'letter', label: 'T1', x: 366, y: 220, color: '#0f172a' },
-          { id: 'def-e5', type: 'letter', label: 'E5', x: 432, y: 220, color: '#0f172a' },
+          // Defense (LIZ - Strength Left): DL (E9, T3, T1, E5) - Red Outline No Fill
+          { id: 'def-e9', type: 'letter', label: 'E9', x: 188, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t3', type: 'letter', label: 'T3', x: 284, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t1', type: 'letter', label: 'T1', x: 372, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-e5', type: 'letter', label: 'E5', x: 468, y: 230, color: '#ef4444', fillMode: 'nofill' },
 
-          // Linebackers: S, M, W, R
-          { id: 'def-s', type: 'letter', label: 'S', x: 215, y: 260, color: '#0f172a' },
-          { id: 'def-m', type: 'letter', label: 'M', x: 300, y: 275, color: '#0f172a' },
-          { id: 'def-w', type: 'letter', label: 'W', x: 375, y: 275, color: '#0f172a' },
-          { id: 'def-r', type: 'letter', label: 'R', x: 460, y: 255, color: '#0f172a' },
+          // Linebackers: S, M, W, R - Red Outline No Fill
+          { id: 'def-s', type: 'letter', label: 'S', x: 165, y: 270, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-m', type: 'letter', label: 'M', x: 284, y: 280, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-w', type: 'letter', label: 'W', x: 372, y: 280, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-r', type: 'letter', label: 'R', x: 490, y: 270, color: '#ef4444', fillMode: 'nofill' },
 
-          // Secondary: Corners and Free Safety
-          { id: 'def-cl', type: 'letter', label: 'C', x: 130, y: 250, color: '#0f172a' },
-          { id: 'def-cr', type: 'letter', label: 'C', x: 570, y: 250, color: '#0f172a' },
-          { id: 'def-fs', type: 'letter', label: 'FS', x: 350, y: 360, color: '#0f172a' },
+          // Secondary: Corners and Free Safety - Red Outline No Fill
+          { id: 'def-cl', type: 'letter', label: 'C', x: 110, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-cr', type: 'letter', label: 'C', x: 590, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-fs', type: 'letter', label: 'FS', x: 350, y: 365, color: '#ef4444', fillMode: 'nofill' },
         ],
         arrows: [],
         zones: [],
@@ -189,33 +189,33 @@ export const HUDL_10U_DEFENSE_INSTALL_PLAYS: WhiteboardDrill[] = [
         tokens: [
           // Offense (21 R): Y right, X left, Z right
           { id: 'off-c', type: 'square', label: 'C', x: 350, y: 195, color: '#0f172a', isSquare: true },
-          { id: 'off-lg', type: 'O', label: 'G', x: 318, y: 195, color: '#0f172a' },
-          { id: 'off-rg', type: 'O', label: 'G', x: 382, y: 195, color: '#0f172a' },
-          { id: 'off-lt', type: 'O', label: 'T', x: 286, y: 195, color: '#0f172a' },
-          { id: 'off-rt', type: 'O', label: 'T', x: 414, y: 195, color: '#0f172a' },
-          { id: 'off-te', type: 'O', label: 'Y', x: 446, y: 195, color: '#0f172a' },
-          { id: 'off-wr-x', type: 'O', label: 'X', x: 130, y: 195, color: '#0f172a' },
-          { id: 'off-wr-z', type: 'O', label: 'Z', x: 570, y: 195, color: '#0f172a' },
-          { id: 'off-qb', type: 'O', label: '1', x: 350, y: 155, color: '#0f172a' },
-          { id: 'off-fb', type: 'O', label: '2', x: 350, y: 115, color: '#0f172a' },
-          { id: 'off-tb', type: 'O', label: '3', x: 350, y: 75, color: '#0f172a' },
+          { id: 'off-lg', type: 'O', label: 'G', x: 306, y: 195, color: '#0f172a' },
+          { id: 'off-rg', type: 'O', label: 'G', x: 394, y: 195, color: '#0f172a' },
+          { id: 'off-lt', type: 'O', label: 'T', x: 262, y: 195, color: '#0f172a' },
+          { id: 'off-rt', type: 'O', label: 'T', x: 438, y: 195, color: '#0f172a' },
+          { id: 'off-te', type: 'O', label: 'Y', x: 482, y: 195, color: '#0f172a' },
+          { id: 'off-wr-x', type: 'O', label: 'X', x: 110, y: 195, color: '#0f172a' },
+          { id: 'off-wr-z', type: 'O', label: 'Z', x: 590, y: 195, color: '#0f172a' },
+          { id: 'off-qb', type: 'O', label: '1', x: 350, y: 150, color: '#0f172a' },
+          { id: 'off-fb', type: 'O', label: '2', x: 350, y: 105, color: '#0f172a' },
+          { id: 'off-tb', type: 'O', label: '3', x: 350, y: 60, color: '#0f172a' },
 
-          // Defense: DL (E5, T1, T3, E9)
-          { id: 'def-e5', type: 'letter', label: 'E5', x: 268, y: 220, color: '#0f172a' },
-          { id: 'def-t1', type: 'letter', label: 'T1', x: 334, y: 220, color: '#0f172a' },
-          { id: 'def-t3', type: 'letter', label: 'T3', x: 400, y: 220, color: '#0f172a' },
-          { id: 'def-e9', type: 'letter', label: 'E9', x: 465, y: 220, color: '#0f172a' },
+          // Defense: DL (E5, T1, T3, E9) - Red Outline No Fill
+          { id: 'def-e5', type: 'letter', label: 'E5', x: 232, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t1', type: 'letter', label: 'T1', x: 328, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t3', type: 'letter', label: 'T3', x: 416, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-e9', type: 'letter', label: 'E9', x: 512, y: 230, color: '#ef4444', fillMode: 'nofill' },
 
-          // Linebackers: R (weak), W, M, S (strong)
-          { id: 'def-r', type: 'letter', label: 'R', x: 240, y: 255, color: '#0f172a' },
-          { id: 'def-w', type: 'letter', label: 'W', x: 325, y: 275, color: '#0f172a' },
-          { id: 'def-m', type: 'letter', label: 'M', x: 400, y: 275, color: '#0f172a' },
-          { id: 'def-s', type: 'letter', label: 'S', x: 485, y: 260, color: '#0f172a' },
+          // Linebackers: R (weak), W, M, S (strong) - Red Outline No Fill
+          { id: 'def-r', type: 'letter', label: 'R', x: 210, y: 270, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-w', type: 'letter', label: 'W', x: 328, y: 280, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-m', type: 'letter', label: 'M', x: 416, y: 280, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-s', type: 'letter', label: 'S', x: 535, y: 270, color: '#ef4444', fillMode: 'nofill' },
 
-          // Secondary
-          { id: 'def-cl', type: 'letter', label: 'C', x: 130, y: 250, color: '#0f172a' },
-          { id: 'def-cr', type: 'letter', label: 'C', x: 570, y: 250, color: '#0f172a' },
-          { id: 'def-fs', type: 'letter', label: 'FS', x: 350, y: 360, color: '#0f172a' },
+          // Secondary - Red Outline No Fill
+          { id: 'def-cl', type: 'letter', label: 'C', x: 110, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-cr', type: 'letter', label: 'C', x: 590, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-fs', type: 'letter', label: 'FS', x: 350, y: 365, color: '#ef4444', fillMode: 'nofill' },
         ],
         arrows: [],
         zones: [],
@@ -243,32 +243,34 @@ export const HUDL_10U_DEFENSE_INSTALL_PLAYS: WhiteboardDrill[] = [
         description: 'Twins and offset wing. Defense properly spaced with overhangs, corners cushioned, FS deep.',
         tokens: [
           // Offense matching image.png: Z left, 2 slot left, Y wing left, line T G C G T X, backfield 1, 3
-          { id: 'off-wr-z', type: 'O', label: 'Z', x: 190, y: 195, color: '#0f172a' },
-          { id: 'off-slot-2', type: 'O', label: '2', x: 260, y: 195, color: '#0f172a' },
-          { id: 'off-te-y', type: 'O', label: 'Y', x: 320, y: 155, color: '#0f172a' },
-          { id: 'off-lt', type: 'O', label: 'T', x: 405, y: 195, color: '#0f172a' },
-          { id: 'off-lg', type: 'O', label: 'G', x: 435, y: 195, color: '#0f172a' },
-          { id: 'off-c', type: 'square', label: 'C', x: 465, y: 195, color: '#0f172a', isSquare: true },
-          { id: 'off-rg', type: 'O', label: 'G', x: 495, y: 195, color: '#0f172a' },
-          { id: 'off-rt', type: 'O', label: 'T', x: 525, y: 195, color: '#0f172a' },
-          { id: 'off-te-x', type: 'O', label: 'X', x: 555, y: 195, color: '#0f172a' },
-          { id: 'off-qb', type: 'O', label: '1', x: 465, y: 160, color: '#0f172a' },
-          { id: 'off-tb', type: 'O', label: '3', x: 445, y: 120, color: '#0f172a' },
+          { id: 'off-wr-z', type: 'O', label: 'Z', x: 110, y: 195, color: '#0f172a' },
+          { id: 'off-slot-2', type: 'O', label: '2', x: 180, y: 195, color: '#0f172a' },
+          { id: 'off-te-y', type: 'O', label: 'Y', x: 250, y: 155, color: '#0f172a' },
+          { id: 'off-lt', type: 'O', label: 'T', x: 320, y: 195, color: '#0f172a' },
+          { id: 'off-lg', type: 'O', label: 'G', x: 364, y: 195, color: '#0f172a' },
+          { id: 'off-c', type: 'square', label: 'C', x: 408, y: 195, color: '#0f172a', isSquare: true },
+          { id: 'off-rg', type: 'O', label: 'G', x: 452, y: 195, color: '#0f172a' },
+          { id: 'off-rt', type: 'O', label: 'T', x: 496, y: 195, color: '#0f172a' },
+          { id: 'off-te-x', type: 'O', label: 'X', x: 540, y: 195, color: '#0f172a' },
+          { id: 'off-qb', type: 'O', label: '1', x: 408, y: 150, color: '#0f172a' },
+          { id: 'off-tb', type: 'O', label: '3', x: 390, y: 105, color: '#0f172a' },
 
-          // Defense matching image.png perfectly spaced
-          { id: 'def-e5', type: 'letter', label: 'E5', x: 395, y: 220, color: '#0f172a' },
-          { id: 'def-t1', type: 'letter', label: 'T1', x: 450, y: 220, color: '#0f172a' },
-          { id: 'def-t3', type: 'letter', label: 'T3', x: 510, y: 220, color: '#0f172a' },
-          { id: 'def-e9', type: 'letter', label: 'E9', x: 575, y: 220, color: '#0f172a' },
+          // Defense: DL (E5, T1, T3, E9) - Red Outline No Fill
+          { id: 'def-e5', type: 'letter', label: 'E5', x: 295, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t1', type: 'letter', label: 'T1', x: 370, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t3', type: 'letter', label: 'T3', x: 440, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-e9', type: 'letter', label: 'E9', x: 520, y: 230, color: '#ef4444', fillMode: 'nofill' },
 
-          { id: 'def-w', type: 'letter', label: 'W', x: 375, y: 265, color: '#0f172a' },
-          { id: 'def-m', type: 'letter', label: 'M', x: 490, y: 265, color: '#0f172a' },
-          { id: 'def-s', type: 'letter', label: 'S', x: 580, y: 250, color: '#0f172a' },
+          // Linebackers - Red Outline No Fill
+          { id: 'def-w', type: 'letter', label: 'W', x: 340, y: 275, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-m', type: 'letter', label: 'M', x: 440, y: 275, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-s', type: 'letter', label: 'S', x: 540, y: 260, color: '#ef4444', fillMode: 'nofill' },
 
-          { id: 'def-cl', type: 'letter', label: 'C', x: 165, y: 245, color: '#0f172a' },
-          { id: 'def-r', type: 'letter', label: 'R', x: 290, y: 245, color: '#0f172a' },
-          { id: 'def-cr', type: 'letter', label: 'C', x: 650, y: 245, color: '#0f172a' },
-          { id: 'def-fs', type: 'letter', label: 'FS', x: 475, y: 365, color: '#0f172a' },
+          // Secondary and Overhangs - Red Outline No Fill
+          { id: 'def-cl', type: 'letter', label: 'C', x: 110, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-r', type: 'letter', label: 'R', x: 215, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-cr', type: 'letter', label: 'C', x: 620, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-fs', type: 'letter', label: 'FS', x: 380, y: 365, color: '#ef4444', fillMode: 'nofill' },
         ],
         arrows: [],
         zones: [],
@@ -296,32 +298,34 @@ export const HUDL_10U_DEFENSE_INSTALL_PLAYS: WhiteboardDrill[] = [
         description: 'Trips formation to the right. Rover widens over #3, Safety shades right hash.',
         tokens: [
           // Offense (Trips Right)
-          { id: 'off-wr-x', type: 'O', label: 'X', x: 130, y: 195, color: '#0f172a' },
-          { id: 'off-lt', type: 'O', label: 'T', x: 270, y: 195, color: '#0f172a' },
-          { id: 'off-lg', type: 'O', label: 'G', x: 302, y: 195, color: '#0f172a' },
-          { id: 'off-c', type: 'square', label: 'C', x: 334, y: 195, color: '#0f172a', isSquare: true },
-          { id: 'off-rg', type: 'O', label: 'G', x: 366, y: 195, color: '#0f172a' },
-          { id: 'off-rt', type: 'O', label: 'T', x: 398, y: 195, color: '#0f172a' },
-          { id: 'off-te-y', type: 'O', label: 'Y', x: 465, y: 195, color: '#0f172a' },
-          { id: 'off-slot-2', type: 'O', label: '2', x: 535, y: 195, color: '#0f172a' },
-          { id: 'off-slot-z', type: 'O', label: 'Z', x: 615, y: 195, color: '#0f172a' },
-          { id: 'off-qb', type: 'O', label: '1', x: 334, y: 155, color: '#0f172a' },
-          { id: 'off-tb', type: 'O', label: '3', x: 310, y: 120, color: '#0f172a' },
+          { id: 'off-wr-x', type: 'O', label: 'X', x: 110, y: 195, color: '#0f172a' },
+          { id: 'off-lt', type: 'O', label: 'T', x: 230, y: 195, color: '#0f172a' },
+          { id: 'off-lg', type: 'O', label: 'G', x: 274, y: 195, color: '#0f172a' },
+          { id: 'off-c', type: 'square', label: 'C', x: 318, y: 195, color: '#0f172a', isSquare: true },
+          { id: 'off-rg', type: 'O', label: 'G', x: 362, y: 195, color: '#0f172a' },
+          { id: 'off-rt', type: 'O', label: 'T', x: 406, y: 195, color: '#0f172a' },
+          { id: 'off-te-y', type: 'O', label: 'Y', x: 460, y: 195, color: '#0f172a' },
+          { id: 'off-slot-2', type: 'O', label: '2', x: 525, y: 195, color: '#0f172a' },
+          { id: 'off-slot-z', type: 'O', label: 'Z', x: 605, y: 195, color: '#0f172a' },
+          { id: 'off-qb', type: 'O', label: '1', x: 318, y: 150, color: '#0f172a' },
+          { id: 'off-tb', type: 'O', label: '3', x: 290, y: 105, color: '#0f172a' },
 
-          // Defense
-          { id: 'def-e5', type: 'letter', label: 'E5', x: 252, y: 220, color: '#0f172a' },
-          { id: 'def-t1', type: 'letter', label: 'T1', x: 318, y: 220, color: '#0f172a' },
-          { id: 'def-t3', type: 'letter', label: 'T3', x: 384, y: 220, color: '#0f172a' },
-          { id: 'def-e9', type: 'letter', label: 'E9', x: 425, y: 220, color: '#0f172a' },
+          // Defense: DL - Red Outline No Fill
+          { id: 'def-e5', type: 'letter', label: 'E5', x: 205, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t1', type: 'letter', label: 'T1', x: 295, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t3', type: 'letter', label: 'T3', x: 380, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-e9', type: 'letter', label: 'E9', x: 435, y: 230, color: '#ef4444', fillMode: 'nofill' },
 
-          { id: 'def-w', type: 'letter', label: 'W', x: 300, y: 275, color: '#0f172a' },
-          { id: 'def-m', type: 'letter', label: 'M', x: 375, y: 275, color: '#0f172a' },
-          { id: 'def-r', type: 'letter', label: 'R', x: 480, y: 250, color: '#0f172a' },
-          { id: 'def-s', type: 'letter', label: 'S', x: 550, y: 250, color: '#0f172a' },
+          // Linebackers - Red Outline No Fill
+          { id: 'def-w', type: 'letter', label: 'W', x: 270, y: 280, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-m', type: 'letter', label: 'M', x: 362, y: 280, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-r', type: 'letter', label: 'R', x: 490, y: 265, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-s', type: 'letter', label: 'S', x: 565, y: 265, color: '#ef4444', fillMode: 'nofill' },
 
-          { id: 'def-cl', type: 'letter', label: 'C', x: 130, y: 250, color: '#0f172a' },
-          { id: 'def-cr', type: 'letter', label: 'C', x: 630, y: 250, color: '#0f172a' },
-          { id: 'def-fs', type: 'letter', label: 'FS', x: 450, y: 365, color: '#0f172a' },
+          // Secondary - Red Outline No Fill
+          { id: 'def-cl', type: 'letter', label: 'C', x: 110, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-cr', type: 'letter', label: 'C', x: 625, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-fs', type: 'letter', label: 'FS', x: 430, y: 365, color: '#ef4444', fillMode: 'nofill' },
         ],
         arrows: [],
         zones: [],
@@ -372,49 +376,51 @@ export const HUDL_10U_DEFENSE_INSTALL_PLAYS: WhiteboardDrill[] = [
         tokens: [
           // Offense (21 L)
           { id: 'off-c', type: 'square', label: 'C', x: 350, y: 195, color: '#0f172a', isSquare: true },
-          { id: 'off-lg', type: 'O', label: 'G', x: 318, y: 195, color: '#0f172a' },
-          { id: 'off-rg', type: 'O', label: 'G', x: 382, y: 195, color: '#0f172a' },
-          { id: 'off-lt', type: 'O', label: 'T', x: 286, y: 195, color: '#0f172a' },
-          { id: 'off-rt', type: 'O', label: 'T', x: 414, y: 195, color: '#0f172a' },
-          { id: 'off-te', type: 'O', label: 'Y', x: 254, y: 195, color: '#0f172a' },
-          { id: 'off-wr-z', type: 'O', label: 'Z', x: 130, y: 195, color: '#0f172a' },
-          { id: 'off-wr-x', type: 'O', label: 'X', x: 570, y: 195, color: '#0f172a' },
-          { id: 'off-qb', type: 'O', label: '1', x: 350, y: 155, color: '#0f172a' },
-          { id: 'off-tb', type: 'O', label: '3', x: 350, y: 95, color: '#0f172a' },
+          { id: 'off-lg', type: 'O', label: 'G', x: 306, y: 195, color: '#0f172a' },
+          { id: 'off-rg', type: 'O', label: 'G', x: 394, y: 195, color: '#0f172a' },
+          { id: 'off-lt', type: 'O', label: 'T', x: 262, y: 195, color: '#0f172a' },
+          { id: 'off-rt', type: 'O', label: 'T', x: 438, y: 195, color: '#0f172a' },
+          { id: 'off-te', type: 'O', label: 'Y', x: 218, y: 195, color: '#0f172a' },
+          { id: 'off-wr-z', type: 'O', label: 'Z', x: 110, y: 195, color: '#0f172a' },
+          { id: 'off-wr-x', type: 'O', label: 'X', x: 590, y: 195, color: '#0f172a' },
+          { id: 'off-qb', type: 'O', label: '1', x: 350, y: 150, color: '#0f172a' },
+          { id: 'off-tb', type: 'O', label: '3', x: 350, y: 90, color: '#0f172a' },
 
-          // Defense
-          { id: 'def-e9', type: 'letter', label: 'E9', x: 235, y: 220, color: '#0f172a' },
-          { id: 'def-t3', type: 'letter', label: 'T3', x: 300, y: 220, color: '#0f172a' },
-          { id: 'def-t1', type: 'letter', label: 'T1', x: 366, y: 220, color: '#0f172a' },
-          { id: 'def-e5', type: 'letter', label: 'E5', x: 432, y: 220, color: '#0f172a' },
+          // Defense: DL - Red Outline No Fill
+          { id: 'def-e9', type: 'letter', label: 'E9', x: 188, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t3', type: 'letter', label: 'T3', x: 284, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t1', type: 'letter', label: 'T1', x: 372, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-e5', type: 'letter', label: 'E5', x: 468, y: 230, color: '#ef4444', fillMode: 'nofill' },
 
-          { id: 'def-s', type: 'letter', label: 'S', x: 215, y: 260, color: '#0f172a' },
-          { id: 'def-m', type: 'letter', label: 'M', x: 300, y: 275, color: '#0f172a' },
-          { id: 'def-w', type: 'letter', label: 'W', x: 375, y: 275, color: '#0f172a' },
-          { id: 'def-r', type: 'letter', label: 'R', x: 460, y: 255, color: '#0f172a' },
+          // Linebackers - Red Outline No Fill
+          { id: 'def-s', type: 'letter', label: 'S', x: 165, y: 270, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-m', type: 'letter', label: 'M', x: 284, y: 280, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-w', type: 'letter', label: 'W', x: 372, y: 280, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-r', type: 'letter', label: 'R', x: 490, y: 270, color: '#ef4444', fillMode: 'nofill' },
 
-          { id: 'def-cl', type: 'letter', label: 'C', x: 130, y: 250, color: '#0f172a' },
-          { id: 'def-cr', type: 'letter', label: 'C', x: 570, y: 250, color: '#0f172a' },
-          { id: 'def-fs', type: 'letter', label: 'FS', x: 350, y: 360, color: '#0f172a' },
+          // Secondary - Red Outline No Fill
+          { id: 'def-cl', type: 'letter', label: 'C', x: 110, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-cr', type: 'letter', label: 'C', x: 590, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-fs', type: 'letter', label: 'FS', x: 350, y: 365, color: '#ef4444', fillMode: 'nofill' },
         ],
         arrows: [
           // E9 loop inside
-          { id: 'arr-e9', type: 'curved', startX: 235, startY: 220, endX: 270, endY: 180, controlX: 260, controlY: 195, color: '#0f172a' },
+          { id: 'arr-e9', type: 'curved', startX: 188, startY: 230, endX: 240, endY: 180, controlX: 225, controlY: 200, color: '#ef4444' },
           // S loop outside
-          { id: 'arr-s', type: 'curved', startX: 215, startY: 260, endX: 200, endY: 180, controlX: 190, controlY: 215, color: '#0f172a' },
+          { id: 'arr-s', type: 'curved', startX: 165, startY: 270, endX: 155, endY: 180, controlX: 145, controlY: 220, color: '#ef4444' },
           // T3 punch
-          { id: 'arr-t3', type: 'straight', startX: 300, startY: 220, endX: 300, endY: 185, color: '#0f172a' },
+          { id: 'arr-t3', type: 'straight', startX: 284, startY: 230, endX: 284, endY: 185, color: '#ef4444' },
           // T1 punch
-          { id: 'arr-t1', type: 'straight', startX: 366, startY: 220, endX: 366, endY: 185, color: '#0f172a' },
+          { id: 'arr-t1', type: 'straight', startX: 372, startY: 230, endX: 372, endY: 185, color: '#ef4444' },
           // E5 punch
-          { id: 'arr-e5', type: 'curved', startX: 432, startY: 220, endX: 420, endY: 180, controlX: 435, controlY: 195, color: '#0f172a' },
+          { id: 'arr-e5', type: 'curved', startX: 468, startY: 230, endX: 450, endY: 180, controlX: 465, controlY: 200, color: '#ef4444' },
           // Rover rush
-          { id: 'arr-r', type: 'curved', startX: 460, startY: 255, endX: 475, endY: 185, controlX: 475, controlY: 220, color: '#0f172a' },
+          { id: 'arr-r', type: 'curved', startX: 490, startY: 270, endX: 505, endY: 185, controlX: 505, controlY: 225, color: '#ef4444' },
         ],
         zones: [],
         textElements: [
-          { id: 'txt-you', text: 'You', x: 185, y: 260, fontSize: 11, color: '#0f172a', fontWeight: '800' },
-          { id: 'txt-me', text: 'Me', x: 480, y: 265, fontSize: 11, color: '#0f172a', fontWeight: '800' },
+          { id: 'txt-you', text: 'You', x: 135, y: 270, fontSize: 11, color: '#ef4444', fontWeight: '800' },
+          { id: 'txt-me', text: 'Me', x: 515, y: 275, fontSize: 11, color: '#ef4444', fontWeight: '800' },
           ...HUDL_DEFENSIVE_BASE_TEXT_ELEMENTS,
         ],
       },
@@ -440,44 +446,48 @@ export const HUDL_10U_DEFENSE_INSTALL_PLAYS: WhiteboardDrill[] = [
         name: 'Double Dog Blitz Paths',
         description: 'Both inside linebackers fire through the A-gaps. Man to Man across the board.',
         tokens: [
+          // Offense (21 L)
           { id: 'off-c', type: 'square', label: 'C', x: 350, y: 195, color: '#0f172a', isSquare: true },
-          { id: 'off-lg', type: 'O', label: 'G', x: 318, y: 195, color: '#0f172a' },
-          { id: 'off-rg', type: 'O', label: 'G', x: 382, y: 195, color: '#0f172a' },
-          { id: 'off-lt', type: 'O', label: 'T', x: 286, y: 195, color: '#0f172a' },
-          { id: 'off-rt', type: 'O', label: 'T', x: 414, y: 195, color: '#0f172a' },
-          { id: 'off-te', type: 'O', label: 'Y', x: 254, y: 195, color: '#0f172a' },
-          { id: 'off-wr-z', type: 'O', label: 'Z', x: 130, y: 195, color: '#0f172a' },
-          { id: 'off-wr-x', type: 'O', label: 'X', x: 570, y: 195, color: '#0f172a' },
-          { id: 'off-qb', type: 'O', label: '1', x: 350, y: 155, color: '#0f172a' },
-          { id: 'off-tb', type: 'O', label: '3', x: 350, y: 95, color: '#0f172a' },
+          { id: 'off-lg', type: 'O', label: 'G', x: 306, y: 195, color: '#0f172a' },
+          { id: 'off-rg', type: 'O', label: 'G', x: 394, y: 195, color: '#0f172a' },
+          { id: 'off-lt', type: 'O', label: 'T', x: 262, y: 195, color: '#0f172a' },
+          { id: 'off-rt', type: 'O', label: 'T', x: 438, y: 195, color: '#0f172a' },
+          { id: 'off-te', type: 'O', label: 'Y', x: 218, y: 195, color: '#0f172a' },
+          { id: 'off-wr-z', type: 'O', label: 'Z', x: 110, y: 195, color: '#0f172a' },
+          { id: 'off-wr-x', type: 'O', label: 'X', x: 590, y: 195, color: '#0f172a' },
+          { id: 'off-qb', type: 'O', label: '1', x: 350, y: 150, color: '#0f172a' },
+          { id: 'off-tb', type: 'O', label: '3', x: 350, y: 90, color: '#0f172a' },
 
-          { id: 'def-e9', type: 'letter', label: 'E9', x: 235, y: 220, color: '#0f172a' },
-          { id: 'def-t3', type: 'letter', label: 'T3', x: 300, y: 220, color: '#0f172a' },
-          { id: 'def-t1', type: 'letter', label: 'T1', x: 366, y: 220, color: '#0f172a' },
-          { id: 'def-e5', type: 'letter', label: 'E5', x: 432, y: 220, color: '#0f172a' },
+          // Defense: DL - Red Outline No Fill
+          { id: 'def-e9', type: 'letter', label: 'E9', x: 188, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t3', type: 'letter', label: 'T3', x: 284, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t1', type: 'letter', label: 'T1', x: 372, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-e5', type: 'letter', label: 'E5', x: 468, y: 230, color: '#ef4444', fillMode: 'nofill' },
 
-          { id: 'def-s', type: 'letter', label: 'S', x: 215, y: 260, color: '#0f172a' },
-          { id: 'def-m', type: 'letter', label: 'M', x: 334, y: 270, color: '#0f172a' },
-          { id: 'def-w', type: 'letter', label: 'W', x: 366, y: 270, color: '#0f172a' },
-          { id: 'def-r', type: 'letter', label: 'R', x: 460, y: 255, color: '#0f172a' },
+          // Linebackers - Red Outline No Fill
+          { id: 'def-s', type: 'letter', label: 'S', x: 165, y: 270, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-m', type: 'letter', label: 'M', x: 328, y: 275, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-w', type: 'letter', label: 'W', x: 394, y: 275, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-r', type: 'letter', label: 'R', x: 490, y: 270, color: '#ef4444', fillMode: 'nofill' },
 
-          { id: 'def-cl', type: 'letter', label: 'C', x: 130, y: 250, color: '#0f172a' },
-          { id: 'def-cr', type: 'letter', label: 'C', x: 570, y: 250, color: '#0f172a' },
-          { id: 'def-fs', type: 'letter', label: 'FS', x: 350, y: 360, color: '#0f172a' },
+          // Secondary - Red Outline No Fill
+          { id: 'def-cl', type: 'letter', label: 'C', x: 110, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-cr', type: 'letter', label: 'C', x: 590, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-fs', type: 'letter', label: 'FS', x: 350, y: 365, color: '#ef4444', fillMode: 'nofill' },
         ],
         arrows: [
           // Mike A-gap blitz
-          { id: 'arr-m-blitz', type: 'straight', startX: 334, startY: 270, endX: 334, endY: 180, color: '#0f172a' },
+          { id: 'arr-m-blitz', type: 'straight', startX: 328, startY: 275, endX: 328, endY: 180, color: '#ef4444' },
           // Will A-gap blitz
-          { id: 'arr-w-blitz', type: 'straight', startX: 366, startY: 270, endX: 366, endY: 180, color: '#0f172a' },
+          { id: 'arr-w-blitz', type: 'straight', startX: 394, startY: 275, endX: 394, endY: 180, color: '#ef4444' },
           // E9 contain
-          { id: 'arr-e9', type: 'curved', startX: 235, startY: 220, endX: 215, endY: 180, controlX: 220, controlY: 195, color: '#0f172a' },
+          { id: 'arr-e9', type: 'curved', startX: 188, startY: 230, endX: 175, endY: 180, controlX: 175, controlY: 200, color: '#ef4444' },
           // E5 contain
-          { id: 'arr-e5', type: 'curved', startX: 432, startY: 220, endX: 445, endY: 180, controlX: 445, controlY: 195, color: '#0f172a' },
+          { id: 'arr-e5', type: 'curved', startX: 468, startY: 230, endX: 485, endY: 180, controlX: 480, controlY: 200, color: '#ef4444' },
           // T3 punch B gap
-          { id: 'arr-t3', type: 'straight', startX: 300, startY: 220, endX: 295, endY: 180, color: '#0f172a' },
+          { id: 'arr-t3', type: 'straight', startX: 284, startY: 230, endX: 280, endY: 180, color: '#ef4444' },
           // T1 punch B gap
-          { id: 'arr-t1', type: 'straight', startX: 366, startY: 220, endX: 395, endY: 180, color: '#0f172a' },
+          { id: 'arr-t1', type: 'straight', startX: 372, startY: 230, endX: 400, endY: 180, color: '#ef4444' },
         ],
         zones: [],
         textElements: [...HUDL_DEFENSIVE_BASE_TEXT_ELEMENTS],
@@ -506,44 +516,46 @@ export const HUDL_10U_DEFENSE_INSTALL_PLAYS: WhiteboardDrill[] = [
         tokens: [
           // Offense (21 L)
           { id: 'off-c', type: 'square', label: 'C', x: 350, y: 195, color: '#0f172a', isSquare: true },
-          { id: 'off-lg', type: 'O', label: 'G', x: 318, y: 195, color: '#0f172a' },
-          { id: 'off-rg', type: 'O', label: 'G', x: 382, y: 195, color: '#0f172a' },
-          { id: 'off-lt', type: 'O', label: 'T', x: 286, y: 195, color: '#0f172a' },
-          { id: 'off-rt', type: 'O', label: 'T', x: 414, y: 195, color: '#0f172a' },
-          { id: 'off-te', type: 'O', label: 'Y', x: 254, y: 195, color: '#0f172a' },
-          { id: 'off-wr-z', type: 'O', label: 'Z', x: 130, y: 195, color: '#0f172a' },
-          { id: 'off-wr-x', type: 'O', label: 'X', x: 570, y: 195, color: '#0f172a' },
-          { id: 'off-qb', type: 'O', label: '1', x: 350, y: 155, color: '#0f172a' },
-          { id: 'off-tb', type: 'O', label: '3', x: 350, y: 95, color: '#0f172a' },
+          { id: 'off-lg', type: 'O', label: 'G', x: 306, y: 195, color: '#0f172a' },
+          { id: 'off-rg', type: 'O', label: 'G', x: 394, y: 195, color: '#0f172a' },
+          { id: 'off-lt', type: 'O', label: 'T', x: 262, y: 195, color: '#0f172a' },
+          { id: 'off-rt', type: 'O', label: 'T', x: 438, y: 195, color: '#0f172a' },
+          { id: 'off-te', type: 'O', label: 'Y', x: 218, y: 195, color: '#0f172a' },
+          { id: 'off-wr-z', type: 'O', label: 'Z', x: 110, y: 195, color: '#0f172a' },
+          { id: 'off-wr-x', type: 'O', label: 'X', x: 590, y: 195, color: '#0f172a' },
+          { id: 'off-qb', type: 'O', label: '1', x: 350, y: 150, color: '#0f172a' },
+          { id: 'off-tb', type: 'O', label: '3', x: 350, y: 90, color: '#0f172a' },
 
-          // Defense
-          { id: 'def-e9', type: 'letter', label: 'E9', x: 235, y: 220, color: '#0f172a' },
-          { id: 'def-t3', type: 'letter', label: 'T3', x: 300, y: 220, color: '#0f172a' },
-          { id: 'def-t1', type: 'letter', label: 'T1', x: 366, y: 220, color: '#0f172a' },
-          { id: 'def-e5', type: 'letter', label: 'E5', x: 432, y: 220, color: '#0f172a' },
+          // Defense: DL - Red Outline No Fill
+          { id: 'def-e9', type: 'letter', label: 'E9', x: 188, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t3', type: 'letter', label: 'T3', x: 284, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t1', type: 'letter', label: 'T1', x: 372, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-e5', type: 'letter', label: 'E5', x: 468, y: 230, color: '#ef4444', fillMode: 'nofill' },
 
-          { id: 'def-s', type: 'letter', label: 'S', x: 215, y: 260, color: '#0f172a' },
-          { id: 'def-m', type: 'letter', label: 'M', x: 300, y: 275, color: '#0f172a' },
-          { id: 'def-w', type: 'letter', label: 'W', x: 375, y: 275, color: '#0f172a' },
-          { id: 'def-r', type: 'letter', label: 'R', x: 460, y: 255, color: '#0f172a' },
+          // Linebackers - Red Outline No Fill
+          { id: 'def-s', type: 'letter', label: 'S', x: 165, y: 270, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-m', type: 'letter', label: 'M', x: 284, y: 280, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-w', type: 'letter', label: 'W', x: 372, y: 280, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-r', type: 'letter', label: 'R', x: 490, y: 270, color: '#ef4444', fillMode: 'nofill' },
 
-          { id: 'def-cl', type: 'letter', label: 'C', x: 130, y: 250, color: '#0f172a' },
-          { id: 'def-cr', type: 'letter', label: 'C', x: 570, y: 250, color: '#0f172a' },
-          { id: 'def-fs', type: 'letter', label: 'FS', x: 350, y: 360, color: '#0f172a' },
+          // Secondary - Red Outline No Fill
+          { id: 'def-cl', type: 'letter', label: 'C', x: 110, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-cr', type: 'letter', label: 'C', x: 590, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-fs', type: 'letter', label: 'FS', x: 350, y: 365, color: '#ef4444', fillMode: 'nofill' },
         ],
         arrows: [
           // T1 cross left into A gap
-          { id: 'arr-t1-cross', type: 'straight', startX: 366, startY: 220, endX: 334, endY: 180, color: '#0f172a' },
+          { id: 'arr-t1-cross', type: 'straight', startX: 372, startY: 230, endX: 335, endY: 180, color: '#ef4444' },
           // T3 loop around T1
-          { id: 'arr-t3-cross', type: 'curved', startX: 300, startY: 220, endX: 370, endY: 180, controlX: 335, controlY: 235, color: '#0f172a' },
+          { id: 'arr-t3-cross', type: 'curved', startX: 284, startY: 230, endX: 365, endY: 180, controlX: 330, controlY: 245, color: '#ef4444' },
           // E9 contain
-          { id: 'arr-e9', type: 'straight', startX: 235, startY: 220, endX: 230, endY: 180, color: '#0f172a' },
+          { id: 'arr-e9', type: 'straight', startX: 188, startY: 230, endX: 180, endY: 180, color: '#ef4444' },
           // E5 contain
-          { id: 'arr-e5', type: 'straight', startX: 432, startY: 220, endX: 438, endY: 180, color: '#0f172a' },
+          { id: 'arr-e5', type: 'straight', startX: 468, startY: 230, endX: 476, endY: 180, color: '#ef4444' },
           // Mike downhill
-          { id: 'arr-m-down', type: 'straight', startX: 300, startY: 275, endX: 295, endY: 235, color: '#0f172a' },
+          { id: 'arr-m-down', type: 'straight', startX: 284, startY: 280, endX: 280, endY: 235, color: '#ef4444' },
           // Will downhill
-          { id: 'arr-w-down', type: 'straight', startX: 375, startY: 275, endX: 380, endY: 235, color: '#0f172a' },
+          { id: 'arr-w-down', type: 'straight', startX: 372, startY: 280, endX: 380, endY: 235, color: '#ef4444' },
         ],
         zones: [],
         textElements: [...HUDL_DEFENSIVE_BASE_TEXT_ELEMENTS],
@@ -570,44 +582,48 @@ export const HUDL_10U_DEFENSE_INSTALL_PLAYS: WhiteboardDrill[] = [
         name: 'Fan Stunt Execution',
         description: 'T3 and T1 slant outward into B-gaps; Mike and Will punch A-gaps.',
         tokens: [
+          // Offense (21 L)
           { id: 'off-c', type: 'square', label: 'C', x: 350, y: 195, color: '#0f172a', isSquare: true },
-          { id: 'off-lg', type: 'O', label: 'G', x: 318, y: 195, color: '#0f172a' },
-          { id: 'off-rg', type: 'O', label: 'G', x: 382, y: 195, color: '#0f172a' },
-          { id: 'off-lt', type: 'O', label: 'T', x: 286, y: 195, color: '#0f172a' },
-          { id: 'off-rt', type: 'O', label: 'T', x: 414, y: 195, color: '#0f172a' },
-          { id: 'off-te', type: 'O', label: 'Y', x: 254, y: 195, color: '#0f172a' },
-          { id: 'off-wr-z', type: 'O', label: 'Z', x: 130, y: 195, color: '#0f172a' },
-          { id: 'off-wr-x', type: 'O', label: 'X', x: 570, y: 195, color: '#0f172a' },
-          { id: 'off-qb', type: 'O', label: '1', x: 350, y: 155, color: '#0f172a' },
-          { id: 'off-tb', type: 'O', label: '3', x: 350, y: 95, color: '#0f172a' },
+          { id: 'off-lg', type: 'O', label: 'G', x: 306, y: 195, color: '#0f172a' },
+          { id: 'off-rg', type: 'O', label: 'G', x: 394, y: 195, color: '#0f172a' },
+          { id: 'off-lt', type: 'O', label: 'T', x: 262, y: 195, color: '#0f172a' },
+          { id: 'off-rt', type: 'O', label: 'T', x: 438, y: 195, color: '#0f172a' },
+          { id: 'off-te', type: 'O', label: 'Y', x: 218, y: 195, color: '#0f172a' },
+          { id: 'off-wr-z', type: 'O', label: 'Z', x: 110, y: 195, color: '#0f172a' },
+          { id: 'off-wr-x', type: 'O', label: 'X', x: 590, y: 195, color: '#0f172a' },
+          { id: 'off-qb', type: 'O', label: '1', x: 350, y: 150, color: '#0f172a' },
+          { id: 'off-tb', type: 'O', label: '3', x: 350, y: 90, color: '#0f172a' },
 
-          { id: 'def-e9', type: 'letter', label: 'E9', x: 235, y: 220, color: '#0f172a' },
-          { id: 'def-t3', type: 'letter', label: 'T3', x: 300, y: 220, color: '#0f172a' },
-          { id: 'def-t1', type: 'letter', label: 'T1', x: 366, y: 220, color: '#0f172a' },
-          { id: 'def-e5', type: 'letter', label: 'E5', x: 432, y: 220, color: '#0f172a' },
+          // Defense: DL - Red Outline No Fill
+          { id: 'def-e9', type: 'letter', label: 'E9', x: 188, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t3', type: 'letter', label: 'T3', x: 284, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t1', type: 'letter', label: 'T1', x: 372, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-e5', type: 'letter', label: 'E5', x: 468, y: 230, color: '#ef4444', fillMode: 'nofill' },
 
-          { id: 'def-s', type: 'letter', label: 'S', x: 215, y: 260, color: '#0f172a' },
-          { id: 'def-m', type: 'letter', label: 'M', x: 300, y: 275, color: '#0f172a' },
-          { id: 'def-w', type: 'letter', label: 'W', x: 375, y: 275, color: '#0f172a' },
-          { id: 'def-r', type: 'letter', label: 'R', x: 460, y: 255, color: '#0f172a' },
+          // Linebackers - Red Outline No Fill
+          { id: 'def-s', type: 'letter', label: 'S', x: 165, y: 270, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-m', type: 'letter', label: 'M', x: 284, y: 280, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-w', type: 'letter', label: 'W', x: 372, y: 280, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-r', type: 'letter', label: 'R', x: 490, y: 270, color: '#ef4444', fillMode: 'nofill' },
 
-          { id: 'def-cl', type: 'letter', label: 'C', x: 130, y: 250, color: '#0f172a' },
-          { id: 'def-cr', type: 'letter', label: 'C', x: 570, y: 250, color: '#0f172a' },
-          { id: 'def-fs', type: 'letter', label: 'FS', x: 350, y: 360, color: '#0f172a' },
+          // Secondary - Red Outline No Fill
+          { id: 'def-cl', type: 'letter', label: 'C', x: 110, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-cr', type: 'letter', label: 'C', x: 590, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-fs', type: 'letter', label: 'FS', x: 350, y: 365, color: '#ef4444', fillMode: 'nofill' },
         ],
         arrows: [
           // T3 fan out to B gap
-          { id: 'arr-t3-fan', type: 'straight', startX: 300, startY: 220, endX: 285, endY: 180, color: '#0f172a' },
+          { id: 'arr-t3-fan', type: 'straight', startX: 284, startY: 230, endX: 255, endY: 180, color: '#ef4444' },
           // T1 fan out to B gap
-          { id: 'arr-t1-fan', type: 'straight', startX: 366, startY: 220, endX: 385, endY: 180, color: '#0f172a' },
+          { id: 'arr-t1-fan', type: 'straight', startX: 372, startY: 230, endX: 405, endY: 180, color: '#ef4444' },
           // Mike plug A gap
-          { id: 'arr-m-fan', type: 'straight', startX: 300, startY: 275, endX: 334, endY: 215, color: '#0f172a' },
+          { id: 'arr-m-fan', type: 'straight', startX: 284, startY: 280, endX: 325, endY: 215, color: '#ef4444' },
           // Will plug A gap
-          { id: 'arr-w-fan', type: 'straight', startX: 375, startY: 275, endX: 366, endY: 215, color: '#0f172a' },
+          { id: 'arr-w-fan', type: 'straight', startX: 372, startY: 280, endX: 360, endY: 215, color: '#ef4444' },
           // E9 contain
-          { id: 'arr-e9', type: 'straight', startX: 235, startY: 220, endX: 230, endY: 180, color: '#0f172a' },
+          { id: 'arr-e9', type: 'straight', startX: 188, startY: 230, endX: 180, endY: 180, color: '#ef4444' },
           // E5 contain
-          { id: 'arr-e5', type: 'straight', startX: 432, startY: 220, endX: 438, endY: 180, color: '#0f172a' },
+          { id: 'arr-e5', type: 'straight', startX: 468, startY: 230, endX: 476, endY: 180, color: '#ef4444' },
         ],
         zones: [],
         textElements: [...HUDL_DEFENSIVE_BASE_TEXT_ELEMENTS],
@@ -634,46 +650,50 @@ export const HUDL_10U_DEFENSE_INSTALL_PLAYS: WhiteboardDrill[] = [
         name: 'Pinch Stunt Execution',
         description: 'Ends and tackles pinch inside, forcing ball to outside edge.',
         tokens: [
+          // Offense (21 R)
           { id: 'off-c', type: 'square', label: 'C', x: 350, y: 195, color: '#0f172a', isSquare: true },
-          { id: 'off-lg', type: 'O', label: 'G', x: 318, y: 195, color: '#0f172a' },
-          { id: 'off-rg', type: 'O', label: 'G', x: 382, y: 195, color: '#0f172a' },
-          { id: 'off-lt', type: 'O', label: 'T', x: 286, y: 195, color: '#0f172a' },
-          { id: 'off-rt', type: 'O', label: 'T', x: 414, y: 195, color: '#0f172a' },
-          { id: 'off-te', type: 'O', label: 'Y', x: 446, y: 195, color: '#0f172a' },
-          { id: 'off-wr-x', type: 'O', label: 'X', x: 130, y: 195, color: '#0f172a' },
-          { id: 'off-wr-z', type: 'O', label: 'Z', x: 570, y: 195, color: '#0f172a' },
-          { id: 'off-qb', type: 'O', label: '1', x: 350, y: 155, color: '#0f172a' },
-          { id: 'off-tb', type: 'O', label: '3', x: 350, y: 95, color: '#0f172a' },
+          { id: 'off-lg', type: 'O', label: 'G', x: 306, y: 195, color: '#0f172a' },
+          { id: 'off-rg', type: 'O', label: 'G', x: 394, y: 195, color: '#0f172a' },
+          { id: 'off-lt', type: 'O', label: 'T', x: 262, y: 195, color: '#0f172a' },
+          { id: 'off-rt', type: 'O', label: 'T', x: 438, y: 195, color: '#0f172a' },
+          { id: 'off-te', type: 'O', label: 'Y', x: 482, y: 195, color: '#0f172a' },
+          { id: 'off-wr-x', type: 'O', label: 'X', x: 110, y: 195, color: '#0f172a' },
+          { id: 'off-wr-z', type: 'O', label: 'Z', x: 590, y: 195, color: '#0f172a' },
+          { id: 'off-qb', type: 'O', label: '1', x: 350, y: 150, color: '#0f172a' },
+          { id: 'off-tb', type: 'O', label: '3', x: 350, y: 90, color: '#0f172a' },
 
-          { id: 'def-e5', type: 'letter', label: 'E5', x: 268, y: 220, color: '#0f172a' },
-          { id: 'def-t1', type: 'letter', label: 'T1', x: 334, y: 220, color: '#0f172a' },
-          { id: 'def-t3', type: 'letter', label: 'T3', x: 400, y: 220, color: '#0f172a' },
-          { id: 'def-e9', type: 'letter', label: 'E9', x: 465, y: 220, color: '#0f172a' },
+          // Defense: DL - Red Outline No Fill
+          { id: 'def-e5', type: 'letter', label: 'E5', x: 232, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t1', type: 'letter', label: 'T1', x: 328, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t3', type: 'letter', label: 'T3', x: 416, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-e9', type: 'letter', label: 'E9', x: 512, y: 230, color: '#ef4444', fillMode: 'nofill' },
 
-          { id: 'def-r', type: 'letter', label: 'R', x: 240, y: 255, color: '#0f172a' },
-          { id: 'def-w', type: 'letter', label: 'W', x: 325, y: 275, color: '#0f172a' },
-          { id: 'def-m', type: 'letter', label: 'M', x: 400, y: 275, color: '#0f172a' },
-          { id: 'def-s', type: 'letter', label: 'S', x: 485, y: 260, color: '#0f172a' },
+          // Linebackers - Red Outline No Fill
+          { id: 'def-r', type: 'letter', label: 'R', x: 210, y: 270, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-w', type: 'letter', label: 'W', x: 328, y: 280, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-m', type: 'letter', label: 'M', x: 416, y: 280, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-s', type: 'letter', label: 'S', x: 535, y: 270, color: '#ef4444', fillMode: 'nofill' },
 
-          { id: 'def-cl', type: 'letter', label: 'C', x: 130, y: 250, color: '#0f172a' },
-          { id: 'def-cr', type: 'letter', label: 'C', x: 570, y: 250, color: '#0f172a' },
-          { id: 'def-fs', type: 'letter', label: 'FS', x: 350, y: 360, color: '#0f172a' },
+          // Secondary - Red Outline No Fill
+          { id: 'def-cl', type: 'letter', label: 'C', x: 110, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-cr', type: 'letter', label: 'C', x: 590, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-fs', type: 'letter', label: 'FS', x: 350, y: 365, color: '#ef4444', fillMode: 'nofill' },
         ],
         arrows: [
           // E5 pinch inside
-          { id: 'arr-e5-pinch', type: 'straight', startX: 268, startY: 220, endX: 290, endY: 185, color: '#0f172a' },
+          { id: 'arr-e5-pinch', type: 'straight', startX: 232, startY: 230, endX: 265, endY: 185, color: '#ef4444' },
           // T1 pinch A gap
-          { id: 'arr-t1-pinch', type: 'straight', startX: 334, startY: 220, endX: 345, endY: 185, color: '#0f172a' },
+          { id: 'arr-t1-pinch', type: 'straight', startX: 328, startY: 230, endX: 345, endY: 185, color: '#ef4444' },
           // T3 pinch A gap
-          { id: 'arr-t3-pinch', type: 'straight', startX: 400, startY: 220, endX: 365, endY: 185, color: '#0f172a' },
+          { id: 'arr-t3-pinch', type: 'straight', startX: 416, startY: 230, endX: 365, endY: 185, color: '#ef4444' },
           // E9 pinch inside
-          { id: 'arr-e9-pinch', type: 'straight', startX: 465, startY: 220, endX: 440, endY: 185, color: '#0f172a' },
+          { id: 'arr-e9-pinch', type: 'straight', startX: 512, startY: 230, endX: 475, endY: 185, color: '#ef4444' },
           // Rover scrape
-          { id: 'arr-r-scrape', type: 'curved', startX: 240, startY: 255, endX: 220, endY: 195, controlX: 215, controlY: 225, color: '#0f172a' },
+          { id: 'arr-r-scrape', type: 'curved', startX: 210, startY: 270, endX: 190, endY: 195, controlX: 185, controlY: 235, color: '#ef4444' },
           // Will scrape
-          { id: 'arr-w-scrape', type: 'straight', startX: 325, startY: 275, endX: 310, endY: 230, color: '#0f172a' },
+          { id: 'arr-w-scrape', type: 'straight', startX: 328, startY: 280, endX: 310, endY: 235, color: '#ef4444' },
           // Mike scrape
-          { id: 'arr-m-scrape', type: 'straight', startX: 400, startY: 275, endX: 415, endY: 230, color: '#0f172a' },
+          { id: 'arr-m-scrape', type: 'straight', startX: 416, startY: 280, endX: 435, endY: 235, color: '#ef4444' },
         ],
         zones: [],
         textElements: [...HUDL_DEFENSIVE_BASE_TEXT_ELEMENTS],
@@ -702,34 +722,34 @@ export const HUDL_10U_DEFENSE_INSTALL_PLAYS: WhiteboardDrill[] = [
         tokens: [
           // Offense (32 Strong Gun)
           { id: 'off-c', type: 'square', label: 'C', x: 350, y: 195, color: '#0f172a', isSquare: true },
-          { id: 'off-lg', type: 'O', label: 'G', x: 318, y: 195, color: '#0f172a' },
-          { id: 'off-rg', type: 'O', label: 'G', x: 382, y: 195, color: '#0f172a' },
-          { id: 'off-lt', type: 'O', label: 'T', x: 286, y: 195, color: '#0f172a' },
-          { id: 'off-rt', type: 'O', label: 'T', x: 414, y: 195, color: '#0f172a' },
-          { id: 'off-te1', type: 'O', label: 'Y', x: 254, y: 195, color: '#0f172a' },
-          { id: 'off-te2', type: 'O', label: 'Y2', x: 222, y: 195, color: '#0f172a' },
-          { id: 'off-wr-z', type: 'O', label: 'Z', x: 570, y: 195, color: '#0f172a' },
+          { id: 'off-lg', type: 'O', label: 'G', x: 306, y: 195, color: '#0f172a' },
+          { id: 'off-rg', type: 'O', label: 'G', x: 394, y: 195, color: '#0f172a' },
+          { id: 'off-lt', type: 'O', label: 'T', x: 262, y: 195, color: '#0f172a' },
+          { id: 'off-rt', type: 'O', label: 'T', x: 438, y: 195, color: '#0f172a' },
+          { id: 'off-te1', type: 'O', label: 'Y', x: 218, y: 195, color: '#0f172a' },
+          { id: 'off-te2', type: 'O', label: 'Y2', x: 174, y: 195, color: '#0f172a' },
+          { id: 'off-wr-z', type: 'O', label: 'Z', x: 590, y: 195, color: '#0f172a' },
           { id: 'off-qb', type: 'O', label: '1', x: 350, y: 140, color: '#0f172a' },
-          { id: 'off-rb1', type: 'O', label: '4', x: 245, y: 160, color: '#0f172a' },
-          { id: 'off-rb2', type: 'O', label: '2', x: 280, y: 160, color: '#0f172a' },
-          { id: 'off-rb3', type: 'O', label: '3', x: 315, y: 160, color: '#0f172a' },
+          { id: 'off-rb1', type: 'O', label: '4', x: 220, y: 160, color: '#0f172a' },
+          { id: 'off-rb2', type: 'O', label: '2', x: 265, y: 160, color: '#0f172a' },
+          { id: 'off-rb3', type: 'O', label: '3', x: 310, y: 160, color: '#0f172a' },
 
-          // Defense: 5 down linemen (E, T, T, E, R)
-          { id: 'def-e-left', type: 'letter', label: 'E', x: 205, y: 220, color: '#0f172a' },
-          { id: 'def-t-left', type: 'letter', label: 'T', x: 270, y: 220, color: '#0f172a' },
-          { id: 'def-t-mid', type: 'letter', label: 'T', x: 335, y: 220, color: '#0f172a' },
-          { id: 'def-e-mid', type: 'letter', label: 'E', x: 400, y: 220, color: '#0f172a' },
-          { id: 'def-r-edge', type: 'letter', label: 'R', x: 460, y: 220, color: '#0f172a' },
+          // Defense: 5 down linemen (E, T, T, E, R) - Red Outline No Fill
+          { id: 'def-e-left', type: 'letter', label: 'E', x: 160, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t-left', type: 'letter', label: 'T', x: 240, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t-mid', type: 'letter', label: 'T', x: 330, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-e-mid', type: 'letter', label: 'E', x: 416, y: 230, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-r-edge', type: 'letter', label: 'R', x: 495, y: 230, color: '#ef4444', fillMode: 'nofill' },
 
-          // Linebackers: S, M, W
-          { id: 'def-s', type: 'letter', label: 'S', x: 245, y: 260, color: '#0f172a' },
-          { id: 'def-m', type: 'letter', label: 'M', x: 330, y: 265, color: '#0f172a' },
-          { id: 'def-w', type: 'letter', label: 'W', x: 415, y: 265, color: '#0f172a' },
+          // Linebackers: S, M, W - Red Outline No Fill
+          { id: 'def-s', type: 'letter', label: 'S', x: 220, y: 270, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-m', type: 'letter', label: 'M', x: 330, y: 275, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-w', type: 'letter', label: 'W', x: 435, y: 275, color: '#ef4444', fillMode: 'nofill' },
 
-          // Secondary
-          { id: 'def-cl', type: 'letter', label: 'C', x: 130, y: 250, color: '#0f172a' },
-          { id: 'def-cr', type: 'letter', label: 'C', x: 570, y: 250, color: '#0f172a' },
-          { id: 'def-fs', type: 'letter', label: 'FS', x: 310, y: 350, color: '#0f172a' },
+          // Secondary - Red Outline No Fill
+          { id: 'def-cl', type: 'letter', label: 'C', x: 110, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-cr', type: 'letter', label: 'C', x: 590, y: 260, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-fs', type: 'letter', label: 'FS', x: 310, y: 360, color: '#ef4444', fillMode: 'nofill' },
         ],
         arrows: [],
         zones: [],
@@ -759,41 +779,41 @@ export const HUDL_10U_DEFENSE_INSTALL_PLAYS: WhiteboardDrill[] = [
         tokens: [
           // Offense Goal Line
           { id: 'off-c', type: 'square', label: 'C', x: 350, y: 195, color: '#0f172a', isSquare: true },
-          { id: 'off-lg', type: 'O', label: 'G', x: 318, y: 195, color: '#0f172a' },
-          { id: 'off-rg', type: 'O', label: 'G', x: 382, y: 195, color: '#0f172a' },
-          { id: 'off-lt', type: 'O', label: 'T', x: 286, y: 195, color: '#0f172a' },
-          { id: 'off-rt', type: 'O', label: 'T', x: 414, y: 195, color: '#0f172a' },
-          { id: 'off-te1', type: 'O', label: 'Y', x: 254, y: 195, color: '#0f172a' },
-          { id: 'off-te2', type: 'O', label: 'Y2', x: 446, y: 195, color: '#0f172a' },
-          { id: 'off-qb', type: 'O', label: '1', x: 350, y: 165, color: '#0f172a' },
-          { id: 'off-fb', type: 'O', label: '2', x: 350, y: 135, color: '#0f172a' },
-          { id: 'off-tb', type: 'O', label: '3', x: 350, y: 100, color: '#0f172a' },
-          { id: 'off-wr', type: 'O', label: 'Z', x: 570, y: 195, color: '#0f172a' },
+          { id: 'off-lg', type: 'O', label: 'G', x: 306, y: 195, color: '#0f172a' },
+          { id: 'off-rg', type: 'O', label: 'G', x: 394, y: 195, color: '#0f172a' },
+          { id: 'off-lt', type: 'O', label: 'T', x: 262, y: 195, color: '#0f172a' },
+          { id: 'off-rt', type: 'O', label: 'T', x: 438, y: 195, color: '#0f172a' },
+          { id: 'off-te1', type: 'O', label: 'Y', x: 218, y: 195, color: '#0f172a' },
+          { id: 'off-te2', type: 'O', label: 'Y2', x: 482, y: 195, color: '#0f172a' },
+          { id: 'off-qb', type: 'O', label: '1', x: 350, y: 160, color: '#0f172a' },
+          { id: 'off-fb', type: 'O', label: '2', x: 350, y: 125, color: '#0f172a' },
+          { id: 'off-tb', type: 'O', label: '3', x: 350, y: 90, color: '#0f172a' },
+          { id: 'off-wr', type: 'O', label: 'Z', x: 590, y: 195, color: '#0f172a' },
 
-          // Defense 6 down linemen: E, T, G, G, T, E
-          { id: 'def-e1', type: 'letter', label: 'E', x: 240, y: 220, color: '#0f172a' },
-          { id: 'def-t1', type: 'letter', label: 'T', x: 286, y: 220, color: '#0f172a' },
-          { id: 'def-g1', type: 'letter', label: 'G', x: 334, y: 220, color: '#0f172a' },
-          { id: 'def-g2', type: 'letter', label: 'G', x: 366, y: 220, color: '#0f172a' },
-          { id: 'def-t2', type: 'letter', label: 'T', x: 414, y: 220, color: '#0f172a' },
-          { id: 'def-e2', type: 'letter', label: 'E', x: 460, y: 220, color: '#0f172a' },
+          // Defense 6 down linemen: E, T, G, G, T, E - Red Outline No Fill
+          { id: 'def-e1', type: 'letter', label: 'E', x: 190, y: 225, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t1', type: 'letter', label: 'T', x: 250, y: 225, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-g1', type: 'letter', label: 'G', x: 318, y: 225, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-g2', type: 'letter', label: 'G', x: 382, y: 225, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-t2', type: 'letter', label: 'T', x: 450, y: 225, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-e2', type: 'letter', label: 'E', x: 510, y: 225, color: '#ef4444', fillMode: 'nofill' },
 
-          // 2 Linebackers
-          { id: 'def-m', type: 'letter', label: 'M', x: 320, y: 265, color: '#0f172a' },
-          { id: 'def-w', type: 'letter', label: 'W', x: 380, y: 265, color: '#0f172a' },
+          // 2 Linebackers - Red Outline No Fill
+          { id: 'def-m', type: 'letter', label: 'M', x: 306, y: 265, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-w', type: 'letter', label: 'W', x: 394, y: 265, color: '#ef4444', fillMode: 'nofill' },
 
-          // Secondary
-          { id: 'def-cl', type: 'letter', label: 'C', x: 130, y: 235, color: '#0f172a' },
-          { id: 'def-cr', type: 'letter', label: 'C', x: 570, y: 235, color: '#0f172a' },
-          { id: 'def-fs', type: 'letter', label: 'FS', x: 350, y: 340, color: '#0f172a' },
+          // Secondary - Red Outline No Fill
+          { id: 'def-cl', type: 'letter', label: 'C', x: 110, y: 245, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-cr', type: 'letter', label: 'C', x: 590, y: 245, color: '#ef4444', fillMode: 'nofill' },
+          { id: 'def-fs', type: 'letter', label: 'FS', x: 350, y: 345, color: '#ef4444', fillMode: 'nofill' },
         ],
         arrows: [
-          { id: 'arr-g1-low', type: 'straight', startX: 334, startY: 220, endX: 342, endY: 185, color: '#0f172a' },
-          { id: 'arr-g2-low', type: 'straight', startX: 366, startY: 220, endX: 358, endY: 185, color: '#0f172a' },
-          { id: 'arr-m-fill', type: 'straight', startX: 320, startY: 265, endX: 325, endY: 225, color: '#0f172a' },
-          { id: 'arr-w-fill', type: 'straight', startX: 380, startY: 265, endX: 375, endY: 225, color: '#0f172a' },
-          { id: 'arr-e1-contain', type: 'curved', startX: 240, startY: 220, endX: 220, endY: 185, controlX: 215, controlY: 200, color: '#0f172a' },
-          { id: 'arr-e2-contain', type: 'curved', startX: 460, startY: 220, endX: 480, endY: 185, controlX: 485, controlY: 200, color: '#0f172a' },
+          { id: 'arr-g1-low', type: 'straight', startX: 318, startY: 225, endX: 325, endY: 185, color: '#ef4444' },
+          { id: 'arr-g2-low', type: 'straight', startX: 382, startY: 225, endX: 375, endY: 185, color: '#ef4444' },
+          { id: 'arr-m-fill', type: 'straight', startX: 306, startY: 265, endX: 312, endY: 225, color: '#ef4444' },
+          { id: 'arr-w-fill', type: 'straight', startX: 394, startY: 265, endX: 388, endY: 225, color: '#ef4444' },
+          { id: 'arr-e1-contain', type: 'curved', startX: 190, startY: 225, endX: 175, endY: 185, controlX: 175, controlY: 205, color: '#ef4444' },
+          { id: 'arr-e2-contain', type: 'curved', startX: 510, startY: 225, endX: 525, endY: 185, controlX: 525, controlY: 205, color: '#ef4444' },
         ],
         zones: [
           { id: 'z-wall-zone', name: 'NO-GAIN GOAL LINE WALL', cx: 350, cy: 210, rx: 140, ry: 20, color: '#b91c1c', opacity: 0.18 },
