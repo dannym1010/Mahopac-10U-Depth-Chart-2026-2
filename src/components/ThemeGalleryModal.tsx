@@ -66,6 +66,57 @@ export interface ThemeScheme {
 
 export const THEME_SCHEMES: ThemeScheme[] = [
   {
+    id: 'daylight_executive',
+    name: 'Daylight Stadium & Modern Executive',
+    subtitle: 'Crisp High-Luminance Contrast & Daylight Field Clarity',
+    category: 'Modern Pro',
+    vibe: 'Ultra-crisp, glare-resistant daylight interface with rich indigo accents and pure white surfaces.',
+    bgGradient: 'from-slate-100 via-slate-50 to-indigo-50/50',
+    cardBg: 'bg-white',
+    cardBorder: 'border-slate-300 hover:border-indigo-400',
+    starterBadge: {
+      bg: 'bg-indigo-600 text-white',
+      border: 'border-indigo-500',
+      text: 'text-white font-black',
+      label: 'STARTER • 1ST STRING',
+    },
+    backupBadge: {
+      bg: 'bg-amber-100 text-amber-900',
+      border: 'border-amber-300',
+      text: 'text-amber-900',
+      label: 'ROTATION • GOLD',
+    },
+    reserveBadge: {
+      bg: 'bg-slate-100 text-slate-700',
+      border: 'border-slate-300',
+      text: 'text-slate-700',
+      label: 'RESERVE',
+    },
+    launchpadCard: {
+      gradient: 'from-white via-slate-50 to-indigo-50/30',
+      border: 'border-slate-300 hover:border-indigo-400',
+      iconBg: 'bg-indigo-50 border-indigo-200',
+      iconText: 'text-indigo-600',
+      titleColor: 'text-slate-900 group-hover:text-indigo-600',
+      badgeBg: 'bg-indigo-100',
+      badgeText: 'text-indigo-700 border-indigo-200',
+    },
+    wristband: {
+      headerBg: 'bg-indigo-600 text-white',
+      headerText: 'text-white font-black',
+      leftRowBg: 'bg-indigo-50 border-indigo-200',
+      rightRowBg: 'bg-amber-50 border-amber-200',
+      tagBg: 'bg-indigo-600 text-white',
+    },
+    swatches: [
+      { name: 'Daylight Field', hex: '#F8FAFC', desc: 'Base canvas' },
+      { name: 'Executive Indigo', hex: '#4F46E5', desc: 'Starters & key calls' },
+      { name: 'Stadium Sun Gold', hex: '#F59E0B', desc: 'Alerts & rotation' },
+      { name: 'Pure Chalk', hex: '#FFFFFF', desc: 'Card background' },
+    ],
+    sidelineAdvantage: 'Engineered for direct bright sunlight, eliminating glare and reflections on iPads and phones.',
+  },
+  {
     id: 'electric_volt',
     name: 'Midnight Gridiron & Electric Volt',
     subtitle: 'Nike Elite & Modern Oregon Athletic Style',
@@ -348,6 +399,9 @@ export const ThemeGalleryModal: React.FC<ThemeGalleryModalProps> = ({
 
   const handleApply = (themeId: string) => {
     setAppliedThemeId(themeId);
+    if (themeId === 'daylight_executive' && onToggleThemeMode && themeMode !== 'light') {
+      onToggleThemeMode('light');
+    }
     if (onSelectTheme) {
       onSelectTheme(themeId);
     }
@@ -368,11 +422,11 @@ export const ThemeGalleryModal: React.FC<ThemeGalleryModalProps> = ({
                   Sideline Visual Scheme Showcase
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30">
-                  5 Trendy Themes
+                  {THEME_SCHEMES.length} Visual Schemes
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Compare athletic palettes optimized for sideline glare, phone screens, and high-contrast coaching.
+                Compare athletic palettes optimized for sideline glare, daylight sun, and high-contrast coaching.
               </p>
             </div>
           </div>
@@ -423,7 +477,7 @@ export const ThemeGalleryModal: React.FC<ThemeGalleryModalProps> = ({
         {/* Modal Body: Two-Column Layout on Desktop, Scrollable on Mobile */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           {/* 1. Theme Scheme Picker Carousel / Pills */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             {THEME_SCHEMES.map((scheme) => {
               const isActive = scheme.id === currentTheme.id;
               const isApplied = scheme.id === appliedThemeId;

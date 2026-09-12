@@ -6103,7 +6103,7 @@ function mergeRemoteWeeklyData(
 
   if (shouldBlockAccess) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans text-slate-100">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4 font-sans text-slate-900 dark:text-slate-100">
         <AuthModal
           isOpen={true}
           isPendingApproval={Boolean(currentUser && !isApproved)}
@@ -6197,7 +6197,7 @@ function mergeRemoteWeeklyData(
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 print:bg-white print:text-black flex flex-row font-sans text-slate-100 selection:bg-indigo-600 selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 print:bg-white print:text-black flex flex-row font-sans text-slate-900 dark:text-slate-100 selection:bg-indigo-600 selection:text-white overflow-x-hidden">
       {/* Hidden File Inputs for Import */}
       <input
         type="file"
