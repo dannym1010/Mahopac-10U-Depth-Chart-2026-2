@@ -27,14 +27,14 @@ export const HudlPlaybookUploadModal: React.FC<HudlPlaybookUploadModalProps> = (
   isOpen,
   onClose,
   onImportPlays,
-  existingFolders = ['📋 Schemes & Installs', '📥 Hudl Installs', '🛡️ Defense', '🏈 Offense'],
+  existingFolders = ['🛡️ Defense', '📋 Defensive Schemes & Shells', '🏈 Offense'],
 }) => {
   const [activeTab, setActiveTab] = useState<'upload' | 'sample' | 'paste'>('upload');
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [pastedText, setPastedText] = useState('');
   const [playbookTitle, setPlaybookTitle] = useState('10U Defense • Mahopac Indians');
-  const [selectedFolder, setSelectedFolder] = useState('📋 Schemes & Installs');
+  const [selectedFolder, setSelectedFolder] = useState('🛡️ Defense');
   const [parsedPreview, setParsedPreview] = useState<WhiteboardDrill[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

@@ -22,6 +22,7 @@ import {
   Layers,
   ExternalLink,
   CheckSquare,
+  Folder,
 } from 'lucide-react';
 import { PlaybookGuideTree, PlaybookGuideOrder, UserRole, Team } from '../types';
 import {
@@ -541,6 +542,52 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
     (guideOrder.sub && guideOrder.sub[activeMain]) ||
     Object.keys(guideTree[activeMain] || {});
 
+  // Defensive Playbook Sub-Folder Organization System
+  const [selectedSubFolder, setSelectedSubFolder] = useState<string>('all');
+
+  const isDefensiveCategory =
+    activeMain.includes('Defense') || activeMain.includes('Schemes');
+
+  const DEFENSIVE_SUB_FOLDERS = [
+    { id: 'all', label: 'All Defensive Sections', icon: '📂' },
+    { id: 'base', label: '4-4 Base Fronts', icon: '🛡️' },
+    { id: 'blitz', label: 'Blitz Packages', icon: '⚡' },
+    { id: 'stunts', label: 'Line Stunts & Slants', icon: '🔄' },
+    { id: 'heavy', label: 'Heavy & Goal Line', icon: '🧱' },
+    { id: 'technique', label: 'Position Technique & Drills', icon: '🎯' },
+  ];
+
+  const getSubTabCategory = (tabName: string): string => {
+    const t = tabName.toLowerCase();
+    if (t.includes('blow sting') || t.includes('double dog') || t.includes('blitz')) return 'blitz';
+    if (t.includes('cross') || t.includes('fan') || t.includes('pinch') || t.includes('stunt')) return 'stunts';
+    if (t.includes('5-3') || t.includes('6-2') || t.includes('goal line') || t.includes('overshift') || t.includes('heavy')) return 'heavy';
+    if (
+      t.includes('tackles') ||
+      t.includes('ends') ||
+      t.includes('linebacker') ||
+      t.includes('backs') ||
+      t.includes('circuit') ||
+      t.includes('(dl)') ||
+      t.includes('(de)') ||
+      t.includes('(lb)') ||
+      t.includes('(db)') ||
+      t.includes('technique') ||
+      t.includes('strike') ||
+      t.includes('pursuit')
+    ) {
+      return 'technique';
+    }
+    return 'base';
+  };
+
+  const visibleSubTabs = useMemo(() => {
+    if (!isDefensiveCategory || selectedSubFolder === 'all') {
+      return currentSubTabs;
+    }
+    return currentSubTabs.filter((sub) => getSubTabCategory(sub) === selectedSubFolder);
+  }, [currentSubTabs, isDefensiveCategory, selectedSubFolder]);
+
   const currentDocUrl = guideTree[activeMain]?.[activeSub] || '';
   const canManageDocs = userRole === 'admin' || userRole === ('coach' as any) || true;
 
@@ -873,6 +920,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                   type="button"
                   onClick={() => {
                     onSelectMain(mainCat);
+                    setSelectedSubFolder('all');
                     const firstSub =
                       guideOrder.sub[mainCat]?.[0] ||
                       Object.keys(guideTree[mainCat] || {})[0] ||
@@ -892,9 +940,60 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
           })}
         </div>
 
+        {/* Level 1.5: Well-Organized Sub-Folder System (for Defense / Schemes) */}
+        {isDefensiveCategory && (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2 no-scrollbar">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1 pr-1 shrink-0 flex items-center gap-1">
+              <Folder className="w-3.5 h-3.5 text-amber-400" />
+              <span>Folders:</span>
+            </span>
+            {DEFENSIVE_SUB_FOLDERS.map((folder) => {
+              const isSelected = selectedSubFolder === folder.id;
+              const count =
+                folder.id === 'all'
+                  ? currentSubTabs.length
+                  : currentSubTabs.filter((s) => getSubTabCategory(s) === folder.id).length;
+
+              if (folder.id !== 'all' && count === 0) return null;
+
+              return (
+                <button
+                  key={folder.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedSubFolder(folder.id);
+                    const matching =
+                      folder.id === 'all'
+                        ? currentSubTabs
+                        : currentSubTabs.filter((s) => getSubTabCategory(s) === folder.id);
+                    if (matching.length > 0 && !matching.includes(activeSub)) {
+                      onSelectSub(matching[0]);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'bg-amber-400/20 text-amber-300 border-amber-400/60 shadow-xs'
+                      : 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border-slate-700/70'
+                  }`}
+                >
+                  <span>{folder.icon}</span>
+                  <span>{folder.label}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                      isSelected ? 'bg-amber-400/30 text-amber-200' : 'bg-slate-800 text-slate-500'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Level 2: Sub-Tabs Ribbon */}
         <div className="flex items-center gap-1.5 overflow-x-auto p-2 bg-slate-900/90 border border-slate-700 rounded-2xl no-scrollbar">
-          {currentSubTabs.map((subTab) => {
+          {visibleSubTabs.map((subTab) => {
             const isActive = subTab === activeSub;
             return (
               <button
@@ -911,8 +1010,8 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
               </button>
             );
           })}
-          {currentSubTabs.length === 0 && (
-            <span className="text-xs text-slate-400 p-1">No sub-tabs found. Click &quot;+ Add Sub-Tab&quot; above to create one.</span>
+          {visibleSubTabs.length === 0 && (
+            <span className="text-xs text-slate-400 p-1">No plays found in this folder.</span>
           )}
         </div>
       </div>

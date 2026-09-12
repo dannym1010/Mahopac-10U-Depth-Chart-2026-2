@@ -171,12 +171,32 @@ export default function App() {
   );
   const [guideTree, setGuideTree] = useState<PlaybookGuideTree>(() => {
     const saved = safeJSONParse<PlaybookGuideTree>('footballPdfGuidesTree', DEFAULT_GUIDES_TREE);
-    return { ...DEFAULT_GUIDES_TREE, ...saved };
+    const merged: PlaybookGuideTree = { ...DEFAULT_GUIDES_TREE, ...saved };
+    // Seamlessly migrate: Remove standalone Hudl Installs and ensure Defense contains all Hudl plays
+    if (merged['📥 Hudl Installs']) {
+      delete merged['📥 Hudl Installs'];
+    }
+    if (merged['🛡️ Defense']) {
+      merged['🛡️ Defense'] = {
+        ...DEFAULT_GUIDES_TREE['🛡️ Defense'],
+        ...merged['🛡️ Defense'],
+      };
+    }
+    return merged;
   });
   const [guideOrder, setGuideOrder] = useState<PlaybookGuideOrder>(() => {
     const saved = safeJSONParse<PlaybookGuideOrder>('footballPdfGuidesOrder', DEFAULT_GUIDES_ORDER);
-    if (!saved || !saved.main || !saved.main.includes('📋 Defensive Schemes & Shells')) {
+    if (
+      !saved ||
+      !saved.main ||
+      !saved.main.includes('🛡️ Defense') ||
+      saved.main.includes('📥 Hudl Installs')
+    ) {
       return DEFAULT_GUIDES_ORDER;
+    }
+    // Also strip Hudl Installs from sub if present
+    if (saved.sub && saved.sub['📥 Hudl Installs']) {
+      delete saved.sub['📥 Hudl Installs'];
     }
     return saved;
   });

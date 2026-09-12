@@ -1604,6 +1604,32 @@ export const DEFAULT_PRACTICE_TEMPLATES: Record<string, PracticePeriod[]> = {
 };
 
 export const DEFAULT_GUIDES_TREE: PlaybookGuideTree = {
+  "🛡️ Defense": {
+    "4-4 Base Stack Liz vs 21 L": "",
+    "4-4 Base Stack Rip vs 21 R": "",
+    "4-4 Base Stack Liz vs 22 Twins R": "",
+    "4-4 Base Stack Liz vs 11 Trick Trips Laser": "",
+    "4-4 Base Stack Blow Sting Liz": "",
+    "4-4 Double Dog 0 Liz": "",
+    "4-4 Stunts Cross": "",
+    "4-4 Stunts Fan": "",
+    "4-4 Stunts Pinch": "",
+    "5-3 Overshift Liz": "",
+    "6-2 Goal Line Wall": "",
+    "Defensive Tackles (DL)": "",
+    "Defensive Ends (DE)": "",
+    "Linebackers (LB)": "",
+    "Defensive Backs (DB)": "",
+    "Team Tackling & Circuits": ""
+  },
+  "🏈 Offense": {
+    "Full Playbook": "",
+    "Quarterbacks": "",
+    "Running Backs": "",
+    "Wide Receivers & TEs": "",
+    "Offensive Line": "",
+    "Team Offense & Install": ""
+  },
   "📋 Defensive Schemes & Shells": {
     "4-4 Base Stack Liz vs 21 L": "",
     "4-4 Base Stack Rip vs 21 R": "",
@@ -1616,22 +1642,6 @@ export const DEFAULT_GUIDES_TREE: PlaybookGuideTree = {
     "4-4 Stunts Pinch": "",
     "5-3 Overshift Liz": "",
     "6-2 Goal Line Wall": ""
-  },
-  "🏈 Offense": {
-    "Full Playbook": "",
-    "Quarterbacks": "",
-    "Running Backs": "",
-    "Wide Receivers & TEs": "",
-    "Offensive Line": "",
-    "Team Offense & Install": ""
-  },
-  "🛡️ Defense": {
-    "Full Playbook": "",
-    "Defensive Tackles (DL)": "",
-    "Defensive Ends (DE)": "",
-    "Linebackers (LB)": "",
-    "Defensive Backs (DB)": "",
-    "Team Tackling & Circuits": ""
   },
   "🥋 Form Fit Tackling": {
     "Form Fit & Strike": "",
@@ -1648,24 +1658,46 @@ export const DEFAULT_GUIDES_TREE: PlaybookGuideTree = {
   "🏃 Warm-Up & Conditioning": {
     "Dynamic Warm-Up": "",
     "Agility & Conditioning Circuits": ""
-  },
-  "📥 Hudl Installs": {
-    "10U Defense • Mahopac Indians": ""
   }
 };
 
 export const DEFAULT_GUIDES_ORDER: PlaybookGuideOrder = {
   main: [
-    "📋 Defensive Schemes & Shells",
-    "🏈 Offense",
     "🛡️ Defense",
+    "🏈 Offense",
+    "📋 Defensive Schemes & Shells",
     "🥋 Form Fit Tackling",
     "🧱 Blocking Technique",
     "🌟 Special Teams",
-    "🏃 Warm-Up & Conditioning",
-    "📥 Hudl Installs"
+    "🏃 Warm-Up & Conditioning"
   ],
   sub: {
+    "🛡️ Defense": [
+      "4-4 Base Stack Liz vs 21 L",
+      "4-4 Base Stack Rip vs 21 R",
+      "4-4 Base Stack Liz vs 22 Twins R",
+      "4-4 Base Stack Liz vs 11 Trick Trips Laser",
+      "4-4 Base Stack Blow Sting Liz",
+      "4-4 Double Dog 0 Liz",
+      "4-4 Stunts Cross",
+      "4-4 Stunts Fan",
+      "4-4 Stunts Pinch",
+      "5-3 Overshift Liz",
+      "6-2 Goal Line Wall",
+      "Defensive Tackles (DL)",
+      "Defensive Ends (DE)",
+      "Linebackers (LB)",
+      "Defensive Backs (DB)",
+      "Team Tackling & Circuits"
+    ],
+    "🏈 Offense": [
+      "Full Playbook",
+      "Quarterbacks",
+      "Running Backs",
+      "Wide Receivers & TEs",
+      "Offensive Line",
+      "Team Offense & Install"
+    ],
     "📋 Defensive Schemes & Shells": [
       "4-4 Base Stack Liz vs 21 L",
       "4-4 Base Stack Rip vs 21 R",
@@ -1679,27 +1711,10 @@ export const DEFAULT_GUIDES_ORDER: PlaybookGuideOrder = {
       "5-3 Overshift Liz",
       "6-2 Goal Line Wall"
     ],
-    "🏈 Offense": [
-      "Full Playbook",
-      "Quarterbacks",
-      "Running Backs",
-      "Wide Receivers & TEs",
-      "Offensive Line",
-      "Team Offense & Install"
-    ],
-    "🛡️ Defense": [
-      "Full Playbook",
-      "Defensive Tackles (DL)",
-      "Defensive Ends (DE)",
-      "Linebackers (LB)",
-      "Defensive Backs (DB)",
-      "Team Tackling & Circuits"
-    ],
     "🥋 Form Fit Tackling": ["Form Fit & Strike", "Angle & Open Field Pursuit"],
     "🧱 Blocking Technique": ["Drive & Reach Blocking", "Pass Protection Fundamentals"],
     "🌟 Special Teams": ["Special Teams (Kick/Punt)", "Kicking & Punting"],
-    "🏃 Warm-Up & Conditioning": ["Dynamic Warm-Up", "Agility & Conditioning Circuits"],
-    "📥 Hudl Installs": ["10U Defense • Mahopac Indians"]
+    "🏃 Warm-Up & Conditioning": ["Dynamic Warm-Up", "Agility & Conditioning Circuits"]
   }
 };
 

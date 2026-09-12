@@ -232,11 +232,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const viewBoxMinY = Math.round(centerY - viewBoxHeight / 2);
   const viewBoxStr = `${viewBoxMinX} ${viewBoxMinY} ${viewBoxWidth} ${viewBoxHeight}`;
 
-  // Dynamic field boundaries extending to the full visible canvas (with neat margin)
-  const fieldLeft = viewBoxMinX + 16;
-  const fieldRight = viewBoxMinX + viewBoxWidth - 16;
-  const fieldTop = viewBoxMinY + 14;
-  const fieldBottom = viewBoxMinY + viewBoxHeight - 14;
+  // Dynamic field boundaries extending to the full visible canvas (seamlessly filling the entire area without white borders)
+  const fieldLeft = viewBoxMinX;
+  const fieldRight = viewBoxMinX + viewBoxWidth;
+  const fieldTop = viewBoxMinY;
+  const fieldBottom = viewBoxMinY + viewBoxHeight;
   const fieldWidth = fieldRight - fieldLeft;
   const fieldHeight = fieldBottom - fieldTop;
 
