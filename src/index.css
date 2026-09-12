@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --print-font-size: 12px;
 }
@@ -45,12 +47,62 @@ body.theme-light,
   --color-zinc-50:  #020617;
 
   /* High-Contrast Accent Adaptations for Light Mode */
-  --color-indigo-300: #4338ca; /* Darker indigo for readable text on white */
-  --color-indigo-400: #4f46e5;
-  --color-amber-300: #b45309;  /* Dark amber for readable text on white */
-  --color-emerald-300: #047857; /* Rich forest emerald readable on white */
-  --color-rose-300: #be123c;   /* Rich deep rose readable on white */
-  --color-blue-300: #1d4ed8;   /* Bold royal blue readable on white */
+  --color-amber-100: #fef3c7;
+  --color-amber-200: #92400e;  /* Deep warm amber/brown readable on white */
+  --color-amber-300: #92400e;
+  --color-amber-400: #78350f;
+  --color-yellow-200: #854d0e;
+  --color-yellow-300: #854d0e;
+  --color-yellow-400: #713f12;
+  --color-indigo-100: #e0e7ff;
+  --color-indigo-200: #3730a3; /* Deep royal indigo readable on white */
+  --color-indigo-300: #3730a3;
+  --color-indigo-400: #4338ca;
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #1e40af;   /* Deep royal blue readable on white */
+  --color-blue-300: #1d4ed8;
+  --color-blue-400: #1e40af;
+  --color-sky-200: #0369a1;    /* Deep sky blue readable on white */
+  --color-sky-300: #0284c7;
+  --color-sky-400: #0369a1;
+  --color-cyan-200: #0e7490;
+  --color-cyan-300: #0e7490;
+  --color-cyan-400: #155e75;
+  --color-emerald-100: #d1fae5;
+  --color-emerald-200: #065f46;/* Deep forest green readable on white */
+  --color-emerald-300: #047857;
+  --color-emerald-400: #065f46;
+  --color-teal-200: #0f766e;
+  --color-teal-300: #0f766e;
+  --color-teal-400: #115e59;
+  --color-rose-100: #ffe4e6;
+  --color-rose-200: #9f1239;   /* Deep crimson rose readable on white */
+  --color-rose-300: #be123c;
+  --color-rose-400: #9f1239;
+  --color-red-200: #991b1b;
+  --color-red-300: #b91c1c;
+  --color-red-400: #991b1b;
+  --color-purple-100: #f3e8ff;
+  --color-purple-200: #6b21a8; /* Deep royal purple readable on white */
+  --color-purple-300: #7e22ce;
+  --color-purple-400: #6b21a8;
+  --color-orange-200: #9a3412;
+  --color-orange-300: #c2410c;
+  --color-orange-400: #9a3412;
+
+  /* Invert dark tints to soft pastel card backgrounds in light mode */
+  --color-indigo-950: #eef2ff;
+  --color-indigo-900: #e0e7ff;
+  --color-blue-950: #eff6ff;
+  --color-blue-900: #dbeafe;
+  --color-amber-950: #fef3c7;
+  --color-amber-900: #fde68a;
+  --color-emerald-950: #ecfdf5;
+  --color-emerald-900: #d1fae5;
+  --color-rose-950: #fff1f2;
+  --color-rose-900: #ffe4e6;
+  --color-purple-950: #faf5ff;
+  --color-purple-900: #f3e8ff;
 }
 
 body {
@@ -102,13 +154,20 @@ body.theme-light {
 }
 
 /* Crisp light borders on cards and panels */
+.theme-light .border-slate-900,
+.theme-light .border-slate-850,
 .theme-light .border-slate-800,
 .theme-light .border-slate-800\/90,
 .theme-light .border-slate-800\/80,
 .theme-light .border-slate-800\/60,
 .theme-light .border-slate-800\/50,
+.theme-light .border-slate-750,
+.theme-light .border-slate-750\/70,
+.theme-light .border-slate-750\/80,
 .theme-light .border-slate-700,
 .theme-light .border-slate-700\/80,
+.theme-light .border-slate-700\/70,
+.theme-light .border-slate-700\/60,
 .theme-light .border-zinc-800,
 .theme-light .border-zinc-700 {
   border-color: #e2e8f0 !important;
@@ -130,7 +189,7 @@ body.theme-light {
 
 .theme-light input::placeholder,
 .theme-light textarea::placeholder {
-  color: #94a3b8 !important;
+  color: #64748b !important;
 }
 
 /* =========================================================================
@@ -139,25 +198,25 @@ body.theme-light {
    ========================================================================= */
 
 /* Default text-white on light mode surfaces becomes dark slate */
-.theme-light .text-white {
-  color: #0f172a;
-}
-.theme-light .text-white\/95,
-.theme-light .text-white\/90,
-.theme-light .text-white\/85,
-.theme-light .text-white\/80 {
-  color: #0f172a;
+.theme-light .text-white,
+.theme-light [class*="text-white/"] {
+  color: #0f172a !important;
 }
 .theme-light .text-white\/75,
 .theme-light .text-white\/70,
 .theme-light .text-white\/65,
-.theme-light .text-white\/60 {
-  color: #334155;
+.theme-light .text-white\/60,
+.theme-light [class*="text-white/7"],
+.theme-light [class*="text-white/6"] {
+  color: #334155 !important;
 }
 .theme-light .text-white\/50,
 .theme-light .text-white\/40,
-.theme-light .text-white\/30 {
-  color: #64748b;
+.theme-light .text-white\/30,
+.theme-light [class*="text-white/5"],
+.theme-light [class*="text-white/4"],
+.theme-light [class*="text-white/3"] {
+  color: #64748b !important;
 }
 
 /* Hover States: Prevent hover:text-white from turning text invisible white on light backgrounds */
@@ -178,16 +237,16 @@ body.theme-light {
 /* Zinc text adaptations in light mode */
 .theme-light .text-zinc-100,
 .theme-light .text-zinc-50 {
-  color: #0f172a;
+  color: #0f172a !important;
 }
 .theme-light .text-zinc-200 {
-  color: #1e293b;
+  color: #1e293b !important;
 }
 .theme-light .text-zinc-300 {
-  color: #334155;
+  color: #334155 !important;
 }
 .theme-light .text-zinc-400 {
-  color: #475569;
+  color: #475569 !important;
 }
 .theme-light .hover\:text-zinc-100:hover,
 .theme-light .hover\:text-zinc-200:hover {
@@ -197,144 +256,196 @@ body.theme-light {
 /* =========================================================================
    PRESERVE WHITE TEXT ON SOLID COLORED BUTTONS & BADGES
    ========================================================================= */
-.theme-light [class*="bg-indigo-500"],
-.theme-light [class*="bg-indigo-600"],
-.theme-light [class*="bg-indigo-700"],
-.theme-light [class*="bg-indigo-800"],
-.theme-light [class*="bg-blue-500"],
-.theme-light [class*="bg-blue-600"],
-.theme-light [class*="bg-blue-700"],
-.theme-light [class*="bg-blue-800"],
-.theme-light [class*="bg-emerald-500"],
-.theme-light [class*="bg-emerald-600"],
-.theme-light [class*="bg-emerald-700"],
-.theme-light [class*="bg-emerald-800"],
-.theme-light [class*="bg-green-600"],
-.theme-light [class*="bg-green-700"],
-.theme-light [class*="bg-red-500"],
-.theme-light [class*="bg-red-600"],
-.theme-light [class*="bg-red-700"],
-.theme-light [class*="bg-red-800"],
-.theme-light [class*="bg-rose-500"],
-.theme-light [class*="bg-rose-600"],
-.theme-light [class*="bg-rose-700"],
-.theme-light [class*="bg-rose-800"],
-.theme-light [class*="bg-purple-600"],
-.theme-light [class*="bg-purple-700"],
-.theme-light [class*="bg-violet-600"],
-.theme-light [class*="bg-amber-600"],
-.theme-light [class*="bg-amber-700"],
-.theme-light [class*="bg-cyan-600"],
-.theme-light [class*="bg-teal-600"],
-.theme-light [class*="bg-black"],
+/* Solid colored buttons & badges: keep crisp white text */
+.theme-light button.bg-indigo-600,
+.theme-light button.bg-indigo-700,
+.theme-light button.bg-blue-600,
+.theme-light button.bg-blue-700,
+.theme-light button.bg-emerald-600,
+.theme-light button.bg-emerald-700,
+.theme-light button.bg-rose-600,
+.theme-light button.bg-rose-700,
+.theme-light button.bg-purple-600,
+.theme-light button.bg-purple-700,
+.theme-light button.bg-red-600,
+.theme-light button.bg-red-700,
+.theme-light button.bg-teal-600,
+.theme-light button.bg-amber-600,
+.theme-light button.bg-black,
+.theme-light button.bg-slate-950,
+.theme-light a.bg-indigo-600,
+.theme-light a.bg-blue-600,
+.theme-light div.bg-indigo-600,
+.theme-light span.bg-indigo-600,
+.theme-light .bg-indigo-600,
+.theme-light .bg-indigo-700,
+.theme-light .bg-blue-600,
+.theme-light .bg-blue-700,
+.theme-light .bg-blue-500,
+.theme-light .bg-emerald-600,
+.theme-light .bg-emerald-700,
+.theme-light .bg-rose-600,
+.theme-light .bg-rose-700,
+.theme-light .bg-purple-600,
+.theme-light .bg-purple-700,
+.theme-light .bg-red-600,
 .theme-light .bg-black,
 .theme-light [class*="from-indigo-600"],
-.theme-light [class*="from-indigo-500"],
-.theme-light [class*="from-rose-600"],
-.theme-light [class*="from-rose-500"],
 .theme-light [class*="from-purple-600"],
-.theme-light [class*="from-emerald-600"],
-.theme-light [class*="from-blue-600"],
 .theme-light [data-wristband-badge],
 .theme-light .wristband-number-badge,
 .theme-light .wrist-badge,
 .theme-light .has-dark-row-highlight,
-.theme-light [data-row-text-white="true"] {
+.theme-light [data-row-text-white="true"],
+.theme-light [data-solid-badge="true"] {
   color: #ffffff !important;
 }
 
-.theme-light [class*="bg-indigo-500"] .text-white,
-.theme-light [class*="bg-indigo-600"] .text-white,
-.theme-light [class*="bg-indigo-700"] .text-white,
-.theme-light [class*="bg-indigo-800"] .text-white,
-.theme-light [class*="bg-blue-500"] .text-white,
-.theme-light [class*="bg-blue-600"] .text-white,
-.theme-light [class*="bg-blue-700"] .text-white,
-.theme-light [class*="bg-blue-800"] .text-white,
-.theme-light [class*="bg-emerald-500"] .text-white,
-.theme-light [class*="bg-emerald-600"] .text-white,
-.theme-light [class*="bg-emerald-700"] .text-white,
-.theme-light [class*="bg-emerald-800"] .text-white,
-.theme-light [class*="bg-green-600"] .text-white,
-.theme-light [class*="bg-green-700"] .text-white,
-.theme-light [class*="bg-red-500"] .text-white,
-.theme-light [class*="bg-red-600"] .text-white,
-.theme-light [class*="bg-red-700"] .text-white,
-.theme-light [class*="bg-red-800"] .text-white,
-.theme-light [class*="bg-rose-500"] .text-white,
-.theme-light [class*="bg-rose-600"] .text-white,
-.theme-light [class*="bg-rose-700"] .text-white,
-.theme-light [class*="bg-rose-800"] .text-white,
-.theme-light [class*="bg-purple-600"] .text-white,
-.theme-light [class*="bg-purple-700"] .text-white,
-.theme-light [class*="bg-violet-600"] .text-white,
-.theme-light [class*="bg-amber-600"] .text-white,
-.theme-light [class*="bg-amber-700"] .text-white,
-.theme-light [class*="bg-cyan-600"] .text-white,
-.theme-light [class*="bg-teal-600"] .text-white,
-.theme-light [class*="bg-black"] .text-white,
-.theme-light .bg-black .text-white,
-.theme-light [class*="from-indigo-600"] .text-white,
-.theme-light [class*="from-indigo-500"] .text-white,
-.theme-light [class*="from-rose-600"] .text-white,
-.theme-light [class*="from-rose-500"] .text-white,
-.theme-light [class*="from-purple-600"] .text-white,
-.theme-light [class*="from-emerald-600"] .text-white,
-.theme-light [class*="from-blue-600"] .text-white,
-.theme-light [data-wristband-badge] .text-white,
-.theme-light .wristband-number-badge .text-white,
-.theme-light .wrist-badge .text-white,
-.theme-light .has-dark-row-highlight .text-white,
-.theme-light [data-row-text-white="true"] .text-white {
+/* Children of solid colored buttons and solid badges stay white */
+.theme-light button.bg-indigo-600 *,
+.theme-light button.bg-indigo-700 *,
+.theme-light button.bg-blue-600 *,
+.theme-light button.bg-blue-700 *,
+.theme-light button.bg-emerald-600 *,
+.theme-light button.bg-emerald-700 *,
+.theme-light button.bg-rose-600 *,
+.theme-light button.bg-rose-700 *,
+.theme-light button.bg-purple-600 *,
+.theme-light button.bg-purple-700 *,
+.theme-light button.bg-red-600 *,
+.theme-light button.bg-black *,
+.theme-light .bg-indigo-600 *,
+.theme-light .bg-indigo-700 *,
+.theme-light .bg-blue-600 *,
+.theme-light .bg-blue-700 *,
+.theme-light .bg-blue-500 *,
+.theme-light .bg-emerald-600 *,
+.theme-light .bg-emerald-700 *,
+.theme-light .bg-rose-600 *,
+.theme-light .bg-rose-700 *,
+.theme-light .bg-purple-600 *,
+.theme-light .bg-purple-700 *,
+.theme-light .bg-red-600 *,
+.theme-light .bg-black *,
+.theme-light [class*="from-indigo-600"] *,
+.theme-light [class*="from-purple-600"] *,
+.theme-light .has-dark-row-highlight *,
+.theme-light [data-row-text-white="true"] * {
   color: #ffffff !important;
 }
 
-/* Hovering on colored buttons retains white text */
-.theme-light [class*="hover:bg-indigo-600"]:hover,
-.theme-light [class*="hover:bg-indigo-500"]:hover,
-.theme-light [class*="hover:bg-blue-600"]:hover,
-.theme-light [class*="hover:bg-blue-500"]:hover,
-.theme-light [class*="hover:bg-emerald-600"]:hover,
-.theme-light [class*="hover:bg-emerald-500"]:hover,
-.theme-light [class*="hover:bg-rose-600"]:hover,
-.theme-light [class*="hover:bg-rose-500"]:hover,
-.theme-light [class*="hover:bg-red-600"]:hover,
-.theme-light [class*="hover:bg-purple-600"]:hover {
-  color: #ffffff !important;
+/* Solid Gold / Amber badges in Light Mode: Crisp dark black text */
+.theme-light .bg-amber-400,
+.theme-light .bg-amber-300,
+.theme-light .bg-yellow-400,
+.theme-light .bg-yellow-300,
+.theme-light [class*="bg-amber-400"]:not([class*="bg-amber-400/"]),
+.theme-light [class*="bg-amber-300"]:not([class*="bg-amber-300/"]) {
+  color: #020617 !important;
+}
+.theme-light .bg-amber-400 *,
+.theme-light .bg-amber-300 *,
+.theme-light .bg-yellow-400 *,
+.theme-light .bg-yellow-300 *,
+.theme-light [class*="bg-amber-400"]:not([class*="bg-amber-400/"]) *,
+.theme-light [class*="bg-amber-300"]:not([class*="bg-amber-300/"]) * {
+  color: #020617 !important;
 }
 
-.theme-light [class*="hover:bg-indigo-600"]:hover *,
-.theme-light [class*="hover:bg-indigo-500"]:hover *,
-.theme-light [class*="hover:bg-blue-600"]:hover *,
-.theme-light [class*="hover:bg-blue-500"]:hover *,
-.theme-light [class*="hover:bg-emerald-600"]:hover *,
-.theme-light [class*="hover:bg-emerald-500"]:hover *,
-.theme-light [class*="hover:bg-rose-600"]:hover *,
-.theme-light [class*="hover:bg-rose-500"]:hover *,
-.theme-light [class*="hover:bg-red-600"]:hover *,
-.theme-light [class*="hover:bg-purple-600"]:hover * {
-  color: #ffffff !important;
+/* High-contrast colors for pastel / semi-transparent chips & pills in light mode */
+.theme-light [class*="bg-indigo-500/"],
+.theme-light [class*="bg-indigo-600/"] {
+  color: #4338ca !important;
+  border-color: #c7d2fe !important;
+}
+.theme-light [class*="bg-indigo-500/"] *,
+.theme-light [class*="bg-indigo-600/"] * {
+  color: #4338ca !important;
+}
+
+.theme-light [class*="bg-emerald-500/"],
+.theme-light [class*="bg-emerald-600/"] {
+  color: #047857 !important;
+  border-color: #a7f3d0 !important;
+}
+.theme-light [class*="bg-emerald-500/"] *,
+.theme-light [class*="bg-emerald-600/"] * {
+  color: #047857 !important;
+}
+
+.theme-light [class*="bg-rose-500/"],
+.theme-light [class*="bg-rose-600/"] {
+  color: #be123c !important;
+  border-color: #fecdd3 !important;
+}
+.theme-light [class*="bg-rose-500/"] *,
+.theme-light [class*="bg-rose-600/"] * {
+  color: #be123c !important;
+}
+
+.theme-light [class*="bg-purple-500/"],
+.theme-light [class*="bg-purple-600/"] {
+  color: #6b21a8 !important;
+  border-color: #e9d5ff !important;
+}
+.theme-light [class*="bg-purple-500/"] *,
+.theme-light [class*="bg-purple-600/"] * {
+  color: #6b21a8 !important;
+}
+
+.theme-light [class*="bg-blue-500/"],
+.theme-light [class*="bg-blue-600/"] {
+  color: #1d4ed8 !important;
+  border-color: #bfdbfe !important;
+}
+.theme-light [class*="bg-blue-500/"] *,
+.theme-light [class*="bg-blue-600/"] * {
+  color: #1d4ed8 !important;
+}
+
+.theme-light [class*="bg-amber-400/"],
+.theme-light [class*="bg-amber-500/"] {
+  color: #92400e !important;
+  border-color: #fde68a !important;
+}
+.theme-light [class*="bg-amber-400/"] *,
+.theme-light [class*="bg-amber-500/"] * {
+  color: #92400e !important;
 }
 
 /* Modal Dialogs in Light Mode: Crisp white elevated surface */
-.theme-light .fixed.inset-0.bg-slate-950\/85,
-.theme-light .fixed.inset-0.bg-slate-950\/80,
-.theme-light .fixed.inset-0.bg-black\/80,
-.theme-light .fixed.inset-0.bg-black\/75 {
+.theme-light .fixed.inset-0[class*="bg-slate-950"],
+.theme-light .fixed.inset-0[class*="bg-black"] {
   background-color: rgba(15, 23, 42, 0.65) !important;
 }
 
 .theme-light .fixed.inset-0 > div:not(.absolute) {
   background-color: #ffffff !important;
   border-color: #e2e8f0 !important;
-  color: #0f172a;
+  color: #0f172a !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
 }
 
 .theme-light .fixed.inset-0 > div:not(.absolute) h1,
 .theme-light .fixed.inset-0 > div:not(.absolute) h2,
 .theme-light .fixed.inset-0 > div:not(.absolute) h3,
-.theme-light .fixed.inset-0 > div:not(.absolute) h4 {
+.theme-light .fixed.inset-0 > div:not(.absolute) h4,
+.theme-light .fixed.inset-0 > div:not(.absolute) label {
   color: #0f172a !important;
+}
+
+/* Master Schedule, Practice, & Call Sheet Tables in Light Mode */
+.theme-light table th {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+.theme-light table td {
+  border-color: #f1f5f9 !important;
+  color: #1e293b !important;
+}
+.theme-light table tr:hover td {
+  background-color: #f8fafc !important;
 }
 
 /* Custom Hide Scrollbar Utilities */

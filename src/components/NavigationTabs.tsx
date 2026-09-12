@@ -334,9 +334,9 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
               <button
                 onClick={() => setIsManagerModalOpen(true)}
                 title="Create new tab groups, nest tabs into sub-menus, and reorder navigation"
-                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-indigo-300 hover:text-indigo-200 border border-slate-800 hover:border-indigo-500/40 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+                className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/40 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
               >
-                <FolderPlus className="w-3.5 h-3.5 text-indigo-400" />
+                <FolderPlus className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                 <span className="hidden lg:inline">+ Custom Tabs</span>
                 <span className="lg:hidden">Tabs</span>
               </button>
@@ -346,7 +346,7 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
               <button
                 onClick={() => setIsManagerModalOpen(true)}
                 title="Manage custom tab folders, tab order, and navigation preferences"
-                className="p-1.5 rounded-xl text-slate-500 hover:text-slate-300 hover:bg-slate-900 transition-colors cursor-pointer border border-transparent hover:border-slate-800"
+                className="p-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-800"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
               </button>

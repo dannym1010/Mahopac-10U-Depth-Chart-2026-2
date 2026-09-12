@@ -425,22 +425,22 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
         onClick={onToggleOpen}
       />
 
-      <div className="fixed inset-y-0 right-0 z-40 w-88 max-w-[90vw] sm:relative sm:inset-auto sm:w-88 bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col h-full min-h-0 print:hidden shrink-0">
+      <div className="fixed inset-y-0 right-0 z-40 w-88 max-w-[90vw] sm:relative sm:inset-auto sm:w-88 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col h-full min-h-0 print:hidden shrink-0 text-slate-900 dark:text-slate-100">
         {/* Header */}
-        <div className="p-3 border-b border-slate-800 flex items-center justify-between bg-slate-850">
+        <div className="p-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-850">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center">
               {sidebarMode === 'wristband' ? (
-                <Watch className="w-4 h-4 text-amber-400" />
+                <Watch className="w-4 h-4 text-amber-500 dark:text-amber-400" />
               ) : (
-                <BookOpen className="w-4 h-4 text-indigo-400" />
+                <BookOpen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               )}
             </div>
             <div>
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-100">
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100">
                 {sidebarMode === 'wristband' ? 'Wristband Table' : `${unit === 'offense' ? 'Offense' : 'Defense'} Play Bank`}
               </h3>
-              <span className="text-[10px] text-slate-400">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">
                 {sidebarMode === 'wristband'
                   ? 'Drag plays onto situation tables'
                   : isManageMode
@@ -461,7 +461,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                   className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                     isManageMode
                       ? 'bg-rose-600 text-white shadow-xs'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                   title={isManageMode ? 'Done managing plays' : 'Manage & delete plays'}
                 >
@@ -479,7 +479,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                     className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                       isOrderSelectMode
                         ? 'bg-indigo-600 text-white shadow-xs'
-                        : 'text-indigo-400 hover:text-indigo-200 hover:bg-indigo-950/40'
+                        : 'text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/40'
                     }`}
                     title={isOrderSelectMode ? 'Cancel order select mode' : 'Select multiple plays in order to place on wristband'}
                   >
@@ -513,7 +513,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
             <button
               type="button"
               onClick={onToggleOpen}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               title="Close panel"
             >
               <ChevronRight className="w-4 h-4" />
@@ -522,17 +522,17 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
         </div>
 
         {/* Primary View Switcher: Wristband Table vs Full Play Bank */}
-        <div className="flex items-center p-1.5 bg-slate-950 border-b border-slate-800 gap-1 shrink-0">
+        <div className="flex items-center p-1.5 bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 gap-1 shrink-0">
           <button
             type="button"
             onClick={() => setSidebarMode('wristband')}
             className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               sidebarMode === 'wristband'
                 ? 'bg-indigo-600 text-white shadow-xs'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-850'
             }`}
           >
-            <Watch className="w-3.5 h-3.5 text-amber-400" />
+            <Watch className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
             <span>Wristband Table ({wristbandCardPlays.length})</span>
           </button>
           <button
@@ -541,26 +541,26 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
             className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               sidebarMode === 'library'
                 ? 'bg-indigo-600 text-white shadow-xs'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-850'
             }`}
           >
-            <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+            <BookOpen className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             <span>Play Library ({filteredPlays.length})</span>
           </button>
         </div>
 
         {/* Informative Banner */}
         {sidebarMode === 'wristband' && (
-          <div className="px-3 py-2 bg-indigo-950/40 border-b border-indigo-900/40 flex items-center gap-2 text-[11px] text-indigo-200/90 shrink-0">
-            <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <div className="px-3 py-2 bg-indigo-50 dark:bg-indigo-950/40 border-b border-indigo-100 dark:border-indigo-900/40 flex items-center gap-2 text-[11px] text-indigo-900 dark:text-indigo-200/90 shrink-0">
+            <Info className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
             <span>Drag plays to situation tables. Plays stay on your wristband table.</span>
           </div>
         )}
 
         {/* Multi-Card Switcher (if multiple wristband cards exist) */}
         {sidebarMode === 'wristband' && wristbandCards.length > 1 && (
-          <div className="px-3 py-1.5 bg-slate-900 border-b border-slate-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0">Card:</span>
+          <div className="px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider shrink-0">Card:</span>
             {wristbandCards.map((wb, idx) => {
               const isCur = wb.id === activeCardId;
               const count = (wb.columns || []).reduce(
@@ -575,7 +575,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                   className={`px-2 py-0.5 rounded-md text-[10.5px] font-bold whitespace-nowrap transition-colors cursor-pointer ${
                     isCur
                       ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
                   }`}
                 >
                   {wb.title || `Card ${idx + 1}`} ({count})
@@ -587,14 +587,14 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
 
         {/* Manage Mode Toolbar (for Play Bank) */}
         {sidebarMode === 'library' && isManageMode && (
-          <div className="p-2.5 bg-rose-950/40 border-b border-rose-900/40 flex items-center justify-between gap-2 shrink-0">
+          <div className="p-2.5 bg-rose-50 dark:bg-rose-950/40 border-b border-rose-200 dark:border-rose-900/40 flex items-center justify-between gap-2 shrink-0">
             <button
               type="button"
               onClick={handleSelectAllFiltered}
-              className="text-[11px] text-rose-300 hover:text-white font-bold flex items-center gap-1.5 cursor-pointer"
+              className="text-[11px] text-rose-700 dark:text-rose-300 hover:text-rose-900 dark:hover:text-white font-bold flex items-center gap-1.5 cursor-pointer"
             >
               {filteredPlays.length > 0 && filteredPlays.every((p) => selectedPlayIds[p.id]) ? (
-                <CheckSquare className="w-4 h-4 text-rose-400" />
+                <CheckSquare className="w-4 h-4 text-rose-600 dark:text-rose-400" />
               ) : (
                 <Square className="w-4 h-4 text-slate-400" />
               )}
@@ -614,7 +614,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
         )}
 
         {/* Search & Filters */}
-        <div className="p-3 space-y-2 border-b border-slate-800 bg-slate-900 shrink-0">
+        <div className="p-3 space-y-2 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shrink-0">
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
             <input
@@ -622,7 +622,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder={sidebarMode === 'wristband' ? 'Search wristband plays or slot...' : 'Search plays or slot...'}
-              className="w-full pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
@@ -636,7 +636,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                   className={`px-2 py-0.5 rounded-md font-bold cursor-pointer transition-colors ${
                     selectedType === 'all'
                       ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                      : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
                   All ({plays.filter((p) => p.unit === unit).length})
@@ -652,7 +652,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                     className={`px-1.5 py-0.5 rounded-md font-bold uppercase cursor-pointer transition-colors whitespace-nowrap ${
                       selectedType === t
                         ? 'bg-indigo-600 text-white'
-                        : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                        : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
                     {t.replace('_', ' ')}
@@ -661,16 +661,16 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
               </div>
 
               {/* Personnel Sub-tabs */}
-              <div className="pt-1 border-t border-slate-800/80">
+              <div className="pt-1 border-t border-slate-200 dark:border-slate-800/80">
                 <div className="flex items-center justify-between pb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                     Personnel:
                   </span>
                   {selectedPersonnel !== 'all' && (
                     <button
                       type="button"
                       onClick={() => setSelectedPersonnel('all')}
-                      className="text-[9px] text-indigo-400 hover:underline cursor-pointer"
+                      className="text-[9px] text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
                     >
                       Clear Filter
                     </button>
@@ -685,7 +685,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                       className={`px-2 py-0.5 rounded-md font-bold whitespace-nowrap transition-colors cursor-pointer ${
                         selectedPersonnel === tab.id
                           ? 'bg-indigo-600 text-white shadow-xs'
-                          : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                          : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                       }`}
                     >
                       {tab.id === 'all' ? 'All' : tab.label.replace(' Personnel', ' Pers')} ({tab.count})
@@ -769,12 +769,12 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                     <Watch className="w-5 h-5 text-amber-400" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-slate-300">
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-300">
                       {wristbandCardPlays.length === 0
                         ? 'No plays on this wristband card'
                         : 'No matching wristband plays found'}
                     </p>
-                    <p className="text-[11px] text-slate-400 mt-1">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                       {wristbandCardPlays.length === 0
                         ? 'Add plays to your wristband in the Wristband tab, or switch to the Play Library tab.'
                         : 'Try searching for a different play name or slot number.'}
@@ -792,7 +792,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                       onDragEnd={() => {
                         (window as any).__activeCallSheetPlayDrag = null;
                       }}
-                      className="group p-2 rounded-xl border border-slate-750 bg-slate-850 hover:bg-slate-800 hover:border-indigo-500/60 transition-all cursor-grab active:cursor-grabbing shadow-xs select-none"
+                      className="group p-2 rounded-xl border border-slate-200 dark:border-slate-750 bg-white hover:bg-slate-50 dark:bg-slate-850 dark:hover:bg-slate-800 hover:border-indigo-500/60 transition-all cursor-grab active:cursor-grabbing shadow-xs select-none"
                       title="Drag to situation table (copies play, leaves wristband unchanged)"
                       style={
                         item.rowBgColor
@@ -817,7 +817,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                             {item.slotLabel}
                           </span>
 
-                          <span className="font-bold text-xs text-slate-100 group-hover:text-white uppercase truncate">
+                          <span className="font-bold text-xs text-slate-900 group-hover:text-black dark:text-slate-100 dark:group-hover:text-white uppercase truncate">
                             {item.playText}
                           </span>
                         </div>
@@ -831,29 +831,29 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                               e.stopPropagation();
                               handleCopyWristbandPlay(item);
                             }}
-                            className="p-1 rounded-md text-slate-400 hover:text-indigo-300 hover:bg-slate-700 transition-all cursor-pointer"
+                            className="p-1 rounded-md text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all cursor-pointer"
                             title="Copy to clipboard (Click any slot to paste, or press Ctrl+V)"
                           >
                             {isCopied ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <Check className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
                             ) : (
                               <Copy className="w-3.5 h-3.5" />
                             )}
                           </button>
 
-                          <GripVertical className="w-3.5 h-3.5 text-slate-500 group-hover:text-indigo-400 shrink-0" />
+                          <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 dark:text-slate-500 dark:group-hover:text-indigo-400 shrink-0" />
                         </div>
                       </div>
 
                       {/* Formation, Concept, Personnel tags */}
-                      <div className="flex items-center gap-1.5 mt-1 text-[9.5px] text-slate-400 flex-wrap">
+                      <div className="flex items-center gap-1.5 mt-1 text-[9.5px] text-slate-500 dark:text-slate-400 flex-wrap">
                         {item.formation && (
-                          <span className="bg-slate-900/90 text-slate-300 px-1.5 py-0.2 rounded border border-slate-700/60 font-mono">
+                          <span className="bg-slate-100 dark:bg-slate-900/90 text-slate-700 dark:text-slate-300 px-1.5 py-0.2 rounded border border-slate-200 dark:border-slate-700/60 font-mono">
                             {item.formation}
                           </span>
                         )}
                         {item.personnel && (
-                          <span className="text-slate-400 font-mono">
+                          <span className="text-slate-500 dark:text-slate-400 font-mono">
                             {item.personnel}
                           </span>
                         )}
@@ -873,12 +873,12 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
             <>
               {filteredPlays.length === 0 ? (
                 <div className="p-6 text-center space-y-3">
-                  <div className="w-10 h-10 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
                     <BookOpen className="w-5 h-5 text-slate-400" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-slate-300">No plays found</p>
-                    <p className="text-[11px] text-slate-400 mt-1">
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-300">No plays found</p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                       {searchTerm
                         ? `No plays match "${searchTerm}".`
                         : `No ${unit} plays found with current filters.`}
@@ -926,10 +926,10 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                         isManageMode || isOrderSelectMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
                       } ${
                         isManageMode && selectedPlayIds[play.id]
-                          ? 'bg-rose-950/30 border-rose-500/60 ring-1 ring-rose-500/40'
+                          ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-300 dark:border-rose-500/60 ring-1 ring-rose-500/40'
                           : isOrderSelectMode && isQueued
-                          ? 'bg-indigo-950/40 border-indigo-500 ring-2 ring-indigo-500/50 shadow-md'
-                          : 'bg-slate-850 hover:bg-slate-800 border-slate-750 hover:border-indigo-500/60'
+                          ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-500 ring-2 ring-indigo-500/50 shadow-md'
+                          : 'bg-white hover:bg-slate-50 dark:bg-slate-850 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-750 hover:border-indigo-500/60'
                       }`}
                       title={
                         isManageMode
@@ -946,9 +946,9 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                           {isManageMode && (
                             <div className="shrink-0 mr-0.5">
                               {selectedPlayIds[play.id] ? (
-                                <CheckSquare className="w-4 h-4 text-rose-400" />
+                                <CheckSquare className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                               ) : (
-                                <Square className="w-4 h-4 text-slate-500" />
+                                <Square className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                               )}
                             </div>
                           )}
@@ -959,7 +959,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                                   {orderNum}
                                 </span>
                               ) : (
-                                <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-500 border border-slate-700 group-hover:border-indigo-500 text-[10px] flex items-center justify-center font-bold">
+                                <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 group-hover:border-indigo-500 text-[10px] flex items-center justify-center font-bold">
                                   +
                                 </span>
                               )}
@@ -989,7 +989,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                             if (play.wristbandNum) {
                               return (
                                 <span
-                                  className="px-1.5 py-0.5 rounded font-mono text-[9px] font-semibold text-slate-400 bg-transparent border border-slate-700/70 shrink-0 leading-tight"
+                                  className="px-1.5 py-0.5 rounded font-mono text-[9px] font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-transparent border border-slate-200 dark:border-slate-750 shrink-0 leading-tight"
                                   title="No spot on active wristband"
                                 >
                                   {play.wristbandNum}
@@ -1000,7 +1000,7 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                             return null;
                           })()}
 
-                          <span className="font-bold text-xs text-slate-100 group-hover:text-white uppercase truncate">
+                          <span className="font-bold text-xs text-slate-900 group-hover:text-black dark:text-slate-100 dark:group-hover:text-white uppercase truncate">
                             {play.name}
                           </span>
                         </div>
@@ -1013,11 +1013,11 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                                 e.stopPropagation();
                                 handleCopyLibraryPlay(play);
                               }}
-                              className="p-1 rounded-md text-slate-400 hover:text-indigo-300 hover:bg-slate-700 transition-all cursor-pointer"
+                              className="p-1 rounded-md text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all cursor-pointer"
                               title="Copy to clipboard (Paste with Ctrl+V on any cell)"
                             >
                               {isCopied ? (
-                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                <Check className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
                               ) : (
                                 <Copy className="w-3.5 h-3.5" />
                               )}
@@ -1031,32 +1031,32 @@ export const PlayBankSidebar: React.FC<PlayBankSidebarProps> = ({
                                 e.stopPropagation();
                                 setPlayToDelete(play);
                               }}
-                              className="p-1 rounded-md text-slate-400 hover:text-rose-400 hover:bg-rose-950/60 transition-all cursor-pointer"
+                              className="p-1 rounded-md text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-all cursor-pointer"
                               title={`Delete "${play.name}" from play bank`}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           )}
                           {!isManageMode && !isOrderSelectMode && (
-                            <GripVertical className="w-3.5 h-3.5 text-slate-500 group-hover:text-indigo-400 shrink-0" />
+                            <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 dark:text-slate-500 dark:group-hover:text-indigo-400 shrink-0" />
                           )}
                         </div>
                       </div>
 
                       {/* Formation, Concept, Personnel tags */}
-                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400 flex-wrap">
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 flex-wrap">
                         {play.formation && (
-                          <span className="bg-slate-900 text-slate-300 px-1.5 py-0.2 rounded border border-slate-750 font-mono">
+                          <span className="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 px-1.5 py-0.2 rounded border border-slate-200 dark:border-slate-750 font-mono">
                             {play.formation}
                           </span>
                         )}
                         {play.concept && (
-                          <span className="text-slate-400 font-mono truncate max-w-[130px]">
+                          <span className="text-slate-500 dark:text-slate-400 font-mono truncate max-w-[130px]">
                             {play.concept}
                           </span>
                         )}
                         {play.personnel && (
-                          <span className="text-slate-400 font-mono ml-auto">
+                          <span className="text-slate-500 dark:text-slate-400 font-mono ml-auto">
                             {play.personnel}
                           </span>
                         )}

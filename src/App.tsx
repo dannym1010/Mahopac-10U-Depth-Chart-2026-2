@@ -642,13 +642,13 @@ export default function App() {
     if (themeMode === 'light') {
       root.classList.add('theme-light');
       document.body.classList.add('theme-light');
-      root.classList.remove('theme-dark');
-      document.body.classList.remove('theme-dark');
+      root.classList.remove('theme-dark', 'dark');
+      document.body.classList.remove('theme-dark', 'dark');
     } else {
       root.classList.remove('theme-light');
       document.body.classList.remove('theme-light');
-      root.classList.add('theme-dark');
-      document.body.classList.add('theme-dark');
+      root.classList.add('theme-dark', 'dark');
+      document.body.classList.add('theme-dark', 'dark');
     }
 
     try {

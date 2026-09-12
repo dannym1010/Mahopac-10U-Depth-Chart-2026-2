@@ -405,7 +405,7 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
     ? {
         backgroundColor: rowHighlightColor,
         borderLeft: `3.5px solid ${numberBgColor || '#4f46e5'}`,
-        color: isDarkRowHighlight ? '#ffffff' : undefined,
+        color: isDarkRowHighlight ? '#ffffff' : '#0f172a',
         WebkitPrintColorAdjust: 'exact',
         printColorAdjust: 'exact',
       }
@@ -504,9 +504,17 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
               ? 'text-slate-400 dark:text-slate-500 italic font-normal print:hidden'
               : isDarkRowHighlight
               ? 'text-white font-bold print:!text-white'
+              : rowHighlightColor
+              ? 'text-slate-900 font-bold'
               : 'text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 print:!text-black print:group-hover:!text-black'
           }`}
-          style={isDarkRowHighlight ? { color: '#ffffff', WebkitTextFillColor: '#ffffff' } : undefined}
+          style={
+            isDarkRowHighlight
+              ? { color: '#ffffff', WebkitTextFillColor: '#ffffff' }
+              : rowHighlightColor
+              ? { color: '#0f172a', WebkitTextFillColor: '#0f172a' }
+              : undefined
+          }
         >
           {hasRealName ? (
             cleanPlayName
@@ -521,6 +529,8 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
             className={`text-[9px] font-mono shrink-0 hidden sm:inline-block print:text-[8px] print:inline-block ${
               isDarkRowHighlight
                 ? 'text-white/90 print:!text-white'
+                : rowHighlightColor
+                ? 'text-slate-700'
                 : 'text-slate-500 dark:text-slate-400 print:!text-slate-800 print:group-hover:!text-slate-800'
             }`}
           >

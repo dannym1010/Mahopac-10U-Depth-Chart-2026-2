@@ -233,7 +233,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="p-2 rounded-xl bg-slate-900 border border-indigo-500/40 text-indigo-400 hover:text-indigo-300 active:scale-95 transition-all cursor-pointer shadow-sm"
+            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-indigo-500/40 text-indigo-700 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 active:scale-95 transition-all cursor-pointer shadow-xs dark:shadow-sm"
             title="Open Coach Tools & Settings"
           >
             <Menu className="w-4 h-4" />
@@ -244,7 +244,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* =========================================================================
           2. CONSOLIDATED DESKTOP HEADER BAR (md: and above)
           ========================================================================= */}
-      <div className="hidden md:flex max-w-[1700px] mx-auto px-4 py-3 items-center justify-between gap-4 border-b border-slate-800">
+      <div className="hidden md:flex max-w-[1700px] mx-auto px-4 py-3 items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800">
         {/* Left: Team & Program Identity */}
         <div
           onClick={onNavigateToHome}
@@ -568,21 +568,21 @@ export const Header: React.FC<HeaderProps> = ({
           4. SLIDE-OVER MOBILE QUICK MENU MODAL
           ========================================================================= */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
-          <div className="bg-slate-950 border border-slate-800 rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden p-4 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden p-4 space-y-4 text-slate-900 dark:text-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <span className="p-2 bg-indigo-500/20 text-indigo-400 rounded-xl border border-indigo-500/40">
+                <span className="p-2 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 rounded-xl border border-indigo-200 dark:border-indigo-500/40">
                   <Sliders className="w-4 h-4" />
                 </span>
                 <div>
-                  <h3 className="text-sm font-black text-slate-100">Coach Settings &amp; Tools</h3>
-                  <p className="text-[11px] text-slate-400">{userEmail}</p>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">Coach Settings &amp; Tools</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">{userEmail}</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-white rounded-xl bg-slate-900 cursor-pointer"
+                className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-xl bg-slate-100 dark:bg-slate-900 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -616,13 +616,13 @@ export const Header: React.FC<HeaderProps> = ({
                     setIsMobileMenuOpen(false);
                     onNavigateToMobileHub();
                   }}
-                  className="w-full flex items-center justify-between p-3 rounded-xl bg-indigo-950/40 hover:bg-indigo-900/50 text-indigo-200 font-bold border border-indigo-500/40 cursor-pointer"
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-200 font-bold border border-indigo-200 dark:border-indigo-500/40 cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <Smartphone className="w-4 h-4 text-indigo-400" />
+                    <Smartphone className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     <span>Open Mobile Field HUD</span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-indigo-400" />
+                  <ChevronRight className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 </button>
               )}
 
@@ -634,13 +634,13 @@ export const Header: React.FC<HeaderProps> = ({
                     onForceSave();
                     setIsMobileMenuOpen(false);
                   }}
-                  className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-300 font-bold border border-slate-800 cursor-pointer"
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-emerald-700 dark:text-emerald-300 font-bold border border-slate-200 dark:border-slate-800 cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <Cloud className="w-4 h-4 text-emerald-400" />
+                    <Cloud className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <span>Save &amp; Sync Cloud Data</span>
                   </div>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 </button>
               )}
 
@@ -652,13 +652,13 @@ export const Header: React.FC<HeaderProps> = ({
                     setIsMobileMenuOpen(false);
                     onOpenPreferencesModal();
                   }}
-                  className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-indigo-300 font-bold border border-indigo-500/30 cursor-pointer"
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-indigo-700 dark:text-indigo-300 font-bold border border-slate-200 dark:border-indigo-500/30 cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <Sliders className="w-4 h-4 text-indigo-400" />
+                    <Sliders className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     <span>Coach Preferences &amp; Defaults</span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                  <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                 </button>
               )}
 
@@ -698,13 +698,13 @@ export const Header: React.FC<HeaderProps> = ({
                     setIsMobileMenuOpen(false);
                     onOpenThemeGallery();
                   }}
-                  className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-indigo-300 font-bold border border-slate-800 cursor-pointer"
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-indigo-700 dark:text-indigo-300 font-bold border border-slate-200 dark:border-slate-800 cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <Sparkles className="w-4 h-4 text-indigo-400" />
+                    <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     <span>Visual Theme Gallery</span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                  <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                 </button>
               )}
 
@@ -716,13 +716,13 @@ export const Header: React.FC<HeaderProps> = ({
                     setIsMobileMenuOpen(false);
                     onOpenCopyWeekModal();
                   }}
-                  className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-300 font-bold border border-slate-800 cursor-pointer"
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-cyan-700 dark:text-cyan-300 font-bold border border-slate-200 dark:border-slate-800 cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <Copy className="w-4 h-4 text-cyan-400" />
+                    <Copy className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                     <span>Clone Week Depth &amp; Formations</span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                  <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                 </button>
               )}
 
@@ -733,26 +733,26 @@ export const Header: React.FC<HeaderProps> = ({
                   setIsMobileMenuOpen(false);
                   onToggleFullScreen();
                 }}
-                className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 font-bold border border-slate-800 cursor-pointer"
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold border border-slate-200 dark:border-slate-800 cursor-pointer"
               >
                 <div className="flex items-center gap-2.5">
-                  <Maximize className="w-4 h-4 text-slate-400" />
+                  <Maximize className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                   <span>Toggle Fullscreen</span>
                 </div>
               </button>
 
               {/* Admin Data Backup */}
               {userRole === 'admin' && (
-                <div className="pt-2 border-t border-slate-800 grid grid-cols-2 gap-2">
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-800 grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => {
                       setIsMobileMenuOpen(false);
                       onExportData();
                     }}
-                    className="p-2.5 rounded-xl bg-slate-900 text-indigo-300 font-bold border border-slate-800 text-center flex items-center justify-center gap-1.5 cursor-pointer hover:bg-slate-800"
+                    className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-indigo-700 dark:text-indigo-300 font-bold border border-slate-200 dark:border-slate-800 text-center flex items-center justify-center gap-1.5 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800"
                   >
-                    <Download className="w-3.5 h-3.5 text-indigo-400" />
+                    <Download className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                     <span>Export JSON</span>
                   </button>
                   <button
@@ -761,9 +761,9 @@ export const Header: React.FC<HeaderProps> = ({
                       setIsMobileMenuOpen(false);
                       onImportClick();
                     }}
-                    className="p-2.5 rounded-xl bg-slate-900 text-cyan-300 font-bold border border-slate-800 text-center flex items-center justify-center gap-1.5 cursor-pointer hover:bg-slate-800"
+                    className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-cyan-700 dark:text-cyan-300 font-bold border border-slate-200 dark:border-slate-800 text-center flex items-center justify-center gap-1.5 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800"
                   >
-                    <Upload className="w-3.5 h-3.5 text-cyan-400" />
+                    <Upload className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
                     <span>Import JSON</span>
                   </button>
                 </div>

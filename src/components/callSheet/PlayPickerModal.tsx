@@ -280,28 +280,28 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+      <div className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden text-slate-900 dark:text-slate-100">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-850">
+        <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-850">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${unit === 'offense' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'}`}>
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${unit === 'offense' ? 'bg-red-500/20 text-red-500 dark:text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-500 dark:text-blue-400 border border-blue-500/30'}`}>
               <BookOpen className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base sm:text-lg font-black text-slate-100 tracking-tight">
+                <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
                   {isMultiSelect ? 'Select Multiple Plays in Order' : `Pick Play for Slot ${slotIndex + 1}`}
                 </h2>
-                <span className="text-[11px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                <span className="text-[11px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">
                   {sectionTitle}
                 </span>
                 {isMultiSelect && (
-                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/40">
                     Starting at Slot {slotIndex + 1}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {isMultiSelect
                   ? 'Click plays in the order you want them on the wristband (1, 2, 3...).'
                   : 'Select a recommended play from your database or write in a custom call.'}
@@ -310,7 +310,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -318,12 +318,12 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
 
         {/* Current Play Info Bar (if one is already assigned) */}
         {currentPlay && !isCreatingCustom && (
-          <div className="px-5 py-2.5 bg-slate-850/70 border-b border-slate-800 flex items-center justify-between text-xs">
+          <div className="px-5 py-2.5 bg-slate-100/80 dark:bg-slate-850/70 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-slate-400">Current Slot:</span>
-              <span className="font-bold text-slate-200 truncate">{currentPlay.name}</span>
+              <span className="text-slate-500 dark:text-slate-400">Current Slot:</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200 truncate">{currentPlay.name}</span>
               {currentPlay.formation && (
-                <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] font-mono">
+                <span className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-mono">
                   {currentPlay.formation}
                 </span>
               )}
@@ -333,7 +333,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                 onClearSlot();
                 onClose();
               }}
-              className="px-2.5 py-1 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-500/30 text-red-300 font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-colors"
+              className="px-2.5 py-1 rounded-lg bg-red-100 hover:bg-red-200 dark:bg-red-950/40 dark:hover:bg-red-900/60 border border-red-300 dark:border-red-500/30 text-red-700 dark:text-red-300 font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-colors"
             >
               <Trash2 className="w-3 h-3" />
               <span>Clear Slot</span>
@@ -342,15 +342,15 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
         )}
 
         {/* Action Toggle (Browse Database vs Create Custom vs Multi-Select) */}
-        <div className="px-5 pt-3 pb-2 flex items-center justify-between gap-2 border-b border-slate-800 bg-slate-900/60 flex-wrap">
-          <div className="flex items-center gap-1.5 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 flex-wrap">
+        <div className="px-5 pt-3 pb-2 flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 flex-wrap">
+          <div className="flex items-center gap-1.5 bg-slate-200/80 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-300 dark:border-slate-700/60 flex-wrap">
             <button
               type="button"
               onClick={() => setIsCreatingCustom(false)}
               className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 !isCreatingCustom
                   ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               📚 Play Database ({filteredPlays.length})
@@ -361,7 +361,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
               className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                 isCreatingCustom
                   ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <Plus className="w-3.5 h-3.5" />
@@ -377,7 +377,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                 className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                   isMultiSelect
                     ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
                 title="Click multiple plays to place them in order"
               >
@@ -392,10 +392,10 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                   onClose();
                   onOpenExcelImport();
                 }}
-                className="px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-300 hover:text-emerald-200 bg-emerald-950/60 hover:bg-emerald-900/60 border border-emerald-500/40 transition-colors cursor-pointer flex items-center gap-1"
+                className="px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-200 bg-emerald-100 dark:bg-emerald-950/60 hover:bg-emerald-200 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-500/40 transition-colors cursor-pointer flex items-center gap-1"
                 title="Import list of plays from Excel (.xlsx, .csv)"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span className="hidden sm:inline">Import Excel</span>
               </button>
             )}
@@ -407,8 +407,8 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
               onClick={() => setFilterSituationOnly(!filterSituationOnly)}
               className={`text-[11px] font-bold px-2.5 py-1 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
                 filterSituationOnly
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                  : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                  ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40'
+                  : 'bg-slate-100 text-slate-600 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <Filter className="w-3 h-3" />
@@ -429,7 +429,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder={`Search ${unit} plays by name, formation, concept, or tag...`}
-                  className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
 
@@ -440,8 +440,8 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                   onClick={() => setSelectedType('all')}
                   className={`px-2.5 py-0.5 rounded-lg font-bold whitespace-nowrap cursor-pointer transition-colors ${
                     selectedType === 'all'
-                      ? 'bg-slate-200 text-slate-900'
-                      : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                      ? 'bg-slate-900 text-white dark:bg-slate-200 dark:text-slate-900'
+                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-200 border border-slate-200 dark:border-transparent'
                   }`}
                 >
                   All Types
@@ -457,7 +457,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                     className={`px-2 py-0.5 rounded-lg font-bold uppercase tracking-wider text-[10px] whitespace-nowrap cursor-pointer transition-colors ${
                       selectedType === t
                         ? 'bg-indigo-600 text-white'
-                        : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                        : 'bg-slate-100 text-slate-600 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-200 border border-slate-200 dark:border-transparent'
                     }`}
                   >
                     {t.replace('_', ' ')}
@@ -466,8 +466,8 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
               </div>
 
               {/* Personnel Sub-tabs Breakdown */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-[10.5px] pt-0.5 border-t border-slate-800/80">
-                <span className="text-[10px] font-bold uppercase text-slate-400 whitespace-nowrap">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-[10.5px] pt-0.5 border-t border-slate-200 dark:border-slate-800/80">
+                <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 whitespace-nowrap">
                   Personnel:
                 </span>
                 {personnelTabs.map((tab) => (
@@ -478,7 +478,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                     className={`px-2 py-0.5 rounded-md font-bold whitespace-nowrap transition-colors cursor-pointer ${
                       selectedPersonnel === tab.id
                         ? 'bg-indigo-600 text-white shadow-xs'
-                        : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                        : 'bg-slate-100 text-slate-600 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-200 border border-slate-200 dark:border-transparent'
                     }`}
                   >
                     {tab.id === 'all' ? 'All' : tab.label.replace(' Personnel', ' Pers')} ({tab.count})
@@ -507,8 +507,8 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                     }}
                     className={`p-3 rounded-2xl cursor-pointer transition-all flex items-start justify-between gap-3 group active:scale-[0.99] border ${
                       isSelectedInQueue
-                        ? 'bg-indigo-950/40 border-indigo-500 ring-2 ring-indigo-500/50 shadow-md'
-                        : 'bg-slate-800/80 hover:bg-slate-750 hover:border-indigo-500/60 border-slate-700/70'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-500 ring-2 ring-indigo-500/50 shadow-md'
+                        : 'bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-750 hover:border-indigo-500/60 border-slate-200 dark:border-slate-700/70 shadow-xs'
                     }`}
                   >
                     {isMultiSelect && (
@@ -518,7 +518,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                             {orderNum}
                           </span>
                         ) : (
-                          <span className="w-6 h-6 rounded-full bg-slate-800/90 text-slate-500 border border-slate-700 group-hover:border-indigo-500/50 group-hover:text-indigo-400 text-xs flex items-center justify-center font-bold">
+                          <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800/90 text-slate-500 border border-slate-300 dark:border-slate-700 group-hover:border-indigo-500/50 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 text-xs flex items-center justify-center font-bold">
                             +
                           </span>
                         )}
@@ -548,7 +548,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                           if (play.wristbandNum) {
                             return (
                               <span
-                                className="px-1.5 py-0.5 rounded-md font-mono text-[10px] font-semibold text-slate-400 bg-transparent border border-slate-700/70"
+                                className="px-1.5 py-0.5 rounded-md font-mono text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-transparent border border-slate-300 dark:border-slate-700/70"
                                 title="No spot on active wristband"
                               >
                                 {play.wristbandNum}
@@ -558,21 +558,21 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
 
                           return null;
                         })()}
-                        <h4 className="text-sm font-black text-slate-100 group-hover:text-white truncate">
+                        <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-white truncate">
                           {play.name}
                         </h4>
                         <span className={`px-2 py-0.5 rounded-md text-[9.5px] font-black uppercase tracking-wider border ${style.bg} ${style.text} ${style.border}`}>
                           {play.type.replace('_', ' ')}
                         </span>
                         {play.formation && (
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-slate-900/90 text-slate-300 border border-slate-700">
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-slate-100 dark:bg-slate-900/90 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                             {play.formation}
                           </span>
                         )}
                       </div>
 
                       {play.concept && (
-                        <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                        <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
                           {play.concept}
                         </p>
                       )}
@@ -583,7 +583,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                           {play.situations.slice(0, 4).map((sit, sIdx) => (
                             <span
                               key={sIdx}
-                              className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-750"
+                              className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-750"
                             >
                               {sit}
                             </span>
@@ -712,9 +712,9 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
             </div>
 
             {isMultiSelect && (
-              <div className="p-3 sm:p-4 bg-slate-950 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0 rounded-b-3xl">
+              <div className="p-3 sm:p-4 bg-slate-100 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0 rounded-b-3xl">
                 <div className="flex items-center gap-2 overflow-x-auto py-1 no-scrollbar min-w-0 flex-1">
-                  <span className="text-xs font-bold text-slate-300 shrink-0 flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0 flex items-center gap-1.5">
                     <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[11px] font-black font-mono">
                       {selectedQueue.length}
                     </span>
@@ -731,9 +731,9 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                       {selectedQueue.map((item, idx) => (
                         <span
                           key={`${item.id}_${idx}`}
-                          className="px-2 py-1 rounded-lg bg-indigo-900/50 border border-indigo-500/50 text-indigo-200 text-xs font-bold flex items-center gap-1.5 shrink-0"
+                          className="px-2 py-1 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 border border-indigo-300 dark:border-indigo-500/50 text-indigo-900 dark:text-indigo-200 text-xs font-bold flex items-center gap-1.5 shrink-0"
                         >
-                          <span className="text-amber-400 font-mono font-black">{idx + 1}</span>
+                          <span className="text-amber-600 dark:text-amber-400 font-mono font-black">{idx + 1}</span>
                           <span className="max-w-[130px] truncate">{item.name}</span>
                           <button
                             type="button"
@@ -741,7 +741,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                               e.stopPropagation();
                               setSelectedQueue((prev) => prev.filter((_, i) => i !== idx));
                             }}
-                            className="text-slate-400 hover:text-white ml-0.5 cursor-pointer text-sm font-bold"
+                            className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white ml-0.5 cursor-pointer text-sm font-bold"
                             title="Remove from queue"
                           >
                             &times;
@@ -757,7 +757,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setSelectedQueue([])}
-                      className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                     >
                       Clear Queue
                     </button>
@@ -769,7 +769,7 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
                     className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-md ${
                       selectedQueue.length > 0
                         ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer hover:scale-[1.02]'
-                        : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                        : 'bg-slate-200 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed'
                     }`}
                   >
                     <Check className="w-4 h-4" />
@@ -787,35 +787,35 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
           /* Custom Play Form */
           <form onSubmit={handleSaveCustom} className="p-4 sm:p-5 space-y-3.5 overflow-y-auto">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300">Play Call Name *</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Play Call Name *</label>
               <input
                 type="text"
                 required
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
                 placeholder={unit === 'offense' ? 'e.g. 24 Dive Lead, Bootleg Flood Right...' : 'e.g. 4-3 Cover 3 Sky, Fire Zone Blitz...'}
-                className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-bold"
+                className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-bold"
               />
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-300">Formation / Front</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Formation / Front</label>
                 <input
                   type="text"
                   value={customFormation}
                   onChange={(e) => setCustomFormation(e.target.value)}
                   placeholder="e.g. I-Right, Gun Trips, 4-3 Over"
-                  className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-slate-100"
+                  className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-300">Play Type</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Play Type</label>
                 <select
                   value={customType}
                   onChange={(e) => setCustomType(e.target.value as PlayType)}
-                  className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-slate-100 capitalize"
+                  className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 capitalize"
                 >
                   {(unit === 'offense'
                     ? ['run', 'pass', 'play_action', 'screen', 'rpo', 'trick', 'two_point']
@@ -829,44 +829,44 @@ export const PlayPickerModal: React.FC<PlayPickerModalProps> = ({
               </div>
 
               <div className="space-y-1 col-span-2 sm:col-span-1">
-                <label className="text-xs font-bold text-slate-300">Wristband Slot (Optional)</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Wristband Slot (Optional)</label>
                 <input
                   type="number"
                   value={customWristbandNum}
                   onChange={(e) => setCustomWristbandNum(e.target.value)}
                   placeholder="e.g. 1"
-                  className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-slate-100 font-mono"
+                  className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 font-mono"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300">Personnel / Package</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Personnel / Package</label>
               <input
                 type="text"
                 value={customPersonnel}
                 onChange={(e) => setCustomPersonnel(e.target.value)}
                 placeholder="e.g. 21 Personnel, Jumbo 22, Nickel 4-2-5"
-                className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-slate-100"
+                className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300">Coaching Notes / Scheme Concept</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Coaching Notes / Scheme Concept</label>
               <textarea
                 rows={2}
                 value={customConcept}
                 onChange={(e) => setCustomConcept(e.target.value)}
                 placeholder="Key assignment, read progression, check against blitz..."
-                className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder:text-slate-500"
+                className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
               />
             </div>
 
-            <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-800">
+            <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setIsCreatingCustom(false)}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors cursor-pointer"
+                className="px-3.5 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors cursor-pointer"
               >
                 Back to Database
               </button>
