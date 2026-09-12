@@ -92,119 +92,119 @@ const POSITION_FOLDER_META: Record<
     name: 'Defensive Schemes & Shells',
     shortLabel: 'Schemes',
     icon: '📋',
-    badgeColor: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
+    badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800',
     description: '4-4 Base Stack Liz, 5-3 Bear Youth, 4-3 Over Front, 6-2 Goal Line Wall, Cover 3 Sky, Cover 2 Tampa',
   },
   DL: {
     name: 'Defensive Tackles (DL / NT)',
     shortLabel: 'DL / DT',
     icon: '🏈',
-    badgeColor: 'bg-indigo-600/20 text-indigo-300 border-indigo-500/30',
+    badgeColor: 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800/70 dark:text-slate-200 dark:border-slate-700',
     description: 'A/B-Gap Fits, Ball Get-Off, Strike & Shed, NT 2-Gap Bullet & Spill, Double-Team Split',
   },
   DE: {
     name: 'Defensive Ends (DE / Edge)',
     shortLabel: 'DE / Edge',
     icon: '⚡',
-    badgeColor: 'bg-cyan-600/20 text-cyan-300 border-cyan-500/30',
+    badgeColor: 'bg-cyan-50 text-cyan-800 border-cyan-200 dark:bg-cyan-950/50 dark:text-cyan-300 dark:border-cyan-800',
     description: 'Outside Containment Stiff-Arm, Hoop Bend & Flatten, Backside Squeeze & Settle, Contain-Crash Stunt',
   },
   LB: {
     name: 'Linebackers (LB / Box & Edge)',
     shortLabel: 'Linebackers',
     icon: '💥',
-    badgeColor: 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30',
+    badgeColor: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
     description: '6-Inch Freeze Step, Scrape-and-Spill Pulling Guard, Inside-Out Mirror & Scrape, Pass-Off Zone Drops',
   },
   DB: {
     name: 'Defensive Backs (DB / Secondary)',
     shortLabel: 'Secondary',
     icon: '🦅',
-    badgeColor: 'bg-purple-600/20 text-purple-300 border-purple-500/30',
+    badgeColor: 'bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-800',
     description: 'Fast Alley Trigger, Open-Field Force & Alley Tackle, Centerfield Post Break, 45° Backpedal, Tip Turnover Circuit',
   },
   TEAM: {
     name: 'Team Tackling & Circuits',
     shortLabel: 'Team Defense',
     icon: '🎯',
-    badgeColor: 'bg-amber-600/20 text-amber-300 border-amber-500/30',
+    badgeColor: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
     description: '4-Corner Pursuit & Swarm, Hawk Profile Tackle, 3-Man Turnover Relay, Goal Line Stand (4th & Inches)',
   },
   OFFENSE: {
     name: 'Offense (All Units)',
     shortLabel: 'Offense',
     icon: '🏈',
-    badgeColor: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
+    badgeColor: 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800',
     description: 'Quarterback drops, running back mesh paths, offensive line power steps, receiver routes & team install',
   },
   DEFENSE: {
     name: 'Defense (All Units)',
     shortLabel: 'Defense',
     icon: '🛡️',
-    badgeColor: 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30',
+    badgeColor: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
     description: 'Defensive tackles, edge containment, linebacker scrape, secondary trigger, stunts & team schemes',
   },
   OFF_QB: {
     name: 'Quarterbacks (QB)',
     shortLabel: 'QB',
     icon: '🎯',
-    badgeColor: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
+    badgeColor: 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800',
     description: 'Under-center drop, shotgun quick game, play-action bootleg mesh, and target net drills',
   },
   OFF_RB: {
     name: 'Running Backs (RB)',
     shortLabel: 'RB',
     icon: '💨',
-    badgeColor: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
+    badgeColor: 'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-800',
     description: 'Handoff mesh, downhill A/B gap press, running back gauntlet, and perimeter outside zone',
   },
   OFF_OL: {
     name: 'Offensive Line (OL)',
     shortLabel: 'OL',
     icon: '🧱',
-    badgeColor: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
+    badgeColor: 'bg-stone-100 text-stone-800 border-stone-300 dark:bg-stone-900/60 dark:text-stone-300 dark:border-stone-700',
     description: '6-inch power step, drive blocking under chute, pulling guard trap technique, and 2-step footwork',
   },
   OFF_WR: {
     name: 'Wide Receivers & Tight Ends (WR/TE)',
     shortLabel: 'WR/TE',
     icon: '⚡',
-    badgeColor: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
+    badgeColor: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
     description: '2-point stance release, route tree landmarks, stalk blocking, diamond hands, and inline TE seal',
   },
   OFF_TEAM: {
     name: 'Team Offense & Group Install',
     shortLabel: 'Off Team',
     icon: '👥',
-    badgeColor: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
+    badgeColor: 'bg-indigo-50 text-indigo-800 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800',
     description: 'Individual stance & legal alignment, QB-Center exchanges, walkthrough installs, and 11-on-11 scrimmage',
   },
   TACKLE: {
     name: 'Form Fit Tackling Circuits',
     shortLabel: 'Tackling',
     icon: '🥋',
-    badgeColor: 'bg-rose-600/20 text-rose-300 border-rose-500/30',
+    badgeColor: 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800',
     description: 'Near-foot drive, chest-to-chest fit, wrap & squeeze, and safe head-out form tackle drills',
   },
   BLOCKING: {
     name: 'Run & Pass Blocking Technique',
     shortLabel: 'Blocking',
     icon: '🛡️',
-    badgeColor: 'bg-teal-600/20 text-teal-300 border-teal-500/30',
+    badgeColor: 'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-800',
     description: 'Drive block 6-inch power step, double-team post-and-drive, zone combo climbing, and pass set punch',
   },
   ST: {
     name: 'Special Teams (Kick & Punt)',
     shortLabel: 'Special Teams',
     icon: '🌟',
-    badgeColor: 'bg-yellow-600/20 text-yellow-300 border-yellow-500/30',
+    badgeColor: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
     description: 'Kickoff lane containment, wedge breaking, punt snap protection, and gunner release technique',
   },
   WARMUP: {
     name: 'Dynamic Warm-Up & Agility',
     shortLabel: 'Warm-Up',
     icon: '🏃',
-    badgeColor: 'bg-orange-600/20 text-orange-300 border-orange-500/30',
+    badgeColor: 'bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-800',
     description: 'High knees, butt kicks, carioca, hip openers, lateral shuffles, and change-of-direction ladders',
   },
 };
@@ -942,14 +942,14 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
 
       {/* Mobile Top Segmented Tab (Position & Drill List vs Full-Width Chalkboard) */}
       <div className="w-full max-w-7xl mb-2.5 px-2 sm:px-0 sm:hidden print:hidden">
-        <div className="grid grid-cols-2 p-1 bg-slate-900 border border-slate-800 rounded-xl text-xs font-black shadow-lg">
+        <div className="grid grid-cols-2 p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black shadow-xs dark:shadow-lg">
           <button
             type="button"
             onClick={() => setMobileViewMode('list')}
             className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               mobileViewMode === 'list'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800'
             }`}
           >
             <Layers className="w-4 h-4" />
@@ -960,8 +960,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             onClick={() => setMobileViewMode('drill')}
             className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               mobileViewMode === 'drill'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800'
             }`}
           >
             <PenTool className="w-4 h-4" />
@@ -974,19 +974,19 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
         /* =========================================================================
            POSITION & DRILL SELECTION LIST VIEW (SELECT POSITION & DRILL FROM LIST)
            ========================================================================= */
-        <section className="w-full max-w-7xl bg-slate-900 border-x-0 sm:border border-slate-800 rounded-none sm:rounded-2xl p-3 sm:p-5 shadow-2xl space-y-4">
+        <section className="w-full max-w-7xl bg-white dark:bg-slate-900 border-x-0 sm:border border-slate-200 dark:border-slate-800 rounded-none sm:rounded-2xl p-3 sm:p-5 shadow-xs dark:shadow-2xl space-y-4">
           {/* Header & Return to Open Drill */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
             <div>
               <div className="flex items-center gap-2.5">
-                <span className="p-2 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30">
+                <span className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-600/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30">
                   <Layers className="w-5 h-5" />
                 </span>
                 <div>
-                  <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-wide">
+                  <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white uppercase tracking-wide">
                     Select Position & Drill
                   </h2>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
                     Choose a position group below, then tap any drill to open directly on the whiteboard
                   </p>
                 </div>
@@ -1000,7 +1000,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 setMobileViewMode('drill');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-750 text-blue-300 hover:text-blue-200 border border-blue-500/30 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-indigo-700 dark:text-blue-300 hover:text-indigo-900 dark:hover:text-blue-200 border border-slate-200 dark:border-blue-500/30 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
             >
               <span>Return to Open Drill</span>
               <ChevronRight className="w-4 h-4" />
@@ -1010,8 +1010,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           {/* 1. Position Group Selection Chips */}
           <div>
             <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="text-xs font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
-                <Shield className="w-3.5 h-3.5 text-blue-400" />
+              <span className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-indigo-600 dark:text-blue-400" />
                 Step 1: Choose Position Group
               </span>
               <span className="text-[11px] text-slate-500 font-bold">
@@ -1025,21 +1025,21 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 onClick={() => handleSelectCategory('ALL')}
                 className={`p-2.5 rounded-xl border text-left flex flex-col justify-between gap-1 transition-all cursor-pointer ${
                   selectedCategory === 'ALL'
-                    ? 'bg-blue-600 text-white border-blue-500 shadow-md ring-2 ring-blue-400/40'
-                    : 'bg-slate-950/70 hover:bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-md ring-2 ring-indigo-400/40'
+                    : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/70 dark:hover:bg-slate-950 text-slate-700 hover:text-slate-950 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                 }`}
               >
                 <div className="flex items-center justify-between w-full">
                   <span className="text-base">🏈</span>
                   <span className={`text-[10px] font-black px-1.5 py-0.2 rounded ${
-                    selectedCategory === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
+                    selectedCategory === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400'
                   }`}>
                     {drills.length}
                   </span>
                 </div>
                 <div>
                   <div className="text-xs font-black uppercase">ALL POSITIONS</div>
-                  <div className={`text-[10px] ${selectedCategory === 'ALL' ? 'text-blue-100' : 'text-slate-500'}`}>
+                  <div className={`text-[10px] ${selectedCategory === 'ALL' ? 'text-indigo-100' : 'text-slate-500'}`}>
                     Entire Playbook
                   </div>
                 </div>
@@ -1055,21 +1055,21 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                     onClick={() => handleSelectCategory(pos.id)}
                     className={`p-2.5 rounded-xl border text-left flex flex-col justify-between gap-1 transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-blue-600 text-white border-blue-500 shadow-md ring-2 ring-blue-400/40'
-                        : 'bg-slate-950/70 hover:bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+                        ? 'bg-indigo-600 text-white border-indigo-500 shadow-md ring-2 ring-indigo-400/40'
+                        : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/70 dark:hover:bg-slate-950 text-slate-700 hover:text-slate-950 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
                     <div className="flex items-center justify-between w-full">
                       <span className="text-base">{pos.icon}</span>
                       <span className={`text-[10px] font-black px-1.5 py-0.2 rounded ${
-                        isSelected ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
+                        isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400'
                       }`}>
                         {count}
                       </span>
                     </div>
                     <div>
                       <div className="text-xs font-black uppercase">{pos.shortLabel}</div>
-                      <div className={`text-[10px] truncate ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
+                      <div className={`text-[10px] truncate ${isSelected ? 'text-indigo-100' : 'text-slate-500'}`}>
                         {pos.label}
                       </div>
                     </div>
@@ -1087,13 +1087,13 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               value={drillSearchTerm}
               onChange={(e) => setDrillSearchTerm(e.target.value)}
               placeholder="Search drills by name, coaching cues, or techniques..."
-              className="w-full bg-slate-950/90 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors shadow-inner"
+              className="w-full bg-slate-50 dark:bg-slate-950/90 border border-slate-200 dark:border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors shadow-inner"
             />
             {drillSearchTerm && (
               <button
                 type="button"
                 onClick={() => setDrillSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-bold px-1.5 py-0.5 rounded bg-slate-800 cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-xs font-bold px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 cursor-pointer"
               >
                 Clear
               </button>
@@ -1103,25 +1103,25 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           {/* 3. Step 2: Drills List */}
           <div>
             <div className="flex items-center justify-between gap-2 mb-2.5">
-              <span className="text-xs font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
-                <Target className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider flex items-center gap-1.5">
+                <Target className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 Step 2: Tap Any Drill to Open ({listFilteredDrills.length})
               </span>
-              <span className="text-[11px] text-blue-400 font-bold">
+              <span className="text-[11px] text-indigo-600 dark:text-blue-400 font-bold">
                 Tap opens full whiteboard & coaching notes
               </span>
             </div>
 
             {listFilteredDrills.length === 0 ? (
-              <div className="p-8 text-center bg-slate-950/60 rounded-2xl border border-slate-800">
-                <p className="text-sm font-bold text-slate-400">No drills found matching your selection.</p>
+              <div className="p-8 text-center bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <p className="text-sm font-bold text-slate-600 dark:text-slate-400">No drills found matching your selection.</p>
                 <button
                   type="button"
                   onClick={() => {
                     setDrillSearchTerm('');
                     setSelectedCategory('ALL');
                   }}
-                  className="mt-3 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold cursor-pointer"
+                  className="mt-3 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold cursor-pointer"
                 >
                   Reset Filters
                 </button>
@@ -1142,20 +1142,20 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                       }}
                       className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer group ${
                         isActive
-                          ? 'bg-blue-950/50 border-blue-500 ring-2 ring-blue-500/50 shadow-xl'
-                          : 'bg-slate-950/80 hover:bg-slate-950 border-slate-800 hover:border-blue-500/50 hover:shadow-lg'
+                          ? 'bg-indigo-50 dark:bg-blue-950/50 border-indigo-400 dark:border-blue-500 ring-2 ring-indigo-400/50 dark:ring-blue-500/50 shadow-md'
+                          : 'bg-white dark:bg-slate-950/80 hover:bg-slate-50 dark:hover:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-blue-500/50 shadow-xs hover:shadow-md'
                       }`}
                     >
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1 border bg-blue-600/20 text-blue-300 border-blue-500/30">
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1 border bg-indigo-50 dark:bg-blue-600/20 text-indigo-700 dark:text-blue-300 border-indigo-200 dark:border-blue-500/30">
                             <span>{posMeta?.icon || '🏈'}</span>
                             <span>{posMeta?.shortLabel || drill.category}</span>
                           </span>
 
                           <div className="flex items-center gap-1.5">
                             {drill.phases && drill.phases.length > 0 && (
-                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800/90 text-sky-300 border border-slate-700">
+                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800/90 text-sky-800 dark:text-sky-300 border border-slate-200 dark:border-slate-700">
                                 {drill.phases.length} {drill.phases.length === 1 ? 'Phase' : 'Phases'}
                               </span>
                             )}
@@ -1167,12 +1167,12 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                           </div>
                         </div>
 
-                        <h3 className="text-sm font-black text-white group-hover:text-blue-300 transition-colors">
+                        <h3 className="text-sm font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-blue-300 transition-colors">
                           {drill.title}
                         </h3>
 
                         {drill.subtitle && (
-                          <p className="text-xs text-slate-400 line-clamp-2">
+                          <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">
                             {drill.subtitle}
                           </p>
                         )}
@@ -1182,7 +1182,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                             {drill.cues.slice(0, 3).map((cue, idx) => (
                               <span
                                 key={idx}
-                                className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800/80 text-slate-300 border border-slate-700/60"
+                                className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60"
                               >
                                 {cue}
                               </span>
@@ -1191,12 +1191,12 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                         )}
                       </div>
 
-                      <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs font-black text-blue-400 group-hover:text-blue-300">
+                      <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs font-black text-indigo-600 dark:text-blue-400 group-hover:text-indigo-700 dark:group-hover:text-blue-300">
                         <span className="flex items-center gap-1">
-                          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                           <span>{isActive ? 'Currently on Whiteboard' : 'Open Drill on Whiteboard'}</span>
                         </span>
-                        <div className="w-6 h-6 rounded-full bg-blue-600/20 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center transition-colors">
+                        <div className="w-6 h-6 rounded-full bg-indigo-50 dark:bg-blue-600/20 text-indigo-700 dark:text-white group-hover:bg-indigo-600 group-hover:text-white flex items-center justify-center transition-colors">
                           <ChevronRight className="w-4 h-4" />
                         </div>
                       </div>
@@ -1211,14 +1211,14 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
         <>
           {/* Mobile & Desktop Top Bar with Quick "Select Position & Drill" Button */}
           <div className="w-full max-w-7xl mb-2 sm:mb-2.5 px-2 sm:px-0 print:hidden">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl sm:rounded-2xl p-2 sm:p-2.5 shadow-xl flex items-center justify-between gap-2">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-2 sm:p-2.5 shadow-xs dark:shadow-xl flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setMobileViewMode('list');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer shrink-0"
+                className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
                 title="Select a position and drill from list"
               >
                 <Layers className="w-4 h-4" />
@@ -1236,15 +1236,15 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 title="Click to change drill"
               >
                 <div className="flex items-center justify-end gap-1.5">
-                  <span className="text-[10px] font-black uppercase text-blue-400 tracking-wider truncate">
+                  <span className="text-[10px] font-black uppercase text-indigo-600 dark:text-blue-400 tracking-wider truncate">
                     {DEFENSIVE_POSITION_GROUPS.find((g) => g.id === currentDrill.category)?.shortLabel || currentDrill.category}
                   </span>
-                  <span className="text-[10px] text-slate-500 font-bold">•</span>
-                  <span className="text-[10px] text-slate-400 font-bold">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold">•</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">
                     {drills.findIndex((d) => d.id === activeDrillId) + 1} of {drills.length}
                   </span>
                 </div>
-                <p className="text-xs font-black text-slate-100 group-hover:text-blue-300 truncate">
+                <p className="text-xs font-black text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-blue-300 truncate">
                   {isCustomMode ? customTitle : currentDrill.title}
                 </p>
               </button>
@@ -1253,23 +1253,23 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsDrillPickerModalOpen(true)}
-                className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 text-xs font-bold cursor-pointer shrink-0"
+                className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-bold cursor-pointer shrink-0"
                 title="Browse modal"
               >
                 <span>Quick Modal</span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
               </button>
             </div>
 
             {/* Quick Position Category Filter Shortcuts */}
-            <div className="hidden sm:flex items-center gap-1 overflow-x-auto no-scrollbar pt-2 mt-2 border-t border-slate-800/80">
+            <div className="hidden sm:flex items-center gap-1 overflow-x-auto no-scrollbar pt-2 mt-2 border-t border-slate-200 dark:border-slate-800/80">
               <button
                 type="button"
                 onClick={() => handleSelectCategory('ALL')}
                 className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all border cursor-pointer ${
                   selectedCategory === 'ALL'
-                    ? 'bg-blue-600 text-white border-blue-500 font-black'
-                    : 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-slate-200'
+                    ? 'bg-indigo-600 text-white border-indigo-500 font-black'
+                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-950/60 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 ALL ({drills.length})
@@ -1284,13 +1284,13 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                     onClick={() => handleSelectCategory(pos.id)}
                     className={`px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all border cursor-pointer flex items-center gap-1 ${
                       isSelected
-                        ? 'bg-blue-600 text-white border-blue-500 font-black'
-                        : 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-slate-200'
+                        ? 'bg-indigo-600 text-white border-indigo-500 font-black'
+                        : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-950/60 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
                     <span>{pos.icon}</span>
                     <span>{pos.shortLabel}</span>
-                    <span className={`text-[10px] ${isSelected ? 'text-blue-200 font-bold' : 'text-slate-500'}`}>({count})</span>
+                    <span className={`text-[10px] ${isSelected ? 'text-indigo-100 dark:text-blue-200 font-bold' : 'text-slate-500'}`}>({count})</span>
                   </button>
                 );
               })}
@@ -1300,36 +1300,36 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           {/* =========================================================================
               SECTION 1: COMPACT DRILL HEADER & ACTIONS (FULL WIDTH ON MOBILE)
               ========================================================================= */}
-          <section className="w-full max-w-7xl mb-2 sm:mb-3 bg-slate-900 border-x-0 sm:border border-slate-800 rounded-none sm:rounded-2xl p-3 sm:p-4 shadow-xl">
+          <section className="w-full max-w-7xl mb-2 sm:mb-3 bg-white dark:bg-slate-900 border-x-0 sm:border border-slate-200 dark:border-slate-800 rounded-none sm:rounded-2xl p-3 sm:p-4 shadow-xs dark:shadow-xl">
             <div className="flex flex-wrap items-center justify-between gap-3">
               {/* Left: Active Drill Identity & Position Group */}
               <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-600/20 text-blue-300 rounded-xl border border-blue-500/30 text-xl flex items-center justify-center shrink-0">
+            <div className="p-2.5 bg-indigo-50 dark:bg-blue-600/20 text-indigo-700 dark:text-blue-300 rounded-xl border border-indigo-200 dark:border-blue-500/30 text-xl flex items-center justify-center shrink-0">
               {DEFENSIVE_POSITION_GROUPS.find((g) => g.id === currentDrill.category)?.icon || "🏈"}
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] sm:text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full bg-blue-600/20 text-blue-300 border border-blue-500/30">
+                <span className="text-[10px] sm:text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-blue-600/20 text-indigo-700 dark:text-blue-300 border border-indigo-200 dark:border-blue-500/30">
                   {DEFENSIVE_POSITION_GROUPS.find((g) => g.id === currentDrill.category)?.label || currentDrill.categoryLabel || currentDrill.category}
                 </span>
                 {!isCustomMode && (!currentDrill.phases || currentDrill.phases.length === 0) && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30">
                     Description & Technique Guide
                   </span>
                 )}
                 {isCustomMode && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30">
                     Custom Drawing Canvas
                   </span>
                 )}
               </div>
               <h2
-                className="text-base sm:text-xl font-black text-white tracking-wide uppercase mt-0.5"
+                className="text-base sm:text-xl font-black text-slate-900 dark:text-white tracking-wide uppercase mt-0.5"
                 style={{ fontFamily: "'Permanent Marker', cursive" }}
               >
                 {isCustomMode ? customTitle : currentDrill.title}
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
                 {isCustomMode ? customObjective : currentDrill.subtitle || currentDrill.objective}
               </p>
             </div>
@@ -1339,27 +1339,27 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           <div className="flex items-center gap-2 flex-wrap">
             {/* Phase Stepper (Only shown when drill has multiple phases) */}
             {!isCustomMode && currentDrill.phases && currentDrill.phases.length > 1 && (
-              <div className="flex items-center bg-slate-950/80 border border-slate-700/80 rounded-xl p-1 gap-1 shadow-inner">
+              <div className="flex items-center bg-slate-100 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-700/80 rounded-xl p-1 gap-1 shadow-inner">
                 <button
                   type="button"
                   onClick={handlePrevPhase}
-                  className="px-2 py-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                  className="px-2 py-1 text-slate-700 hover:text-slate-950 hover:bg-slate-200 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800 rounded-lg text-xs font-bold transition-colors cursor-pointer"
                   title="Previous Phase"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <div className="px-2 py-0.5 text-center">
-                  <span className="text-[10px] font-black uppercase text-blue-400 block leading-tight">
+                  <span className="text-[10px] font-black uppercase text-indigo-600 dark:text-blue-400 block leading-tight">
                     Phase {activePhaseIdx + 1} of {currentDrill.phases.length}
                   </span>
-                  <span className="text-[11px] font-bold text-slate-200 truncate max-w-[120px] sm:max-w-[160px] block">
+                  <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate max-w-[120px] sm:max-w-[160px] block">
                     {currentDrill.phases[activePhaseIdx]?.name?.replace(/PHASE \d+:\s*/i, "") || `Phase ${activePhaseIdx + 1}`}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={handleNextPhase}
-                  className="px-2 py-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                  className="px-2 py-1 text-slate-700 hover:text-slate-950 hover:bg-slate-200 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800 rounded-lg text-xs font-bold transition-colors cursor-pointer"
                   title="Next Phase"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -1370,7 +1370,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ${
                     isAutoPlaying
                       ? "bg-amber-600 text-white"
-                      : "bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700"
+                      : "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-300 dark:hover:bg-slate-700"
                   }`}
                   title={isAutoPlaying ? "Pause Animation" : "Auto-Play Phases"}
                 >
@@ -1386,12 +1386,12 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               onClick={() => setIsCustomMode(!isCustomMode)}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
                 isCustomMode
-                  ? "bg-blue-600 text-white border-blue-500 shadow-sm"
-                  : "bg-slate-800 hover:bg-slate-750 text-slate-300 border-slate-700 hover:border-slate-600"
+                  ? "bg-indigo-600 text-white border-indigo-500 shadow-sm"
+                  : "bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
               }`}
               title="Toggle between preset diagram and blank chalkboard canvas"
             >
-              <PenTool className="w-3.5 h-3.5 text-blue-400" />
+              <PenTool className="w-3.5 h-3.5 text-indigo-600 dark:text-blue-400" />
               <span>{isCustomMode ? "Viewing Chalkboard" : "Open Chalkboard"}</span>
             </button>
 
@@ -1411,10 +1411,10 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               <button
                 type="button"
                 onClick={handleDeleteDrill}
-                className="px-2.5 py-1.5 bg-slate-800 hover:bg-rose-900/60 text-slate-300 hover:text-rose-200 border border-slate-700 hover:border-rose-600/50 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1"
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-900/60 text-slate-700 hover:text-rose-700 dark:text-slate-300 dark:hover:text-rose-200 border border-slate-200 dark:border-slate-700 hover:border-rose-300 dark:hover:border-rose-600/50 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1"
                 title="Delete this drill from the whiteboard"
               >
-                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                <Trash2 className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
                 <span className="hidden sm:inline">Delete Drill</span>
               </button>
             )}
@@ -1450,24 +1450,24 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           {/* =========================================================================
           SECTION 2: FULL-WIDTH WHITEBOARD CANVAS & TOOLBAR
           ========================================================================= */}
-      <div className="w-full max-w-7xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2.5 sm:p-5 flex flex-col relative">
+      <div className="w-full max-w-7xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-md dark:shadow-2xl p-2.5 sm:p-5 flex flex-col relative">
         {/* Canvas Quick Controls Bar (Declutter, Labels, Coaching Inset, Print) */}
         <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3 px-1 flex-wrap">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-black uppercase text-slate-200 tracking-wide flex items-center gap-2 bg-slate-950/90 px-3 py-1.5 rounded-xl border border-slate-800 shadow-inner">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-xs font-black uppercase text-slate-800 dark:text-slate-200 tracking-wide flex items-center gap-2 bg-slate-100 dark:bg-slate-950/90 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-inner">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span>
               Tactical Chalkboard
             </span>
-            <span className="text-[11px] font-semibold text-slate-400 hidden md:inline">
+            <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 hidden md:inline">
               High-contrast alignment & routes
             </span>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Zone Shade Dimmer Selector */}
-            <div className="flex items-center bg-slate-950/90 rounded-xl p-1 border border-slate-800 shadow-inner">
-              <span className="text-[10px] font-black uppercase text-slate-400 px-2 flex items-center gap-1">
-                <SunMedium className="w-3 h-3 text-slate-400" />
+            <div className="flex items-center bg-slate-100 dark:bg-slate-950/90 rounded-xl p-1 border border-slate-200 dark:border-slate-800 shadow-inner">
+              <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 px-2 flex items-center gap-1">
+                <SunMedium className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                 Shade:
               </span>
               <button
@@ -1475,8 +1475,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 onClick={() => setZoneShadeMode('dim')}
                 className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   zoneShadeMode === 'dim'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-950 hover:bg-slate-200 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800/80'
                 }`}
                 title="Dim shade: soft translucent wash (Default per coach preference)"
               >
@@ -1487,8 +1487,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 onClick={() => setZoneShadeMode('soft')}
                 className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   zoneShadeMode === 'soft'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-950 hover:bg-slate-200 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800/80'
                 }`}
                 title="Soft shade: subtle tint"
               >
@@ -1499,8 +1499,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 onClick={() => setZoneShadeMode('outline')}
                 className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   zoneShadeMode === 'outline'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-950 hover:bg-slate-200 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800/80'
                 }`}
                 title="Outline only: dashed boundary without fill tint"
               >
@@ -1514,8 +1514,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               onClick={() => setShowLabels(!showLabels)}
               className={`px-2.5 py-1 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
                 showLabels
-                  ? 'bg-slate-800 hover:bg-slate-750 text-sky-300 border-slate-700'
-                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                  ? 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-sky-700 dark:text-sky-300 border-slate-200 dark:border-slate-700'
+                  : 'bg-amber-500/15 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-500/40'
               }`}
               title={showLabels ? 'Hide arrow and zone labels for clean uncluttered view' : 'Show all diagram labels'}
             >
@@ -1531,11 +1531,11 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 className={`px-2.5 py-1 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
                   showCoachingInset
                     ? 'bg-indigo-600 text-white border-indigo-500'
-                    : 'bg-slate-800 hover:bg-slate-750 text-slate-300 border-slate-700'
+                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                 }`}
                 title="Toggle the coaching keys inset card overlay on the whiteboard"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-300" />
                 <span>Keys: {showCoachingInset ? 'ON' : 'OFF'}</span>
               </button>
             )}
@@ -1547,14 +1547,14 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                   <button
                     type="button"
                     onClick={() => onNavigateToPracticePlan(matchingPracticePlanInfo?.plan.id, currentDrill.title)}
-                    className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-bold rounded-xl border border-emerald-500/40 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                    className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-600/20 dark:hover:bg-emerald-600/30 text-emerald-800 dark:text-emerald-300 text-xs font-bold rounded-xl border border-emerald-300 dark:border-emerald-500/40 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
                     title={
                       matchingPracticePlanInfo
                         ? `Open in ${matchingPracticePlanInfo.plan.title} (Period ${matchingPracticePlanInfo.periodNumber})`
                         : 'Open in Practice Plan'
                     }
                   >
-                    <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                    <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                     <span>
                       {matchingPracticePlanInfo
                         ? `Plan (P${matchingPracticePlanInfo.periodNumber})`
@@ -1565,7 +1565,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsHudlModalOpen(true)}
-                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl border border-blue-500 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                  className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl border border-indigo-500 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
                   title="Upload playbook PDF or text from Hudl to auto-redraw"
                 >
                   <Upload className="w-3.5 h-3.5" />
@@ -1574,10 +1574,10 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 <button
                   type="button"
                   onClick={() => printDrillSheet(currentDrill, activePhaseIdx)}
-                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
                   title="Print this isolated drill sheet"
                 >
-                  <Printer className="w-3.5 h-3.5 text-blue-400" />
+                  <Printer className="w-3.5 h-3.5 text-indigo-600 dark:text-blue-400" />
                   <span>Print Drill</span>
                 </button>
               </div>
@@ -1586,7 +1586,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
         </div>
 
         {/* Full-Width Canvas Container */}
-        <div className="w-full bg-white rounded-xl border border-slate-700/80 overflow-hidden shadow-2xl relative min-h-[580px] sm:min-h-[660px] xl:min-h-[720px]">
+        <div className="w-full bg-white rounded-xl border border-slate-200 dark:border-slate-700/80 overflow-hidden shadow-md dark:shadow-2xl relative min-h-[580px] sm:min-h-[660px] xl:min-h-[720px]">
           <WhiteboardCanvas
             tokens={tokens}
             arrows={arrows}
@@ -1619,7 +1619,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
         </div>
 
         {/* Whiteboard Lower Toolbar */}
-        <div className="mt-3 p-3 bg-slate-950 border border-slate-800 rounded-xl shadow-xl flex flex-wrap justify-between items-center gap-3">
+        <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm dark:shadow-xl flex flex-wrap justify-between items-center gap-3">
           {/* Left: Phase controls for Drills */}
           <div className="flex items-center gap-2 flex-wrap">
             {!isCustomMode ? (
@@ -1627,17 +1627,17 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 <button
                   type="button"
                   onClick={handlePrevPhase}
-                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white text-xs font-bold rounded-lg border border-slate-700 shadow-xs transition-all active:translate-y-0.5 cursor-pointer"
+                  className="px-3 py-1.5 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs transition-all active:translate-y-0.5 cursor-pointer"
                 >
                   ◀ Prev Phase
                 </button>
-                <div className="px-3.5 py-1.5 bg-blue-950/80 text-sky-300 text-xs font-mono font-black rounded-lg border border-blue-800/60 shadow-inner">
+                <div className="px-3.5 py-1.5 bg-indigo-50 dark:bg-blue-950/80 text-indigo-700 dark:text-sky-300 text-xs font-mono font-black rounded-lg border border-indigo-200 dark:border-blue-800/60 shadow-inner">
                   {currentDrill.phases[activePhaseIdx]?.name || 'PHASE 1'}
                 </div>
                 <button
                   type="button"
                   onClick={handleNextPhase}
-                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white text-xs font-bold rounded-lg border border-slate-700 shadow-xs transition-all active:translate-y-0.5 cursor-pointer"
+                  className="px-3 py-1.5 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs transition-all active:translate-y-0.5 cursor-pointer"
                 >
                   Next Phase ▶
                 </button>
@@ -1647,7 +1647,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                   className={`px-3 py-1.5 text-xs font-bold rounded-lg border shadow-xs transition-all flex items-center gap-1.5 cursor-pointer ${
                     isAutoPlaying
                       ? 'bg-rose-600 text-white border-rose-500 animate-pulse'
-                      : 'bg-blue-600 hover:bg-blue-500 text-white border-blue-500'
+                      : 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-500'
                   }`}
                 >
                   {isAutoPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
@@ -1662,7 +1662,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 <button
                   type="button"
                   onClick={handleClearAll}
-                  className="px-2.5 py-1.5 bg-rose-700 hover:bg-rose-600 text-white text-xs font-bold rounded-lg border border-rose-800 cursor-pointer"
+                  className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg border border-rose-700 cursor-pointer"
                 >
                   Clear Field
                 </button>
@@ -1671,10 +1671,10 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           </div>
 
           {/* Center: Comprehensive Stamp Controls for Shapes, Text, Fill, Colors, & Circle Zones */}
-          <div className="flex items-center gap-2 bg-slate-900 p-2 rounded-xl border border-slate-800 flex-wrap">
+          <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 flex-wrap">
             {/* Shape Selectors */}
-            <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800">
-              <span className="text-[10px] font-black uppercase text-slate-400 px-1">Shapes:</span>
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950/80 p-1 rounded-lg border border-slate-200 dark:border-slate-800">
+              <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 px-1">Shapes:</span>
 
               {/* Circle (O) */}
               <button
@@ -1685,8 +1685,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 }}
                 className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                   stampMode === 'O'
-                    ? 'bg-blue-600 text-white ring-2 ring-blue-400 shadow-md'
-                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                    ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 shadow-md'
+                    : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
                 }`}
                 title="Stamp Circle Token"
               >
@@ -1703,8 +1703,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 }}
                 className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                   stampMode === 'square'
-                    ? 'bg-blue-600 text-white ring-2 ring-blue-400 shadow-md'
-                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                    ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 shadow-md'
+                    : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
                 }`}
                 title="Stamp Square Token (e.g. Center / Lineman)"
               >
@@ -1721,8 +1721,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 }}
                 className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                   stampMode === 'triangle'
-                    ? 'bg-blue-600 text-white ring-2 ring-blue-400 shadow-md'
-                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                    ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 shadow-md'
+                    : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
                 }`}
                 title="Stamp Triangle Token (e.g. Safety / Edge)"
               >
@@ -1739,8 +1739,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 }}
                 className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                   stampMode === 'diamond'
-                    ? 'bg-blue-600 text-white ring-2 ring-blue-400 shadow-md'
-                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                    ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 shadow-md'
+                    : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
                 }`}
                 title="Stamp Diamond Token (e.g. Hybrid / H-Back / Star)"
               >
@@ -1757,8 +1757,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 }}
                 className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                   stampMode === 'star'
-                    ? 'bg-blue-600 text-white ring-2 ring-blue-400 shadow-md'
-                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                    ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 shadow-md'
+                    : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
                 }`}
                 title="Stamp Star Token (e.g. Impact Player / Key Defender)"
               >
@@ -1776,7 +1776,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                   stampMode === 'X'
                     ? 'bg-red-600 text-white ring-2 ring-red-400 shadow-md'
-                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                    : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
                 }`}
                 title="Stamp X Token (Defense)"
               >
@@ -1786,13 +1786,13 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             </div>
 
             {/* Fill Mode Toggle: Fill vs No Fill */}
-            <div className="flex items-center bg-slate-950/80 p-1 rounded-lg border border-slate-800">
-              <span className="text-[10px] font-black uppercase text-slate-400 px-1">Style:</span>
+            <div className="flex items-center bg-slate-100 dark:bg-slate-950/80 p-1 rounded-lg border border-slate-200 dark:border-slate-800">
+              <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 px-1">Style:</span>
               <button
                 type="button"
                 onClick={() => setStampFillMode('fill')}
                 className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer transition-colors ${
-                  stampFillMode === 'fill' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                  stampFillMode === 'fill' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white'
                 }`}
                 title="Solid Fill"
               >
@@ -1802,7 +1802,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 type="button"
                 onClick={() => setStampFillMode('nofill')}
                 className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer transition-colors ${
-                  stampFillMode === 'nofill' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                  stampFillMode === 'nofill' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white'
                 }`}
                 title="No Fill (Crisp Outline only)"
               >
@@ -1811,8 +1811,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             </div>
 
             {/* Color Swatches for Shapes & Zones */}
-            <div className="flex items-center gap-1 bg-slate-950/80 p-1.5 rounded-lg border border-slate-800">
-              <span className="text-[10px] font-black uppercase text-slate-400 px-1">Color:</span>
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950/80 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800">
+              <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 px-1">Color:</span>
               {[
                 { color: '#1d4ed8', title: 'Royal Blue' },
                 { color: '#dc2626', title: 'Crimson Red' },
@@ -1829,7 +1829,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                   onClick={() => setStampColor(c.color)}
                   title={c.title}
                   className={`w-4 h-4 rounded-full border cursor-pointer transition-transform ${
-                    stampColor === c.color ? 'scale-125 border-white ring-2 ring-blue-400' : 'border-slate-600 hover:scale-110'
+                    stampColor === c.color ? 'scale-125 border-white ring-2 ring-indigo-500' : 'border-slate-400 dark:border-slate-600 hover:scale-110'
                   }`}
                   style={{ backgroundColor: c.color }}
                 />
@@ -1844,19 +1844,19 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             </div>
 
             {/* Label Input for Placed Shape */}
-            <div className="flex items-center bg-slate-950/80 p-1 px-1.5 rounded-lg border border-slate-800">
-              <span className="text-[10px] font-bold text-slate-400 mr-1.5">Text/Pos:</span>
+            <div className="flex items-center bg-slate-100 dark:bg-slate-950/80 p-1 px-1.5 rounded-lg border border-slate-200 dark:border-slate-800">
+              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mr-1.5">Text/Pos:</span>
               <input
                 type="text"
                 value={stampLabel}
                 onChange={(e) => setStampLabel(e.target.value)}
                 placeholder="Label"
-                className="bg-slate-800 text-white font-black text-xs px-2 py-0.5 rounded border border-slate-700 w-16 focus:w-20 transition-all outline-none"
+                className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-black text-xs px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 w-16 focus:w-20 transition-all outline-none"
               />
               <select
                 value={stampLabel}
                 onChange={(e) => setStampLabel(e.target.value)}
-                className="bg-slate-800 text-white text-[11px] font-bold px-1 py-0.5 rounded border border-slate-700 ml-1 cursor-pointer"
+                className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-[11px] font-bold px-1 py-0.5 rounded border border-slate-300 dark:border-slate-700 ml-1 cursor-pointer"
               >
                 <optgroup label="Offense">
                   {['C', 'QB', 'RB', 'FB', 'TE', 'WR', 'LT', 'LG', 'RG', 'RT', 'X', 'Z', 'Y'].map((pos) => (
@@ -1876,7 +1876,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             </div>
 
             {/* Tactical Zones & Movable Text */}
-            <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800">
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950/80 p-1 rounded-lg border border-slate-200 dark:border-slate-800">
               {/* Circle Zone */}
               <button
                 type="button"
@@ -1888,11 +1888,11 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 className={`p-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                   stampMode === 'circle_zone'
                     ? 'bg-sky-600 text-white ring-2 ring-sky-400 shadow-md'
-                    : 'bg-slate-800 hover:bg-slate-700 text-sky-300'
+                    : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-sky-700 dark:text-sky-300'
                 }`}
                 title="Stamp Circular Zone Bubble"
               >
-                <Target className="w-3.5 h-3.5 text-sky-300" />
+                <Target className="w-3.5 h-3.5 text-sky-600 dark:text-sky-300" />
                 <span className="text-[11px]">Circle Zone</span>
               </button>
 
@@ -1907,11 +1907,11 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 className={`p-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                   stampMode === 'zone'
                     ? 'bg-sky-600 text-white ring-2 ring-sky-400 shadow-md'
-                    : 'bg-slate-800 hover:bg-slate-700 text-sky-300'
+                    : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-sky-700 dark:text-sky-300'
                 }`}
                 title="Stamp Oval Zone Bubble"
               >
-                <Shield className="w-3.5 h-3.5 text-sky-300" />
+                <Shield className="w-3.5 h-3.5 text-sky-600 dark:text-sky-300" />
                 <span className="text-[11px]">Oval Zone</span>
               </button>
 
@@ -1925,7 +1925,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 className={`p-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                   stampMode === 'blitz'
                     ? 'bg-rose-600 text-white ring-2 ring-rose-400 shadow-md'
-                    : 'bg-slate-800 hover:bg-slate-700 text-rose-300'
+                    : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-rose-700 dark:text-rose-300'
                 }`}
                 title="Stamp Blitz Arrow"
               >
@@ -1943,19 +1943,19 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 className={`p-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                   stampMode === 'text'
                     ? 'bg-emerald-600 text-white ring-2 ring-emerald-400 shadow-md'
-                    : 'bg-slate-800 hover:bg-slate-700 text-emerald-300'
+                    : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-emerald-700 dark:text-emerald-300'
                 }`}
                 title="Stamp Coaching Text Note on Canvas"
               >
-                <Type className="w-3.5 h-3.5 text-emerald-300" />
+                <Type className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-300" />
                 <span className="text-[11px]">Text</span>
               </button>
             </div>
           </div>
 
           {/* Right: Dry-Erase Markers Tray */}
-          <div className="flex items-center gap-2 bg-slate-900 p-1.5 px-2.5 rounded-xl border border-slate-800 shadow-inner">
-            <span className="text-[10px] font-black uppercase text-slate-400 mr-1">Dry Erase:</span>
+          <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1.5 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-inner">
+            <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mr-1">Dry Erase:</span>
             {[
               { color: '#1a1a24', label: 'Black' },
               { color: '#0052cc', label: 'Blue' },
@@ -1971,8 +1971,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                   setIsDrawingMode(true);
                   setStampMode('none');
                 }}
-                className={`w-5 h-5 rounded-full border-2 border-slate-600 shadow transition-transform cursor-pointer ${
-                  penColor === pen.color && isDrawingMode ? 'scale-125 ring-2 ring-white' : 'hover:scale-110'
+                className={`w-5 h-5 rounded-full border-2 border-slate-400 dark:border-slate-600 shadow transition-transform cursor-pointer ${
+                  penColor === pen.color && isDrawingMode ? 'scale-125 ring-2 ring-indigo-500' : 'hover:scale-110'
                 }`}
                 style={{ backgroundColor: pen.color }}
                 title={`${pen.label} Marker`}
@@ -1988,7 +1988,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
                 isDrawingMode
                   ? 'bg-emerald-600 text-white border-emerald-500'
-                  : 'bg-slate-800 hover:bg-slate-750 text-slate-300 border-slate-700'
+                  : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
               }`}
             >
               {isDrawingMode ? '✏️ Drawing ON' : '✏️ Draw'}
@@ -1997,7 +1997,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             <button
               type="button"
               onClick={handleWipeBoard}
-              className="px-2.5 py-1 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/80 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+              className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/80 rounded-lg text-xs font-bold transition-colors cursor-pointer"
             >
               Wipe Board
             </button>
@@ -2008,21 +2008,21 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
       {/* =========================================================================
           SECTION 3: PLAY NOTES & COACHING NOTEPAD (BELOW THE DIAGRAM)
           ========================================================================= */}
-      <section className="w-full max-w-7xl mt-2 sm:mt-4 bg-slate-900/95 border-x-0 sm:border border-slate-800 rounded-none sm:rounded-3xl p-3 sm:p-6 shadow-2xl space-y-4">
+      <section className="w-full max-w-7xl mt-2 sm:mt-4 bg-white dark:bg-slate-900/95 border-x-0 sm:border border-slate-200 dark:border-slate-800 rounded-none sm:rounded-3xl p-3 sm:p-6 shadow-md dark:shadow-2xl space-y-4">
         {/* Play Notes Header & Active Scheme Status */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs text-blue-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-xs text-indigo-600 dark:text-blue-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
                 <BookOpen className="w-3.5 h-3.5" />
                 <span>Defensive Playbook Notes:</span>
               </span>
               {!isCustomMode ? (
-                <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-blue-600/20 text-blue-300 border border-blue-500/40 uppercase">
+                <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-blue-600/20 text-indigo-700 dark:text-blue-300 border border-indigo-200 dark:border-blue-500/40 uppercase">
                   {currentDrill.category} • {currentDrill.categoryLabel}
                 </span>
               ) : (
-                <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-amber-600/20 text-amber-300 border border-amber-500/40 uppercase">
+                <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-amber-500/15 dark:bg-amber-600/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 uppercase">
                   Custom Scheme Mode
                 </span>
               )}
@@ -2030,7 +2030,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
 
             <div className="flex items-center gap-3">
               <h3
-                className="text-lg sm:text-2xl font-black text-white tracking-wide"
+                className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-wide"
                 style={{ fontFamily: "'Permanent Marker', cursive" }}
               >
                 {isCustomMode ? customTitle : currentDrill.title}
@@ -2042,7 +2042,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                     const newTitle = prompt('Enter Play / Scheme Title:', customTitle);
                     if (newTitle) setCustomTitle(newTitle.toUpperCase());
                   }}
-                  className="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-xs font-bold border border-slate-700 flex items-center gap-1 cursor-pointer"
+                  className="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300 text-xs font-bold border border-slate-200 dark:border-slate-700 flex items-center gap-1 cursor-pointer"
                   title="Edit Title"
                 >
                   <Sliders className="w-3.5 h-3.5" />
@@ -2051,7 +2051,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               )}
             </div>
 
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
               {isCustomMode
                 ? customObjective
                 : `${currentDrill.subtitle} — ${currentDrill.phases[activePhaseIdx]?.name || 'Phase 1'}`}
@@ -2061,8 +2061,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           {/* Phase Quick Indicator & Print Action */}
           <div className="flex items-center gap-2 flex-wrap">
             {!isCustomMode && currentDrill.phases.length > 0 && (
-              <div className="flex items-center gap-1.5 bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700">
-                <span className="text-[10px] uppercase font-black text-slate-400 px-2">Phases:</span>
+              <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700">
+                <span className="text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 px-2">Phases:</span>
                 {currentDrill.phases.map((ph, idx) => (
                   <button
                     key={idx}
@@ -2070,8 +2070,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                     onClick={() => setActivePhaseIdx(idx)}
                     className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       activePhaseIdx === idx
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'bg-slate-900 text-slate-400 hover:text-white'
+                        ? 'bg-indigo-600 text-white shadow-md'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-transparent'
                     }`}
                   >
                     {idx + 1}
@@ -2084,14 +2084,14 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               <button
                 type="button"
                 onClick={() => onNavigateToPracticePlan(matchingPracticePlanInfo?.plan.id, currentDrill.title)}
-                className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 hover:text-white text-xs font-bold rounded-xl border border-emerald-500/40 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-600/20 dark:hover:bg-emerald-600/30 text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-white text-xs font-bold rounded-xl border border-emerald-300 dark:border-emerald-500/40 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                 title={
                   matchingPracticePlanInfo
                     ? `Open in ${matchingPracticePlanInfo.plan.title} (Period ${matchingPracticePlanInfo.periodNumber})`
                     : 'Open in Practice Plan'
                 }
               >
-                <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>
                   {matchingPracticePlanInfo
                     ? `View in Plan (P${matchingPracticePlanInfo.periodNumber})`
@@ -2104,9 +2104,9 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               type="button"
               onClick={handlePrintWhiteboard}
               title="Print isolated 1-page coaching sheet with field setup and cues"
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-blue-300 hover:text-white text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-indigo-700 dark:text-blue-300 hover:text-indigo-900 dark:hover:text-white text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
             >
-              <Printer className="w-3.5 h-3.5 text-blue-400" />
+              <Printer className="w-3.5 h-3.5 text-indigo-600 dark:text-blue-400" />
               <span>Print Drill Sheet</span>
             </button>
           </div>
@@ -2114,16 +2114,16 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
 
         {/* Selected Element Inspector (Appears when coach clicks a token, arrow, or zone on the canvas) */}
         {selectedId && selectedType && (
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 shadow-md animate-in fade-in">
+          <div className="bg-amber-500/10 border border-amber-400 dark:border-amber-500/30 rounded-2xl p-3.5 shadow-md animate-in fade-in">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-black uppercase text-amber-300 tracking-wider flex items-center gap-1.5">
-                <Target className="w-4 h-4 text-amber-400" />
+              <span className="text-xs font-black uppercase text-amber-800 dark:text-amber-300 tracking-wider flex items-center gap-1.5">
+                <Target className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 <span>Selected On Diagram: {selectedType.toUpperCase()} #{selectedId}</span>
               </span>
               <button
                 type="button"
                 onClick={handleDeleteSelected}
-                className="px-2.5 py-1 bg-rose-900/60 hover:bg-rose-800 text-rose-200 rounded-lg flex items-center gap-1 text-xs font-bold border border-rose-700/60 transition-colors cursor-pointer"
+                className="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/60 dark:hover:bg-rose-800 text-rose-800 dark:text-rose-200 rounded-lg flex items-center gap-1 text-xs font-bold border border-rose-300 dark:border-rose-700/60 transition-colors cursor-pointer"
                 title="Delete Element from Diagram"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -2134,7 +2134,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             {selectedType === 'token' && (
               <div className="flex flex-wrap items-center gap-4 text-xs">
                 <div className="flex items-center gap-2">
-                  <label className="text-slate-300 font-bold">Position Label:</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-bold">Position Label:</label>
                   <input
                     type="text"
                     value={tokens.find((t) => t.id === selectedId)?.label || ''}
@@ -2142,11 +2142,11 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                       const val = e.target.value.toUpperCase();
                       setTokens(tokens.map((t) => (t.id === selectedId ? { ...t, label: val } : t)));
                     }}
-                    className="px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-lg font-bold w-20 text-white focus:outline-none focus:border-amber-400"
+                    className="px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg font-bold w-20 text-slate-900 dark:text-white focus:outline-none focus:border-amber-400"
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="text-slate-300 font-bold">Color:</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-bold">Color:</label>
                   <div className="flex items-center gap-1.5">
                     {['#1a1a24', '#0052cc', '#d91b24', '#058538', '#e06c00', '#7c3aed'].map((c) => (
                       <button
@@ -2167,7 +2167,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             {selectedType === 'arrow' && (
               <div className="flex flex-wrap items-center gap-4 text-xs">
                 <div className="flex items-center gap-2">
-                  <label className="text-slate-300 font-bold">Route / Blitz Label:</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-bold">Route / Blitz Label:</label>
                   <input
                     type="text"
                     value={arrows.find((a) => a.id === selectedId)?.label || ''}
@@ -2175,11 +2175,11 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                       const val = e.target.value;
                       setArrows(arrows.map((a) => (a.id === selectedId ? { ...a, label: val } : a)));
                     }}
-                    className="px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-lg font-bold w-40 text-white focus:outline-none focus:border-amber-400"
+                    className="px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg font-bold w-40 text-slate-900 dark:text-white focus:outline-none focus:border-amber-400"
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="text-slate-300 font-bold">Color:</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-bold">Color:</label>
                   <div className="flex items-center gap-1.5">
                     {['#d91b24', '#0052cc', '#058538', '#e06c00', '#1a1a24'].map((c) => (
                       <button
@@ -2200,7 +2200,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             {selectedType === 'zone' && (
               <div className="flex flex-wrap items-center gap-4 text-xs">
                 <div className="flex items-center gap-2">
-                  <label className="text-slate-300 font-bold">Coverage Zone Name:</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-bold">Coverage Zone Name:</label>
                   <input
                     type="text"
                     value={zones.find((z) => z.id === selectedId)?.name || ''}
@@ -2208,11 +2208,11 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                       const val = e.target.value.toUpperCase();
                       setZones(zones.map((z) => (z.id === selectedId ? { ...z, name: val } : z)));
                     }}
-                    className="px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-lg font-bold w-44 text-white focus:outline-none focus:border-amber-400"
+                    className="px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg font-bold w-44 text-slate-900 dark:text-white focus:outline-none focus:border-amber-400"
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="text-slate-300 font-bold">Color:</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-bold">Color:</label>
                   <div className="flex items-center gap-1.5">
                     {['#0284c7', '#058538', '#d91b24', '#e06c00', '#7c3aed'].map((c) => (
                       <button
@@ -2241,20 +2241,20 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                   currentDrill.instructions && currentDrill.instructions.length > 0
                     ? 'lg:col-span-5'
                     : 'lg:col-span-12'
-                } bg-white p-4 rounded-2xl border-l-4 border-indigo-600 shadow-lg text-slate-800`}
+                } bg-white dark:bg-slate-800/90 p-4 rounded-2xl border-l-4 border-indigo-600 shadow-md border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100`}
               >
                 <div className="flex items-center gap-1.5 mb-2">
-                  <span className="text-[11px] font-black uppercase text-indigo-700 tracking-wider flex items-center gap-1.5">
-                    <Flag className="w-4 h-4 text-indigo-600" />
+                  <span className="text-[11px] font-black uppercase text-indigo-700 dark:text-indigo-400 tracking-wider flex items-center gap-1.5">
+                    <Flag className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     <span>Field Setup & Alignment</span>
                   </span>
                 </div>
-                <p className="text-sm text-slate-800 leading-relaxed font-semibold">
+                <p className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-semibold">
                   {currentDrill.setup}
                 </p>
                 {currentDrill.equipment && (
-                  <div className="mt-3 pt-2.5 border-t border-slate-100 text-xs text-slate-600 flex items-start gap-1.5">
-                    <span className="font-black text-slate-800 uppercase tracking-wider text-[10px] shrink-0">Equipment:</span>
+                  <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400 flex items-start gap-1.5">
+                    <span className="font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[10px] shrink-0">Equipment:</span>
                     <span>{currentDrill.equipment}</span>
                   </div>
                 )}
@@ -2265,18 +2265,18 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               <div
                 className={`${
                   currentDrill.setup ? 'lg:col-span-7' : 'lg:col-span-12'
-                } bg-white p-4 rounded-2xl border-l-4 border-amber-600 shadow-lg text-slate-800`}
+                } bg-white dark:bg-slate-800/90 p-4 rounded-2xl border-l-4 border-amber-600 shadow-md border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100`}
               >
                 <div className="flex items-center gap-1.5 mb-2">
-                  <span className="text-[11px] font-black uppercase text-amber-700 tracking-wider flex items-center gap-1.5">
-                    <ListOrdered className="w-4 h-4 text-amber-600" />
+                  <span className="text-[11px] font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider flex items-center gap-1.5">
+                    <ListOrdered className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                     <span>Step-by-Step Execution Instructions</span>
                   </span>
                 </div>
-                <ol className="space-y-2 text-xs sm:text-sm text-slate-800">
+                <ol className="space-y-2 text-xs sm:text-sm text-slate-800 dark:text-slate-200">
                   {currentDrill.instructions.map((inst, idx) => (
                     <li key={idx} className="flex items-start gap-2.5">
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-900 font-black text-xs shrink-0 mt-0.5 shadow-xs">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-black text-xs shrink-0 mt-0.5 shadow-xs">
                         {idx + 1}
                       </span>
                       <span className="leading-snug">{inst}</span>
@@ -2291,11 +2291,11 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
         {/* 3-Column / Responsive Grid of Dry-Erase Coaching Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* CARD 1: Objective & Scheme Technical Progression */}
-          <div className="bg-white p-4 rounded-2xl border-l-4 border-blue-600 shadow-lg flex flex-col justify-between text-slate-800">
+          <div className="bg-white dark:bg-slate-800/90 p-4 rounded-2xl border-l-4 border-indigo-600 shadow-md border border-slate-200 dark:border-slate-700 flex flex-col justify-between text-slate-800 dark:text-slate-100">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-black uppercase text-blue-700 tracking-wider flex items-center gap-1.5">
-                  <Shield className="w-4 h-4 text-blue-600" />
+                <span className="text-[11px] font-black uppercase text-indigo-700 dark:text-indigo-400 tracking-wider flex items-center gap-1.5">
+                  <Shield className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                   <span>Objective & Scheme Breakdown</span>
                 </span>
                 {isCustomMode && (
@@ -2305,7 +2305,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                       const newObj = prompt('Enter Scheme Objective & Notes:', customObjective);
                       if (newObj) setCustomObjective(newObj);
                     }}
-                    className="text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
+                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 font-bold flex items-center gap-1 cursor-pointer"
                   >
                     <Sliders className="w-3 h-3" />
                     <span>Edit</span>
@@ -2314,7 +2314,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
               </div>
 
               <p
-                className="text-sm text-slate-800 leading-relaxed mb-3"
+                className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed mb-3"
                 style={{ fontFamily: "'Architects Daughter', cursive" }}
               >
                 {isCustomMode ? customObjective : currentDrill.objective}
@@ -2322,12 +2322,12 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
 
               {/* Active Phase Description (if preset drill) */}
               {!isCustomMode && currentDrill.phases[activePhaseIdx] && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mt-2">
-                  <div className="text-[11px] font-black text-blue-900 uppercase tracking-wider mb-1">
+                <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl p-3 mt-2">
+                  <div className="text-[11px] font-black text-indigo-900 dark:text-indigo-200 uppercase tracking-wider mb-1">
                     Current Phase Focus: {currentDrill.phases[activePhaseIdx].name}
                   </div>
                   <p
-                    className="text-xs text-slate-700 leading-normal"
+                    className="text-xs text-slate-700 dark:text-slate-300 leading-normal"
                     style={{ fontFamily: "'Architects Daughter', cursive" }}
                   >
                     {currentDrill.phases[activePhaseIdx].description}
@@ -2338,10 +2338,10 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           </div>
 
           {/* CARD 2: 10U Practice Coaching Cues & Verbal Triggers */}
-          <div className="bg-white p-4 rounded-2xl border-l-4 border-emerald-600 shadow-lg text-slate-800">
+          <div className="bg-white dark:bg-slate-800/90 p-4 rounded-2xl border-l-4 border-emerald-600 shadow-md border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-black uppercase text-emerald-700 tracking-wider flex items-center gap-1.5">
-                <Target className="w-4 h-4 text-emerald-600" />
+              <span className="text-[11px] font-black uppercase text-emerald-700 dark:text-emerald-400 tracking-wider flex items-center gap-1.5">
+                <Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>10U Practice Coaching Cues</span>
               </span>
               {isCustomMode && (
@@ -2351,7 +2351,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                     const cue = prompt('Add Coaching Cue:');
                     if (cue) setCustomCues([...customCues, cue]);
                   }}
-                  className="text-xs text-emerald-600 hover:text-emerald-800 font-bold flex items-center gap-1 cursor-pointer"
+                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 font-bold flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3 h-3" />
                   <span>Add Cue</span>
@@ -2360,12 +2360,12 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             </div>
 
             <ul
-              className="space-y-2 text-slate-800 text-sm leading-relaxed"
+              className="space-y-2 text-slate-800 dark:text-slate-200 text-sm leading-relaxed"
               style={{ fontFamily: "'Architects Daughter', cursive" }}
             >
               {(isCustomMode ? customCues : currentDrill.cues).map((cue, idx) => (
                 <li key={idx} className="flex items-start gap-2">
-                  <span className="text-emerald-600 font-black text-base leading-none mt-0.5">✔</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-black text-base leading-none mt-0.5">✔</span>
                   <span>{cue}</span>
                 </li>
               ))}
@@ -2373,10 +2373,10 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           </div>
 
           {/* CARD 3: Critical Mistakes & Penalties (DO NOT DO THIS!) */}
-          <div className="bg-white p-4 rounded-2xl border-l-4 border-rose-600 shadow-lg text-slate-800">
+          <div className="bg-white dark:bg-slate-800/90 p-4 rounded-2xl border-l-4 border-rose-600 shadow-md border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-black uppercase text-rose-700 tracking-wider flex items-center gap-1.5">
-                <Trash2 className="w-4 h-4 text-rose-600" />
+              <span className="text-[11px] font-black uppercase text-rose-700 dark:text-rose-400 tracking-wider flex items-center gap-1.5">
+                <Trash2 className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                 <span>DO NOT DO THIS! (CRITICAL FAULTS)</span>
               </span>
               {isCustomMode && (
@@ -2386,7 +2386,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                     const fault = prompt('Add Critical Fault:');
                     if (fault) setCustomFaults([...customFaults, fault]);
                   }}
-                  className="text-xs text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 cursor-pointer"
+                  className="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-800 font-bold flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3 h-3" />
                   <span>Add Fault</span>
@@ -2395,12 +2395,12 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
             </div>
 
             <ul
-              className="space-y-2 text-slate-800 text-sm leading-relaxed"
+              className="space-y-2 text-slate-800 dark:text-slate-200 text-sm leading-relaxed"
               style={{ fontFamily: "'Architects Daughter', cursive" }}
             >
               {(isCustomMode ? customFaults : currentDrill.faults).map((fault, idx) => (
                 <li key={idx} className="flex items-start gap-2">
-                  <span className="text-rose-600 font-black text-base leading-none mt-0.5">✖</span>
+                  <span className="text-rose-600 dark:text-rose-400 font-black text-base leading-none mt-0.5">✖</span>
                   <span>{fault}</span>
                 </li>
               ))}
@@ -2409,10 +2409,10 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
         </div>
 
         {/* Quick-Load Defensive Fronts & Coverage Shells */}
-        <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
+        <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
-              <Shield className="w-3.5 h-3.5 text-blue-400" />
+            <span className="text-[11px] font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider flex items-center gap-1">
+              <Shield className="w-3.5 h-3.5 text-indigo-600 dark:text-blue-400" />
               <span>Load Defensive Front / Shell:</span>
             </span>
           </div>
@@ -2423,7 +2423,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 key={preset.id}
                 type="button"
                 onClick={() => handleLoadPreset(preset.id)}
-                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700 hover:border-blue-500 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
+                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white border border-slate-200 dark:border-slate-700 hover:border-indigo-500 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
               >
                 {preset.name}
               </button>

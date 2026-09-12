@@ -649,26 +649,26 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
       )}
 
       {/* Top Action & Filter Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-850/95 backdrop-blur-md p-4 rounded-3xl border border-slate-750/90 shadow-xl print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-850/95 backdrop-blur-md p-4 rounded-3xl border border-slate-200 dark:border-slate-750/90 shadow-sm dark:shadow-xl print:hidden">
         <div className="flex items-center gap-2.5 flex-wrap">
           {activeTeam && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/90 rounded-xl border border-slate-700/80 text-xs shadow-inner">
-              <span className="text-[10px] font-black uppercase text-indigo-400 font-mono">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-slate-900/90 rounded-xl border border-slate-200 dark:border-slate-700/80 text-xs shadow-inner">
+              <span className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 font-mono">
                 Team:
               </span>
-              <span className="font-bold text-white">{activeTeam.name}</span>
+              <span className="font-bold text-slate-900 dark:text-white">{activeTeam.name}</span>
             </div>
           )}
 
           {/* View Mode Switcher (Mobile Cards vs Field Diagram) */}
-          <div className="flex items-center bg-slate-900/90 border border-slate-750 p-1 rounded-xl shadow-inner print:hidden">
+          <div className="flex items-center bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-750 p-1 rounded-xl shadow-inner print:hidden">
             <button
               type="button"
               onClick={() => setViewMode('mobile_cards')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 viewMode === 'mobile_cards'
                   ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
               title="Full-width cards and player assignment matrix"
             >
@@ -681,7 +681,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
               className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 viewMode === 'field'
                   ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
               title="Field formation diagram"
             >
@@ -691,16 +691,16 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
           </div>
 
           {/* On-screen view filter */}
-          <div className="flex items-center gap-1.5 bg-slate-900/90 border border-slate-750 px-2.5 py-1.5 rounded-xl">
-            <Filter className="w-3.5 h-3.5 text-indigo-400" />
+          <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-750 px-2.5 py-1.5 rounded-xl">
+            <Filter className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             <select
               value={filterViewId}
               onChange={(e) => setFilterViewId(e.target.value)}
-              className="bg-transparent text-xs font-bold text-slate-100 focus:outline-none cursor-pointer"
+              className="bg-transparent text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
             >
-              <option value="ALL" className="bg-slate-900 text-slate-100">All Formations ({unitFormations.length})</option>
+              <option value="ALL" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">All Formations ({unitFormations.length})</option>
               {unitFormations.map((f) => (
-                <option key={f.id} value={f.id} className="bg-slate-900 text-slate-100">
+                <option key={f.id} value={f.id} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
                   {f.name}
                 </option>
               ))}
@@ -743,14 +743,14 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                   onClick={() => setIsPlaybookActionsDropdownOpen(!isPlaybookActionsDropdownOpen)}
                   className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
                     isPlaybookActionsDropdownOpen
-                      ? 'bg-slate-700 text-white border-slate-500 ring-2 ring-indigo-500/30'
-                      : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-750 hover:border-slate-600'
+                      ? 'bg-slate-100 text-slate-900 dark:bg-slate-700 dark:text-white border-slate-300 dark:border-slate-500 ring-2 ring-indigo-500/30'
+                      : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-900 dark:text-slate-200 border-slate-200 dark:border-slate-750 hover:border-slate-300 dark:hover:border-slate-600'
                   }`}
                   title="Playbook tools and options"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-amber-400" />
                   <span>Actions</span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isPlaybookActionsDropdownOpen ? 'rotate-180 text-amber-300' : 'text-slate-400'}`} />
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isPlaybookActionsDropdownOpen ? 'rotate-180 text-indigo-600 dark:text-amber-300' : 'text-slate-400'}`} />
                 </button>
 
                 {isPlaybookActionsDropdownOpen && (
@@ -759,8 +759,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                       className="fixed inset-0 z-40"
                       onClick={() => setIsPlaybookActionsDropdownOpen(false)}
                     />
-                    <div className="absolute right-0 top-full mt-1.5 w-64 bg-slate-900 border border-slate-700/90 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-                      <div className="px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-400 tracking-wider border-b border-slate-800 mb-1">
+                    <div className="absolute right-0 top-full mt-1.5 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/90 rounded-2xl shadow-xl dark:shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider border-b border-slate-100 dark:border-slate-800 mb-1">
                         Playbook &amp; Depth Chart Actions
                       </div>
 
@@ -770,14 +770,14 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                             setIsPlaybookActionsDropdownOpen(false);
                             onOpenCopyWeekModal();
                           }}
-                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-200 hover:text-indigo-300 hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
                         >
-                          <div className="w-6 h-6 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center shrink-0">
-                            <Copy className="w-3.5 h-3.5 text-indigo-400" />
+                          <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-500/15 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center shrink-0">
+                            <Copy className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                           </div>
                           <div>
                             <div>Copy Week Lineup...</div>
-                            <div className="text-[10px] text-slate-400 font-normal">Copy formations or player spots to any week</div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Copy formations or player spots to any week</div>
                           </div>
                         </button>
                       )}
@@ -794,14 +794,14 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                             }
                             setShowCopyModal(true);
                           }}
-                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-200 hover:text-amber-300 hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-amber-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
                         >
-                          <div className="w-6 h-6 rounded-lg bg-amber-400/15 border border-amber-400/30 flex items-center justify-center shrink-0">
-                            <Layers className="w-3.5 h-3.5 text-amber-400" />
+                          <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-amber-400/15 border border-indigo-200 dark:border-amber-400/30 flex items-center justify-center shrink-0">
+                            <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-amber-400" />
                           </div>
                           <div>
                             <div>Clone from Team...</div>
-                            <div className="text-[10px] text-slate-400 font-normal">Import formations from another team</div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Import formations from another team</div>
                           </div>
                         </button>
                       )}
@@ -811,14 +811,14 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                           setIsPlaybookActionsDropdownOpen(false);
                           setIsPocketPrintModalOpen(true);
                         }}
-                        className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-200 hover:text-amber-300 hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                        className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-amber-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
                       >
-                        <div className="w-6 h-6 rounded-lg bg-amber-400/15 border border-amber-400/30 flex items-center justify-center shrink-0">
-                          <Printer className="w-3.5 h-3.5 text-amber-400" />
+                        <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-amber-400/15 border border-indigo-200 dark:border-amber-400/30 flex items-center justify-center shrink-0">
+                          <Printer className="w-3.5 h-3.5 text-indigo-600 dark:text-amber-400" />
                         </div>
                         <div>
                           <div>Print Pocket Depth Chart</div>
-                          <div className="text-[10px] text-slate-400 font-normal">Laminated pocket card layout &amp; 2-deep</div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Laminated pocket card layout &amp; 2-deep</div>
                         </div>
                       </button>
 
@@ -827,14 +827,14 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                           setIsPlaybookActionsDropdownOpen(false);
                           onOpenSelectivePrintModal(unit);
                         }}
-                        className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-200 hover:text-amber-300 hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                        className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-amber-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
                       >
-                        <div className="w-6 h-6 rounded-lg bg-amber-400/15 border border-amber-400/30 flex items-center justify-center shrink-0">
-                          <Printer className="w-3.5 h-3.5 text-amber-400" />
+                        <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-amber-400/15 border border-indigo-200 dark:border-amber-400/30 flex items-center justify-center shrink-0">
+                          <Printer className="w-3.5 h-3.5 text-indigo-600 dark:text-amber-400" />
                         </div>
                         <div>
                           <div>Selective Print Sheets</div>
-                          <div className="text-[10px] text-slate-400 font-normal">Choose specific formations to print</div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Choose specific formations to print</div>
                         </div>
                       </button>
 
@@ -844,14 +844,14 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                             setIsPlaybookActionsDropdownOpen(false);
                             onAcquireLock();
                           }}
-                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-200 hover:text-emerald-300 hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
                         >
-                          <div className="w-6 h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
-                            <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                          <div className="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center shrink-0">
+                            <Lock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                           </div>
                           <div>
                             <div>Lock Playbook for Me</div>
-                            <div className="text-[10px] text-slate-400 font-normal">Prevent edits from other coaches</div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Prevent edits from other coaches</div>
                           </div>
                         </button>
                       )}
@@ -862,14 +862,14 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                             setIsPlaybookActionsDropdownOpen(false);
                             onReleaseLock();
                           }}
-                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-200 hover:text-slate-100 hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
                         >
-                          <div className="w-6 h-6 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
-                            <Unlock className="w-3.5 h-3.5 text-slate-300" />
+                          <div className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0">
+                            <Unlock className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
                           </div>
                           <div>
                             <div>Release Lock</div>
-                            <div className="text-[10px] text-slate-400 font-normal">Allow other coaches to edit</div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Allow other coaches to edit</div>
                           </div>
                         </button>
                       )}
@@ -887,10 +887,10 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
               setSelectedPocketPrintFormId(null);
               setIsPocketPrintModalOpen(true);
             }}
-            className="px-3 py-2 bg-gradient-to-r from-amber-500/20 to-amber-600/20 hover:from-amber-500/30 hover:to-amber-600/30 text-amber-300 hover:text-amber-200 font-bold text-xs rounded-xl border border-amber-500/40 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
+            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-950 dark:text-slate-200 dark:hover:text-white font-bold text-xs rounded-xl border border-slate-200 dark:border-slate-750 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
             title="Print Pocket Depth Chart in Laminated Card Format"
           >
-            <Printer className="w-3.5 h-3.5 text-amber-400" />
+            <Printer className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
             <span className="hidden sm:inline">Pocket Card</span>
             <span className="sm:hidden">Pocket</span>
           </button>
@@ -904,10 +904,10 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                 triggerPrint();
               }
             }}
-            className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-xs rounded-xl border border-slate-750 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-950 dark:text-slate-200 dark:hover:text-white font-bold text-xs rounded-xl border border-slate-200 dark:border-slate-750 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
             title="Print Depth Chart Formations"
           >
-            <Printer className="w-3.5 h-3.5 text-slate-400" />
+            <Printer className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
             <span>Print</span>
           </button>
         </div>
@@ -963,14 +963,14 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
       {viewMode === 'mobile_cards' && (
         <div className={`space-y-4 ${mobileSubTab === 'pocket_chart' ? '' : 'print:hidden'}`}>
           {/* Sub-View Switcher: Pocket Table vs Player Matrix */}
-          <div className="flex items-center justify-between gap-2 bg-slate-900/95 border border-slate-700/80 p-1.5 rounded-2xl shadow-xl">
+          <div className="flex items-center justify-between gap-2 bg-slate-100 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700/80 p-1.5 rounded-2xl shadow-xs dark:shadow-xl">
             <button
               type="button"
               onClick={() => setMobileSubTab('pocket_chart')}
               className={`flex-1 py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
                 mobileSubTab === 'pocket_chart'
                   ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-800'
               }`}
             >
               <TableProperties className="w-4 h-4" />
@@ -982,7 +982,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
               className={`flex-1 py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
                 mobileSubTab === 'player_matrix'
                   ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-800'
               }`}
             >
               <Users className="w-4 h-4" />
@@ -1002,13 +1002,13 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
               }
               value={mobileSearchQuery}
               onChange={(e) => setMobileSearchQuery(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-2xl pl-10 pr-9 py-2.5 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 shadow-inner"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl pl-10 pr-9 py-2.5 text-xs font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 shadow-xs dark:shadow-inner"
             />
             {mobileSearchQuery && (
               <button
                 type="button"
                 onClick={() => setMobileSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 rounded-lg"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1029,7 +1029,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                     className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all cursor-pointer ${
                       activeMobileFormationTab === 'ALL'
                         ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
-                        : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700'
+                        : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs'
                     }`}
                   >
                     All Formations ({unitFormations.length})
@@ -1042,7 +1042,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                       className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all cursor-pointer ${
                         activeMobileFormationTab === f.id
                           ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
-                          : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700'
+                          : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs'
                       }`}
                     >
                       {f.name}
@@ -1058,7 +1058,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                     );
                     setIsPocketPrintModalOpen(true);
                   }}
-                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all shrink-0 cursor-pointer print:hidden"
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 active:scale-95 text-slate-800 dark:text-slate-100 font-bold text-xs rounded-xl shadow-xs border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 transition-all shrink-0 cursor-pointer print:hidden"
                   title="Print Pocket Depth Chart in Laminated Pocket Format"
                 >
                   <Printer className="w-3.5 h-3.5" />
@@ -1096,19 +1096,19 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                   return (
                     <div
                       key={form.id}
-                      className="bg-slate-850/95 rounded-3xl border border-slate-700/80 shadow-2xl overflow-hidden"
+                      className="bg-white dark:bg-slate-850/95 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm dark:shadow-2xl overflow-hidden"
                     >
                       {/* Laminated Card Header */}
-                      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-indigo-950/80 p-3.5 sm:p-4 border-b border-slate-700/80 flex items-center justify-between gap-2">
+                      <div className="bg-slate-50 dark:bg-gradient-to-r dark:from-slate-900 dark:via-slate-850 dark:to-indigo-950/80 p-3.5 sm:p-4 border-b border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
+                          <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-amber-400 dark:text-slate-950 dark:border-amber-400 flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
                             {unit === 'offense' ? 'OFF' : unit === 'defense' ? 'DEF' : unit === 'st' ? 'ST' : 'GRP'}
                           </div>
                           <div className="min-w-0">
-                            <h2 className="font-black text-base text-white tracking-tight truncate">
+                            <h2 className="font-black text-base text-slate-900 dark:text-white tracking-tight truncate">
                               {form.name}
                             </h2>
-                            <p className="text-[11px] font-bold text-slate-400">
+                            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
                               {filteredSlots.length} Positions • Pocket Depth Chart
                             </p>
                           </div>
@@ -1122,10 +1122,10 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                               setSelectedPocketPrintFormId(form.id);
                               setIsPocketPrintModalOpen(true);
                             }}
-                            className="p-1.5 text-slate-400 hover:text-amber-300 bg-slate-800 hover:bg-slate-750 rounded-lg border border-slate-700 cursor-pointer transition-all shrink-0 print:hidden"
+                            className="p-1.5 text-slate-500 hover:text-slate-900 bg-white hover:bg-slate-100 dark:text-slate-400 dark:hover:text-amber-300 dark:bg-slate-800 dark:hover:bg-slate-750 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer transition-all shrink-0 print:hidden"
                             title={`Print ${form.name} Pocket Depth Card`}
                           >
-                            <Printer className="w-3.5 h-3.5 text-amber-400" />
+                            <Printer className="w-3.5 h-3.5 text-slate-500 dark:text-amber-400" />
                           </button>
 
                           {userRole === 'admin' && (
@@ -1142,7 +1142,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                   setRowLabelInput('');
                                   setRowLabelModalTarget({ formId: form.id, isNew: true });
                                 }}
-                                className="px-2.5 py-1 text-xs font-bold bg-indigo-600/30 hover:bg-indigo-600/60 text-indigo-200 hover:text-white rounded-lg border border-indigo-500/40 flex items-center gap-1 cursor-pointer transition-all shrink-0"
+                                className="px-2.5 py-1 text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-600/30 dark:hover:bg-indigo-600/60 dark:text-indigo-200 dark:hover:text-white rounded-lg border border-indigo-200 dark:border-indigo-500/40 flex items-center gap-1 cursor-pointer transition-all shrink-0"
                                 title="Add Level to Formation"
                               >
                                 <Plus className="w-3.5 h-3.5" />
@@ -1159,7 +1159,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                   unit: form.unit,
                                 });
                               }}
-                              className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-all cursor-pointer shrink-0"
+                              className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 rounded-lg transition-all cursor-pointer shrink-0"
                               title="Rename formation"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
@@ -1172,7 +1172,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                   formName: form.name,
                                 });
                               }}
-                              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-all cursor-pointer shrink-0"
+                              className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-400 dark:hover:text-rose-400 dark:hover:bg-rose-950/40 rounded-lg transition-all cursor-pointer shrink-0"
                               title="Delete formation"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1183,24 +1183,24 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                     </div>
 
                       {/* Pocket Table Grid */}
-                      <div className="overflow-x-auto divide-y divide-slate-800/80">
+                      <div className="overflow-x-auto divide-y divide-slate-200 dark:divide-slate-800/80">
                         {/* Table Header Bar */}
-                        <div className="min-w-[490px] grid grid-cols-[48px_repeat(4,minmax(0,1fr))] bg-slate-900/95 text-[10px] font-black uppercase text-slate-400 px-2 py-2 border-b border-slate-800 tracking-wider items-center gap-1.5">
-                          <div className="text-left font-black text-slate-400">POS</div>
-                          <div className="flex items-center gap-1 text-zinc-100 min-w-0 truncate">
-                            <span className="w-2 h-2 rounded-full bg-zinc-300 ring-1 ring-zinc-600 shrink-0"></span>
+                        <div className="min-w-[490px] grid grid-cols-[48px_repeat(4,minmax(0,1fr))] bg-slate-100 dark:bg-slate-900/95 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 px-2 py-2 border-b border-slate-200 dark:border-slate-800 tracking-wider items-center gap-1.5">
+                          <div className="text-left font-black text-slate-600 dark:text-slate-400">POS</div>
+                          <div className="flex items-center gap-1 text-slate-900 dark:text-zinc-100 min-w-0 truncate">
+                            <span className="w-2 h-2 rounded-full bg-slate-800 dark:bg-zinc-300 ring-1 ring-slate-400 dark:ring-zinc-600 shrink-0"></span>
                             <span className="truncate">BLACK</span>
                           </div>
-                          <div className="flex items-center gap-1 text-amber-400 min-w-0 truncate">
-                            <span className="w-2 h-2 rounded-full bg-amber-400 ring-1 ring-amber-700 shrink-0"></span>
+                          <div className="flex items-center gap-1 text-amber-800 dark:text-amber-300 min-w-0 truncate">
+                            <span className="w-2 h-2 rounded-full bg-amber-500/80 ring-1 ring-amber-300 dark:ring-amber-700 shrink-0"></span>
                             <span className="truncate">GOLD</span>
                           </div>
-                          <div className="flex items-center gap-1 text-blue-400 min-w-0 truncate">
-                            <span className="w-2 h-2 rounded-full bg-blue-400 ring-1 ring-blue-700 shrink-0"></span>
+                          <div className="flex items-center gap-1 text-sky-800 dark:text-sky-300 min-w-0 truncate">
+                            <span className="w-2 h-2 rounded-full bg-sky-500/80 ring-1 ring-sky-300 dark:ring-sky-700 shrink-0"></span>
                             <span className="truncate">BLUE</span>
                           </div>
-                          <div className="flex items-center gap-1 text-slate-300 min-w-0 truncate">
-                            <span className="w-2 h-2 rounded-full bg-slate-400 ring-1 ring-slate-600 shrink-0"></span>
+                          <div className="flex items-center gap-1 text-slate-600 dark:text-slate-300 min-w-0 truncate">
+                            <span className="w-2 h-2 rounded-full bg-slate-400 ring-1 ring-slate-400 dark:ring-slate-600 shrink-0"></span>
                             <span className="truncate">BACKUPS</span>
                           </div>
                         </div>
@@ -1216,11 +1216,11 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                           return (
                             <div
                               key={pos.id}
-                              className="min-w-[490px] grid grid-cols-[48px_repeat(4,minmax(0,1fr))] px-2 py-2 items-center gap-1.5 hover:bg-slate-800/40 transition-colors"
+                              className="min-w-[490px] grid grid-cols-[48px_repeat(4,minmax(0,1fr))] px-2 py-2 items-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
                             >
                               {/* Position Badge (Clean without position description) */}
                               <div className="flex items-center justify-center min-w-0">
-                                <span className="px-2 py-0.5 bg-indigo-600/90 text-white font-black text-[11px] rounded-md border border-indigo-400/40 shadow-xs leading-none">
+                                <span className="px-2 py-0.5 bg-indigo-600 text-white font-black text-[11px] rounded-md border border-indigo-400/40 shadow-xs leading-none">
                                   {pos.name}
                                 </span>
                               </div>
@@ -1241,17 +1241,17 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="p-1 bg-black border border-zinc-700 hover:border-amber-400 rounded-lg flex items-center justify-between gap-1 shadow-xs cursor-pointer group"
+                                    className="p-1 bg-white dark:bg-black border border-slate-300 dark:border-zinc-700 hover:border-amber-400 rounded-lg flex items-center justify-between gap-1 shadow-xs cursor-pointer group"
                                   >
                                     <div className="flex items-center gap-1 min-w-0 flex-1">
-                                      <span className="w-5 h-5 rounded bg-amber-400 text-slate-950 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
+                                      <span className="w-5 h-5 rounded bg-slate-900 text-white dark:bg-amber-400 dark:text-slate-950 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
                                         #{blackPlayer.num}
                                       </span>
                                       <div className="min-w-0 flex-1">
-                                        <span className="text-[11px] font-black uppercase text-white tracking-tight truncate block group-hover:text-amber-300 leading-tight">
+                                        <span className="text-[11px] font-black uppercase text-slate-900 dark:text-white tracking-tight truncate block group-hover:text-amber-500 leading-tight">
                                           {blackPlayer.name}
                                         </span>
-                                        <span className="text-[7.5px] font-black uppercase text-zinc-400 tracking-wider block leading-none">
+                                        <span className="text-[7.5px] font-black uppercase text-slate-500 dark:text-zinc-400 tracking-wider block leading-none">
                                           BLACK
                                         </span>
                                       </div>
@@ -1277,9 +1277,9 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="w-full py-1.5 px-1 border border-dashed border-zinc-700 hover:border-amber-400 bg-black/40 hover:bg-black/70 rounded-lg text-center text-[10px] font-black text-zinc-400 hover:text-amber-300 flex items-center justify-center gap-0.5 cursor-pointer"
+                                    className="w-full py-1.5 px-1 border border-dashed border-slate-300 dark:border-zinc-700 hover:border-amber-400 bg-slate-50 dark:bg-black/40 hover:bg-slate-100 dark:hover:bg-black/70 rounded-lg text-center text-[10px] font-black text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-amber-300 flex items-center justify-center gap-0.5 cursor-pointer"
                                   >
-                                    <Plus className="w-3 h-3 text-zinc-300 shrink-0" />
+                                    <Plus className="w-3 h-3 text-slate-400 dark:text-zinc-300 shrink-0" />
                                     <span className="truncate">+ BLACK</span>
                                   </button>
                                 )}
@@ -1301,17 +1301,17 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="p-1 bg-amber-950/30 border border-amber-500/40 hover:border-amber-400 rounded-lg flex items-center justify-between gap-1 shadow-xs cursor-pointer group"
+                                    className="p-1 bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-500/40 hover:border-amber-400 rounded-lg flex items-center justify-between gap-1 shadow-xs cursor-pointer group"
                                   >
                                     <div className="flex items-center gap-1 min-w-0 flex-1">
-                                      <span className="w-5 h-5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
+                                      <span className="w-5 h-5 rounded bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
                                         #{goldPlayer.num}
                                       </span>
                                       <div className="min-w-0 flex-1">
-                                        <span className="text-[11px] font-black uppercase text-amber-200 tracking-tight truncate block group-hover:text-amber-100 leading-tight">
+                                        <span className="text-[11px] font-black uppercase text-amber-950 dark:text-amber-200 tracking-tight truncate block group-hover:text-amber-600 dark:group-hover:text-amber-100 leading-tight">
                                           {goldPlayer.name}
                                         </span>
-                                        <span className="text-[7.5px] font-black uppercase text-amber-400 tracking-wider block leading-none">
+                                        <span className="text-[7.5px] font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider block leading-none">
                                           GOLD
                                         </span>
                                       </div>
@@ -1337,9 +1337,9 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="w-full py-1.5 px-1 border border-dashed border-amber-700/50 hover:border-amber-400 bg-amber-950/20 hover:bg-amber-950/40 rounded-lg text-center text-[10px] font-black text-amber-400/80 hover:text-amber-300 flex items-center justify-center gap-0.5 cursor-pointer"
+                                    className="w-full py-1.5 px-1 border border-dashed border-amber-300 dark:border-amber-700/50 hover:border-amber-400 bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-100/60 dark:hover:bg-amber-950/40 rounded-lg text-center text-[10px] font-black text-amber-800 dark:text-amber-400/80 hover:text-amber-950 dark:hover:text-amber-300 flex items-center justify-center gap-0.5 cursor-pointer"
                                   >
-                                    <Plus className="w-3 h-3 text-amber-400 shrink-0" />
+                                    <Plus className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
                                     <span className="truncate">+ GOLD</span>
                                   </button>
                                 )}
@@ -1361,17 +1361,17 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="p-1 bg-blue-950/30 border border-blue-500/40 hover:border-blue-400 rounded-lg flex items-center justify-between gap-1 shadow-xs cursor-pointer group"
+                                    className="p-1 bg-sky-50/90 dark:bg-blue-950/30 border border-sky-200/80 dark:border-blue-500/40 hover:border-sky-400 rounded-lg flex items-center justify-between gap-1 shadow-xs cursor-pointer group"
                                   >
                                     <div className="flex items-center gap-1 min-w-0 flex-1">
-                                      <span className="w-5 h-5 rounded bg-blue-600/30 text-blue-300 border border-blue-500/40 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
+                                      <span className="w-5 h-5 rounded bg-sky-100 text-sky-900 border border-sky-300 dark:bg-blue-600/30 dark:text-blue-300 dark:border-blue-500/40 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
                                         #{bluePlayer.num}
                                       </span>
                                       <div className="min-w-0 flex-1">
-                                        <span className="text-[11px] font-black uppercase text-blue-200 tracking-tight truncate block group-hover:text-blue-100 leading-tight">
+                                        <span className="text-[11px] font-black uppercase text-sky-950 dark:text-blue-200 tracking-tight truncate block group-hover:text-sky-600 dark:group-hover:text-blue-100 leading-tight">
                                           {bluePlayer.name}
                                         </span>
-                                        <span className="text-[7.5px] font-black uppercase text-blue-400 tracking-wider block leading-none">
+                                        <span className="text-[7.5px] font-black uppercase text-sky-700 dark:text-blue-400 tracking-wider block leading-none">
                                           BLUE
                                         </span>
                                       </div>
@@ -1397,9 +1397,9 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="w-full py-1.5 px-1 border border-dashed border-blue-700/50 hover:border-blue-400 bg-blue-950/20 hover:bg-blue-950/40 rounded-lg text-center text-[10px] font-black text-blue-400/80 hover:text-blue-300 flex items-center justify-center gap-0.5 cursor-pointer"
+                                    className="w-full py-1.5 px-1 border border-dashed border-sky-300 dark:border-blue-700/50 hover:border-sky-400 bg-sky-50/50 dark:bg-blue-950/20 hover:bg-sky-100/60 dark:hover:bg-blue-950/40 rounded-lg text-center text-[10px] font-black text-sky-800 dark:text-blue-400/80 hover:text-sky-950 dark:hover:text-blue-300 flex items-center justify-center gap-0.5 cursor-pointer"
                                   >
-                                    <Plus className="w-3 h-3 text-blue-400 shrink-0" />
+                                    <Plus className="w-3 h-3 text-sky-600 dark:text-blue-400 shrink-0" />
                                     <span className="truncate">+ BLUE</span>
                                   </button>
                                 )}
@@ -1425,7 +1425,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                           });
                                         }
                                       }}
-                                      className="px-1.5 py-0.5 rounded-md border border-slate-700 bg-slate-800/90 text-slate-200 hover:bg-slate-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all shrink-0 max-w-full"
+                                      className="px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all shrink-0 max-w-full"
                                       title={`Backup (D${realIdx + 1}): #${bk.num} ${bk.name}`}
                                     >
                                       <span className="font-mono font-black text-[9.5px]">#{bk.num}</span>
@@ -1482,7 +1482,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                   className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                     matrixFilter === 'ALL'
                       ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400 font-black'
-                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-700'
+                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-xs'
                   }`}
                 >
                   All Roster ({roster.length})
@@ -1492,8 +1492,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                   onClick={() => setMatrixFilter('BLACK')}
                   className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                     matrixFilter === 'BLACK' || matrixFilter === 'STARTERS'
-                      ? 'bg-zinc-100 text-slate-950 font-black shadow-md shadow-zinc-200/20'
-                      : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-700'
+                      ? 'bg-slate-900 text-white dark:bg-zinc-100 dark:text-slate-950 font-black shadow-xs'
+                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 shadow-xs'
                   }`}
                 >
                   BLACK ({playerAssignmentsMatrix.filter((p) => p.blackCount > 0).length})
@@ -1503,8 +1503,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                   onClick={() => setMatrixFilter('GOLD')}
                   className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                     matrixFilter === 'GOLD'
-                      ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/30'
-                      : 'bg-slate-900 text-amber-400 hover:text-amber-300 border border-slate-700'
+                      ? 'bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300 dark:border-amber-600 font-bold shadow-xs'
+                      : 'bg-white dark:bg-slate-900 text-amber-800 dark:text-amber-300/90 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs'
                   }`}
                 >
                   GOLD ({playerAssignmentsMatrix.filter((p) => p.goldCount > 0).length})
@@ -1514,8 +1514,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                   onClick={() => setMatrixFilter('BLUE')}
                   className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                     matrixFilter === 'BLUE'
-                      ? 'bg-blue-600 text-white font-black shadow-md shadow-blue-600/30'
-                      : 'bg-slate-900 text-blue-400 hover:text-blue-300 border border-slate-700'
+                      ? 'bg-sky-100 text-sky-900 dark:bg-sky-950/80 dark:text-sky-200 border border-sky-300 dark:border-sky-600 font-bold shadow-xs'
+                      : 'bg-white dark:bg-slate-900 text-sky-800 dark:text-sky-300/90 hover:bg-sky-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs'
                   }`}
                 >
                   BLUE ({playerAssignmentsMatrix.filter((p) => p.blueCount > 0).length})
@@ -1525,8 +1525,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                   onClick={() => setMatrixFilter('BACKUPS')}
                   className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                     matrixFilter === 'BACKUPS' || matrixFilter === 'ROTATION'
-                      ? 'bg-slate-700 text-white shadow-md font-black'
-                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-700'
+                      ? 'bg-slate-200 text-slate-900 dark:bg-slate-700 dark:text-white font-bold shadow-xs'
+                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-xs'
                   }`}
                 >
                   Backups ({playerAssignmentsMatrix.filter((p) => p.backupCount > 0).length})
@@ -1536,8 +1536,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                   onClick={() => setMatrixFilter('UNASSIGNED')}
                   className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                     matrixFilter === 'UNASSIGNED'
-                      ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30 font-black'
-                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-700'
+                      ? 'bg-rose-100 text-rose-900 dark:bg-rose-900/70 dark:text-rose-100 font-bold shadow-xs'
+                      : 'bg-white dark:bg-slate-900 text-rose-700 dark:text-slate-400 hover:text-rose-900 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-xs'
                   }`}
                 >
                   Unassigned in {unit.toUpperCase()} ({playerAssignmentsMatrix.filter((p) => p.isUnassigned).length})
@@ -1550,7 +1550,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                   return (
                     <div
                       key={item.player.id || `${item.num}-${item.playerName}`}
-                      className="bg-slate-850/95 rounded-2xl border border-slate-700/80 p-3.5 shadow-md space-y-2.5"
+                      className="bg-white dark:bg-slate-850/95 rounded-2xl border border-slate-200 dark:border-slate-700/80 p-3.5 shadow-xs dark:shadow-md space-y-2.5"
                     >
                       {/* Player Info Line */}
                       <div className="flex items-center justify-between gap-2">
@@ -1558,33 +1558,33 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                           <div
                             className={`w-10 h-10 rounded-xl font-mono font-black text-sm flex items-center justify-center shrink-0 border ${
                               item.blackCount > 0
-                                ? 'bg-black text-amber-400 border-zinc-600 shadow-xs'
+                                ? 'bg-slate-900 text-amber-400 dark:bg-black dark:text-amber-400 border-slate-700 dark:border-zinc-600 shadow-xs'
                                 : item.goldCount > 0
-                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                ? 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300 border-amber-300 dark:border-amber-500/40'
                                 : item.blueCount > 0
-                                ? 'bg-blue-950/80 text-blue-300 border-blue-600/40'
-                                : 'bg-slate-800 text-slate-400 border-slate-700'
+                                ? 'bg-sky-100 text-sky-900 dark:bg-blue-950/80 dark:text-blue-300 border-sky-300 dark:border-blue-600/40'
+                                : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                             }`}
                           >
                             #{item.num}
                           </div>
                           <div className="min-w-0">
-                            <div className="text-sm font-black uppercase text-white tracking-tight truncate">
+                            <div className="text-sm font-black uppercase text-slate-900 dark:text-white tracking-tight truncate">
                               {item.playerName}
                             </div>
-                            <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-bold">
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400 font-bold">
                               {item.player.primaryPosition && (
-                                <span className="text-slate-300">
+                                <span className="text-slate-700 dark:text-slate-300">
                                   Pos: {item.player.primaryPosition}
                                 </span>
                               )}
                               {item.player.offensivePosition && (
-                                <span className="text-emerald-400">
+                                <span className="text-emerald-700 dark:text-emerald-400">
                                   OFF: {item.player.offensivePosition}
                                 </span>
                               )}
                               {item.player.defensivePosition && (
-                                <span className="text-blue-400">
+                                <span className="text-sky-700 dark:text-blue-400">
                                   DEF: {item.player.defensivePosition}
                                 </span>
                               )}
@@ -1595,27 +1595,27 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                         {/* Summary Badges */}
                         <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
                           {item.blackCount > 0 && (
-                            <span className="px-2 py-0.5 bg-black text-white border border-zinc-700 font-black text-[10.5px] rounded-lg shadow-xs">
+                            <span className="px-2 py-0.5 bg-slate-900 text-white dark:bg-black dark:text-white border border-slate-700 dark:border-zinc-700 font-black text-[10.5px] rounded-lg shadow-xs">
                               {item.blackCount} BLACK
                             </span>
                           )}
                           {item.goldCount > 0 && (
-                            <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 font-black text-[10.5px] rounded-lg">
+                            <span className="px-2 py-0.5 bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 font-black text-[10.5px] rounded-lg">
                               {item.goldCount} GOLD
                             </span>
                           )}
                           {item.blueCount > 0 && (
-                            <span className="px-2 py-0.5 bg-blue-950/80 text-blue-300 border border-blue-600/50 font-black text-[10.5px] rounded-lg">
+                            <span className="px-2 py-0.5 bg-sky-100 text-sky-900 dark:bg-blue-950/80 dark:text-blue-300 border border-sky-300 dark:border-blue-600/50 font-black text-[10.5px] rounded-lg">
                               {item.blueCount} BLUE
                             </span>
                           )}
                           {item.backupCount > 0 && (
-                            <span className="px-2 py-0.5 bg-slate-800 text-slate-300 border border-slate-700 font-bold text-[10.5px] rounded-lg">
+                            <span className="px-2 py-0.5 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-bold text-[10.5px] rounded-lg">
                               {item.backupCount} Backup
                             </span>
                           )}
                           {item.isUnassigned && (
-                            <span className="px-2 py-0.5 bg-rose-950/60 text-rose-300 border border-rose-800/50 font-bold text-[10.5px] rounded-lg">
+                            <span className="px-2 py-0.5 bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50 font-bold text-[10.5px] rounded-lg">
                               No Spot Yet
                             </span>
                           )}
@@ -1624,18 +1624,18 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
 
                       {/* Formation Assignments Badges */}
                       {item.assignments.length > 0 ? (
-                        <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-slate-800/80">
+                        <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-slate-200 dark:border-slate-800/80">
                           {item.assignments.map((asgn, aIdx) => (
                             <div
                               key={aIdx}
                               className={`px-2.5 py-1 rounded-xl border text-xs font-black flex items-center gap-1.5 ${
                                 asgn.depthIndex === 0
-                                  ? 'bg-black/90 border-zinc-700 text-zinc-100 shadow-xs'
+                                  ? 'bg-slate-900 border-slate-700 text-zinc-100 dark:bg-black/90 dark:border-zinc-700 dark:text-zinc-100 shadow-xs'
                                   : asgn.depthIndex === 1
-                                  ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                                  ? 'bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-950/40 dark:border-amber-500/40 dark:text-amber-200'
                                   : asgn.depthIndex === 2
-                                  ? 'bg-blue-950/40 border-blue-500/40 text-blue-200'
-                                  : 'bg-slate-800/90 border-slate-700 text-slate-300'
+                                  ? 'bg-sky-50 border-sky-200 text-sky-900 dark:bg-blue-950/40 dark:border-blue-500/40 dark:text-blue-200'
+                                  : 'bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800/90 dark:border-slate-700 dark:text-slate-300'
                               }`}
                             >
                               <span className="font-extrabold text-slate-400">{asgn.formName}:</span>

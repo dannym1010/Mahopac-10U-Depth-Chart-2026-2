@@ -1697,16 +1697,16 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
       {/* =========================================================================
           4. SEGMENTED COACH COMMAND HUB (Tabs: Starters | Roster | Attendance)
           ========================================================================= */}
-      <div className="bg-slate-850 rounded-3xl border border-slate-700/80 p-3.5 shadow-xl space-y-3">
+      <div className="bg-white dark:bg-slate-850 rounded-3xl border border-slate-200 dark:border-slate-700/80 p-3.5 shadow-xs dark:shadow-xl space-y-3">
         {/* Segmented Tab Bar */}
-        <div className="grid grid-cols-3 gap-1 bg-slate-900 p-1 rounded-2xl border border-slate-800">
+        <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl border border-slate-200 dark:border-slate-800">
           <button
             type="button"
             onClick={() => setHubTab('starters')}
             className={`py-2 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               hubTab === 'starters'
                 ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                : 'text-slate-400 hover:text-slate-200'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-800/60'
             }`}
           >
             <Zap className="w-3.5 h-3.5" />
@@ -1718,7 +1718,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
             className={`py-2 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               hubTab === 'roster'
                 ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                : 'text-slate-400 hover:text-slate-200'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-800/60'
             }`}
           >
             <Users className="w-3.5 h-3.5" />
@@ -1730,7 +1730,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
             className={`py-2 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               hubTab === 'attendance'
                 ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                : 'text-slate-400 hover:text-slate-200'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-800/60'
             }`}
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
@@ -1743,7 +1743,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
           <div className="space-y-3">
             {/* Unit Selector: Offense, Defense, Special Teams */}
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => {
@@ -1752,8 +1752,8 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                   }}
                   className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                     starterUnit === 'offense'
-                      ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
                   Offense
@@ -1766,8 +1766,8 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                   }}
                   className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                     starterUnit === 'defense'
-                      ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
                   Defense
@@ -1780,8 +1780,8 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                   }}
                   className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                     starterUnit === 'st'
-                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
                   ST
@@ -1794,7 +1794,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                   value={activeFormation?.id || ''}
                   onChange={(e) => setSelectedFormationId(e.target.value)}
                   aria-label="Select Formation"
-                  className="bg-slate-900 border border-slate-700 text-slate-200 text-xs font-bold rounded-xl px-2 py-1 focus:outline-none max-w-[130px] truncate"
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl px-2 py-1 focus:outline-none max-w-[130px] truncate"
                 >
                   {unitFormations.map((f) => (
                     <option key={f.id} value={f.id}>
@@ -1807,7 +1807,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
               <button
                 type="button"
                 onClick={() => onNavigateToUnit('depth_chart', starterUnit as any)}
-                className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-0.5 cursor-pointer shrink-0"
+                className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 flex items-center gap-0.5 cursor-pointer shrink-0"
               >
                 <span>Full Chart</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -1815,82 +1815,94 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
             </div>
 
             {/* Team / Tier Breakdown Selector (Black, Blue, Gold, Sub Section, All Matrix) */}
-            <div className="grid grid-cols-5 gap-1 p-1 bg-slate-900/90 rounded-2xl border border-slate-800">
+            <div className="grid grid-cols-5 gap-1 p-1 bg-slate-100 dark:bg-slate-900/90 rounded-2xl border border-slate-200 dark:border-slate-800">
               {/* 1. Black Team */}
               <button
                 type="button"
                 onClick={() => setStarterString('black')}
-                className={`py-1.5 px-1 rounded-xl text-center flex flex-col items-center gap-0.5 transition-all cursor-pointer ${
+                className={`py-1.5 px-1 rounded-xl text-center flex flex-col items-center gap-1 transition-all cursor-pointer ${
                   starterString === 'black'
-                    ? 'bg-slate-950 text-amber-300 border border-amber-400/60 shadow-md ring-1 ring-amber-400/40'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                    ? 'bg-slate-900 text-white dark:bg-slate-950 dark:text-zinc-100 border border-slate-700 dark:border-slate-600 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
                 }`}
               >
-                <span className="text-[11px] font-black leading-none">⬛ Black</span>
-                <span className="text-[9px] font-bold opacity-80">Black ({stringCounts.blackCount})</span>
+                <span className="flex items-center gap-1 text-[11px] font-black leading-none">
+                  <span className="w-2 h-2 rounded-full bg-slate-900 dark:bg-zinc-200 ring-1 ring-slate-400 shrink-0"></span>
+                  Black
+                </span>
+                <span className="text-[9px] font-bold opacity-80">({stringCounts.blackCount})</span>
               </button>
 
-              {/* 2. Blue Team (3rd / Blue String) */}
+              {/* 2. Blue Team (3rd / Blue String) - Muted */}
               <button
                 type="button"
                 onClick={() => setStarterString('blue')}
-                className={`py-1.5 px-1 rounded-xl text-center flex flex-col items-center gap-0.5 transition-all cursor-pointer ${
+                className={`py-1.5 px-1 rounded-xl text-center flex flex-col items-center gap-1 transition-all cursor-pointer ${
                   starterString === 'blue'
-                    ? 'bg-blue-600 text-white font-black border border-blue-400 shadow-md'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                    ? 'bg-sky-100 text-sky-900 border border-sky-300 dark:bg-sky-950/70 dark:text-sky-200 dark:border-sky-600/50 shadow-xs font-black'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
                 }`}
               >
-                <span className="text-[11px] font-black leading-none">🟦 Blue</span>
-                <span className="text-[9px] font-bold opacity-80">Blue ({stringCounts.blueCount})</span>
+                <span className="flex items-center gap-1 text-[11px] font-black leading-none text-sky-900 dark:text-sky-300">
+                  <span className="w-2 h-2 rounded-full bg-sky-500/80 ring-1 ring-sky-300 dark:ring-sky-700 shrink-0"></span>
+                  Blue
+                </span>
+                <span className="text-[9px] font-bold opacity-80">({stringCounts.blueCount})</span>
               </button>
 
-              {/* 3. Gold Team (2nd / Gold String) */}
+              {/* 3. Gold Team (2nd / Gold String) - Muted */}
               <button
                 type="button"
                 onClick={() => setStarterString('gold')}
-                className={`py-1.5 px-1 rounded-xl text-center flex flex-col items-center gap-0.5 transition-all cursor-pointer ${
+                className={`py-1.5 px-1 rounded-xl text-center flex flex-col items-center gap-1 transition-all cursor-pointer ${
                   starterString === 'gold'
-                    ? 'bg-amber-400 text-slate-950 font-black border border-amber-500 shadow-md'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                    ? 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/70 dark:text-amber-200 dark:border-amber-600/50 shadow-xs font-black'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
                 }`}
               >
-                <span className="text-[11px] font-black leading-none">🟨 Gold</span>
-                <span className="text-[9px] font-bold opacity-80">Gold ({stringCounts.goldCount})</span>
+                <span className="flex items-center gap-1 text-[11px] font-black leading-none text-amber-900 dark:text-amber-300">
+                  <span className="w-2 h-2 rounded-full bg-amber-500/80 ring-1 ring-amber-300 dark:ring-amber-700 shrink-0"></span>
+                  Gold
+                </span>
+                <span className="text-[9px] font-bold opacity-80">({stringCounts.goldCount})</span>
               </button>
 
               {/* 4. Sub Section (Reserves / Backups) */}
               <button
                 type="button"
                 onClick={() => setStarterString('sub')}
-                className={`py-1.5 px-1 rounded-xl text-center flex flex-col items-center gap-0.5 transition-all cursor-pointer ${
+                className={`py-1.5 px-1 rounded-xl text-center flex flex-col items-center gap-1 transition-all cursor-pointer ${
                   starterString === 'sub'
-                    ? 'bg-purple-900/90 text-purple-200 font-black border border-purple-400/60 shadow-md'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                    ? 'bg-purple-100 text-purple-900 border border-purple-300 dark:bg-purple-900/70 dark:text-purple-200 dark:border-purple-600/50 shadow-xs font-black'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
                 }`}
               >
-                <span className="text-[11px] font-black leading-none">🟪 Sub</span>
-                <span className="text-[9px] font-bold opacity-80">Sub ({stringCounts.subCount})</span>
+                <span className="flex items-center gap-1 text-[11px] font-black leading-none text-purple-900 dark:text-purple-300">
+                  <span className="w-2 h-2 rounded-full bg-purple-500/80 ring-1 ring-purple-300 dark:ring-purple-700 shrink-0"></span>
+                  Sub
+                </span>
+                <span className="text-[9px] font-bold opacity-80">({stringCounts.subCount})</span>
               </button>
 
               {/* 5. Matrix (All 4 Strings / Teams) */}
               <button
                 type="button"
                 onClick={() => setStarterString('matrix')}
-                className={`py-1.5 px-1 rounded-xl text-center flex flex-col items-center gap-0.5 transition-all cursor-pointer ${
+                className={`py-1.5 px-1 rounded-xl text-center flex flex-col items-center gap-1 transition-all cursor-pointer ${
                   starterString === 'matrix'
-                    ? 'bg-indigo-600 text-white font-black border border-indigo-400 shadow-md'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                    ? 'bg-indigo-600 text-white shadow-xs font-black'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
                 }`}
               >
-                <span className="text-[11px] font-black leading-none">📊 Matrix</span>
-                <span className="text-[9px] font-bold opacity-80">All 4</span>
+                <span className="text-[11px] font-black leading-none">Matrix</span>
+                <span className="text-[9px] font-bold opacity-80">All Strings</span>
               </button>
             </div>
 
             {/* Active Formation Banner & Position Count */}
-            <div className="flex items-center justify-between px-1 text-[11px] text-slate-400">
-              <span className="font-bold text-slate-300">
-                Scheme: <span className="text-white">{activeFormation?.name || 'Standard'}</span>
+            <div className="flex items-center justify-between px-1 text-[11px] text-slate-500 dark:text-slate-400">
+              <span className="font-bold text-slate-700 dark:text-slate-300">
+                Scheme: <span className="text-slate-900 dark:text-white font-bold">{activeFormation?.name || 'Standard'}</span>
               </span>
               <span className="text-[10px] font-mono">
                 {formationPositionsData.length} Positions on Field
@@ -1917,30 +1929,30 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                   return (
                     <div
                       key={pos.posId}
-                      className={`bg-slate-900/90 border rounded-2xl p-2.5 flex flex-col justify-between transition-all ${
+                      className={`bg-white dark:bg-slate-900/90 border rounded-2xl p-2.5 flex flex-col justify-between transition-all shadow-xs ${
                         starterString === 'black'
-                          ? 'border-slate-800 hover:border-amber-400/40'
+                          ? 'border-slate-200 dark:border-slate-800 hover:border-amber-400/60'
                           : starterString === 'gold'
-                          ? 'border-slate-800 hover:border-amber-400/60'
+                          ? 'border-slate-200 dark:border-slate-800 hover:border-amber-400/60'
                           : starterString === 'blue'
-                          ? 'border-slate-800 hover:border-blue-500/60'
-                          : 'border-slate-800 hover:border-purple-500/60'
+                          ? 'border-slate-200 dark:border-slate-800 hover:border-sky-500/60'
+                          : 'border-slate-200 dark:border-slate-800 hover:border-purple-500/60'
                       }`}
                     >
                       {/* Position Tag Header */}
                       <div className="flex items-center justify-between gap-1 mb-1.5">
-                        <span className="text-[11px] font-black text-indigo-300 uppercase tracking-tight">
+                        <span className="text-[11px] font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-tight">
                           {pos.posName}
                         </span>
                         <span
                           className={`px-1.5 py-0.2 rounded text-[9px] font-black uppercase ${
                             starterString === 'black'
-                              ? 'bg-slate-950 text-amber-300 border border-amber-400/30'
+                              ? 'bg-slate-900 text-amber-300 dark:bg-slate-950 dark:text-amber-300 border border-slate-700 dark:border-amber-400/30'
                               : starterString === 'gold'
-                              ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
+                              ? 'bg-amber-50 text-amber-900 dark:bg-amber-400/20 dark:text-amber-300 border border-amber-200 dark:border-amber-400/30'
                               : starterString === 'blue'
-                              ? 'bg-blue-500/20 text-blue-300 border border-blue-400/30'
-                              : 'bg-purple-500/20 text-purple-300 border border-purple-400/30'
+                              ? 'bg-sky-50 text-sky-900 dark:bg-blue-500/20 dark:text-blue-300 border border-sky-200 dark:border-blue-400/30'
+                              : 'bg-purple-50 text-purple-900 dark:bg-purple-500/20 dark:text-purple-300 border border-purple-200 dark:border-purple-400/30'
                           }`}
                         >
                           {starterString === 'black'
@@ -1961,19 +1973,19 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                               <div
                                 key={sIdx}
                                 onClick={() => sub.player && setSelectedPlayerModal(sub.player)}
-                                className="flex items-center gap-1.5 p-1 rounded-lg bg-slate-950/60 border border-purple-500/20 cursor-pointer hover:bg-slate-800 transition-colors"
+                                className="flex items-center gap-1.5 p-1 rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-purple-200 dark:border-purple-500/20 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                               >
-                                <div className="w-6 h-6 rounded bg-purple-950 text-purple-300 font-mono font-black text-[10px] flex items-center justify-center shrink-0 border border-purple-700/60">
+                                <div className="w-6 h-6 rounded bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 font-mono font-black text-[10px] flex items-center justify-center shrink-0 border border-purple-300 dark:border-purple-700/60">
                                   #{sub.num}
                                 </div>
-                                <span className="text-xs font-bold text-slate-200 truncate">
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
                                   {sub.name}
                                 </span>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <div className="p-2 text-center text-[10px] text-slate-500 italic bg-slate-950/40 rounded-xl border border-slate-800/60">
+                          <div className="p-2 text-center text-[10px] text-slate-500 italic bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-slate-200 dark:border-slate-800/60">
                             No Subs Assigned
                           </div>
                         )
@@ -1985,19 +1997,19 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                           <div
                             className={`w-8 h-8 rounded-xl font-mono font-black text-xs flex items-center justify-center shrink-0 border ${
                               starterString === 'black'
-                                ? 'bg-black text-amber-400 border-zinc-700'
+                                ? 'bg-slate-900 text-amber-300 dark:bg-black dark:text-amber-400 border-slate-700 dark:border-zinc-700'
                                 : starterString === 'gold'
-                                ? 'bg-amber-400 text-slate-950 border-amber-500 font-black'
-                                : 'bg-blue-600 text-white border-blue-400 font-black'
+                                ? 'bg-amber-100 text-amber-900 dark:bg-amber-400 dark:text-slate-950 border-amber-300 dark:border-amber-500 font-black'
+                                : 'bg-sky-100 text-sky-900 dark:bg-blue-600 dark:text-white border-sky-300 dark:border-blue-400 font-black'
                             }`}
                           >
                             #{playerObj.num}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="text-xs font-black text-slate-100 truncate">
+                            <div className="text-xs font-black text-slate-900 dark:text-slate-100 truncate">
                               {playerObj.name}
                             </div>
-                            <div className="text-[10px] text-slate-400 font-medium truncate">
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">
                               {playerObj.player ? getPlayerPos(playerObj.player) : 'ATH'}
                             </div>
                           </div>
@@ -2006,7 +2018,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                         <button
                           type="button"
                           onClick={() => onNavigateToUnit('depth_chart', starterUnit as any)}
-                          className="p-2 text-center text-[10px] text-slate-500 hover:text-slate-300 italic bg-slate-950/40 rounded-xl border border-dashed border-slate-800 hover:border-slate-700 cursor-pointer transition-colors"
+                          className="p-2 text-center text-[10px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 italic bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 cursor-pointer transition-colors"
                         >
                           + Unassigned
                         </button>
@@ -2021,10 +2033,10 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                 {formationPositionsData.map((pos) => (
                   <div
                     key={pos.posId}
-                    className="bg-slate-900/90 border border-slate-800 rounded-2xl p-2.5 space-y-2"
+                    className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 space-y-2 shadow-xs"
                   >
-                    <div className="flex items-center justify-between pb-1 border-b border-slate-800/80">
-                      <span className="text-xs font-black text-indigo-300 uppercase tracking-tight">
+                    <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800/80">
+                      <span className="text-xs font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-tight">
                         {pos.posName}
                       </span>
                       {pos.rowLabel && (
@@ -2038,16 +2050,16 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                         onClick={() => pos.blackPlayer?.player && setSelectedPlayerModal(pos.blackPlayer.player)}
                         className={`p-1.5 rounded-xl border flex items-center gap-1.5 ${
                           pos.blackPlayer
-                            ? 'bg-slate-950 border-amber-400/30 text-slate-200 cursor-pointer hover:border-amber-400'
-                            : 'bg-slate-950/40 border-slate-800 text-slate-500'
+                            ? 'bg-slate-900 text-amber-300 dark:bg-slate-950 dark:text-slate-200 border-slate-700 dark:border-amber-400/30 cursor-pointer hover:border-amber-400'
+                            : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500'
                         }`}
                       >
-                        <span className="w-5 h-5 rounded bg-black text-amber-400 font-mono font-black text-[10px] flex items-center justify-center shrink-0 border border-zinc-700">
+                        <span className="w-5 h-5 rounded bg-slate-900 text-amber-400 dark:bg-black dark:text-amber-400 font-mono font-black text-[10px] flex items-center justify-center shrink-0 border border-slate-700 dark:border-zinc-700">
                           {pos.blackPlayer ? `#${pos.blackPlayer.num}` : '-'}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <div className="text-[9px] font-black text-amber-400 uppercase leading-none">Black (1st)</div>
-                          <div className="text-[11px] font-bold truncate">
+                          <div className="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase leading-none">Black (1st)</div>
+                          <div className="text-[11px] font-bold text-slate-900 dark:text-slate-200 truncate">
                             {pos.blackPlayer ? pos.blackPlayer.name : 'None'}
                           </div>
                         </div>
@@ -2058,16 +2070,16 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                         onClick={() => pos.bluePlayer?.player && setSelectedPlayerModal(pos.bluePlayer.player)}
                         className={`p-1.5 rounded-xl border flex items-center gap-1.5 ${
                           pos.bluePlayer
-                            ? 'bg-blue-950/40 border-blue-500/40 text-slate-200 cursor-pointer hover:border-blue-400'
-                            : 'bg-slate-950/40 border-slate-800 text-slate-500'
+                            ? 'bg-sky-50 dark:bg-blue-950/40 border-sky-200 dark:border-blue-500/40 text-sky-900 dark:text-slate-200 cursor-pointer hover:border-sky-400'
+                            : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500'
                         }`}
                       >
-                        <span className="w-5 h-5 rounded bg-blue-600 text-white font-mono font-black text-[10px] flex items-center justify-center shrink-0">
+                        <span className="w-5 h-5 rounded bg-sky-100 text-sky-900 dark:bg-blue-600 dark:text-white border border-sky-300 dark:border-transparent font-mono font-black text-[10px] flex items-center justify-center shrink-0">
                           {pos.bluePlayer ? `#${pos.bluePlayer.num}` : '-'}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <div className="text-[9px] font-black text-blue-300 uppercase leading-none">Blue (3rd)</div>
-                          <div className="text-[11px] font-bold truncate">
+                          <div className="text-[9px] font-black text-sky-700 dark:text-blue-300 uppercase leading-none">Blue (3rd)</div>
+                          <div className="text-[11px] font-bold text-slate-900 dark:text-slate-200 truncate">
                             {pos.bluePlayer ? pos.bluePlayer.name : 'None'}
                           </div>
                         </div>
@@ -2078,16 +2090,16 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                         onClick={() => pos.goldPlayer?.player && setSelectedPlayerModal(pos.goldPlayer.player)}
                         className={`p-1.5 rounded-xl border flex items-center gap-1.5 ${
                           pos.goldPlayer
-                            ? 'bg-amber-950/40 border-amber-500/40 text-slate-200 cursor-pointer hover:border-amber-400'
-                            : 'bg-slate-950/40 border-slate-800 text-slate-500'
+                            ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-500/40 text-amber-900 dark:text-slate-200 cursor-pointer hover:border-amber-400'
+                            : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500'
                         }`}
                       >
-                        <span className="w-5 h-5 rounded bg-amber-400 text-slate-950 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
+                        <span className="w-5 h-5 rounded bg-amber-100 text-amber-900 dark:bg-amber-400 dark:text-slate-950 border border-amber-300 dark:border-transparent font-mono font-black text-[10px] flex items-center justify-center shrink-0">
                           {pos.goldPlayer ? `#${pos.goldPlayer.num}` : '-'}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <div className="text-[9px] font-black text-amber-300 uppercase leading-none">Gold (2nd)</div>
-                          <div className="text-[11px] font-bold truncate">
+                          <div className="text-[9px] font-black text-amber-700 dark:text-amber-300 uppercase leading-none">Gold (2nd)</div>
+                          <div className="text-[11px] font-bold text-slate-900 dark:text-slate-200 truncate">
                             {pos.goldPlayer ? pos.goldPlayer.name : 'None'}
                           </div>
                         </div>
@@ -2097,16 +2109,16 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                       <div
                         className={`p-1.5 rounded-xl border flex items-center gap-1.5 ${
                           pos.subPlayers.length > 0
-                            ? 'bg-purple-950/40 border-purple-500/40 text-slate-200'
-                            : 'bg-slate-950/40 border-slate-800 text-slate-500'
+                            ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-500/40 text-purple-900 dark:text-slate-200'
+                            : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500'
                         }`}
                       >
-                        <span className="w-5 h-5 rounded bg-purple-900 text-purple-200 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
+                        <span className="w-5 h-5 rounded bg-purple-100 text-purple-900 dark:bg-purple-900 dark:text-purple-200 border border-purple-300 dark:border-transparent font-mono font-black text-[10px] flex items-center justify-center shrink-0">
                           {pos.subPlayers.length > 0 ? `${pos.subPlayers.length}` : '0'}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <div className="text-[9px] font-black text-purple-300 uppercase leading-none">Sub / Res</div>
-                          <div className="text-[11px] font-bold truncate">
+                          <div className="text-[9px] font-black text-purple-700 dark:text-purple-300 uppercase leading-none">Sub / Res</div>
+                          <div className="text-[11px] font-bold text-slate-900 dark:text-slate-200 truncate">
                             {pos.subPlayers.length > 0
                               ? pos.subPlayers.map((s) => `#${s.num}`).join(', ')
                               : 'None'}

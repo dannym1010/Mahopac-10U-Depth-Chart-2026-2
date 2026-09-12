@@ -843,17 +843,17 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
   return (
     <div className="space-y-5">
       {/* Top Header Card */}
-      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 print:hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-700/80 mb-4">
+      <div className="bg-white dark:bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm dark:shadow-xl p-5 print:hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-slate-700/80 mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 flex items-center justify-center font-black shadow-inner">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 flex items-center justify-center font-black shadow-inner">
               <BookOpen className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-black text-base md:text-lg text-slate-100 tracking-tight flex items-center gap-2">
+              <h2 className="font-black text-base md:text-lg text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
                 <span>Playbooks &amp; Positional Install Guides</span>
               </h2>
-              <p className="text-xs text-slate-300 font-medium">
+              <p className="text-xs text-slate-500 dark:text-slate-300 font-medium">
                 Upload PDFs, write interactive HTML playbook sheets, organize folders, and print team binders
               </p>
             </div>
@@ -876,9 +876,9 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsOrganizeModalOpen(true)}
-                  className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm"
+                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
                 >
-                  <Settings className="w-3.5 h-3.5 text-indigo-400" />
+                  <Settings className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                   <span>Organize Folders &amp; Tabs</span>
                 </button>
 
@@ -888,9 +888,9 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                     const name = prompt('Enter New Playbook / Guide Category Name (e.g. Special Teams, 7v7 Tournament, Red Zone):');
                     if (name && name.trim()) onAddMainFolder(name.trim());
                   }}
-                  className="px-3.5 py-2 bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm"
+                  className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-amber-800 dark:text-amber-300 font-bold text-xs rounded-xl border border-amber-200 dark:border-slate-700 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
                 >
-                  <Plus className="w-3.5 h-3.5 text-amber-400" />
+                  <Plus className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                   <span>+ Category Folder</span>
                 </button>
 
@@ -929,8 +929,8 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                   }}
                   className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all select-none border cursor-pointer ${
                     isActive
-                      ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-md'
-                      : 'bg-slate-900 hover:bg-slate-750 hover:bg-slate-700 text-slate-200 border-slate-700'
+                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white border-indigo-400 shadow-md shadow-indigo-600/25 ring-1 ring-indigo-400/40'
+                      : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white border-slate-200 dark:border-slate-800'
                   }`}
                 >
                   {mainCat}
@@ -943,8 +943,8 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
         {/* Level 1.5: Well-Organized Sub-Folder System (for Defense / Schemes) */}
         {isDefensiveCategory && (
           <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2 no-scrollbar">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1 pr-1 shrink-0 flex items-center gap-1">
-              <Folder className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider pl-1 pr-1 shrink-0 flex items-center gap-1">
+              <Folder className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
               <span>Folders:</span>
             </span>
             {DEFENSIVE_SUB_FOLDERS.map((folder) => {
@@ -972,15 +972,17 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer flex items-center gap-1.5 ${
                     isSelected
-                      ? 'bg-amber-400/20 text-amber-300 border-amber-400/60 shadow-xs'
-                      : 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border-slate-700/70'
+                      ? 'bg-amber-500/15 text-amber-900 dark:text-amber-200 border-amber-400/50 shadow-xs'
+                      : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-900/80 dark:hover:bg-slate-800 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 border-slate-200 dark:border-slate-700/70'
                   }`}
                 >
                   <span>{folder.icon}</span>
                   <span>{folder.label}</span>
                   <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                      isSelected ? 'bg-amber-400/30 text-amber-200' : 'bg-slate-800 text-slate-500'
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                      isSelected
+                        ? 'bg-amber-500/25 text-amber-900 dark:text-amber-200'
+                        : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                     }`}
                   >
                     {count}
@@ -992,7 +994,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
         )}
 
         {/* Level 2: Sub-Tabs Ribbon */}
-        <div className="flex items-center gap-1.5 overflow-x-auto p-2 bg-slate-900/90 border border-slate-700 rounded-2xl no-scrollbar">
+        <div className="flex items-center gap-1.5 overflow-x-auto p-2 bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-2xl no-scrollbar">
           {visibleSubTabs.map((subTab) => {
             const isActive = subTab === activeSub;
             return (
@@ -1003,7 +1005,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all select-none border cursor-pointer ${
                   isActive
                     ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                    : 'bg-slate-800 hover:bg-slate-750 text-slate-300 border-slate-700'
+                    : 'bg-white hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white border-slate-200 dark:border-slate-700'
                 }`}
               >
                 {subTab}
@@ -1011,48 +1013,48 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
             );
           })}
           {visibleSubTabs.length === 0 && (
-            <span className="text-xs text-slate-400 p-1">No plays found in this folder.</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 p-1">No plays found in this folder.</span>
           )}
         </div>
       </div>
 
       {/* Document Area */}
-      <div className="bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-700/80 shadow-xl p-5 space-y-4">
+      <div className="bg-white dark:bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-xl p-5 space-y-4">
         {/* Document Action Banner */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 p-3.5 rounded-2xl border border-slate-700">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 dark:bg-slate-900/90 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-2.5 flex-wrap">
-            <FileText className="w-4 h-4 text-indigo-400" />
-            <span className="font-black text-xs text-slate-200">
-              Active Section: <span className="text-amber-300">{activeMain} &gt; {activeSub}</span>
+            <FileText className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <span className="font-black text-xs text-slate-800 dark:text-slate-200">
+              Active Section: <span className="text-amber-700 dark:text-amber-300">{activeMain} &gt; {activeSub}</span>
             </span>
 
             {currentDocUrl ? (
               isCurrentHtml ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-[10.5px] font-bold border border-emerald-500/30">
-                  <Code className="w-3 h-3" />
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-[10.5px] font-bold border border-emerald-200 dark:border-emerald-500/30">
+                  <Code className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                   <span>HTML Code / Interactive</span>
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-sky-500/20 text-sky-300 text-[10.5px] font-bold border border-sky-500/30">
-                  <Globe className="w-3 h-3" />
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-sky-50 dark:bg-sky-500/20 text-sky-800 dark:text-sky-300 text-[10.5px] font-bold border border-sky-200 dark:border-sky-500/30">
+                  <Globe className="w-3 h-3 text-sky-600 dark:text-sky-400" />
                   <span>File / Cloud Document</span>
                 </span>
               )
             ) : (
-              <span className="text-[11px] text-slate-400">(Empty Section)</span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">(Empty Section)</span>
             )}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* View Mode Toggle: Interactive Play Sheet vs Document / PDF */}
-            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-700">
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
               <button
                 type="button"
                 onClick={() => setViewMode('sheet')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   viewMode === 'sheet'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                 }`}
               >
                 📋 Whiteboard Play Sheet
@@ -1062,8 +1064,8 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                 onClick={() => setViewMode('doc')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   viewMode === 'doc'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                 }`}
               >
                 📄 Document / PDF View
@@ -1074,7 +1076,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
             <button
               type="button"
               onClick={() => setIsHudlUploadOpen(true)}
-              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md shadow-blue-500/20 cursor-pointer transition-colors"
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm shadow-indigo-500/20 cursor-pointer transition-colors"
               title="Upload PDF or text playbook from Hudl and auto-redraw in interactive whiteboard"
             >
               <Upload className="w-3.5 h-3.5" />
@@ -1088,15 +1090,15 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                   type="button"
                   onClick={handleOpenHtmlEditor}
                   title="Write or paste custom HTML code, styled diagrams, or HUDL/video embeds"
-                  className="px-3.5 py-2 bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700/60 text-emerald-300 hover:text-emerald-100 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-sm transition-colors active:scale-95"
+                  className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/70 dark:hover:bg-emerald-900 border border-emerald-200 dark:border-emerald-700/60 text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-emerald-100 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-xs transition-colors active:scale-95"
                 >
-                  <Code className="w-3.5 h-3.5 text-emerald-400" />
+                  <Code className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span>{isCurrentHtml ? 'Edit HTML Code' : '+ Add HTML Code'}</span>
                 </button>
 
                 {/* Upload File Button */}
-                <label className="px-3.5 py-2 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-sm transition-colors active:scale-95">
-                  <Upload className="w-3.5 h-3.5 text-indigo-400" />
+                <label className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-xs transition-colors active:scale-95">
+                  <Upload className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                   <span>Upload PDF / HTML / Doc</span>
                   <input
                     type="file"
@@ -1120,9 +1122,9 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                       }
                     }}
                     title="Delete document from this sub-tab"
-                    className="px-3 py-2 bg-rose-950/60 hover:bg-rose-900 border border-rose-800/60 text-rose-300 hover:text-rose-100 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+                    className="px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 hover:text-rose-900 dark:hover:text-rose-100 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-xs transition-all active:scale-95"
                   >
-                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                    <Trash2 className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
                     <span>Delete Document</span>
                   </button>
                 )}
@@ -1267,20 +1269,20 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
 
       {/* HTML Code Editor & Starter Template Modal */}
       {isHtmlEditorOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl w-full p-6 shadow-2xl space-y-4 max-h-[95vh] flex flex-col">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-4xl w-full p-6 shadow-2xl space-y-4 max-h-[95vh] flex flex-col">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3.5">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3.5">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-black">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-black">
                   <Code className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-black text-base text-slate-100 flex items-center gap-2">
+                  <h3 className="font-black text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
                     HTML Playbook &amp; Embed Editor
                   </h3>
-                  <p className="text-xs text-slate-400">
-                    Editing for section: <span className="text-amber-300 font-bold">{activeMain} &gt; {activeSub}</span>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Editing for section: <span className="text-indigo-600 dark:text-indigo-400 font-bold">{activeMain} &gt; {activeSub}</span>
                   </p>
                 </div>
               </div>
@@ -1289,7 +1291,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsHtmlEditorOpen(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 cursor-pointer"
+                  className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1298,8 +1300,8 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
 
             {/* Template Selector Ribbon */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-black uppercase text-indigo-300 tracking-wider flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-amber-400" />
+              <label className="text-[11px] font-black uppercase text-indigo-700 dark:text-indigo-300 tracking-wider flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-indigo-500 dark:text-indigo-400" />
                 <span>Quick Starter HTML Templates:</span>
               </label>
               <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
@@ -1316,7 +1318,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                         setHtmlEditorCode(tmpl.code);
                       }
                     }}
-                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 whitespace-nowrap cursor-pointer transition-colors active:scale-95"
+                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 whitespace-nowrap cursor-pointer transition-colors active:scale-95"
                     title={tmpl.description}
                   >
                     {tmpl.name}
@@ -1326,15 +1328,15 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
             </div>
 
             {/* Mode Switch Tabs (Editor / Live Preview) */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <div className="flex items-center gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+              <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setEditorTab('code')}
                   className={`px-3 py-1 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
                     editorTab === 'code'
                       ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
+                      : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
                   <FileCode className="w-3.5 h-3.5" />
@@ -1346,7 +1348,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                   className={`px-3 py-1 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
                     editorTab === 'preview'
                       ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
+                      : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
                   <Eye className="w-3.5 h-3.5" />
@@ -1358,21 +1360,21 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handlePrintHtmlEditorContent('tab')}
-                  className="px-2.5 py-1 text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg flex items-center gap-1 cursor-pointer"
+                  className="px-2.5 py-1 text-xs text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-1 cursor-pointer"
                   title="Print Preview this HTML design"
                 >
-                  <Printer className="w-3.5 h-3.5 text-indigo-400" />
+                  <Printer className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                   <span>Print Preview</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleCopyCode}
-                  className="px-2.5 py-1 text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg flex items-center gap-1 cursor-pointer"
+                  className="px-2.5 py-1 text-xs text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-1 cursor-pointer"
                 >
                   {copiedNotification ? (
                     <>
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="text-emerald-400">Copied!</span>
+                      <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">Copied!</span>
                     </>
                   ) : (
                     <>
@@ -1385,13 +1387,13 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
             </div>
 
             {/* Editor / Preview Body */}
-            <div className="flex-1 min-h-[350px] max-h-[500px] overflow-hidden flex flex-col rounded-2xl border border-slate-800 bg-slate-950">
+            <div className="flex-1 min-h-[350px] max-h-[500px] overflow-hidden flex flex-col rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
               {editorTab === 'code' ? (
                 <textarea
                   value={htmlEditorCode}
                   onChange={(e) => setHtmlEditorCode(e.target.value)}
                   placeholder="Paste or write your HTML, CSS, SVG diagrams, table tags, or <iframe> embeds here..."
-                  className="w-full h-full min-h-[350px] p-4 bg-slate-950 font-mono text-xs text-slate-200 border-0 focus:outline-none resize-none selection:bg-indigo-500 selection:text-white"
+                  className="w-full h-full min-h-[350px] p-4 bg-transparent font-mono text-xs text-slate-900 dark:text-slate-200 border-0 focus:outline-none resize-none selection:bg-indigo-500 selection:text-white"
                   spellCheck={false}
                 />
               ) : (
@@ -1405,7 +1407,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+            <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800">
               <span className="text-xs text-slate-500">
                 {htmlEditorCode.length.toLocaleString()} characters
               </span>
@@ -1414,7 +1416,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsHtmlEditorOpen(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl cursor-pointer"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1437,7 +1439,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
         <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex flex-col p-4">
           <div className="flex items-center justify-between pb-3 text-white border-b border-slate-800">
             <div className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-amber-400" />
+              <BookOpen className="w-5 h-5 text-indigo-400" />
               <span className="font-black text-sm md:text-base">
                 {activeMain} &gt; {activeSub} - Fullscreen View
               </span>
@@ -1484,16 +1486,16 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
       {/* Organize Tabs & Folders Modal */}
       {isOrganizeModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3.5">
-              <h3 className="font-black text-base text-slate-100 flex items-center gap-2">
-                <Settings className="w-4 h-4 text-indigo-400" />
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3.5">
+              <h3 className="font-black text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Settings className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 <span>Organize Playbook Folders &amp; Tabs</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setIsOrganizeModalOpen(false)}
-                className="text-slate-400 hover:text-slate-200 cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1502,7 +1504,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
             {/* 1. Main Folders */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="font-black text-[11px] text-indigo-300 uppercase tracking-wider">
+                <label className="font-black text-[11px] text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
                   1. Playbook &amp; Category Folders ({mainCategories.length}):
                 </label>
                 <button
@@ -1511,13 +1513,13 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                     const name = prompt('Enter new Category / Playbook Folder Name (e.g. Special Teams, Pass Concepts):');
                     if (name && name.trim()) onAddMainFolder(name.trim());
                   }}
-                  className="text-xs text-amber-300 hover:text-amber-200 font-bold flex items-center gap-1 cursor-pointer"
+                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 font-bold flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add Category
                 </button>
               </div>
 
-              <div className="space-y-1.5 max-h-48 overflow-y-auto border border-slate-800 p-2 rounded-2xl bg-slate-950/80">
+              <div className="space-y-1.5 max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-800 p-2 rounded-2xl bg-slate-50 dark:bg-slate-950/80">
                 {mainCategories.map((mainCat) => {
                   const subCount =
                     (guideOrder.sub && guideOrder.sub[mainCat]?.length) ||
@@ -1527,8 +1529,8 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                       key={mainCat}
                       className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold ${
                         mainCat === activeMain
-                          ? 'bg-indigo-950/60 border-indigo-500/50 text-indigo-200'
-                          : 'bg-slate-900 border-slate-800 text-slate-300'
+                          ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-300 dark:border-indigo-500/50 text-indigo-900 dark:text-indigo-200'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300'
                       }`}
                     >
                       <span
@@ -1543,7 +1545,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                         className="cursor-pointer hover:underline truncate max-w-[200px]"
                         title={`Select ${mainCat}`}
                       >
-                        {mainCat} <span className="text-[10px] text-slate-400 font-normal">({subCount} tabs)</span>
+                        {mainCat} <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">({subCount} tabs)</span>
                         {mainCat === activeMain ? ' 👈 (Active)' : ''}
                       </span>
 
@@ -1551,7 +1553,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                         <button
                           type="button"
                           onClick={() => onMoveMainFolder(mainCat, -1)}
-                          className="p-1 hover:bg-slate-800 rounded text-slate-400 cursor-pointer"
+                          className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-500 dark:text-slate-400 cursor-pointer"
                           title="Move Up"
                         >
                           <ArrowUp className="w-3.5 h-3.5" />
@@ -1559,7 +1561,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                         <button
                           type="button"
                           onClick={() => onMoveMainFolder(mainCat, 1)}
-                          className="p-1 hover:bg-slate-800 rounded text-slate-400 cursor-pointer"
+                          className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-500 dark:text-slate-400 cursor-pointer"
                           title="Move Down"
                         >
                           <ArrowDown className="w-3.5 h-3.5" />
@@ -1571,7 +1573,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                             if (newName && newName.trim() && newName !== mainCat)
                               onRenameMainFolder(mainCat, newName.trim());
                           }}
-                          className="p-1 hover:bg-slate-800 rounded text-slate-400 cursor-pointer"
+                          className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-500 dark:text-slate-400 cursor-pointer"
                           title="Rename"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
@@ -1587,7 +1589,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                               onDeleteMainFolder(mainCat);
                             }
                           }}
-                          className="p-1 hover:bg-rose-950/50 text-rose-400 rounded cursor-pointer"
+                          className="p-1 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded cursor-pointer"
                           title="Delete Folder"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1602,7 +1604,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
             {/* 2. Sub-Tabs */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="font-black text-[11px] text-indigo-300 uppercase tracking-wider">
+                <label className="font-black text-[11px] text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
                   2. Sub-Tabs in [{activeMain}] ({currentSubTabs.length}):
                 </label>
                 <button
@@ -1611,13 +1613,13 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                     const name = prompt(`Enter new Sub-Tab for [${activeMain}] (e.g. Quarterbacks, Red Zone):`);
                     if (name && name.trim()) onAddSubTab(activeMain, name.trim());
                   }}
-                  className="text-xs text-amber-300 hover:text-amber-200 font-bold flex items-center gap-1 cursor-pointer"
+                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 font-bold flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add Sub-Tab
                 </button>
               </div>
 
-              <div className="space-y-1.5 max-h-48 overflow-y-auto border border-slate-800 p-2 rounded-2xl bg-slate-950/80">
+              <div className="space-y-1.5 max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-800 p-2 rounded-2xl bg-slate-50 dark:bg-slate-950/80">
                 {currentSubTabs.map((subTab) => {
                   const hasDoc = Boolean(guideTree[activeMain]?.[subTab]);
                   return (
@@ -1625,8 +1627,8 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                       key={subTab}
                       className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold ${
                         subTab === activeSub
-                          ? 'bg-indigo-950/40 border-indigo-500/40 text-indigo-200'
-                          : 'bg-slate-900 border-slate-800 text-slate-300'
+                          ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-500/40 text-indigo-900 dark:text-indigo-200'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300'
                       }`}
                     >
                       <span
@@ -1640,7 +1642,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                         <button
                           type="button"
                           onClick={() => onMoveSubTab(activeMain, subTab, -1)}
-                          className="p-1 hover:bg-slate-800 rounded text-slate-400 cursor-pointer"
+                          className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-500 dark:text-slate-400 cursor-pointer"
                           title="Move Up"
                         >
                           <ArrowUp className="w-3.5 h-3.5" />
@@ -1648,7 +1650,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                         <button
                           type="button"
                           onClick={() => onMoveSubTab(activeMain, subTab, 1)}
-                          className="p-1 hover:bg-slate-800 rounded text-slate-400 cursor-pointer"
+                          className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-500 dark:text-slate-400 cursor-pointer"
                           title="Move Down"
                         >
                           <ArrowDown className="w-3.5 h-3.5" />
@@ -1660,7 +1662,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                             if (newName && newName.trim() && newName !== subTab)
                               onRenameSubTab(activeMain, subTab, newName.trim());
                           }}
-                          className="p-1 hover:bg-slate-800 rounded text-slate-400 cursor-pointer"
+                          className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-500 dark:text-slate-400 cursor-pointer"
                           title="Rename"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
@@ -1671,7 +1673,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                             if (confirm(`Delete sub-tab "${subTab}" from [${activeMain}]?`))
                               onDeleteSubTab(activeMain, subTab);
                           }}
-                          className="p-1 hover:bg-rose-950/50 text-rose-400 rounded cursor-pointer"
+                          className="p-1 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded cursor-pointer"
                           title="Delete Sub-Tab"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1688,7 +1690,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
               </div>
             </div>
 
-            <div className="flex justify-end pt-3.5 border-t border-slate-800">
+            <div className="flex justify-end pt-3.5 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setIsOrganizeModalOpen(false)}
@@ -1704,18 +1706,18 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
       {/* Print Playbook & Guides Modal */}
       {isPrintModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3.5">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3.5">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shadow-inner">
+                <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-inner">
                   <Printer className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-black text-base text-slate-100 flex items-center gap-2">
+                  <h3 className="font-black text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
                     <span>Print Playbook &amp; Guides</span>
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     High-contrast, printer-friendly sideline sheets and complete team binders
                   </p>
                 </div>
@@ -1723,7 +1725,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsPrintModalOpen(false)}
-                className="text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer transition-colors"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1731,8 +1733,8 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
 
             {/* Scope Selection */}
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-indigo-400" />
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                 <span>1. Select Print Scope</span>
               </label>
 
@@ -1743,22 +1745,22 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                   onClick={() => setPrintScope('current')}
                   className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                     printScope === 'current'
-                      ? 'bg-indigo-950/60 border-indigo-500 text-white shadow-md ring-1 ring-indigo-500/50'
-                      : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-750'
+                      ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-500 text-indigo-950 dark:text-white shadow-md ring-1 ring-indigo-500/50'
+                      : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-750 border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300'
                   }`}
                 >
                   <div>
-                    <div className="text-xs font-black flex items-center gap-1.5 text-indigo-300">
+                    <div className="text-xs font-black flex items-center gap-1.5 text-indigo-600 dark:text-indigo-300">
                       <span>📄 Current Section</span>
                     </div>
-                    <div className="font-bold text-sm text-slate-100 mt-1 truncate" title={`${activeMain} > ${activeSub}`}>
+                    <div className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-1 truncate" title={`${activeMain} > ${activeSub}`}>
                       {activeSub}
                     </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5 truncate">
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                       {activeMain}
                     </div>
                   </div>
-                  <div className="mt-3 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-900/60 text-slate-400 w-fit">
+                  <div className="mt-3 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-900/60 text-slate-700 dark:text-slate-400 w-fit">
                     1 Single Sheet
                   </div>
                 </button>
@@ -1769,22 +1771,22 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                   onClick={() => setPrintScope('category')}
                   className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                     printScope === 'category'
-                      ? 'bg-indigo-950/60 border-indigo-500 text-white shadow-md ring-1 ring-indigo-500/50'
-                      : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-750'
+                      ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-500 text-indigo-950 dark:text-white shadow-md ring-1 ring-indigo-500/50'
+                      : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-750 border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300'
                   }`}
                 >
                   <div>
-                    <div className="text-xs font-black flex items-center gap-1.5 text-amber-300">
+                    <div className="text-xs font-black flex items-center gap-1.5 text-amber-600 dark:text-amber-300">
                       <span>📑 Category Packet</span>
                     </div>
-                    <div className="font-bold text-sm text-slate-100 mt-1 truncate" title={activeMain}>
+                    <div className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-1 truncate" title={activeMain}>
                       {activeMain}
                     </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                       All sub-tabs
                     </div>
                   </div>
-                  <div className="mt-3 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-900/60 text-amber-300 w-fit">
+                  <div className="mt-3 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-900/60 text-amber-700 dark:text-amber-300 w-fit">
                     {currentSubTabs.length} Sections
                   </div>
                 </button>
@@ -1795,22 +1797,22 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                   onClick={() => setPrintScope('all')}
                   className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                     printScope === 'all'
-                      ? 'bg-indigo-950/60 border-indigo-500 text-white shadow-md ring-1 ring-indigo-500/50'
-                      : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-750'
+                      ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-500 text-indigo-950 dark:text-white shadow-md ring-1 ring-indigo-500/50'
+                      : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-750 border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300'
                   }`}
                 >
                   <div>
-                    <div className="text-xs font-black flex items-center gap-1.5 text-emerald-300">
+                    <div className="text-xs font-black flex items-center gap-1.5 text-emerald-600 dark:text-emerald-300">
                       <span>📚 Full Binder</span>
                     </div>
-                    <div className="font-bold text-sm text-slate-100 mt-1">
+                    <div className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-1">
                       Team Playbook
                     </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                       Cover Page + TOC
                     </div>
                   </div>
-                  <div className="mt-3 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-900/60 text-emerald-300 w-fit">
+                  <div className="mt-3 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-900/60 text-emerald-700 dark:text-emerald-300 w-fit">
                     {totalSubTabsCount} Sections &bull; {mainCategories.length} Cats
                   </div>
                 </button>
@@ -1819,42 +1821,42 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
 
             {/* Pagination & Multi-Section Handling */}
             <div className="space-y-3">
-              <div className="bg-indigo-950/40 p-3.5 rounded-2xl border border-indigo-500/40 flex items-start gap-3">
-                <FileText className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-                <div className="text-xs text-slate-300 space-y-1">
-                  <div className="font-bold text-white flex items-center gap-1.5">
+              <div className="bg-indigo-50 dark:bg-indigo-950/40 p-3.5 rounded-2xl border border-indigo-200 dark:border-indigo-500/40 flex items-start gap-3">
+                <FileText className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                <div className="text-xs text-slate-700 dark:text-slate-300 space-y-1">
+                  <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                     <span>Multi-Section Page Break Assurance</span>
-                    <span className="text-[10px] px-1.5 py-0.2 bg-indigo-500/30 text-indigo-300 rounded border border-indigo-400/40 font-mono">
+                    <span className="text-[10px] px-1.5 py-0.2 bg-indigo-100 dark:bg-indigo-500/30 text-indigo-700 dark:text-indigo-300 rounded border border-indigo-300 dark:border-indigo-400/40 font-mono">
                       page-break-after: always
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
                     Every playbook section prints on its <strong>own separate page</strong>. If a complex play contains extensive diagrams and coaching assignments, it cleanly flows onto a <strong>2nd page</strong> without truncating, and the next section will always start on a brand new sheet.
                   </p>
                 </div>
               </div>
 
               {printScope !== 'current' && (
-                <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800 flex items-center justify-between gap-3">
+                <div className="p-3 bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
                   <label htmlFor="cover-page-toggle" className="cursor-pointer flex items-center gap-2.5">
                     <input
                       id="cover-page-toggle"
                       type="checkbox"
                       checked={includeCoverPage}
                       onChange={(e) => setIncludeCoverPage(e.target.checked)}
-                      className="w-4 h-4 rounded text-indigo-600 bg-slate-900 border-slate-700 cursor-pointer accent-indigo-500"
+                      className="w-4 h-4 rounded text-indigo-600 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 cursor-pointer accent-indigo-500"
                     />
                     <div>
-                      <div className="text-xs font-bold text-slate-200">
+                      <div className="text-xs font-bold text-slate-900 dark:text-slate-200">
                         Include Binder Cover Sheet &amp; Table of Contents
                       </div>
-                      <div className="text-[11px] text-slate-400">
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
                         Prints team title &amp; quick table of contents on Page 1. Playbook sections begin on Page 2.
                       </div>
                     </div>
                   </label>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${
-                    includeCoverPage ? 'bg-indigo-950 text-indigo-300 border-indigo-500/40' : 'bg-slate-900 text-slate-500 border-slate-800'
+                    includeCoverPage ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-500/40' : 'bg-slate-100 dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-800'
                   }`}>
                     {includeCoverPage ? '+1 Cover Sheet' : 'Plays Only'}
                   </span>
@@ -1864,30 +1866,30 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
               {printScope !== 'current' && availablePrintSections.length > 1 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                      <CheckSquare className="w-3.5 h-3.5 text-indigo-400" />
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                      <CheckSquare className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                       <span>Sections to Print ({selectedSectionsCount} of {availablePrintSections.length})</span>
                     </label>
                     <div className="flex items-center gap-2 text-[11px]">
                       <button
                         type="button"
                         onClick={() => handleSelectAllPrintSections(true)}
-                        className="text-indigo-400 hover:text-indigo-300 font-bold hover:underline cursor-pointer"
+                        className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-bold hover:underline cursor-pointer"
                       >
                         Select All
                       </button>
-                      <span className="text-slate-600">&bull;</span>
+                      <span className="text-slate-400 dark:text-slate-600">&bull;</span>
                       <button
                         type="button"
                         onClick={() => handleSelectAllPrintSections(false)}
-                        className="text-slate-400 hover:text-slate-300 font-medium hover:underline cursor-pointer"
+                        className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 font-medium hover:underline cursor-pointer"
                       >
                         Deselect All
                       </button>
                     </div>
                   </div>
 
-                  <div className="max-h-36 overflow-y-auto space-y-1 pr-1 rounded-xl bg-slate-950/60 p-2 border border-slate-800/80">
+                  <div className="max-h-36 overflow-y-auto space-y-1 pr-1 rounded-xl bg-slate-50 dark:bg-slate-950/60 p-2 border border-slate-200 dark:border-slate-800/80">
                     {availablePrintSections.map((sec, sIdx) => {
                       const isSelected = selectedPrintSubTabs[sec.key] !== false;
                       return (
@@ -1895,8 +1897,8 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                           key={sec.key}
                           className={`flex items-center justify-between p-1.5 px-2.5 rounded-lg border text-xs cursor-pointer transition-colors ${
                             isSelected
-                              ? 'bg-slate-900/90 border-slate-700/80 text-white'
-                              : 'bg-slate-950/40 border-slate-900 text-slate-500 hover:bg-slate-900/40'
+                              ? 'bg-white dark:bg-slate-900/90 border-slate-300 dark:border-slate-700/80 text-slate-900 dark:text-white shadow-xs'
+                              : 'bg-slate-100/60 dark:bg-slate-950/40 border-slate-200 dark:border-slate-900 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-900/40'
                           }`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
@@ -1904,14 +1906,14 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => togglePrintSection(sec.key)}
-                              className="w-3.5 h-3.5 rounded text-indigo-600 bg-slate-900 border-slate-700 cursor-pointer accent-indigo-500"
+                              className="w-3.5 h-3.5 rounded text-indigo-600 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 cursor-pointer accent-indigo-500"
                             />
                             <span className="font-bold truncate">{sec.subTab}</span>
-                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-bold uppercase">
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400 font-bold uppercase">
                               {sec.category}
                             </span>
                           </div>
-                          <span className="text-[10px] text-slate-400 font-mono shrink-0 ml-2">
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono shrink-0 ml-2">
                             Section {sIdx + 1}
                           </span>
                         </label>
@@ -1924,7 +1926,7 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
 
             {/* Print Theme & Ink Format */}
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 3. Print Styling &amp; Paper Mode
               </label>
 
@@ -1934,20 +1936,20 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                   onClick={() => setPrintInkFriendly(true)}
                   className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-2.5 ${
                     printInkFriendly
-                      ? 'bg-emerald-950/40 border-emerald-500 text-emerald-200 shadow-sm'
-                      : 'bg-slate-800/80 border-slate-700/80 text-slate-400 hover:bg-slate-750'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-900 dark:text-emerald-200 shadow-sm'
+                      : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-750 border-slate-200 dark:border-slate-700/80 text-slate-600 dark:text-slate-400'
                   }`}
                 >
                   <div className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center ${
-                    printInkFriendly ? 'border-emerald-400 bg-emerald-500' : 'border-slate-500'
+                    printInkFriendly ? 'border-emerald-500 bg-emerald-500' : 'border-slate-400 dark:border-slate-500'
                   }`}>
                     {printInkFriendly && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                   </div>
                   <div>
-                    <div className="text-xs font-black text-slate-100">
+                    <div className="text-xs font-black text-slate-900 dark:text-slate-100">
                       🖨️ Ink-Friendly Paper Mode (Recommended)
                     </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
                       Clean white background, sharp black text, crisp borders. Saves expensive printer ink/toner.
                     </div>
                   </div>
@@ -1958,20 +1960,20 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                   onClick={() => setPrintInkFriendly(false)}
                   className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-2.5 ${
                     !printInkFriendly
-                      ? 'bg-indigo-950/40 border-indigo-500 text-indigo-200 shadow-sm'
-                      : 'bg-slate-800/80 border-slate-700/80 text-slate-400 hover:bg-slate-750'
+                      ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-500 text-indigo-900 dark:text-indigo-200 shadow-sm'
+                      : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-750 border-slate-200 dark:border-slate-700/80 text-slate-600 dark:text-slate-400'
                   }`}
                 >
                   <div className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center ${
-                    !printInkFriendly ? 'border-indigo-400 bg-indigo-500' : 'border-slate-500'
+                    !printInkFriendly ? 'border-indigo-500 bg-indigo-500' : 'border-slate-400 dark:border-slate-500'
                   }`}>
                     {!printInkFriendly && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                   </div>
                   <div>
-                    <div className="text-xs font-black text-slate-100">
+                    <div className="text-xs font-black text-slate-900 dark:text-slate-100">
                       🎨 Full Color / Original Theme
                     </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
                       Preserves dark backgrounds and original styles. Great for color PDFs and digital tablets.
                     </div>
                   </div>
@@ -1980,24 +1982,24 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
             </div>
 
             {/* Target Team & Pro-Tip Banner */}
-            <div className="bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800 flex items-start gap-2.5">
-              <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-              <div className="text-xs text-slate-300 space-y-1">
-                <div className="font-bold text-slate-200">
+            <div className="bg-slate-50 dark:bg-slate-950/70 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-start gap-2.5">
+              <Sparkles className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div className="text-xs text-slate-700 dark:text-slate-300 space-y-1">
+                <div className="font-bold text-slate-900 dark:text-slate-200">
                   Team Target: {activeTeam?.name || 'Mahopac 10U Indians'} ({activeTeam?.season || activeTeam?.ageGroup || '10U Football'})
                 </div>
-                <div className="text-[11px] text-slate-400 leading-relaxed">
-                  💡 In the system print dialog, choose <strong className="text-slate-200">&quot;Save as PDF&quot;</strong> to export an electronic playbook file to email or message to staff and families.
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                  💡 In the system print dialog, choose <strong className="text-slate-800 dark:text-slate-200">&quot;Save as PDF&quot;</strong> to export an electronic playbook file to email or message to staff and families.
                 </div>
               </div>
             </div>
 
             {/* Modal Actions */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setIsPrintModalOpen(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold text-xs rounded-xl cursor-pointer"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl cursor-pointer"
               >
                 Cancel
               </button>
@@ -2007,10 +2009,10 @@ export const PlaybookGuidesView: React.FC<PlaybookGuidesViewProps> = ({
                   type="button"
                   onClick={() => handleExecutePrint('tab')}
                   disabled={isPrintingLoading}
-                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 hover:text-slate-900 dark:text-slate-200 dark:hover:text-white font-bold text-xs rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
                   title="Open formatted sheet in a new browser tab"
                 >
-                  <ExternalLink className="w-3.5 h-3.5 text-indigo-400" />
+                  <ExternalLink className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                   <span>Open in Print Tab</span>
                 </button>
 

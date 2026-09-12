@@ -6454,22 +6454,52 @@ function mergeRemoteWeeklyData(
             {['offense', 'defense', 'st', 'groups', 'scrimmage', 'depth_chart'].includes(
               activeUnit
             ) && (
-              <div className="mb-4 bg-slate-900/90 border border-slate-700/80 rounded-2xl p-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar shadow-md">
-                <span className="px-3 py-1 text-[11px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5 shrink-0">
-                  <ClipboardList className="w-3.5 h-3.5 text-indigo-400" />
+              <div className="mb-4 bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar shadow-xs dark:shadow-md">
+                <span className="px-3 py-1 text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider flex items-center gap-1.5 shrink-0">
+                  <ClipboardList className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                   <span>Depth Chart:</span>
                 </span>
                 {[
-                  { id: 'offense', label: 'Offense', icon: Zap },
-                  { id: 'defense', label: 'Defense', icon: Shield },
-                  { id: 'st', label: 'Special Teams', icon: Target },
-                  { id: 'groups', label: 'Position Groups', icon: Users },
-                  { id: 'scrimmage', label: 'Practice / Scrimmage', icon: Swords },
+                  { id: 'offense', label: 'Offense', icon: Zap, isSpecial: false },
+                  { id: 'defense', label: 'Defense', icon: Shield, isSpecial: false },
+                  { id: 'st', label: 'Special Teams', icon: Target, isSpecial: false },
+                  { id: 'groups', label: 'Position Groups', icon: Users, isSpecial: false },
+                  { id: 'scrimmage', label: '11v11 Scrimmage & Rotation', icon: Swords, isSpecial: true },
                 ].map((sub) => {
                   const Icon = sub.icon;
                   const isActive =
                     activeUnit === sub.id ||
                     (activeUnit === 'depth_chart' && depthSubUnit === sub.id);
+
+                  if (sub.isSpecial) {
+                    return (
+                      <button
+                        key={sub.id}
+                        onClick={() => {
+                          setDepthSubUnit(sub.id as any);
+                          setActiveUnit(sub.id as any);
+                        }}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer border ${
+                          isActive
+                            ? 'bg-violet-600 text-white border-violet-500 shadow-sm shadow-violet-600/25 ring-1 ring-violet-400/40'
+                            : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-750 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white border-slate-200 dark:border-slate-700 shadow-xs'
+                        }`}
+                      >
+                        <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-violet-600 dark:text-violet-400'}`} />
+                        <span>{sub.label}</span>
+                        <span
+                          className={`text-[9px] px-1.5 py-0.2 rounded-md font-bold uppercase tracking-wider ${
+                            isActive
+                              ? 'bg-white/20 text-white'
+                              : 'bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-700/50'
+                          }`}
+                        >
+                          Live
+                        </span>
+                      </button>
+                    );
+                  }
+
                   return (
                     <button
                       key={sub.id}
@@ -6477,10 +6507,10 @@ function mergeRemoteWeeklyData(
                         setDepthSubUnit(sub.id as any);
                         setActiveUnit(sub.id as any);
                       }}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
                         isActive
                           ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400/40'
-                          : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                          : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800'
                       }`}
                     >
                       <Icon className="w-3.5 h-3.5" />

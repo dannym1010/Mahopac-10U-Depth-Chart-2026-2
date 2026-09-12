@@ -461,9 +461,9 @@ Looking forward to a great season!`;
                   setResetLinkEmail(currentUserEmail || staffList[0]?.email || '');
                   setResetLinkStatus(null);
                 }}
-                className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-750 text-amber-300 hover:text-amber-200 border border-amber-500/30 font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
               >
-                <Mail className="w-3.5 h-3.5" />
+                <Mail className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                 <span>Email Reset Link</span>
               </button>
 
@@ -475,7 +475,7 @@ Looking forward to a great season!`;
                   setInputNewPasscode('');
                   setInputConfirmPasscode('');
                 }}
-                className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl shadow-md shadow-amber-600/30 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
               >
                 <KeyRound className="w-3.5 h-3.5" />
                 <span>{adminPasscode ? 'Change Admin Passcode' : 'Set Admin Passcode'}</span>
@@ -484,36 +484,36 @@ Looking forward to a great season!`;
           </div>
 
           {passcodeSuccess && (
-            <div className="p-3 bg-emerald-950/80 border border-emerald-700/80 rounded-xl text-xs text-emerald-200 font-semibold flex items-center gap-2">
-              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-700/80 rounded-xl text-xs text-emerald-800 dark:text-emerald-200 font-semibold flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>{passcodeSuccess}</span>
             </div>
           )}
 
           {!adminPasscode ? (
-            <div className="p-3.5 bg-slate-900/90 border border-slate-700/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-              <p className="text-slate-400">
-                No custom admin passcode has been created yet. Click <strong className="text-amber-300">Set Admin Passcode</strong> above to configure your master passcode.
+            <div className="p-3.5 bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+              <p className="text-slate-600 dark:text-slate-400">
+                No custom admin passcode has been created yet. Click <strong className="text-indigo-600 dark:text-indigo-400">Set Admin Passcode</strong> above to configure your master passcode.
               </p>
             </div>
           ) : (
-            <div className="p-3.5 bg-slate-900/90 border border-slate-700/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div className="p-3.5 bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-400 font-bold">Passcode Status:</span>
-                  <span className="text-emerald-400 font-mono font-bold tracking-wider">
+                  <span className="text-slate-500 dark:text-slate-400 font-bold">Passcode Status:</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-mono font-bold tracking-wider">
                     {showCurrentPasscode ? adminPasscode : '••••••••••••'}
                   </span>
                   <button
                     type="button"
                     onClick={() => setShowCurrentPasscode(!showCurrentPasscode)}
-                    className="text-[10.5px] text-indigo-400 hover:text-indigo-300 font-semibold underline ml-1 cursor-pointer"
+                    className="text-[10.5px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold ml-1 cursor-pointer"
                   >
                     {showCurrentPasscode ? 'Hide' : 'Reveal'}
                   </button>
                 </div>
-                <p className="text-[11px] text-slate-400">
-                  Coaches can sign in using this passcode under the <strong className="text-amber-300">Admin Passcode</strong> tab on the login screen.
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Coaches can sign in using this passcode under the <strong className="text-indigo-600 dark:text-indigo-400">Admin Passcode</strong> tab on the login screen.
                 </p>
               </div>
             </div>

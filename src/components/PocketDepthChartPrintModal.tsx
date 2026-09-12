@@ -313,23 +313,23 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-hidden animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-750 rounded-2xl w-full max-w-6xl max-h-[94vh] flex flex-col shadow-2xl overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-750 rounded-2xl w-full max-w-6xl max-h-[94vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Modal Header */}
-        <div className="px-5 py-3.5 bg-slate-850 border-b border-slate-750 flex items-center justify-between shrink-0">
+        <div className="px-5 py-3.5 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-750 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 flex items-center justify-center shrink-0">
               <Printer className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-black text-white tracking-tight">
+                <h2 className="text-base font-black text-slate-900 dark:text-white tracking-tight">
                   Print Pocket Depth Chart
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40">
                   Pocket / Sideline Card
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-medium">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                 Clean, position-focused print layout with custom formation ordering and single-column options.
               </p>
             </div>
@@ -337,7 +337,7 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -346,11 +346,11 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
         {/* Modal Body: Controls Left, Live Preview Right */}
         <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-0">
           {/* Controls Column (5 cols) */}
-          <div className="lg:col-span-5 p-4 sm:p-5 border-b lg:border-b-0 lg:border-r border-slate-750 overflow-y-auto space-y-4 bg-slate-900/60">
+          <div className="lg:col-span-5 p-4 sm:p-5 border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-750 overflow-y-auto space-y-4 bg-slate-50/50 dark:bg-slate-900/60">
             {/* 1. Unit Selection */}
             <div className="space-y-1.5">
-              <label className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-indigo-400" />
+              <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                 <span>Unit &amp; Scope</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -364,8 +364,8 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                   }}
                   className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                     unitMode === 'both_off_def' && !oneChartPerColumn
-                      ? 'bg-amber-500/20 border-amber-500/60 text-amber-200 shadow-xs'
-                      : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-800'
+                      ? 'bg-amber-50 dark:bg-amber-500/20 border-amber-300 dark:border-amber-500/60 text-amber-900 dark:text-amber-200 shadow-xs'
+                      : 'bg-white hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
@@ -374,7 +374,7 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                       Coaches' Pick
                     </span>
                   </div>
-                  <div className="text-[10px] text-slate-400 leading-tight">
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
                     Side-by-side pocket card (folds into pocket)
                   </div>
                 </button>
@@ -384,14 +384,14 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                   onClick={() => setUnitMode('current')}
                   className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                     unitMode === 'current'
-                      ? 'bg-indigo-600/20 border-indigo-500/60 text-indigo-200 shadow-xs'
-                      : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-800'
+                      ? 'bg-indigo-50 dark:bg-indigo-600/20 border-indigo-300 dark:border-indigo-500/60 text-indigo-900 dark:text-indigo-200 shadow-xs'
+                      : 'bg-white hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300'
                   }`}
                 >
                   <div className="text-xs font-black mb-1 capitalize">
                     Current Unit ({activeUnit})
                   </div>
-                  <div className="text-[10px] text-slate-400 leading-tight">
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
                     Print active {activeUnit} formation depth
                   </div>
                 </button>
@@ -401,12 +401,12 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                   onClick={() => setUnitMode('offense')}
                   className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
                     unitMode === 'offense'
-                      ? 'bg-blue-600/20 border-blue-500/60 text-blue-200 shadow-xs'
-                      : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:bg-slate-800'
+                      ? 'bg-sky-50 dark:bg-blue-600/20 border-sky-300 dark:border-blue-500/60 text-sky-900 dark:text-blue-200 shadow-xs'
+                      : 'bg-white hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700/60 text-slate-600 dark:text-slate-400'
                   }`}
                 >
                   <div className="text-xs font-bold flex items-center gap-1">
-                    <Swords className="w-3.5 h-3.5 text-blue-400" />
+                    <Swords className="w-3.5 h-3.5 text-sky-600 dark:text-blue-400" />
                     <span>Offense Only</span>
                   </div>
                 </button>
@@ -416,12 +416,12 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                   onClick={() => setUnitMode('defense')}
                   className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
                     unitMode === 'defense'
-                      ? 'bg-red-600/20 border-red-500/60 text-red-200 shadow-xs'
-                      : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:bg-slate-800'
+                      ? 'bg-rose-50 dark:bg-red-600/20 border-rose-300 dark:border-red-500/60 text-rose-900 dark:text-red-200 shadow-xs'
+                      : 'bg-white hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700/60 text-slate-600 dark:text-slate-400'
                   }`}
                 >
                   <div className="text-xs font-bold flex items-center gap-1">
-                    <Shield className="w-3.5 h-3.5 text-red-400" />
+                    <Shield className="w-3.5 h-3.5 text-rose-600 dark:text-red-400" />
                     <span>Defense Only</span>
                   </div>
                 </button>
@@ -431,19 +431,19 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
             {/* 2. Formation Ordering & 1st Formation Selector */}
             <div className="space-y-2 pt-1">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 dark:text-amber-400 dark:fill-amber-400" />
                   <span>1st Formation &amp; Sequence</span>
                 </label>
-                <span className="text-[10px] text-amber-300 font-bold">
+                <span className="text-[10px] text-amber-700 dark:text-amber-300 font-bold">
                   #1 Appears 1st on Sheet
                 </span>
               </div>
 
               {/* 1st Formation Dropdown Picker */}
-              <div className="bg-slate-850 border border-slate-700 rounded-xl p-2.5 space-y-1.5 shadow-xs">
+              <div className="bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 space-y-1.5 shadow-xs">
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-bold text-slate-300 flex items-center gap-1">
+                  <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
                     <span>Which Formation is 1st:</span>
                   </span>
                   {firstFormation && (
@@ -455,7 +455,7 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                 <select
                   value={firstFormation?.id || ''}
                   onChange={(e) => handleSetFirstFormation(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-bold text-amber-300 focus:outline-none focus:border-amber-400 cursor-pointer"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-amber-300 focus:outline-none focus:border-amber-500 cursor-pointer"
                 >
                   {relevantFormations.map((f) => (
                     <option key={f.id} value={f.id}>
@@ -467,35 +467,35 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
 
               {/* Sorting Presets */}
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
                   <ListOrdered className="w-3 h-3 text-slate-400" />
                   <span>Sort:</span>
                 </span>
                 <button
                   type="button"
                   onClick={() => handleSortPreset('offense_first')}
-                  className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold transition-colors cursor-pointer"
+                  className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-bold transition-colors cursor-pointer"
                 >
                   Offense 1st
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSortPreset('defense_first')}
-                  className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold transition-colors cursor-pointer"
+                  className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-bold transition-colors cursor-pointer"
                 >
                   Defense 1st
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSortPreset('alphabetical')}
-                  className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold transition-colors cursor-pointer"
+                  className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-bold transition-colors cursor-pointer"
                 >
                   A-Z
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSortPreset('reset')}
-                  className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[10px] font-medium transition-colors cursor-pointer ml-auto"
+                  className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 text-[10px] font-medium transition-colors cursor-pointer ml-auto"
                 >
                   Reset
                 </button>
@@ -505,30 +505,30 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
             {/* 3. Re-order List & Selection */}
             <div className="space-y-1.5 pt-1">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" />
+                <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                   <span>Order &amp; Inclusions ({targetFormations.length}/{relevantFormations.length})</span>
                 </label>
                 <div className="flex items-center gap-2 text-[10px] font-bold">
                   <button
                     type="button"
                     onClick={() => toggleSelectAll(true)}
-                    className="text-indigo-400 hover:text-indigo-300 cursor-pointer"
+                    className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 cursor-pointer"
                   >
                     Select All
                   </button>
-                  <span className="text-slate-600">&bull;</span>
+                  <span className="text-slate-400 dark:text-slate-600">&bull;</span>
                   <button
                     type="button"
                     onClick={() => toggleSelectAll(false)}
-                    className="text-slate-400 hover:text-slate-300 cursor-pointer"
+                    className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
                   >
                     Clear
                   </button>
                 </div>
               </div>
 
-              <div className="max-h-44 overflow-y-auto space-y-1 bg-slate-950/50 p-2 rounded-xl border border-slate-800">
+              <div className="max-h-44 overflow-y-auto space-y-1 bg-slate-100/70 dark:bg-slate-950/50 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
                 {orderedRelevantFormations.map((f, idx) => {
                   const isChecked = selectedFormationIds.includes(f.id);
                   const isFirst = idx === 0;
@@ -537,10 +537,10 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                       key={f.id}
                       className={`flex items-center justify-between p-1.5 rounded-lg border transition-all ${
                         isFirst
-                          ? 'bg-amber-500/10 border-amber-500/50 text-amber-200'
+                          ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/50 text-amber-950 dark:text-amber-200'
                           : isChecked
-                          ? 'bg-slate-850/80 border-slate-800 text-slate-200'
-                          : 'bg-slate-900/40 border-slate-850/40 text-slate-500 opacity-60'
+                          ? 'bg-white dark:bg-slate-850/80 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 shadow-2xs'
+                          : 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-850/40 text-slate-400 opacity-60'
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -554,20 +554,20 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                               setSelectedFormationIds((prev) => prev.filter((id) => id !== f.id));
                             }
                           }}
-                          className="rounded text-amber-500 focus:ring-amber-400 bg-slate-900 border-slate-700 w-3.5 h-3.5 cursor-pointer shrink-0"
+                          className="rounded text-amber-500 focus:ring-amber-400 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 w-3.5 h-3.5 cursor-pointer shrink-0"
                         />
                         <span
                           className={`text-[9px] font-mono font-black px-1.5 py-0.5 rounded shrink-0 ${
                             isFirst
                               ? 'bg-amber-400 text-slate-950 shadow-xs'
-                              : 'bg-slate-800 text-slate-300'
+                              : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                           }`}
                           title={isFirst ? '1st formation on printout' : `Order position #${idx + 1}`}
                         >
                           {isFirst ? '⭐ #1' : `#${idx + 1}`}
                         </span>
                         <span className="font-bold text-xs truncate">{f.name}</span>
-                        <span className="text-[8.5px] font-mono uppercase px-1 py-0.2 rounded bg-slate-800 text-slate-400 shrink-0">
+                        <span className="text-[8.5px] font-mono uppercase px-1 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 shrink-0">
                           {f.unit}
                         </span>
                       </div>
@@ -578,7 +578,7 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                           <button
                             type="button"
                             onClick={() => handleSetFirstFormation(f.id)}
-                            className="px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 font-black text-[9px] transition-colors cursor-pointer"
+                            className="px-1.5 py-0.5 rounded bg-amber-100 hover:bg-amber-400 text-amber-900 hover:text-slate-950 dark:bg-amber-500/20 dark:hover:bg-amber-500 dark:text-amber-300 dark:hover:text-slate-950 font-black text-[9px] transition-colors cursor-pointer"
                             title="Make this the 1st formation"
                           >
                             1st
@@ -588,7 +588,7 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                           type="button"
                           onClick={() => handleMoveUp(f.id)}
                           disabled={idx === 0}
-                          className="w-5 h-5 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-20 text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
+                          className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-20 text-slate-700 dark:text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
                           title="Move Up"
                         >
                           <ArrowUp className="w-3 h-3" />
@@ -597,7 +597,7 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                           type="button"
                           onClick={() => handleMoveDown(f.id)}
                           disabled={idx === orderedRelevantFormations.length - 1}
-                          className="w-5 h-5 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-20 text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
+                          className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-20 text-slate-700 dark:text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
                           title="Move Down"
                         >
                           <ArrowDown className="w-3 h-3" />
@@ -611,8 +611,8 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
 
             {/* 4. Layout & Column Options (Includes 1 Chart Per Column) */}
             <div className="space-y-1.5 pt-1">
-              <label className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                <LayoutGrid className="w-3.5 h-3.5 text-emerald-400" />
+              <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <LayoutGrid className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>Layout &amp; Columns</span>
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -626,15 +626,15 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                   }}
                   className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
                     oneChartPerColumn || columnsCount === 1
-                      ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-200 font-black ring-1 ring-emerald-500/40'
-                      : 'bg-slate-800/70 border-slate-700 text-slate-400 hover:text-slate-200'
+                      ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-400 dark:border-emerald-500/60 text-emerald-950 dark:text-emerald-200 font-black ring-1 ring-emerald-400/40'
+                      : 'bg-white hover:bg-slate-100 dark:bg-slate-800/70 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
                   <div className="text-xs flex items-center justify-center gap-1">
                     <Columns className="w-3 h-3" />
                     <span>1 Chart / Col</span>
                   </div>
-                  <div className="text-[9px] text-slate-400">Full Width Single</div>
+                  <div className="text-[9px] text-slate-500 dark:text-slate-400">Full Width Single</div>
                 </button>
 
                 {/* 2 Columns */}
@@ -647,12 +647,12 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                   }}
                   className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
                     !oneChartPerColumn && columnsCount === 2 && layout === 'pocket_grid'
-                      ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-200 font-black ring-1 ring-emerald-500/40'
-                      : 'bg-slate-800/70 border-slate-700 text-slate-400 hover:text-slate-200'
+                      ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-400 dark:border-emerald-500/60 text-emerald-950 dark:text-emerald-200 font-black ring-1 ring-emerald-400/40'
+                      : 'bg-white hover:bg-slate-100 dark:bg-slate-800/70 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
                   <div className="text-xs">2 Columns</div>
-                  <div className="text-[9px] text-slate-400">Side-by-Side Grid</div>
+                  <div className="text-[9px] text-slate-500 dark:text-slate-400">Side-by-Side Grid</div>
                 </button>
 
                 {/* 3 Columns */}
@@ -665,25 +665,25 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                   }}
                   className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
                     !oneChartPerColumn && columnsCount === 3
-                      ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-200 font-black ring-1 ring-emerald-500/40'
-                      : 'bg-slate-800/70 border-slate-700 text-slate-400 hover:text-slate-200'
+                      ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-400 dark:border-emerald-500/60 text-emerald-950 dark:text-emerald-200 font-black ring-1 ring-emerald-400/40'
+                      : 'bg-white hover:bg-slate-100 dark:bg-slate-800/70 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
                   <div className="text-xs">3-Col Dense</div>
-                  <div className="text-[9px] text-slate-400">Max Fit 1-Page</div>
+                  <div className="text-[9px] text-slate-500 dark:text-slate-400">Max Fit 1-Page</div>
                 </button>
               </div>
 
               {/* Orientation & Font Size */}
               <div className="grid grid-cols-2 gap-2 pt-1">
-                <div className="flex items-center gap-1 bg-slate-800/70 border border-slate-700 p-1 rounded-xl">
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 p-1 rounded-xl">
                   <button
                     type="button"
                     onClick={() => setOrientation('landscape')}
                     className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       orientation === 'landscape'
-                        ? 'bg-slate-700 text-white shadow-xs'
-                        : 'text-slate-400 hover:text-slate-200'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                     }`}
                   >
                     Landscape
@@ -693,22 +693,22 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                     onClick={() => setOrientation('portrait')}
                     className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       orientation === 'portrait'
-                        ? 'bg-slate-700 text-white shadow-xs'
-                        : 'text-slate-400 hover:text-slate-200'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                     }`}
                   >
                     Portrait
                   </button>
                 </div>
 
-                <div className="flex items-center gap-1 bg-slate-800/70 border border-slate-700 p-1 rounded-xl">
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 p-1 rounded-xl">
                   <button
                     type="button"
                     onClick={() => setFontSize('compact')}
                     className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       fontSize === 'compact'
-                        ? 'bg-slate-700 text-white shadow-xs'
-                        : 'text-slate-400 hover:text-slate-200'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                     }`}
                   >
                     Compact
@@ -718,8 +718,8 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                     onClick={() => setFontSize('standard')}
                     className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       fontSize === 'standard'
-                        ? 'bg-slate-700 text-white shadow-xs'
-                        : 'text-slate-400 hover:text-slate-200'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                     }`}
                   >
                     Standard
@@ -730,8 +730,8 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
 
             {/* 5. Depth Levels */}
             <div className="space-y-1.5 pt-1">
-              <label className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                <Sliders className="w-3.5 h-3.5 text-amber-400" />
+              <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Sliders className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
                 <span>Depth Levels</span>
               </label>
               <div className="grid grid-cols-4 gap-1.5">
@@ -747,12 +747,12 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                     onClick={() => setDepthLevels(tier.id as any)}
                     className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer ${
                       depthLevels === tier.id
-                        ? 'bg-amber-500/20 border-amber-500/60 text-amber-200 font-black'
-                        : 'bg-slate-800/70 border-slate-700 text-slate-400 hover:text-slate-200'
+                        ? 'bg-amber-50 dark:bg-amber-500/20 border-amber-300 dark:border-amber-500/60 text-amber-950 dark:text-amber-200 font-black'
+                        : 'bg-white hover:bg-slate-100 dark:bg-slate-800/70 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
                     <div className="text-xs">{tier.label}</div>
-                    <div className="text-[8.5px] text-slate-400 font-medium truncate">{tier.sub}</div>
+                    <div className="text-[8.5px] text-slate-500 dark:text-slate-400 font-medium truncate">{tier.sub}</div>
                   </button>
                 ))}
               </div>
@@ -761,12 +761,12 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
             {/* 6. Toggles (1 Chart/Col, 1 Chart/Page, Ink-Friendly, Cut Lines) */}
             <div className="space-y-2 pt-1">
               {/* Explicit toggle for 1 Chart Per Column */}
-              <label className="flex items-center justify-between p-2.5 bg-slate-800/70 border border-slate-750 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors">
+              <label className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-800/70 border border-slate-200 dark:border-slate-750 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                 <div className="flex items-center gap-2">
-                  <Columns className="w-4 h-4 text-emerald-400" />
+                  <Columns className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <div>
-                    <div className="text-xs font-bold text-slate-200">1 Chart Per Column (Full Width)</div>
-                    <div className="text-[10px] text-slate-400">
+                    <div className="text-xs font-bold text-slate-900 dark:text-slate-200">1 Chart Per Column (Full Width)</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400">
                       Stack each formation chart in its own full-width column
                     </div>
                   </div>
@@ -779,17 +779,17 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                     if (e.target.checked) setColumnsCount(1);
                     else setColumnsCount(2);
                   }}
-                  className="rounded text-emerald-500 focus:ring-emerald-400 bg-slate-900 border-slate-700 w-4 h-4"
+                  className="rounded text-emerald-600 focus:ring-emerald-500 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 w-4 h-4"
                 />
               </label>
 
               {/* Explicit toggle for 1 Chart Per Page */}
-              <label className="flex items-center justify-between p-2.5 bg-slate-800/70 border border-slate-750 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors">
+              <label className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-800/70 border border-slate-200 dark:border-slate-750 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-indigo-400" />
+                  <FileText className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                   <div>
-                    <div className="text-xs font-bold text-slate-200">1 Chart Per Page (Page Breaks)</div>
-                    <div className="text-[10px] text-slate-400">
+                    <div className="text-xs font-bold text-slate-900 dark:text-slate-200">1 Chart Per Page (Page Breaks)</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400">
                       Print each formation card on its own dedicated page
                     </div>
                   </div>
@@ -798,18 +798,18 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                   type="checkbox"
                   checked={oneChartPerPage}
                   onChange={(e) => setOneChartPerPage(e.target.checked)}
-                  className="rounded text-indigo-500 focus:ring-indigo-400 bg-slate-900 border-slate-700 w-4 h-4"
+                  className="rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 w-4 h-4"
                 />
               </label>
 
-              <label className="flex items-center justify-between p-2.5 bg-slate-800/70 border border-slate-750 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors">
+              <label className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-800/70 border border-slate-200 dark:border-slate-750 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded bg-slate-700 text-slate-300 flex items-center justify-center text-xs font-bold">
+                  <div className="w-5 h-5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center text-xs font-bold">
                     $
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-200">Ink-Friendly Black &amp; White</div>
-                    <div className="text-[10px] text-slate-400">
+                    <div className="text-xs font-bold text-slate-900 dark:text-slate-200">Ink-Friendly Black &amp; White</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400">
                       Clean white backgrounds, zero background ink waste
                     </div>
                   </div>
@@ -818,16 +818,16 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                   type="checkbox"
                   checked={inkFriendly}
                   onChange={(e) => setInkFriendly(e.target.checked)}
-                  className="rounded text-amber-500 focus:ring-amber-400 bg-slate-900 border-slate-700 w-4 h-4"
+                  className="rounded text-amber-500 focus:ring-amber-400 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 w-4 h-4"
                 />
               </label>
 
-              <label className="flex items-center justify-between p-2.5 bg-slate-800/70 border border-slate-750 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors">
+              <label className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-800/70 border border-slate-200 dark:border-slate-750 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                 <div className="flex items-center gap-2">
                   <Scissors className="w-4 h-4 text-slate-400" />
                   <div>
-                    <div className="text-xs font-bold text-slate-200">Pocket Fold / Cut Guide Lines</div>
-                    <div className="text-[10px] text-slate-400">
+                    <div className="text-xs font-bold text-slate-900 dark:text-slate-200">Pocket Fold / Cut Guide Lines</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400">
                       Center dashed line for folding into coach's back pocket
                     </div>
                   </div>
@@ -836,16 +836,16 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                   type="checkbox"
                   checked={showCutLines}
                   onChange={(e) => setShowCutLines(e.target.checked)}
-                  className="rounded text-amber-500 focus:ring-amber-400 bg-slate-900 border-slate-700 w-4 h-4"
+                  className="rounded text-amber-500 focus:ring-amber-400 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 w-4 h-4"
                 />
               </label>
             </div>
 
             {/* 7. Cell Highlighting (Printout Emphasis) */}
-            <div className="space-y-2.5 pt-2 border-t border-slate-750">
+            <div className="space-y-2.5 pt-2 border-t border-slate-200 dark:border-slate-750">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-300">
-                  <Highlighter className="w-3.5 h-3.5 text-amber-400" />
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <Highlighter className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
                   <span>7. Cell Highlighting</span>
                 </div>
                 {highlightCount > 0 ? (
@@ -862,56 +862,56 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                     </button>
                   </div>
                 ) : (
-                  <span className="text-[10px] text-slate-500">0 highlighted</span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">0 highlighted</span>
                 )}
               </div>
 
-              <div className="text-[11px] text-slate-400 bg-slate-800/50 p-2.5 rounded-xl border border-slate-750 space-y-1.5">
+              <div className="text-[11px] text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-750 space-y-1.5 shadow-xs">
                 <p>
-                  Click <strong className="text-slate-200">any cell</strong> in the live preview to highlight it.
-                  Cells highlight using a lighter shade of their respective team color:
+                  Click <strong className="text-slate-900 dark:text-slate-200">any cell</strong> in the live preview to highlight it.
+                  Cells highlight using a soft, muted shade of their respective team tier:
                 </p>
                 <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[10px] font-bold">
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-300 text-slate-950 border border-slate-900">
-                    <span className="w-2 h-2 rounded-xs bg-slate-900 inline-block"></span>
-                    Black (Light Slate)
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-300 text-slate-900 dark:text-slate-950 border border-slate-400 dark:border-slate-900">
+                    <span className="w-2 h-2 rounded-xs bg-slate-800 dark:bg-slate-900 inline-block"></span>
+                    Black (Slate)
                   </span>
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-200 text-amber-950 border border-amber-600">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-200 text-amber-900 dark:text-amber-950 border border-amber-300 dark:border-amber-600">
                     <span className="w-2 h-2 rounded-xs bg-amber-500 inline-block"></span>
-                    Gold (Light Gold)
+                    Gold (Muted Gold)
                   </span>
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-200 text-blue-950 border border-blue-600">
-                    <span className="w-2 h-2 rounded-xs bg-blue-600 inline-block"></span>
-                    Blue (Light Blue)
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-sky-100 dark:bg-blue-200 text-sky-900 dark:text-blue-950 border border-sky-300 dark:border-blue-600">
+                    <span className="w-2 h-2 rounded-xs bg-sky-600 dark:bg-blue-600 inline-block"></span>
+                    Blue (Soft Sky)
                   </span>
                 </div>
               </div>
 
               {/* Brush Mode Picker */}
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-400">Highlight Brush Color:</label>
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Highlight Brush Color:</label>
                 <div className="grid grid-cols-4 gap-1">
                   <button
                     type="button"
                     onClick={() => setHighlightBrushMode('auto')}
                     className={`px-1.5 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer text-center ${
                       highlightBrushMode === 'auto'
-                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm'
-                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-750 hover:text-slate-300'
+                        ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-500/50 shadow-xs'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-750 hover:text-slate-900 dark:hover:text-slate-300'
                     }`}
                     title="Auto assigns lighter shade based on column team color"
                   >
-                    Auto (Team)
+                    Auto (Tier)
                   </button>
                   <button
                     type="button"
                     onClick={() => setHighlightBrushMode('black')}
                     className={`px-1.5 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer text-center ${
                       highlightBrushMode === 'black'
-                        ? 'bg-slate-300 text-slate-950 border-slate-950 ring-1 ring-white'
-                        : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-750'
+                        ? 'bg-slate-200 dark:bg-slate-300 text-slate-950 border-slate-600 dark:border-slate-950 ring-1 ring-slate-400 dark:ring-white'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-750'
                     }`}
-                    title="Forces Light Slate Black shade"
+                    title="Forces Slate Black shade"
                   >
                     Black
                   </button>
@@ -920,10 +920,10 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                     onClick={() => setHighlightBrushMode('gold')}
                     className={`px-1.5 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer text-center ${
                       highlightBrushMode === 'gold'
-                        ? 'bg-amber-200 text-amber-950 border-amber-600 ring-1 ring-amber-400'
-                        : 'bg-slate-800 text-amber-300 border-slate-700 hover:bg-slate-750'
+                        ? 'bg-amber-100 dark:bg-amber-200 text-amber-950 border-amber-400 dark:border-amber-600 ring-1 ring-amber-400'
+                        : 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-750'
                     }`}
-                    title="Forces Light Athletic Gold shade"
+                    title="Forces Muted Gold shade"
                   >
                     Gold
                   </button>
@@ -932,10 +932,10 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                     onClick={() => setHighlightBrushMode('blue')}
                     className={`px-1.5 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer text-center ${
                       highlightBrushMode === 'blue'
-                        ? 'bg-blue-200 text-blue-950 border-blue-600 ring-1 ring-blue-400'
-                        : 'bg-slate-800 text-blue-300 border-slate-700 hover:bg-slate-750'
+                        ? 'bg-sky-100 dark:bg-blue-200 text-sky-950 dark:text-blue-950 border-sky-400 dark:border-blue-600 ring-1 ring-sky-400 dark:ring-blue-400'
+                        : 'bg-white dark:bg-slate-800 text-sky-700 dark:text-blue-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-750'
                     }`}
-                    title="Forces Light Royal Blue shade"
+                    title="Forces Soft Sky shade"
                   >
                     Blue
                   </button>
@@ -944,30 +944,30 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
 
               {/* Quick Batch Toggles */}
               <div className="space-y-1 pt-1">
-                <label className="text-[11px] font-bold text-slate-400">Quick Highlighting Shortcuts:</label>
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Quick Highlighting Shortcuts:</label>
                 <div className="grid grid-cols-3 gap-1.5">
                   <button
                     type="button"
                     onClick={() => highlightAllTier('black')}
-                    className="px-2 py-1 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-slate-600 rounded-lg text-[10px] font-bold text-slate-300 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                    className="px-2 py-1 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 rounded-lg text-[10px] font-bold text-slate-700 dark:text-slate-300 transition-colors flex items-center justify-center gap-1 cursor-pointer"
                   >
-                    <span className="w-2 h-2 rounded-xs bg-slate-400 inline-block"></span>
+                    <span className="w-2 h-2 rounded-xs bg-slate-600 dark:bg-slate-400 inline-block"></span>
                     <span>All Black</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => highlightAllTier('gold')}
-                    className="px-2 py-1 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-slate-600 rounded-lg text-[10px] font-bold text-amber-300 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                    className="px-2 py-1 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 rounded-lg text-[10px] font-bold text-amber-800 dark:text-amber-300 transition-colors flex items-center justify-center gap-1 cursor-pointer"
                   >
-                    <span className="w-2 h-2 rounded-xs bg-amber-400 inline-block"></span>
+                    <span className="w-2 h-2 rounded-xs bg-amber-500 dark:bg-amber-400 inline-block"></span>
                     <span>All Gold</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => highlightAllTier('blue')}
-                    className="px-2 py-1 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-slate-600 rounded-lg text-[10px] font-bold text-blue-300 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                    className="px-2 py-1 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 rounded-lg text-[10px] font-bold text-sky-800 dark:text-blue-300 transition-colors flex items-center justify-center gap-1 cursor-pointer"
                   >
-                    <span className="w-2 h-2 rounded-xs bg-blue-400 inline-block"></span>
+                    <span className="w-2 h-2 rounded-xs bg-sky-500 dark:bg-blue-400 inline-block"></span>
                     <span>All Blue</span>
                   </button>
                 </div>
@@ -976,59 +976,59 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
           </div>
 
           {/* Live Print Preview Column (7 cols) */}
-          <div className="lg:col-span-7 p-4 sm:p-5 bg-slate-950 flex flex-col min-h-0">
-            <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800 shrink-0">
+          <div className="lg:col-span-7 p-4 sm:p-5 bg-slate-100 dark:bg-slate-950 flex flex-col min-h-0">
+            <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200 dark:border-slate-800 shrink-0">
               <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-amber-400" />
-                <span className="text-xs font-black uppercase tracking-wider text-slate-200">
+                <FileText className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+                <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
                   Live Print Sheet Preview
                 </span>
               </div>
-              <div className="text-[11px] text-slate-400 font-medium flex items-center gap-2">
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium flex items-center gap-2">
                 <span>{targetFormations.length} Formations</span>
                 <span>&bull;</span>
-                <span className="text-amber-400 font-bold">
+                <span className="text-amber-700 dark:text-amber-400 font-bold">
                   {oneChartPerColumn || columnsCount === 1 ? '1 Chart / Col' : `${columnsCount} Columns`}
                 </span>
                 {firstFormation && (
                   <>
                     <span>&bull;</span>
-                    <span className="text-amber-300 font-mono">1st: {firstFormation.name}</span>
+                    <span className="text-amber-700 dark:text-amber-300 font-mono">1st: {firstFormation.name}</span>
                   </>
                 )}
               </div>
             </div>
 
             {/* Interactive Cell Highlighter banner */}
-            <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl mb-2 text-xs shrink-0">
+            <div className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl mb-2 text-xs shrink-0 shadow-xs">
               <div className="flex items-center gap-2 min-w-0">
-                <Highlighter className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span className="text-slate-300 font-bold text-[11px] truncate">
-                  Click any cell below to toggle highlight (lighter shade of Black, Gold, Blue)
+                <Highlighter className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
+                <span className="text-slate-700 dark:text-slate-300 font-bold text-[11px] truncate">
+                  Click any cell below to toggle highlight (muted shade of Black, Gold, Blue)
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {highlightCount > 0 ? (
                   <>
-                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-500/20 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40">
                       {highlightCount} Highlighted
                     </span>
                     <button
                       type="button"
                       onClick={clearAllHighlights}
-                      className="text-[10px] text-rose-400 hover:text-rose-300 font-bold underline cursor-pointer"
+                      className="text-[10px] text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 font-bold underline cursor-pointer"
                     >
                       Clear
                     </button>
                   </>
                 ) : (
-                  <span className="text-[10px] text-slate-500">Ready to highlight</span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">Ready to highlight</span>
                 )}
               </div>
             </div>
 
             {/* Scrollable scaled preview page */}
-            <div className="flex-1 overflow-auto rounded-xl bg-slate-900/50 p-2 flex justify-center items-start">
+            <div className="flex-1 overflow-auto rounded-xl bg-slate-200/50 dark:bg-slate-900/50 p-2 flex justify-center items-start">
               <div
                 className="bg-white text-slate-950 p-4 rounded shadow-2xl transition-all select-none origin-top"
                 style={{
@@ -1189,8 +1189,8 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
         </div>
 
         {/* Modal Footer */}
-        <div className="px-5 py-3.5 bg-slate-850 border-t border-slate-750 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2 text-xs text-slate-400">
+        <div className="px-5 py-3.5 bg-slate-50 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-750 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <Info className="w-4 h-4 text-slate-400 shrink-0" />
             <span className="hidden sm:inline">
               Tip: Print on heavy cardstock or laminate for season-long durability in your back pocket.
@@ -1201,7 +1201,7 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold text-xs rounded-xl border border-slate-700 transition-all cursor-pointer"
+              className="px-4 py-2 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl border border-slate-200 dark:border-slate-700 transition-all cursor-pointer"
             >
               Cancel
             </button>
@@ -1209,7 +1209,7 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
             <button
               type="button"
               onClick={handleOpenCleanTab}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-4 py-2 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 hover:text-slate-950 dark:text-slate-200 dark:hover:text-white font-bold text-xs rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer"
               title="Open print sheet in clean new browser tab"
             >
               <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
