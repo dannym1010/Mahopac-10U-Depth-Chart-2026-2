@@ -435,6 +435,60 @@ export const MASTER_ROSTER: RosterPlayer[] = [
 
 export const INITIAL_DEFAULT_FORMATIONS: FormationBoard[] = [
   {
+    id: "form_10_spread",
+    unit: "offense",
+    name: "10 Spread Offense",
+    collapsed: false,
+    subtitle: "1 RB - 0 TE - 4 WRs (Spread)",
+    rows: [
+      {
+        id: "row_10sp_ol",
+        label: "Offensive Line",
+        slotCount: 7,
+        rowClass: "oline",
+        positions: [
+          null,
+          { id: "10sp-LT", name: "LT" },
+          { id: "10sp-LG", name: "LG" },
+          { id: "10sp-C", name: "C" },
+          { id: "10sp-RG", name: "RG" },
+          { id: "10sp-RT", name: "RT" },
+          null
+        ]
+      },
+      {
+        id: "row_10sp_wr",
+        label: "Wideouts & QB (X, H, 1, Y, Z)",
+        slotCount: 7,
+        rowClass: "receivers",
+        positions: [
+          { id: "10sp-X", name: "X" },
+          { id: "10sp-H", name: "H" },
+          null,
+          { id: "10sp-1", name: "1 (QB)" },
+          null,
+          { id: "10sp-Y", name: "Y" },
+          { id: "10sp-Z", name: "Z" }
+        ]
+      },
+      {
+        id: "row_10sp_bk",
+        label: "Backfield ( 2 RB )",
+        slotCount: 7,
+        rowClass: "backfield",
+        positions: [
+          null,
+          null,
+          null,
+          { id: "10sp-2", name: "2 (RB)" },
+          null,
+          null,
+          null
+        ]
+      }
+    ]
+  },
+  {
     id: "form_11",
     unit: "offense",
     name: "11 Offense",

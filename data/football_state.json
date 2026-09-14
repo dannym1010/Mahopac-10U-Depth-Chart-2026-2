@@ -1,6 +1,6 @@
 {
-  "version": 123,
-  "updatedAt": 1789411833767,
+  "version": 124,
+  "updatedAt": 1789412824473,
   "lastAuthor": "defense_coach@test.com",
   "state": {
     "weeklyData": {
@@ -2565,6 +2565,93 @@
         "opponent": "Brewster",
         "formations": [
           {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
+          {
             "id": "form_21",
             "rows": [
               {
@@ -3999,6 +4086,93 @@
       },
       "1": {
         "formations": [
+          {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
           {
             "id": "form_21",
             "name": "21 Offense",
@@ -10861,6 +11035,93 @@
         "opponent": "Yorktown Huskers",
         "formations": [
           {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
+          {
             "collapsed": false,
             "unit": "offense",
             "name": "21 Offense",
@@ -15254,6 +15515,93 @@
         "opponent": "Shrub Oak",
         "formations": [
           {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
+          {
             "collapsed": false,
             "unit": "offense",
             "name": "21 Offense",
@@ -16774,6 +17122,93 @@
         "opponent": "Carmel Rams",
         "formations": [
           {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
+          {
             "rows": [
               {
                 "rowClass": "oline",
@@ -17479,6 +17914,93 @@
         "opponent": "Wappingers Wildcats",
         "formations": [
           {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
+          {
             "name": "11 Offense",
             "rows": [
               {
@@ -18183,6 +18705,93 @@
         "scrimmageChart": {},
         "opponent": "Brewster",
         "formations": [
+          {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
           {
             "unit": "offense",
             "collapsed": false,
@@ -19759,6 +20368,93 @@
         "opponent": "Somers Tuskers",
         "formations": [
           {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
+          {
             "collapsed": false,
             "name": "21 Offense",
             "rows": [
@@ -21185,6 +21881,93 @@
         "opponent": "TBD",
         "formations": [
           {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
+          {
             "rows": [
               {
                 "positions": [
@@ -21889,6 +22672,93 @@
         "scrimmageChart": {},
         "opponent": "",
         "formations": [
+          {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
           {
             "unit": "offense",
             "subtitle": "2 RBs - 1 TE (Y1) - 2 WRs (X Left, Z Right)",
@@ -23156,6 +24026,93 @@
       },
       "pre-3": {
         "formations": [
+          {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
           {
             "collapsed": false,
             "subtitle": "2 RBs - 1 TE (Y1) - 2 WRs (X Left, Z Right)",
@@ -24427,6 +25384,93 @@
       "pre-4": {
         "formations": [
           {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
+          {
             "subtitle": "2 RBs - 1 TE (Y1) - 2 WRs (X Left, Z Right)",
             "name": "21 Offense",
             "rows": [
@@ -25696,6 +26740,93 @@
       },
       "playoffs": {
         "formations": [
+          {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
           {
             "id": "form_21",
             "collapsed": false,
@@ -29525,6 +30656,93 @@
         "opponent": "Brewster",
         "formations": [
           {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
+          {
             "id": "form_21",
             "rows": [
               {
@@ -30959,6 +32177,93 @@
       },
       "team_10u__week_1": {
         "formations": [
+          {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
           {
             "id": "form_21",
             "name": "21 Offense",
@@ -37821,6 +39126,93 @@
         "opponent": "Yorktown Huskers",
         "formations": [
           {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
+          {
             "collapsed": false,
             "unit": "offense",
             "name": "21 Offense",
@@ -42214,6 +43606,93 @@
         "opponent": "Shrub Oak",
         "formations": [
           {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
+          {
             "collapsed": false,
             "unit": "offense",
             "name": "21 Offense",
@@ -43734,6 +45213,93 @@
         "opponent": "Carmel Rams",
         "formations": [
           {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
+          {
             "rows": [
               {
                 "rowClass": "oline",
@@ -44439,6 +46005,93 @@
         "opponent": "Wappingers Wildcats",
         "formations": [
           {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
+          {
             "name": "11 Offense",
             "rows": [
               {
@@ -45143,6 +46796,93 @@
         "scrimmageChart": {},
         "opponent": "Brewster",
         "formations": [
+          {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
           {
             "unit": "offense",
             "collapsed": false,
@@ -46719,6 +48459,93 @@
         "opponent": "Somers Tuskers",
         "formations": [
           {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
+          {
             "collapsed": false,
             "name": "21 Offense",
             "rows": [
@@ -48145,6 +49972,93 @@
         "opponent": "TBD",
         "formations": [
           {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
+          {
             "rows": [
               {
                 "positions": [
@@ -48849,6 +50763,93 @@
         "scrimmageChart": {},
         "opponent": "",
         "formations": [
+          {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
           {
             "unit": "offense",
             "subtitle": "2 RBs - 1 TE (Y1) - 2 WRs (X Left, Z Right)",
@@ -50116,6 +52117,93 @@
       },
       "team_10u__week_pre-3": {
         "formations": [
+          {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
           {
             "collapsed": false,
             "subtitle": "2 RBs - 1 TE (Y1) - 2 WRs (X Left, Z Right)",
@@ -51387,6 +53475,93 @@
       "team_10u__week_pre-4": {
         "formations": [
           {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
+          {
             "subtitle": "2 RBs - 1 TE (Y1) - 2 WRs (X Left, Z Right)",
             "name": "21 Offense",
             "rows": [
@@ -52656,6 +54831,93 @@
       },
       "team_10u__week_playoffs": {
         "formations": [
+          {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
           {
             "id": "form_21",
             "collapsed": false,
@@ -55726,6 +57988,93 @@
         },
         "formations": [
           {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
+          {
             "rows": [
               {
                 "positions": [
@@ -56147,6 +58496,93 @@
           "activeWristbandId": "wb_1788585605160"
         },
         "formations": [
+          {
+            "id": "form_10_spread",
+            "unit": "offense",
+            "name": "10 Spread Offense",
+            "collapsed": false,
+            "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+            "rows": [
+              {
+                "id": "row_10sp_ol",
+                "label": "Offensive Line",
+                "slotCount": 7,
+                "rowClass": "oline",
+                "positions": [
+                  null,
+                  {
+                    "id": "10sp-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "10sp-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "10sp-C",
+                    "name": "C"
+                  },
+                  {
+                    "id": "10sp-RG",
+                    "name": "RG"
+                  },
+                  {
+                    "id": "10sp-RT",
+                    "name": "RT"
+                  },
+                  null
+                ]
+              },
+              {
+                "id": "row_10sp_wr",
+                "label": "Wideouts & QB (X, H, 1, Y, Z)",
+                "slotCount": 7,
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "10sp-X",
+                    "name": "X"
+                  },
+                  {
+                    "id": "10sp-H",
+                    "name": "H"
+                  },
+                  null,
+                  {
+                    "id": "10sp-1",
+                    "name": "1 (QB)"
+                  },
+                  null,
+                  {
+                    "id": "10sp-Y",
+                    "name": "Y"
+                  },
+                  {
+                    "id": "10sp-Z",
+                    "name": "Z"
+                  }
+                ]
+              },
+              {
+                "id": "row_10sp_bk",
+                "label": "Backfield ( 2 RB )",
+                "slotCount": 7,
+                "rowClass": "backfield",
+                "positions": [
+                  null,
+                  null,
+                  null,
+                  {
+                    "id": "10sp-2",
+                    "name": "2 (RB)"
+                  },
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          },
           {
             "name": "21 Offense",
             "rows": [
@@ -57269,6 +59705,93 @@
       }
     },
     "defaultFormations": [
+      {
+        "id": "form_10_spread",
+        "unit": "offense",
+        "name": "10 Spread Offense",
+        "collapsed": false,
+        "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+        "rows": [
+          {
+            "id": "row_10sp_ol",
+            "label": "Offensive Line",
+            "slotCount": 7,
+            "rowClass": "oline",
+            "positions": [
+              null,
+              {
+                "id": "10sp-LT",
+                "name": "LT"
+              },
+              {
+                "id": "10sp-LG",
+                "name": "LG"
+              },
+              {
+                "id": "10sp-C",
+                "name": "C"
+              },
+              {
+                "id": "10sp-RG",
+                "name": "RG"
+              },
+              {
+                "id": "10sp-RT",
+                "name": "RT"
+              },
+              null
+            ]
+          },
+          {
+            "id": "row_10sp_wr",
+            "label": "Wideouts & QB (X, H, 1, Y, Z)",
+            "slotCount": 7,
+            "rowClass": "receivers",
+            "positions": [
+              {
+                "id": "10sp-X",
+                "name": "X"
+              },
+              {
+                "id": "10sp-H",
+                "name": "H"
+              },
+              null,
+              {
+                "id": "10sp-1",
+                "name": "1 (QB)"
+              },
+              null,
+              {
+                "id": "10sp-Y",
+                "name": "Y"
+              },
+              {
+                "id": "10sp-Z",
+                "name": "Z"
+              }
+            ]
+          },
+          {
+            "id": "row_10sp_bk",
+            "label": "Backfield ( 2 RB )",
+            "slotCount": 7,
+            "rowClass": "backfield",
+            "positions": [
+              null,
+              null,
+              null,
+              {
+                "id": "10sp-2",
+                "name": "2 (RB)"
+              },
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      },
       {
         "name": "21 Offense",
         "rows": [

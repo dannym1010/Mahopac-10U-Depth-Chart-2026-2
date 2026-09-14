@@ -549,12 +549,6 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
 
   // Helper to trigger slot count change directly
   const handleDirectSetSlots = (formId: string, rIdx: number, newCount: number) => {
-    if (isLockedByOther) {
-      if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Would you like to take over editing control?`)) {
-        if (onTakeOverLock) onTakeOverLock();
-      }
-      return;
-    }
     const safeCount = Math.max(1, Math.min(12, newCount));
     if (onSetRowSlots) {
       onSetRowSlots(formId, rIdx, safeCount);
@@ -565,12 +559,6 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
 
   // Helper to add 1 slot to row
   const handleQuickAddSlot = (formId: string, rIdx: number, currentLen: number) => {
-    if (isLockedByOther) {
-      if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Would you like to take over editing control?`)) {
-        if (onTakeOverLock) onTakeOverLock();
-      }
-      return;
-    }
     if (currentLen >= 12) return;
     if (onAddSlotToRow) {
       onAddSlotToRow(formId, rIdx);
@@ -581,12 +569,6 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
 
   // Helper to remove 1 slot from row
   const handleQuickRemoveSlot = (formId: string, rIdx: number, currentLen: number) => {
-    if (isLockedByOther) {
-      if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Would you like to take over editing control?`)) {
-        if (onTakeOverLock) onTakeOverLock();
-      }
-      return;
-    }
     if (currentLen <= 1) return;
     if (onRemoveSlotFromRow) {
       onRemoveSlotFromRow(formId, rIdx);
@@ -607,63 +589,20 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Real-time Multi-Coach Edit Lock / Collaboration Banner */}
-      {isLockedByOther && (
-        <div className="p-4 rounded-3xl bg-gradient-to-r from-amber-950/90 via-slate-900 to-amber-950/90 border-2 border-amber-500/80 shadow-2xl flex flex-wrap items-center justify-between gap-4 print:hidden animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center shrink-0 shadow-inner">
-              <ShieldAlert className="w-5 h-5 text-amber-400 animate-pulse" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-black tracking-wider uppercase border border-amber-500/40">
-                  🔒 View-Only Mode
-                </span>
-                <span className="text-xs font-bold text-amber-200">
-                  Locked by Coach <strong className="text-white font-extrabold">{lockHolderName || lockHolderEmail}</strong>
-                </span>
-              </div>
-              <p className="text-xs text-slate-300 font-medium mt-1">
-                Editing is currently locked for this {unit.toUpperCase()} depth chart so changes are never lost or overwritten. Live changes stream to your screen in real time.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {onTakeOverLock && (
-              <button
-                onClick={() => {
-                  if (confirm(`Take over editing control from Coach ${lockHolderName || lockHolderEmail}? This will lock the page to your screen.`)) {
-                    onTakeOverLock();
-                  }
-                }}
-                className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-500/20 flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
-              >
-                <Zap className="w-3.5 h-3.5" />
-                <span>Take Over Editing Control</span>
-              </button>
-            )}
-          </div>
+      {/* Real-time Multi-Coach Collaboration Status Banner */}
+      <div className="px-4 py-2.5 rounded-2xl bg-slate-900/80 border border-emerald-500/40 shadow-lg flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <div className="flex items-center gap-2.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+          <span className="text-xs font-semibold text-emerald-300">
+            👥 <strong>Multi-Coach Live Sync:</strong> All coaches can view and edit this {unit.toUpperCase()} depth chart simultaneously. Player moves, positions, and formations update in real time across all screens.
+          </span>
         </div>
-      )}
-
-      {isHeldByMe && (
-        <div className="px-4 py-2.5 rounded-2xl bg-emerald-950/70 border border-emerald-500/50 shadow-lg flex flex-wrap items-center justify-between gap-3 print:hidden animate-in fade-in duration-300">
-          <div className="flex items-center gap-2.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
-            <span className="text-xs font-bold text-emerald-300">
-              🔒 <strong>Editing Control Active:</strong> You hold the lock for {unit.toUpperCase()} depth chart. All player moves and changes save instantly to the cloud and cannot be overwritten.
-            </span>
-          </div>
-          {onReleaseLock && (
-            <button
-              onClick={onReleaseLock}
-              className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white font-bold text-[11px] rounded-lg border border-slate-700 transition-all cursor-pointer"
-            >
-              Release Lock
-            </button>
-          )}
+        <div className="flex items-center gap-2">
+          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold uppercase tracking-wider border border-emerald-500/30">
+            Real-Time Active
+          </span>
         </div>
-      )}
+      </div>
 
       {/* Top Action & Filter Toolbar */}
       <div className="relative z-30 flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-850/95 backdrop-blur-md p-4 rounded-3xl border border-slate-200 dark:border-slate-750/90 shadow-sm dark:shadow-xl print:hidden">
@@ -731,12 +670,6 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
             <>
               <button
                 onClick={() => {
-                  if (isLockedByOther) {
-                    if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Would you like to take over editing control?`)) {
-                      if (onTakeOverLock) onTakeOverLock();
-                    }
-                    return;
-                  }
                   setFormationNameInput('');
                   setFormationTemplateKey(FORMATION_TEMPLATES[unit]?.[0]?.key || '');
                   setFormationModalState({
@@ -800,12 +733,6 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                         type="button"
                         onClick={() => {
                           setIsPlaybookActionsDropdownOpen(false);
-                          if (isLockedByOther) {
-                            if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Would you like to take over editing control?`)) {
-                              if (onTakeOverLock) onTakeOverLock();
-                            }
-                            return;
-                          }
                           setShowCopyModal(true);
                         }}
                         className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-800 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-amber-300 hover:bg-slate-100 dark:hover:bg-slate-800/90 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
@@ -1150,12 +1077,6 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  if (isLockedByOther) {
-                                    if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Take over editing?`)) {
-                                      if (onTakeOverLock) onTakeOverLock();
-                                    }
-                                    return;
-                                  }
                                   setRowLabelInput('');
                                   setRowLabelModalTarget({ formId: form.id, isNew: true });
                                 }}
@@ -1279,12 +1200,6 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                     type="button"
                                     onClick={() => {
                                       if (userRole === 'admin') {
-                                        if (isLockedByOther) {
-                                          if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Take over editing?`)) {
-                                            if (onTakeOverLock) onTakeOverLock();
-                                          }
-                                          return;
-                                        }
                                         setAssignPlayerModalTarget({
                                           formId: form.id,
                                           formName: form.name,
@@ -1339,12 +1254,6 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                     type="button"
                                     onClick={() => {
                                       if (userRole === 'admin') {
-                                        if (isLockedByOther) {
-                                          if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Take over editing?`)) {
-                                            if (onTakeOverLock) onTakeOverLock();
-                                          }
-                                          return;
-                                        }
                                         setAssignPlayerModalTarget({
                                           formId: form.id,
                                           formName: form.name,
@@ -1399,12 +1308,6 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                     type="button"
                                     onClick={() => {
                                       if (userRole === 'admin') {
-                                        if (isLockedByOther) {
-                                          if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Take over editing?`)) {
-                                            if (onTakeOverLock) onTakeOverLock();
-                                          }
-                                          return;
-                                        }
                                         setAssignPlayerModalTarget({
                                           formId: form.id,
                                           formName: form.name,
@@ -1455,12 +1358,6 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      if (isLockedByOther) {
-                                        if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Take over editing?`)) {
-                                          if (onTakeOverLock) onTakeOverLock();
-                                        }
-                                        return;
-                                      }
                                       setAssignPlayerModalTarget({
                                         formId: form.id,
                                         formName: form.name,
@@ -1995,28 +1892,18 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                 >
                                   {/* Card Header (Position Name + Actions) */}
                                   <div
-                                    draggable={userRole === 'admin' && !isLockedByOther}
+                                    draggable={userRole === 'admin'}
                                     onDragStart={(e) => {
-                                      if (isLockedByOther) {
-                                        e.preventDefault();
-                                        return;
-                                      }
                                       onPositionCardDragStart(e, form.id, rIdx, pIdx);
                                     }}
                                     className={`position-card-title px-2.5 py-1.5 bg-slate-900 border-b border-slate-700 rounded-t-2xl print:rounded-none flex items-center justify-between text-xs font-black select-none ${
-                                      userRole === 'admin' && !isLockedByOther ? 'cursor-grab active:cursor-grabbing' : ''
+                                      userRole === 'admin' ? 'cursor-grab active:cursor-grabbing' : ''
                                     }`}
                                   >
                                     <div
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         if (userRole === 'admin') {
-                                          if (isLockedByOther) {
-                                            if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Would you like to take over editing control?`)) {
-                                              if (onTakeOverLock) onTakeOverLock();
-                                            }
-                                            return;
-                                          }
                                           setCustomPosInput(pos.name);
                                           setPositionPickerTarget({
                                             formId: form.id,
@@ -2146,12 +2033,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                       return (
                                         <div
                                           key={plIdx}
-                                          draggable={userRole === 'admin' && !isLockedByOther}
+                                          draggable={userRole === 'admin'}
                                           onDragStart={(e) => {
-                                            if (isLockedByOther) {
-                                              e.preventDefault();
-                                              return;
-                                            }
                                             onDragStartPlacedPlayer(e, pos.id, plIdx, player);
                                           }}
                                           className={`px-2 py-1 print:px-1.5 print:py-0.5 rounded-xl print:rounded-sm border text-[10.5px] print:text-[10px] font-black flex items-center justify-between transition-all select-none print:min-h-[20px] ${
@@ -2162,7 +2045,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                               : isD3
                                               ? 'bg-blue-600 text-white border-blue-500 font-extrabold shadow-xs print-player-badge-d3'
                                               : 'bg-white text-slate-950 border-slate-300 font-extrabold shadow-xs print-player-badge-d4'
-                                          } ${userRole === 'admin' && !isLockedByOther ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                                          } ${userRole === 'admin' ? 'cursor-grab active:cursor-grabbing' : ''}`}
                                         >
                                           <div className="flex items-center gap-1.5 min-w-0 flex-1">
                                             <span
@@ -2190,12 +2073,6 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                             <button
                                               onClick={(e) => {
                                                 e.stopPropagation();
-                                                if (isLockedByOther) {
-                                                  if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Would you like to take over editing control?`)) {
-                                                    if (onTakeOverLock) onTakeOverLock();
-                                                  }
-                                                  return;
-                                                }
                                                 onRemovePlayerFromCard(pos.id, plIdx);
                                               }}
                                               className={`ml-1 opacity-70 hover:opacity-100 print:hidden text-xs cursor-pointer ${

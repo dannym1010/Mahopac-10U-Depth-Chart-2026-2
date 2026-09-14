@@ -258,12 +258,14 @@ export interface FormationRow {
   label: string;
   slotCount: number;
   positions: (PositionSlot | null)[];
+  rowClass?: string;
 }
 
 export interface FormationBoard {
   id: string;
   unit: 'offense' | 'defense' | 'st' | 'groups';
   name: string;
+  subtitle?: string;
   collapsed?: boolean;
   rows: FormationRow[];
 }

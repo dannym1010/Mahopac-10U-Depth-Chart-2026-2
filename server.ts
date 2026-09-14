@@ -93,6 +93,13 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
 
   const merged: any = { ...current };
 
+  // Merge deletedFormationIds so deleted formations can NEVER resurrect
+  if (Array.isArray(incoming.deletedFormationIds)) {
+    merged.deletedFormationIds = Array.from(
+      new Set([...(current.deletedFormationIds || []), ...incoming.deletedFormationIds])
+    );
+  }
+
   // 1. Merge weeklyData deeply per week and per unit
   if (incoming.weeklyData && typeof incoming.weeklyData === 'object') {
     merged.weeklyData = { ...(current.weeklyData || {}) };
@@ -114,11 +121,14 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
 
       // Merge formations array preserving the incoming requested order
       let mergedFormations = curWeekState.formations || [];
+      const deletedSet = new Set<string>(merged.deletedFormationIds || []);
+
       if (Array.isArray(incWeekState.formations) && incWeekState.formations.length > 0) {
         if (
           metadata?.scope === 'all' ||
           metadata?.scope === 'force' ||
           metadata?.scope === 'copy_week' ||
+          metadata?.scope === 'delete_formation' ||
           !metadata?.activeUnit ||
           !isTargetWeek
         ) {
@@ -130,7 +140,7 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
           const result: any[] = [];
 
           incWeekState.formations.forEach((f: any) => {
-            if (f && f.id) {
+            if (f && f.id && !deletedSet.has(f.id)) {
               seenIds.add(f.id);
               result.push(f);
             }
@@ -138,7 +148,7 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
 
           const activeU = metadata?.activeUnit;
           (curWeekState.formations || []).forEach((f: any) => {
-            if (f && f.id && !seenIds.has(f.id)) {
+            if (f && f.id && !seenIds.has(f.id) && !deletedSet.has(f.id)) {
               if (!activeU || f.unit !== activeU) {
                 result.push(f);
               }
@@ -149,13 +159,22 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
         }
       }
 
-      // Guarantee that 11 Personnel and 11 Offense are NEVER lost from any week
+      // Filter out any explicitly deleted formations
+      mergedFormations = mergedFormations.filter((f: any) => f && f.id && !deletedSet.has(f.id));
+
+      // Guarantee that 11 Personnel and 11 Offense are NEVER lost from any week (unless explicitly deleted)
       const cur11Forms = (curWeekState.formations || []).filter((f: any) =>
-        f && (f.id === 'form_1788270435286' || f.id === 'form_11' || f.name?.toLowerCase().includes('11'))
+        f && !deletedSet.has(f.id) && (f.id === 'form_1788270435286' || f.id === 'form_11' || f.name?.toLowerCase().includes('11'))
       );
       cur11Forms.forEach((elf: any) => {
         if (!mergedFormations.some((f: any) => f && (f.id === elf.id || f.name?.toLowerCase().trim() === elf.name?.toLowerCase().trim()))) {
-          const lastOffIdx = mergedFormations.findLastIndex((f: any) => f && f.unit === 'offense');
+          let lastOffIdx = -1;
+          for (let i = mergedFormations.length - 1; i >= 0; i--) {
+            if (mergedFormations[i] && mergedFormations[i].unit === 'offense') {
+              lastOffIdx = i;
+              break;
+            }
+          }
           if (lastOffIdx >= 0) {
             mergedFormations.splice(lastOffIdx + 1, 0, elf);
           } else {
@@ -172,39 +191,56 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
       const curPlayerCount = countPlayersInDC(curDC);
       const incPlayerCount = countPlayersInDC(incDC);
 
-      const isSingleUnitSave =
-        isTargetWeek &&
-        metadata?.scope !== 'force' &&
-        metadata?.scope !== 'copy_week' &&
-        metadata?.scope !== 'all' &&
-        metadata?.activeUnit &&
-        metadata.activeUnit !== 'all' &&
-        metadata.activeUnit !== 'scrimmage' &&
-        metadata.activeUnit !== 'practice';
-
-      if (isSingleUnitSave) {
-        const activeUnitPosIds = getFormationUnitPosIds(mergedFormations, metadata.activeUnit);
-
-        // Retain positions from other units
-        for (const [posId, players] of Object.entries(curDC)) {
-          if (!activeUnitPosIds.has(posId)) {
-            mergedDC[posId] = players;
-          }
-        }
-
-        // Take incoming positions for active unit (explicitly setting empty or updated arrays)
-        for (const [posId, players] of Object.entries(incDC)) {
-          if (activeUnitPosIds.has(posId) || !mergedDC[posId]) {
-            mergedDC[posId] = players;
+      // Support ultra-fast concurrent multi-coach editing:
+      // If client specified modifiedPosIds, update ONLY those specific positions into curDC
+      if (
+        Array.isArray(metadata?.modifiedPosIds) &&
+        metadata.modifiedPosIds.length > 0 &&
+        isTargetWeek
+      ) {
+        mergedDC = { ...curDC };
+        for (const posId of metadata.modifiedPosIds) {
+          if (incDC[posId] !== undefined) {
+            mergedDC[posId] = incDC[posId];
+          } else {
+            delete mergedDC[posId];
           }
         }
       } else {
-        // Full depth chart save (force, copy_week, all, or depth_chart)
-        // If incoming has 0 players but current has populated players, and not force/copy, preserve current
-        if (incPlayerCount === 0 && curPlayerCount > 0 && metadata?.scope !== 'force' && metadata?.scope !== 'copy_week') {
-          mergedDC = { ...curDC };
+        const isSingleUnitSave =
+          isTargetWeek &&
+          metadata?.scope !== 'force' &&
+          metadata?.scope !== 'copy_week' &&
+          metadata?.scope !== 'all' &&
+          metadata?.activeUnit &&
+          metadata.activeUnit !== 'all' &&
+          metadata.activeUnit !== 'scrimmage' &&
+          metadata.activeUnit !== 'practice';
+
+        if (isSingleUnitSave) {
+          const activeUnitPosIds = getFormationUnitPosIds(mergedFormations, metadata.activeUnit);
+
+          // Retain positions from other units
+          for (const [posId, players] of Object.entries(curDC)) {
+            if (!activeUnitPosIds.has(posId)) {
+              mergedDC[posId] = players;
+            }
+          }
+
+          // Take incoming positions for active unit (explicitly setting empty or updated arrays)
+          for (const [posId, players] of Object.entries(incDC)) {
+            if (activeUnitPosIds.has(posId) || !mergedDC[posId]) {
+              mergedDC[posId] = players;
+            }
+          }
         } else {
-          mergedDC = { ...incDC };
+          // Full depth chart save (force, copy_week, all, or depth_chart)
+          // If incoming has 0 players but current has populated players, and not force/copy, preserve current
+          if (incPlayerCount === 0 && curPlayerCount > 0 && metadata?.scope !== 'force' && metadata?.scope !== 'copy_week') {
+            mergedDC = { ...curDC };
+          } else {
+            mergedDC = { ...incDC };
+          }
         }
       }
 
@@ -212,7 +248,21 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
       const curSC: Record<string, any> = curWeekState.scrimmageChart || {};
       const incSC: Record<string, any> = incWeekState.scrimmageChart || {};
       let mergedSC: Record<string, any> = {};
-      if (metadata?.activeUnit === 'scrimmage') {
+      if (
+        Array.isArray(metadata?.modifiedPosIds) &&
+        metadata.modifiedPosIds.length > 0 &&
+        isTargetWeek &&
+        metadata?.activeUnit === 'scrimmage'
+      ) {
+        mergedSC = { ...curSC };
+        for (const posId of metadata.modifiedPosIds) {
+          if (incSC[posId] !== undefined) {
+            mergedSC[posId] = incSC[posId];
+          } else {
+            delete mergedSC[posId];
+          }
+        }
+      } else if (metadata?.activeUnit === 'scrimmage') {
         mergedSC = { ...incSC };
       } else if (metadata?.scope === 'all' || !metadata?.activeUnit) {
         mergedSC = { ...incSC };
@@ -263,8 +313,15 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
   }
 
   // 2. Merge Default Formations preserving incoming order
+  const defDeletedSet = new Set<string>(merged.deletedFormationIds || []);
   if (Array.isArray(incoming.defaultFormations) && incoming.defaultFormations.length > 0) {
-    if (metadata?.scope === 'all' || metadata?.scope === 'force' || metadata?.scope === 'copy_week' || !metadata?.activeUnit) {
+    if (
+      metadata?.scope === 'all' ||
+      metadata?.scope === 'force' ||
+      metadata?.scope === 'copy_week' ||
+      metadata?.scope === 'delete_formation' ||
+      !metadata?.activeUnit
+    ) {
       merged.defaultFormations = incoming.defaultFormations;
     } else {
       const seenIds = new Set<string>();
@@ -288,6 +345,10 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
 
       merged.defaultFormations = result;
     }
+    const defDeletedSet = new Set<string>(merged.deletedFormationIds || []);
+    merged.defaultFormations = (merged.defaultFormations || []).filter(
+      (f: any) => f && f.id && !defDeletedSet.has(f.id)
+    );
   }
 
   // 3. Merge Roster preserving incoming order

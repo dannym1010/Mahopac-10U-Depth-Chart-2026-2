@@ -220,6 +220,11 @@ export default function App() {
     if (saved && Array.isArray(saved)) return saved;
     return [];
   });
+  const [deletedFormationIds, setDeletedFormationIds] = useState<string[]>(() => {
+    const saved = safeJSONParse('footballDeletedFormationIds', null);
+    if (saved && Array.isArray(saved)) return saved;
+    return [];
+  });
   const [playDatabase, setPlayDatabase] = useState<PlayDatabaseEntry[]>(() => {
     const saved = safeJSONParse('footballPlayDatabase', null);
     const savedDeleted = safeJSONParse('footballDeletedPlayIds', []);
@@ -762,6 +767,7 @@ export default function App() {
   const activeTeamIdRef = useRef<string>(activeTeamId);
   const currentWeekRef = useRef<string>(currentWeek);
   const currentPracticeIdRef = useRef<string | null>(currentPracticeId);
+  const recentlyModifiedPositionsRef = useRef<Map<string, number>>(new Map());
 
   activeUnitRef.current = activeUnit;
   activeTeamIdRef.current = activeTeamId;
@@ -785,6 +791,7 @@ export default function App() {
     callSheetData,
     wristbandData,
     deletedPlayIds,
+    deletedFormationIds,
     collapsedFolders,
     scheduleEvents,
     roster,
@@ -811,6 +818,7 @@ export default function App() {
       callSheetData,
       wristbandData,
       deletedPlayIds,
+      deletedFormationIds,
       collapsedFolders,
       scheduleEvents,
       roster,
@@ -1204,14 +1212,16 @@ function getUnitPositionIds(formations: FormationBoard[], unit: string): Set<str
   return ids;
 }
 
-// Multi-Coach state merger that prevents Offense/Defense/Special Teams overwrites and respects formation ordering
+// Multi-Coach state merger that prevents Offense/Defense/Special Teams overwrites, respects formation ordering, and supports real-time multi-coach depth chart updates
 function mergeRemoteWeeklyData(
   localWeekly: Record<string, WeekState>,
   remoteWeekly: Record<string, WeekState>,
   activeTeamId: string,
   currentWeek: string,
   activeUnit: string,
-  lastLocalEditTime: number
+  lastLocalEditTime: number,
+  recentlyModifiedPositions?: Map<string, number>,
+  deletedFormationIds?: string[]
 ): Record<string, WeekState> {
   if (!localWeekly || Object.keys(localWeekly).length === 0) return remoteWeekly;
   if (!remoteWeekly || Object.keys(remoteWeekly).length === 0) return localWeekly;
@@ -1221,6 +1231,7 @@ function mergeRemoteWeeklyData(
   const timeSinceEdit = Date.now() - lastLocalEditTime;
   // Local edit guard window: only shield local state if a local edit occurred within the last 4 seconds
   const isActivelyEditingLocally = timeSinceEdit < 4000;
+  const deletedSet = new Set<string>(deletedFormationIds || []);
 
   for (const weekKey of Object.keys(localWeekly)) {
     const localState = localWeekly[weekKey];
@@ -1237,29 +1248,33 @@ function mergeRemoteWeeklyData(
     }
 
     const isCurrentActiveWeek = weekKey === scopedKey || weekKey === currentWeek;
-    const localFormations = Array.isArray(localState.formations) ? localState.formations : [];
-    const remoteFormations = Array.isArray(remoteState.formations) ? remoteState.formations : [];
+    const localFormations = (Array.isArray(localState.formations) ? localState.formations : []).filter(
+      (f) => f && f.id && !deletedSet.has(f.id)
+    );
+    const remoteFormations = (Array.isArray(remoteState.formations) ? remoteState.formations : []).filter(
+      (f) => f && f.id && !deletedSet.has(f.id)
+    );
 
     if (isActivelyEditingLocally && isCurrentActiveWeek) {
-      // Local coach actively edited this specific week in the last 10 seconds:
-      // Preserve local depth chart & formations while accepting new remote items
+      // Local coach actively edited this specific week in the last 4 seconds:
+      // Preserve local depth chart modifications while accepting remote items in real time
       const mergedFormations: FormationBoard[] = [...localFormations];
       const localFormIds = new Set(localFormations.map((lf) => lf && lf.id));
       remoteFormations.forEach((rf) => {
-        if (rf && rf.id && !localFormIds.has(rf.id)) {
+        if (rf && rf.id && !localFormIds.has(rf.id) && !deletedSet.has(rf.id)) {
           mergedFormations.push(rf);
           localFormIds.add(rf.id);
         }
       });
 
-      // Ensure 11 Offense and all 4 core units are present
-      if (!mergedFormations.some((f) => f && f.unit === 'offense')) {
+      // Ensure 11 Offense and all 4 core units are present (unless explicitly deleted)
+      if (!deletedSet.has('form_11') && !mergedFormations.some((f) => f && f.unit === 'offense')) {
         mergedFormations.unshift(deepClone(INITIAL_DEFAULT_FORMATIONS[0]));
       }
       for (const u of ['defense', 'st', 'groups'] as const) {
         if (!mergedFormations.some((f) => f && f.unit === u)) {
           const defForm = INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.unit === u);
-          if (defForm && !localFormIds.has(defForm.id)) {
+          if (defForm && !localFormIds.has(defForm.id) && !deletedSet.has(defForm.id)) {
             mergedFormations.push(deepClone(defForm));
             localFormIds.add(defForm.id);
           }
@@ -1269,22 +1284,36 @@ function mergeRemoteWeeklyData(
       const localDC = localState.depthChart || {};
       const remoteDC = remoteState.depthChart || {};
       const mergedDC: Record<string, PlacedPlayer[]> = { ...remoteDC };
-      for (const [posId, localPlayers] of Object.entries(localDC)) {
-        if (Array.isArray(localPlayers) && localPlayers.length > 0) {
-          mergedDC[posId] = localPlayers;
-        } else if (localPlayers !== undefined) {
-          mergedDC[posId] = localPlayers;
+      if (recentlyModifiedPositions && recentlyModifiedPositions.size > 0) {
+        const now = Date.now();
+        for (const [posId, editTime] of recentlyModifiedPositions.entries()) {
+          if (now - editTime < 3500 && localDC[posId] !== undefined) {
+            mergedDC[posId] = localDC[posId];
+          }
+        }
+      } else {
+        for (const [posId, localPlayers] of Object.entries(localDC)) {
+          if (remoteDC[posId] === undefined && Array.isArray(localPlayers) && localPlayers.length > 0) {
+            mergedDC[posId] = localPlayers;
+          }
         }
       }
 
       const localSC = localState.scrimmageChart || {};
       const remoteSC = remoteState.scrimmageChart || {};
       const mergedSC: Record<string, PlacedPlayer[]> = { ...remoteSC };
-      for (const [posId, localPlayers] of Object.entries(localSC)) {
-        if (Array.isArray(localPlayers) && localPlayers.length > 0) {
-          mergedSC[posId] = localPlayers;
-        } else if (localPlayers !== undefined) {
-          mergedSC[posId] = localPlayers;
+      if (recentlyModifiedPositions && recentlyModifiedPositions.size > 0) {
+        const now = Date.now();
+        for (const [posId, editTime] of recentlyModifiedPositions.entries()) {
+          if (now - editTime < 3500 && localSC[posId] !== undefined) {
+            mergedSC[posId] = localSC[posId];
+          }
+        }
+      } else {
+        for (const [posId, localPlayers] of Object.entries(localSC)) {
+          if (remoteSC[posId] === undefined && Array.isArray(localPlayers) && localPlayers.length > 0) {
+            mergedSC[posId] = localPlayers;
+          }
         }
       }
 
@@ -1303,7 +1332,7 @@ function mergeRemoteWeeklyData(
 
       merged[weekKey] = {
         ...remoteState,
-        formations: mergedFormations,
+        formations: mergedFormations.filter((f) => f && f.id && !deletedSet.has(f.id)),
         depthChart: mergedDC,
         scrimmageChart: mergedSC,
         opponent: remoteState.opponent || localState.opponent || '',
@@ -1312,29 +1341,31 @@ function mergeRemoteWeeklyData(
       };
     } else {
       // Not actively editing locally in this specific window:
-      // Merge remote and local formations intelligently - never drop 11 formations or valid custom formations
-      const mergedFormations: FormationBoard[] = remoteFormations.length > 0 ? [...remoteFormations] : [...localFormations];
+      // Merge remote and local formations intelligently - never resurrect deleted formations
+      const mergedFormations: FormationBoard[] = (
+        remoteFormations.length > 0 ? [...remoteFormations] : [...localFormations]
+      ).filter((f) => f && f.id && !deletedSet.has(f.id));
       const seenIds = new Set(mergedFormations.map((f) => f && f.id));
 
       // Retain any local formations that are missing from remote (e.g. 11 Personnel or custom formations)
       localFormations.forEach((lf) => {
-        if (lf && lf.id && !seenIds.has(lf.id)) {
+        if (lf && lf.id && !seenIds.has(lf.id) && !deletedSet.has(lf.id)) {
           mergedFormations.push(lf);
           seenIds.add(lf.id);
         }
       });
 
-      // Guarantee that 11 Personnel and 11 Offense are always present
+      // Guarantee that 11 Personnel and 11 Offense are always present UNLESS explicitly deleted
       const elevenCandidates = [
         INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.id === 'form_11') || { id: 'form_11', name: '11 Offense', unit: 'offense' },
       ];
       for (const elf of elevenCandidates) {
-        if (elf && !mergedFormations.some((f) => f && (f.id === elf.id || f.name?.toLowerCase().includes('11')))) {
+        if (elf && !deletedSet.has(elf.id) && !mergedFormations.some((f) => f && (f.id === elf.id || f.name?.toLowerCase().includes('11')))) {
           mergedFormations.push(deepClone(elf as FormationBoard));
         }
       }
 
-      // Merge depth chart safely: never wipe a populated depth chart with an empty object
+      // Merge depth chart safely: remote takes precedence so other coaches' edits show in real time
       const countPlayers = (dc?: Record<string, any[]>) =>
         dc ? Object.values(dc).reduce((sum, p) => sum + (Array.isArray(p) ? p.length : 0), 0) : 0;
       const localDCCount = countPlayers(localState.depthChart);
@@ -1346,8 +1377,16 @@ function mergeRemoteWeeklyData(
       } else if (remoteDCCount > 0 && localDCCount === 0) {
         mergedDC = remoteState.depthChart || {};
       } else if (remoteDCCount > 0 && localDCCount > 0) {
-        // Both have players: remote takes precedence for updated spots, local spots preserved if not in remote
+        // Both have players: remote takes precedence for real-time sync, but preserve recent local edits
         mergedDC = { ...(localState.depthChart || {}), ...(remoteState.depthChart || {}) };
+        if (recentlyModifiedPositions && recentlyModifiedPositions.size > 0) {
+          const now = Date.now();
+          for (const [posId, editTime] of recentlyModifiedPositions.entries()) {
+            if (now - editTime < 3500 && localState.depthChart?.[posId] !== undefined) {
+              mergedDC[posId] = localState.depthChart[posId];
+            }
+          }
+        }
       } else {
         mergedDC = remoteState.depthChart !== undefined ? remoteState.depthChart : (localState.depthChart || {});
       }
@@ -1361,6 +1400,14 @@ function mergeRemoteWeeklyData(
         mergedSC = remoteState.scrimmageChart || {};
       } else {
         mergedSC = { ...(localState.scrimmageChart || {}), ...(remoteState.scrimmageChart || {}) };
+        if (recentlyModifiedPositions && recentlyModifiedPositions.size > 0) {
+          const now = Date.now();
+          for (const [posId, editTime] of recentlyModifiedPositions.entries()) {
+            if (now - editTime < 3500 && localState.scrimmageChart?.[posId] !== undefined) {
+              mergedSC[posId] = localState.scrimmageChart[posId];
+            }
+          }
+        }
       }
 
       const localHasWristbandPlays = localState.wristbandData?.wristbands?.some((wb: any) =>
@@ -1379,7 +1426,7 @@ function mergeRemoteWeeklyData(
       merged[weekKey] = {
         ...localState,
         ...remoteState,
-        formations: mergedFormations,
+        formations: mergedFormations.filter((f) => f && f.id && !deletedSet.has(f.id)),
         depthChart: mergedDC,
         scrimmageChart: mergedSC,
         opponent: remoteState.opponent || localState.opponent || '',
@@ -1410,6 +1457,20 @@ function mergeRemoteWeeklyData(
 
     isRemoteSyncRef.current = true;
 
+    const effectiveDeletedFormIds = new Set<string>([
+      ...(latestStateRef.current.deletedFormationIds || []),
+      ...(Array.isArray(data.deletedFormationIds) ? data.deletedFormationIds : []),
+    ]);
+
+    if (Array.isArray(data.deletedFormationIds) && data.deletedFormationIds.length > 0) {
+      setDeletedFormationIds((prev) => {
+        const merged = Array.from(new Set([...prev, ...data.deletedFormationIds]));
+        latestStateRef.current.deletedFormationIds = merged;
+        safeJSONSet('footballDeletedFormationIds', merged);
+        return merged;
+      });
+    }
+
     if (data.weeklyData && Object.keys(data.weeklyData).length > 0) {
       const normalizedWeekly = normalizeWeeklyData(
         data.weeklyData,
@@ -1421,7 +1482,9 @@ function mergeRemoteWeeklyData(
         activeTeamIdRef.current,
         currentWeekRef.current,
         activeUnitRef.current,
-        lastLocalEditTimeRef.current
+        lastLocalEditTimeRef.current,
+        recentlyModifiedPositionsRef.current,
+        Array.from(effectiveDeletedFormIds)
       );
       setWeeklyData(mergedWeekly);
       latestStateRef.current.weeklyData = mergedWeekly;
@@ -1437,13 +1500,13 @@ function mergeRemoteWeeklyData(
         const mergedDefs: FormationBoard[] = [];
         const usedIds = new Set<string>();
         localDefs.forEach((lf) => {
-          if (lf && lf.id && lf.unit === activeUnitRef.current) {
+          if (lf && lf.id && lf.unit === activeUnitRef.current && !effectiveDeletedFormIds.has(lf.id)) {
             mergedDefs.push(lf);
             usedIds.add(lf.id);
           }
         });
         data.defaultFormations.forEach((rf: any) => {
-          if (rf && rf.id && !usedIds.has(rf.id)) {
+          if (rf && rf.id && !usedIds.has(rf.id) && !effectiveDeletedFormIds.has(rf.id)) {
             mergedDefs.push(rf);
             usedIds.add(rf.id);
           }
@@ -1452,9 +1515,12 @@ function mergeRemoteWeeklyData(
         latestStateRef.current.defaultFormations = mergedDefs;
         safeJSONSet('footballDefaultFormations', mergedDefs);
       } else {
-        setDefaultFormations(data.defaultFormations);
-        latestStateRef.current.defaultFormations = data.defaultFormations;
-        safeJSONSet('footballDefaultFormations', data.defaultFormations);
+        const filteredDefs = data.defaultFormations.filter(
+          (df: any) => df && df.id && !effectiveDeletedFormIds.has(df.id)
+        );
+        setDefaultFormations(filteredDefs);
+        latestStateRef.current.defaultFormations = filteredDefs;
+        safeJSONSet('footballDefaultFormations', filteredDefs);
       }
     }
     if (data.practiceData && Array.isArray(data.practiceData)) {
@@ -1709,12 +1775,13 @@ function mergeRemoteWeeklyData(
   };
 
   // Trigger Save to LocalStorage, Server API & Firestore
-  const saveStateToStorage = async (scope: string = 'all') => {
+  const saveStateToStorage = async (scope: string = 'all', extraMeta?: Record<string, any>) => {
     const currentState = latestStateRef.current;
 
     // 1. LocalStorage update
     safeJSONSet('footballWeeklyData', currentState.weeklyData);
     safeJSONSet('footballDefaultFormations', currentState.defaultFormations);
+    safeJSONSet('footballDeletedFormationIds', currentState.deletedFormationIds || []);
     safeJSONSet('footballPracticeData', currentState.practiceData);
     safeJSONSet('footballPracticeTemplates', currentState.practiceTemplates);
     safeJSONSet('footballCascadingDrills', currentState.cascadingDrills);
@@ -1739,6 +1806,7 @@ function mergeRemoteWeeklyData(
     const payload = {
       weeklyData: currentState.weeklyData,
       defaultFormations: currentState.defaultFormations,
+      deletedFormationIds: currentState.deletedFormationIds || [],
       practiceData: currentState.practiceData,
       practiceTemplates: currentState.practiceTemplates,
       cascadingDrills: currentState.cascadingDrills,
@@ -1789,6 +1857,7 @@ function mergeRemoteWeeklyData(
         activeUnit: effectiveUnit,
         scope,
         timestamp: Date.now(),
+        ...(extraMeta || {}),
       };
       const sResult = await saveServerState(payload, authorEmail, metadata);
       if (sResult && typeof sResult.version === 'number') {
@@ -1826,12 +1895,12 @@ function mergeRemoteWeeklyData(
   };
 
   // Immediate non-debounced flush to storage & cloud
-  const flushAndSaveStateToStorage = async (scope: string = 'immediate') => {
+  const flushAndSaveStateToStorage = async (scope: string = 'immediate', extraMeta?: Record<string, any>) => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
     }
-    await saveStateToStorage(scope);
+    await saveStateToStorage(scope, extraMeta);
   };
 
   const debouncedSave = (scope: string = 'all') => {
@@ -3148,8 +3217,14 @@ function mergeRemoteWeeklyData(
     if (!chart[targetPosId]) chart[targetPosId] = [];
 
     let playerObj: PlacedPlayer | null = null;
+    const modifiedPosIds: string[] = [targetPosId];
+    recentlyModifiedPositionsRef.current.set(targetPosId, Date.now());
 
     if (dragged.type === 'placed_player' && dragged.sourcePosId !== undefined) {
+      if (dragged.sourcePosId !== targetPosId) {
+        modifiedPosIds.push(dragged.sourcePosId);
+        recentlyModifiedPositionsRef.current.set(dragged.sourcePosId, Date.now());
+      }
       if (chart[dragged.sourcePosId] && dragged.sourceIndex !== undefined) {
         playerObj = chart[dragged.sourcePosId][dragged.sourceIndex];
         chart[dragged.sourcePosId].splice(dragged.sourceIndex, 1);
@@ -3169,7 +3244,7 @@ function mergeRemoteWeeklyData(
     }
 
     draggedPlayerRef.current = null;
-    flushAndSaveStateToStorage('player_move');
+    flushAndSaveStateToStorage('player_move', { modifiedPosIds });
   };
 
   const handleRemovePlayerFromCard = (posId: string, playerIndex: number) => {
@@ -3181,9 +3256,10 @@ function mergeRemoteWeeklyData(
 
     if (chart[posId]) {
       chart[posId].splice(playerIndex, 1);
+      recentlyModifiedPositionsRef.current.set(posId, Date.now());
       if (isScrimmage) updateCurrentWeekScrimmageChart(chart);
       else updateCurrentWeekDepthChart(chart);
-      flushAndSaveStateToStorage('player_remove');
+      flushAndSaveStateToStorage('player_remove', { modifiedPosIds: [posId] });
     }
   };
 
@@ -3208,13 +3284,14 @@ function mergeRemoteWeeklyData(
       filtered.push(player);
     }
     chart[posId] = filtered;
+    recentlyModifiedPositionsRef.current.set(posId, Date.now());
 
     if (isScrimmage) {
       updateCurrentWeekScrimmageChart(chart);
     } else {
       updateCurrentWeekDepthChart(chart);
     }
-    flushAndSaveStateToStorage('player_assign_direct');
+    flushAndSaveStateToStorage('player_assign_direct', { modifiedPosIds: [posId] });
   };
 
   const handleReorderDepthPlayer = (
@@ -3234,13 +3311,14 @@ function mergeRemoteWeeklyData(
     const clampedToIndex = Math.max(0, Math.min(list.length, toIndex));
     list.splice(clampedToIndex, 0, moved);
     chart[posId] = list;
+    recentlyModifiedPositionsRef.current.set(posId, Date.now());
 
     if (isScrimmage) {
       updateCurrentWeekScrimmageChart(chart);
     } else {
       updateCurrentWeekDepthChart(chart);
     }
-    flushAndSaveStateToStorage('player_reorder_depth');
+    flushAndSaveStateToStorage('player_reorder_depth', { modifiedPosIds: [posId] });
   };
 
   // Drag and Drop Position Cards Across Rows & Slots
@@ -3849,6 +3927,14 @@ function mergeRemoteWeeklyData(
 
     const updated = currentFormations.filter((f) => f.id !== formId);
 
+    // Track deleted formation ID to prevent resurrection
+    setDeletedFormationIds((prev) => {
+      const merged = Array.from(new Set([...prev, formId]));
+      latestStateRef.current.deletedFormationIds = merged;
+      safeJSONSet('footballDeletedFormationIds', merged);
+      return merged;
+    });
+
     lastLocalEditTimeRef.current = Date.now();
     const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
     setWeeklyData((prev) => {
@@ -3880,6 +3966,17 @@ function mergeRemoteWeeklyData(
     setDefaultFormations(updated);
     safeJSONSet('footballDefaultFormations', updated);
     latestStateRef.current.defaultFormations = updated;
+
+    if (selectedFormationId === formId) {
+      const remainingSameUnit = updated.filter((f) => f.unit === activeUnit);
+      if (remainingSameUnit.length > 0) {
+        setSelectedFormationId(remainingSameUnit[0].id);
+      } else if (updated.length > 0) {
+        setSelectedFormationId(updated[0].id);
+      }
+    }
+
+    flushAndSaveStateToStorage('delete_formation');
   };
 
   const handleMoveFormation = (formId: string, direction: number) => {
