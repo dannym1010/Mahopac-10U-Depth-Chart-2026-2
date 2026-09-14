@@ -30,10 +30,35 @@ export function normalizeWeeklyData(
   for (const [key, weekState] of Object.entries(wData)) {
     if (!weekState || typeof weekState !== 'object') continue;
 
-    const formations =
+    let formations =
       Array.isArray(weekState.formations) && weekState.formations.length > 0
         ? deepClone(weekState.formations)
         : deepClone(fallbackFormations);
+
+    // Guarantee that every week has formations for all 4 core units and specifically 11 Offense
+    const hasOffense = formations.some((f) => f && f.unit === 'offense');
+    if (!hasOffense) {
+      const defaultOffense =
+        fallbackFormations.find((f) => f && f.unit === 'offense') ||
+        INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.unit === 'offense') ||
+        INITIAL_DEFAULT_FORMATIONS[0];
+      if (defaultOffense) {
+        formations.unshift(deepClone(defaultOffense));
+      }
+    }
+
+    const existingFormIds = new Set(formations.map((f) => f && f.id));
+    for (const u of ['defense', 'st', 'groups'] as const) {
+      if (!formations.some((f) => f && f.unit === u)) {
+        const defaultForUnit =
+          fallbackFormations.find((f) => f && f.unit === u) ||
+          INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.unit === u);
+        if (defaultForUnit && !existingFormIds.has(defaultForUnit.id)) {
+          formations.push(deepClone(defaultForUnit));
+          existingFormIds.add(defaultForUnit.id);
+        }
+      }
+    }
 
     const depthChart =
       weekState.depthChart && typeof weekState.depthChart === 'object'

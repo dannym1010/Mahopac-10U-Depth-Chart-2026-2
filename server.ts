@@ -118,12 +118,14 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
           }
         });
 
-        // 2. Append any existing formations from other units not present in incoming
-        (curWeekState.formations || []).forEach((f: any) => {
-          if (f && f.id && !seenIds.has(f.id)) {
-            result.push(f);
-          }
-        });
+        // 2. Append any existing formations from other units not present in incoming (unless full force or copy_week save)
+        if (metadata?.scope !== 'force' && metadata?.scope !== 'copy_week') {
+          (curWeekState.formations || []).forEach((f: any) => {
+            if (f && f.id && !seenIds.has(f.id)) {
+              result.push(f);
+            }
+          });
+        }
 
         mergedFormations = result;
       }
@@ -133,7 +135,17 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
       const incDC: Record<string, any> = incWeekState.depthChart || {};
       let mergedDC: Record<string, any> = {};
 
-      if (metadata?.activeUnit && metadata.activeUnit !== 'all' && metadata.activeUnit !== 'scrimmage' && metadata.activeUnit !== 'practice') {
+      const isSingleUnitSave =
+        metadata?.scope !== 'force' &&
+        metadata?.scope !== 'copy_week' &&
+        metadata?.scope !== 'all' &&
+        metadata?.activeUnit &&
+        metadata.activeUnit !== 'all' &&
+        metadata.activeUnit !== 'depth_chart' &&
+        metadata.activeUnit !== 'scrimmage' &&
+        metadata.activeUnit !== 'practice';
+
+      if (isSingleUnitSave) {
         const activeUnitPosIds = getFormationUnitPosIds(mergedFormations, metadata.activeUnit);
         
         // Retain positions from other units
@@ -150,7 +162,7 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
           }
         }
       } else {
-        // Whole depth chart save: incoming state is authoritative
+        // Whole depth chart save (force, copy_week, all, or depth_chart): incoming state is authoritative
         mergedDC = { ...incDC };
       }
 

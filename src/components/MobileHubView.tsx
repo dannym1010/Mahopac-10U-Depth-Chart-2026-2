@@ -2456,13 +2456,13 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
             </div>
             <div>
               <div className="text-xs font-black text-white group-hover:text-indigo-200 flex items-center gap-1.5">
-                <span>Visual Theme Schemes</span>
+                <span>Sideline Visual Schemes</span>
                 <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-indigo-500/30 text-indigo-300 border border-indigo-400/40">
-                  5 Presets
+                  12 Schemes • 6 Dark &amp; 6 Light
                 </span>
               </div>
               <div className="text-[10px] text-slate-400 font-medium">
-                Preview Volt Neon, Championship Gold, Cyber Cobalt &amp; more
+                Modern professional presets: Volt Neon, Championship Gold, Cyber Cobalt, Daylight Stadium &amp; more
               </div>
             </div>
           </div>

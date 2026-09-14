@@ -771,7 +771,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                 </button>
 
                 {isPlaybookActionsDropdownOpen && (
-                  <div className="absolute right-0 sm:right-0 max-sm:left-0 sm:left-auto top-full mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/90 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 ring-1 ring-black/10 dark:ring-white/10 space-y-1">
+                  <div className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/90 rounded-2xl shadow-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-150 ring-1 ring-black/10 dark:ring-white/10 space-y-1 origin-top-right">
                     <div className="px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider border-b border-slate-100 dark:border-slate-800 mb-1">
                       Playbook &amp; Depth Chart Actions
                     </div>
