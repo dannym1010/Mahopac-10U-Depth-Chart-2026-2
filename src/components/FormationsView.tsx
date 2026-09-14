@@ -376,31 +376,61 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
   } | null>(null);
   const [selectedTargetFormId, setSelectedTargetFormId] = useState<string>('');
 
-  const unitFormations = formations.filter((f) => f && f.unit === unit);
+  const unitFormations = useMemo(
+    () => formations.filter((f) => f && f.unit === unit),
+    [formations, unit]
+  );
 
-  // Auto-reset stale filter or active tab if formation was deleted or moved
+  // Synchronous safe validation: never allow a stale filter ID to filter the view to empty
+  const safeFilterViewId = useMemo(() => {
+    if (filterViewId === 'ALL') return 'ALL';
+    return unitFormations.some((f) => f && f.id === filterViewId) ? filterViewId : 'ALL';
+  }, [filterViewId, unitFormations]);
+
+  const safeMobileTab = useMemo(() => {
+    if (activeMobileFormationTab === 'ALL') return 'ALL';
+    return unitFormations.some((f) => f && f.id === activeMobileFormationTab)
+      ? activeMobileFormationTab
+      : 'ALL';
+  }, [activeMobileFormationTab, unitFormations]);
+
+  // Keep state in sync with valid choices
   useEffect(() => {
-    if (activeMobileFormationTab !== 'ALL' && !unitFormations.some((f) => f && f.id === activeMobileFormationTab)) {
-      setActiveMobileFormationTab('ALL');
+    if (filterViewId !== safeFilterViewId) {
+      setFilterViewId(safeFilterViewId);
     }
-    if (filterViewId !== 'ALL' && !unitFormations.some((f) => f && f.id === filterViewId)) {
-      setFilterViewId('ALL');
+  }, [filterViewId, safeFilterViewId]);
+
+  useEffect(() => {
+    if (activeMobileFormationTab !== safeMobileTab) {
+      setActiveMobileFormationTab(safeMobileTab);
     }
-  }, [unitFormations, activeMobileFormationTab, filterViewId]);
-  const displayedFormations =
-    filterViewId === 'ALL'
-      ? unitFormations
-      : unitFormations.filter((f) => f.id === filterViewId);
+  }, [activeMobileFormationTab, safeMobileTab]);
+
+  // Automatically reset filters to ALL whenever the active unit changes
+  useEffect(() => {
+    setFilterViewId('ALL');
+    setActiveMobileFormationTab('ALL');
+  }, [unit]);
+
+  const displayedFormations = useMemo(() => {
+    if (safeFilterViewId === 'ALL') return unitFormations;
+    const filtered = unitFormations.filter((f) => f.id === safeFilterViewId);
+    return filtered.length > 0 ? filtered : unitFormations;
+  }, [unitFormations, safeFilterViewId]);
 
   const mobileFormations = useMemo(() => {
     let list = unitFormations;
-    if (activeMobileFormationTab !== 'ALL') {
-      list = list.filter((f) => f.id === activeMobileFormationTab);
-    } else if (filterViewId !== 'ALL') {
-      list = list.filter((f) => f.id === filterViewId);
+    if (safeMobileTab !== 'ALL') {
+      const filtered = list.filter((f) => f.id === safeMobileTab);
+      if (filtered.length > 0) return filtered;
+    }
+    if (safeFilterViewId !== 'ALL') {
+      const filtered = list.filter((f) => f.id === safeFilterViewId);
+      if (filtered.length > 0) return filtered;
     }
     return list;
-  }, [unitFormations, activeMobileFormationTab, filterViewId]);
+  }, [unitFormations, safeMobileTab, safeFilterViewId]);
 
   const filteredRosterPlayers = useMemo(() => {
     if (!assignPlayerModalTarget) return [];
@@ -669,7 +699,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
           <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-750 px-2.5 py-1.5 rounded-xl">
             <Filter className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             <select
-              value={filterViewId}
+              value={safeFilterViewId}
               onChange={(e) => setFilterViewId(e.target.value)}
               className="bg-transparent text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
             >
@@ -1076,7 +1106,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                     type="button"
                     onClick={() => setActiveMobileFormationTab('ALL')}
                     className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all cursor-pointer ${
-                      activeMobileFormationTab === 'ALL'
+                      safeMobileTab === 'ALL'
                         ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
                         : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs'
                     }`}
@@ -1089,7 +1119,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                       type="button"
                       onClick={() => setActiveMobileFormationTab(f.id)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all cursor-pointer ${
-                        activeMobileFormationTab === f.id
+                        safeMobileTab === f.id
                           ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
                           : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs'
                       }`}

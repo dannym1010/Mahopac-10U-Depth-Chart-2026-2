@@ -243,10 +243,14 @@ export default function App() {
   const [deletedFormationIds, setDeletedFormationIds] = useState<string[]>(() => {
     const saved = safeJSONParse('footballDeletedFormationIds', null);
     const list = saved && Array.isArray(saved) ? [...saved] : [];
-    if (!list.includes('form_10_spread')) {
-      list.push('form_10_spread');
+    const coreDefaultIds = new Set(
+      INITIAL_DEFAULT_FORMATIONS.filter((f) => f.id !== 'form_10_spread').map((f) => f.id)
+    );
+    const sanitized = list.filter((id) => !coreDefaultIds.has(id));
+    if (!sanitized.includes('form_10_spread')) {
+      sanitized.push('form_10_spread');
     }
-    return list;
+    return sanitized;
   });
   const [playDatabase, setPlayDatabase] = useState<PlayDatabaseEntry[]>(() => {
     const saved = safeJSONParse('footballPlayDatabase', null);
@@ -988,10 +992,15 @@ export default function App() {
     const defScopedState = wData[defScopedKey];
 
     // Formations resolution
-    const curDeletedSet = new Set<string>([
+    const coreDefaultIds = new Set(
+      INITIAL_DEFAULT_FORMATIONS.filter((f) => f.id !== 'form_10_spread').map((f) => f.id)
+    );
+    const rawDeleted = [
       ...(deletedFormationIds || []),
       ...(latestStateRef.current?.deletedFormationIds || []),
-    ]);
+    ].filter((id) => !coreDefaultIds.has(id));
+    const curDeletedSet = new Set<string>(rawDeleted);
+    curDeletedSet.add('form_10_spread');
 
     let rawCandidateForms: FormationBoard[] = [];
     let hasExplicitFormations = false;
@@ -1055,7 +1064,6 @@ export default function App() {
             (f) =>
               f &&
               f.unit === u &&
-              !curDeletedSet.has(f.id) &&
               f.id !== 'form_10_spread' &&
               f.name !== '10 Spread Offense'
           );
@@ -1063,7 +1071,6 @@ export default function App() {
         for (const df of defsForUnit) {
           if (
             !seenFormIds.has(df.id) &&
-            !curDeletedSet.has(df.id) &&
             df.id !== 'form_10_spread'
           ) {
             formations.push(deepClone(df));
@@ -1387,7 +1394,7 @@ function mergeRemoteWeeklyData(
 
       // Safety guarantee: never allow a week to lose its core offensive formations
       if (!mergedFormations.some((f) => f && f.unit === 'offense')) {
-        const fallbackOff = (defaultFormations || [])
+        let fallbackOff = (defaultFormations || [])
           .concat(INITIAL_DEFAULT_FORMATIONS)
           .filter(
             (f) =>
@@ -1397,12 +1404,17 @@ function mergeRemoteWeeklyData(
               f.id !== 'form_10_spread' &&
               f.name !== '10 Spread Offense'
           );
+        if (fallbackOff.length === 0) {
+          fallbackOff = INITIAL_DEFAULT_FORMATIONS.filter(
+            (f) =>
+              f &&
+              f.unit === 'offense' &&
+              f.id !== 'form_10_spread' &&
+              f.name !== '10 Spread Offense'
+          );
+        }
         for (const fo of fallbackOff) {
-          if (
-            !seenIds.has(fo.id) &&
-            !deletedSet.has(fo.id) &&
-            fo.id !== 'form_10_spread'
-          ) {
+          if (!seenIds.has(fo.id) && fo.id !== 'form_10_spread') {
             mergedFormations.push(deepClone(fo));
             seenIds.add(fo.id);
           }
@@ -1501,14 +1513,26 @@ function mergeRemoteWeeklyData(
 
     isRemoteSyncRef.current = true;
 
+    const coreDefaultIds = new Set(
+      INITIAL_DEFAULT_FORMATIONS.filter((f) => f.id !== 'form_10_spread').map((f) => f.id)
+    );
     const effectiveDeletedFormIds = new Set<string>([
       ...(latestStateRef.current.deletedFormationIds || []),
       ...(Array.isArray(data.deletedFormationIds) ? data.deletedFormationIds : []),
     ]);
+    for (const cid of coreDefaultIds) {
+      effectiveDeletedFormIds.delete(cid);
+    }
+    effectiveDeletedFormIds.add('form_10_spread');
 
     if (Array.isArray(data.deletedFormationIds) && data.deletedFormationIds.length > 0) {
       setDeletedFormationIds((prev) => {
-        const merged = Array.from(new Set([...prev, ...data.deletedFormationIds]));
+        const merged = Array.from(new Set([...prev, ...data.deletedFormationIds])).filter(
+          (id) => !coreDefaultIds.has(id)
+        );
+        if (!merged.includes('form_10_spread')) {
+          merged.push('form_10_spread');
+        }
         latestStateRef.current.deletedFormationIds = merged;
         safeJSONSet('footballDeletedFormationIds', merged);
         return merged;
@@ -4287,6 +4311,60 @@ function mergeRemoteWeeklyData(
       direction,
       activeUnit: targetUnit,
     });
+  };
+
+  const handleRestoreDefaultFormations = (targetUnit: 'offense' | 'defense' | 'st' | 'groups') => {
+    const baseDefaults = INITIAL_DEFAULT_FORMATIONS.filter(
+      (f) =>
+        f &&
+        f.unit === targetUnit &&
+        f.id !== 'form_10_spread' &&
+        f.name !== '10 Spread Offense'
+    );
+    const baseDefaultIds = new Set(baseDefaults.map((f) => f.id));
+
+    // Clear these IDs from deletedFormationIds
+    const nextDeleted = (deletedFormationIds || []).filter((id) => !baseDefaultIds.has(id));
+    if (!nextDeleted.includes('form_10_spread')) {
+      nextDeleted.push('form_10_spread');
+    }
+    setDeletedFormationIds(nextDeleted);
+    latestStateRef.current.deletedFormationIds = nextDeleted;
+    safeJSONSet('footballDeletedFormationIds', nextDeleted);
+
+    // Replace targetUnit in defaultFormations
+    const otherUnitDefaults = (latestStateRef.current.defaultFormations || defaultFormations || []).filter(
+      (f) => f && f.unit !== targetUnit && f.id !== 'form_10_spread' && f.name !== '10 Spread Offense'
+    );
+    const nextDefaults = [...otherUnitDefaults, ...deepClone(baseDefaults)];
+    setDefaultFormations(nextDefaults);
+    latestStateRef.current.defaultFormations = nextDefaults;
+    safeJSONSet('footballDefaultFormations', nextDefaults);
+
+    // Update weeklyData across all weeks
+    lastLocalEditTimeRef.current = Date.now();
+    setWeeklyData((prev) => {
+      const updatedAll: Record<string, WeekState> = {};
+      for (const [wKey, wState] of Object.entries(prev)) {
+        if (!wState) continue;
+        const otherUnitForms = (wState.formations || []).filter(
+          (f) => f && f.unit !== targetUnit && f.id !== 'form_10_spread' && f.name !== '10 Spread Offense'
+        );
+        updatedAll[wKey] = {
+          ...wState,
+          formations: [...otherUnitForms, ...deepClone(baseDefaults)],
+        };
+      }
+      latestStateRef.current.weeklyData = updatedAll;
+      safeJSONSet('footballWeeklyData', updatedAll);
+      return updatedAll;
+    });
+
+    if (baseDefaults.length > 0) {
+      setSelectedFormationId(baseDefaults[0].id);
+    }
+
+    flushAndSaveStateToStorage('restore_default_formations', { targetUnit });
   };
 
   const handleAddRow = (formId: string) => {
@@ -7195,6 +7273,11 @@ function mergeRemoteWeeklyData(
                 )}
 
                 <FormationsView
+                key={
+                  activeUnit === 'depth_chart'
+                    ? (depthSubUnit === 'scrimmage' ? 'offense' : (depthSubUnit || 'offense'))
+                    : (activeUnit as 'offense' | 'defense' | 'st' | 'groups')
+                }
                 unit={
                   activeUnit === 'depth_chart'
                     ? (depthSubUnit === 'scrimmage' ? 'offense' : (depthSubUnit || 'offense'))
@@ -7213,6 +7296,7 @@ function mergeRemoteWeeklyData(
                 onDuplicateFormation={handleDuplicateFormation}
                 onRenameFormation={handleRenameFormation}
                 onDeleteFormation={handleDeleteFormation}
+                onRestoreDefaultFormations={handleRestoreDefaultFormations}
                 onAddRow={handleAddRow}
                 onEditRowName={handleEditRowName}
                 onEditRowSlots={handleEditRowSlots}

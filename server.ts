@@ -158,6 +158,11 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
       ...(Array.isArray(incoming.deletedFormationIds) ? incoming.deletedFormationIds : []),
       ...(metadata?.deletedFormationId ? [metadata.deletedFormationId] : []),
     ]);
+    const CORE_OFFENSIVE_IDS = new Set(['form_21', 'form_1787860064353', 'form_1787860077403', 'form_1788270435286']);
+    for (const coreId of CORE_OFFENSIVE_IDS) {
+      deletedSet.delete(coreId);
+    }
+    deletedSet.add('form_10_spread');
     merged.deletedFormationIds = Array.from(deletedSet);
   }
 
@@ -252,9 +257,10 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
 
       // Safety guarantee: never allow a week to completely lose its offensive formations
       if (!mergedFormations.some((f: any) => f && f.unit === 'offense')) {
-        const fallbackOff = (Array.isArray(incoming.defaultFormations) ? incoming.defaultFormations : [])
+        let fallbackOff = (Array.isArray(incoming.defaultFormations) ? incoming.defaultFormations : [])
           .concat(Array.isArray(current.defaultFormations) ? current.defaultFormations : [])
           .concat(Array.isArray(curWeekState.formations) ? curWeekState.formations : [])
+          .concat(Array.isArray(cachedState?.defaultFormations) ? cachedState.defaultFormations : [])
           .filter(
             (f: any) =>
               f &&
@@ -263,9 +269,14 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
               f.id !== 'form_10_spread' &&
               f.name !== '10 Spread Offense'
           );
+        if (fallbackOff.length === 0) {
+          fallbackOff = (Array.isArray(cachedState?.defaultFormations) ? cachedState.defaultFormations : []).filter(
+            (f: any) => f && f.unit === 'offense' && f.id !== 'form_10_spread' && f.name !== '10 Spread Offense'
+          );
+        }
         const seenFIds = new Set<string>(mergedFormations.map((f: any) => f?.id));
         for (const fo of fallbackOff) {
-          if (fo && fo.id && !seenFIds.has(fo.id) && !deletedSet.has(fo.id)) {
+          if (fo && fo.id && !seenFIds.has(fo.id) && fo.id !== 'form_10_spread') {
             mergedFormations.push(fo);
             seenFIds.add(fo.id);
           }

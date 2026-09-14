@@ -64,7 +64,6 @@ export function normalizeWeeklyData(
                 (f) =>
                   f &&
                   f.unit === u &&
-                  !deletedSet.has(f.id) &&
                   f.id !== 'form_10_spread' &&
                   f.name !== '10 Spread Offense'
               );
