@@ -954,26 +954,36 @@ export default function App() {
     // Formations resolution
     let formations: FormationBoard[] = [];
     if (Array.isArray(scopedState?.formations) && scopedState.formations.length > 0) {
-      formations = scopedState.formations;
+      formations = [...scopedState.formations];
+      // If legacyState also has formations, union any missing formations
+      if (Array.isArray(legacyState?.formations) && legacyState.formations.length > 0) {
+        const seen = new Set(formations.map((f) => f && f.id));
+        legacyState.formations.forEach((lf) => {
+          if (lf && lf.id && !seen.has(lf.id)) {
+            formations.push(lf);
+            seen.add(lf.id);
+          }
+        });
+      }
     } else if (Array.isArray(legacyState?.formations) && legacyState.formations.length > 0) {
-      formations = legacyState.formations;
+      formations = [...legacyState.formations];
     } else if (Array.isArray(defScopedState?.formations) && defScopedState.formations.length > 0) {
-      formations = defScopedState.formations;
+      formations = [...defScopedState.formations];
     } else if (Array.isArray(wData['0']?.formations) && wData['0'].formations.length > 0) {
-      formations = wData['0'].formations;
+      formations = [...wData['0'].formations];
     } else if (
       Array.isArray(wData[getScopedWeekKey('team_10u', '0')]?.formations) &&
       wData[getScopedWeekKey('team_10u', '0')].formations.length > 0
     ) {
-      formations = wData[getScopedWeekKey('team_10u', '0')].formations;
+      formations = [...wData[getScopedWeekKey('team_10u', '0')].formations];
     } else {
       formations =
         defaultFormations && Array.isArray(defaultFormations) && defaultFormations.length > 0
-          ? defaultFormations
-          : INITIAL_DEFAULT_FORMATIONS;
+          ? [...defaultFormations]
+          : [...INITIAL_DEFAULT_FORMATIONS];
     }
 
-    // Guarantee that every resolved week always includes all 4 units and specifically 11 Offense
+    // Guarantee that every resolved week always includes all 4 units
     const hasOff = formations.some((f) => f && f.unit === 'offense');
     if (!hasOff) {
       const defaultOffense =
@@ -982,6 +992,46 @@ export default function App() {
         INITIAL_DEFAULT_FORMATIONS[0];
       if (defaultOffense) {
         formations = [deepClone(defaultOffense), ...formations];
+      }
+    }
+
+    // Guarantee that 11 Personnel and 11 Offense are NEVER missing from any week
+    const elevenCandidates = [
+      (defaultFormations || []).find((f) => f && (f.id === 'form_1788270435286' || f.name === '11 Personnel')) ||
+        wData['team_10u__week_2']?.formations?.find((f) => f && (f.id === 'form_1788270435286' || f.name === '11 Personnel')),
+      (defaultFormations || []).find((f) => f && (f.id === 'form_11' || f.name === '11 Offense')) ||
+        INITIAL_DEFAULT_FORMATIONS.find((f) => f && (f.id === 'form_11' || f.name === '11 Offense')),
+    ].filter(Boolean);
+
+    for (const elf of elevenCandidates) {
+      if (!elf) continue;
+      const alreadyHas = formations.some(
+        (f) => f && (f.id === elf.id || f.name?.toLowerCase().trim() === elf.name?.toLowerCase().trim())
+      );
+      if (!alreadyHas) {
+        let lastOffenseIdx = -1;
+        for (let i = formations.length - 1; i >= 0; i--) {
+          if (formations[i] && formations[i].unit === 'offense') {
+            lastOffenseIdx = i;
+            break;
+          }
+        }
+        if (lastOffenseIdx >= 0) {
+          formations.splice(lastOffenseIdx + 1, 0, deepClone(elf));
+        } else {
+          formations.unshift(deepClone(elf));
+        }
+      }
+    }
+
+    // Ensure all default formations (e.g. customized user formations) are present
+    if (defaultFormations && Array.isArray(defaultFormations)) {
+      const currentIds = new Set(formations.map((f) => f && f.id));
+      for (const df of defaultFormations) {
+        if (df && df.id && !currentIds.has(df.id)) {
+          formations.push(deepClone(df));
+          currentIds.add(df.id);
+        }
       }
     }
 
@@ -1191,7 +1241,7 @@ function mergeRemoteWeeklyData(
     const remoteFormations = Array.isArray(remoteState.formations) ? remoteState.formations : [];
 
     if (isActivelyEditingLocally && isCurrentActiveWeek) {
-      // Local coach actively edited this specific week in the last 4 seconds:
+      // Local coach actively edited this specific week in the last 10 seconds:
       // Preserve local depth chart & formations while accepting new remote items
       const mergedFormations: FormationBoard[] = [...localFormations];
       const localFormIds = new Set(localFormations.map((lf) => lf && lf.id));
@@ -1261,22 +1311,57 @@ function mergeRemoteWeeklyData(
         scouting: remoteState.scouting || localState.scouting,
       };
     } else {
-      // Not actively editing locally (e.g. watching another coach edit, or on a different week):
-      // Remote cloud state is authoritative! Never resurrect stale local depth chart or formations!
-      const mergedFormations: FormationBoard[] =
-        remoteFormations.length > 0
-          ? remoteFormations
-          : (localFormations.length > 0 ? localFormations : []);
+      // Not actively editing locally in this specific window:
+      // Merge remote and local formations intelligently - never drop 11 formations or valid custom formations
+      const mergedFormations: FormationBoard[] = remoteFormations.length > 0 ? [...remoteFormations] : [...localFormations];
+      const seenIds = new Set(mergedFormations.map((f) => f && f.id));
 
-      const mergedDC: Record<string, PlacedPlayer[]> =
-        remoteState.depthChart !== undefined
-          ? remoteState.depthChart
-          : (localState.depthChart || {});
+      // Retain any local formations that are missing from remote (e.g. 11 Personnel or custom formations)
+      localFormations.forEach((lf) => {
+        if (lf && lf.id && !seenIds.has(lf.id)) {
+          mergedFormations.push(lf);
+          seenIds.add(lf.id);
+        }
+      });
 
-      const mergedSC: Record<string, PlacedPlayer[]> =
-        remoteState.scrimmageChart !== undefined
-          ? remoteState.scrimmageChart
-          : (localState.scrimmageChart || {});
+      // Guarantee that 11 Personnel and 11 Offense are always present
+      const elevenCandidates = [
+        INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.id === 'form_11') || { id: 'form_11', name: '11 Offense', unit: 'offense' },
+      ];
+      for (const elf of elevenCandidates) {
+        if (elf && !mergedFormations.some((f) => f && (f.id === elf.id || f.name?.toLowerCase().includes('11')))) {
+          mergedFormations.push(deepClone(elf as FormationBoard));
+        }
+      }
+
+      // Merge depth chart safely: never wipe a populated depth chart with an empty object
+      const countPlayers = (dc?: Record<string, any[]>) =>
+        dc ? Object.values(dc).reduce((sum, p) => sum + (Array.isArray(p) ? p.length : 0), 0) : 0;
+      const localDCCount = countPlayers(localState.depthChart);
+      const remoteDCCount = countPlayers(remoteState.depthChart);
+
+      let mergedDC: Record<string, PlacedPlayer[]> = {};
+      if (remoteDCCount === 0 && localDCCount > 0) {
+        mergedDC = localState.depthChart || {};
+      } else if (remoteDCCount > 0 && localDCCount === 0) {
+        mergedDC = remoteState.depthChart || {};
+      } else if (remoteDCCount > 0 && localDCCount > 0) {
+        // Both have players: remote takes precedence for updated spots, local spots preserved if not in remote
+        mergedDC = { ...(localState.depthChart || {}), ...(remoteState.depthChart || {}) };
+      } else {
+        mergedDC = remoteState.depthChart !== undefined ? remoteState.depthChart : (localState.depthChart || {});
+      }
+
+      const localSCCount = countPlayers(localState.scrimmageChart);
+      const remoteSCCount = countPlayers(remoteState.scrimmageChart);
+      let mergedSC: Record<string, PlacedPlayer[]> = {};
+      if (remoteSCCount === 0 && localSCCount > 0) {
+        mergedSC = localState.scrimmageChart || {};
+      } else if (remoteSCCount > 0 && localSCCount === 0) {
+        mergedSC = remoteState.scrimmageChart || {};
+      } else {
+        mergedSC = { ...(localState.scrimmageChart || {}), ...(remoteState.scrimmageChart || {}) };
+      }
 
       const localHasWristbandPlays = localState.wristbandData?.wristbands?.some((wb: any) =>
         wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
@@ -5475,7 +5560,7 @@ function mergeRemoteWeeklyData(
       updatedScrimmageChart = deepClone(src.scrimmageChart || {});
     }
 
-    // Guarantee that updatedFormations contains all 4 units and specifically 11 Offense
+    // Guarantee that updatedFormations contains all 4 units and specifically 11 Personnel and 11 Offense
     if (!Array.isArray(updatedFormations) || updatedFormations.length === 0) {
       updatedFormations = deepClone(defaultFormations || INITIAL_DEFAULT_FORMATIONS);
     }
@@ -5487,6 +5572,36 @@ function mergeRemoteWeeklyData(
         INITIAL_DEFAULT_FORMATIONS[0];
       if (defaultOffense) {
         updatedFormations = [deepClone(defaultOffense), ...updatedFormations];
+      }
+    }
+
+    // Guarantee 11 Personnel and 11 Offense are preserved in the copied formations
+    const elevenCandidates = [
+      (src.formations || []).find((f) => f && (f.id === 'form_1788270435286' || f.name === '11 Personnel')) ||
+        (defaultFormations || []).find((f) => f && (f.id === 'form_1788270435286' || f.name === '11 Personnel')),
+      (src.formations || []).find((f) => f && (f.id === 'form_11' || f.name === '11 Offense')) ||
+        (defaultFormations || []).find((f) => f && (f.id === 'form_11' || f.name === '11 Offense')) ||
+        INITIAL_DEFAULT_FORMATIONS.find((f) => f && (f.id === 'form_11' || f.name === '11 Offense')),
+    ].filter(Boolean);
+
+    for (const elf of elevenCandidates) {
+      if (!elf) continue;
+      const alreadyInCopy = updatedFormations.some(
+        (f) => f && (f.id === elf.id || f.name?.toLowerCase().trim() === elf.name?.toLowerCase().trim())
+      );
+      if (!alreadyInCopy) {
+        let lastOffenseIdx = -1;
+        for (let i = updatedFormations.length - 1; i >= 0; i--) {
+          if (updatedFormations[i] && updatedFormations[i].unit === 'offense') {
+            lastOffenseIdx = i;
+            break;
+          }
+        }
+        if (lastOffenseIdx >= 0) {
+          updatedFormations.splice(lastOffenseIdx + 1, 0, deepClone(elf));
+        } else {
+          updatedFormations.unshift(deepClone(elf));
+        }
       }
     }
 
@@ -5512,7 +5627,7 @@ function mergeRemoteWeeklyData(
 
     const targetScopedKey = getScopedWeekKey(activeTeamId, targetWeek);
 
-    // Synchronously update local edit timestamp and latest state ref
+    // Synchronously update local edit timestamp and latest state ref with 15s protection window
     lastLocalEditTimeRef.current = Date.now();
     currentWeekRef.current = targetWeek;
 
@@ -5530,9 +5645,8 @@ function mergeRemoteWeeklyData(
     setWeeklyData(nextWeekly);
     setCurrentWeek(targetWeek);
 
-    // Save and sync immediately to local and cloud
-    saveStateToStorage('force');
-    flushAndSaveStateToStorage('copy_week');
+    // Save and sync immediately to local and cloud with authoritative copy_week scope
+    saveStateToStorage('copy_week');
 
     const srcLabel = srcWeek === '0' ? 'Preseason / Week 0' : srcWeek === 'playoffs' ? 'Playoffs' : `Week ${srcWeek}`;
     const targetLabel = targetWeek === '0' ? 'Preseason / Week 0' : targetWeek === 'playoffs' ? 'Playoffs' : `Week ${targetWeek}`;

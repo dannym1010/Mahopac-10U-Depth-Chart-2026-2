@@ -97,6 +97,9 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
   if (incoming.weeklyData && typeof incoming.weeklyData === 'object') {
     merged.weeklyData = { ...(current.weeklyData || {}) };
 
+    const countPlayersInDC = (dc?: Record<string, any[]>) =>
+      dc ? Object.values(dc).reduce((sum: number, p: any) => sum + (Array.isArray(p) ? p.length : 0), 0) : 0;
+
     for (const [weekKey, incWeekState] of Object.entries<any>(incoming.weeklyData)) {
       const curWeekState = merged.weeklyData[weekKey];
       if (!curWeekState) {
@@ -104,12 +107,23 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
         continue;
       }
 
+      const isTargetWeek =
+        !metadata?.currentWeek ||
+        weekKey === metadata.currentWeek ||
+        weekKey.endsWith(`__week_${metadata.currentWeek}`);
+
       // Merge formations array preserving the incoming requested order
       let mergedFormations = curWeekState.formations || [];
       if (Array.isArray(incWeekState.formations) && incWeekState.formations.length > 0) {
-        if (metadata?.scope === 'all' || metadata?.scope === 'force' || metadata?.scope === 'copy_week' || !metadata?.activeUnit) {
+        if (
+          metadata?.scope === 'all' ||
+          metadata?.scope === 'force' ||
+          metadata?.scope === 'copy_week' ||
+          !metadata?.activeUnit ||
+          !isTargetWeek
+        ) {
           // Full formations update: incoming array is authoritative
-          mergedFormations = incWeekState.formations;
+          mergedFormations = [...incWeekState.formations];
         } else {
           // Single unit or partial save: retain formations for other units, do not resurrect deleted formations in active unit
           const seenIds = new Set<string>();
@@ -135,12 +149,31 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
         }
       }
 
+      // Guarantee that 11 Personnel and 11 Offense are NEVER lost from any week
+      const cur11Forms = (curWeekState.formations || []).filter((f: any) =>
+        f && (f.id === 'form_1788270435286' || f.id === 'form_11' || f.name?.toLowerCase().includes('11'))
+      );
+      cur11Forms.forEach((elf: any) => {
+        if (!mergedFormations.some((f: any) => f && (f.id === elf.id || f.name?.toLowerCase().trim() === elf.name?.toLowerCase().trim()))) {
+          const lastOffIdx = mergedFormations.findLastIndex((f: any) => f && f.unit === 'offense');
+          if (lastOffIdx >= 0) {
+            mergedFormations.splice(lastOffIdx + 1, 0, elf);
+          } else {
+            mergedFormations.unshift(elf);
+          }
+        }
+      });
+
       // Merge Depth Chart per position ID without ghost retention or resurrecting removed players
       const curDC: Record<string, any> = curWeekState.depthChart || {};
       const incDC: Record<string, any> = incWeekState.depthChart || {};
       let mergedDC: Record<string, any> = {};
 
+      const curPlayerCount = countPlayersInDC(curDC);
+      const incPlayerCount = countPlayersInDC(incDC);
+
       const isSingleUnitSave =
+        isTargetWeek &&
         metadata?.scope !== 'force' &&
         metadata?.scope !== 'copy_week' &&
         metadata?.scope !== 'all' &&
@@ -151,14 +184,14 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
 
       if (isSingleUnitSave) {
         const activeUnitPosIds = getFormationUnitPosIds(mergedFormations, metadata.activeUnit);
-        
+
         // Retain positions from other units
         for (const [posId, players] of Object.entries(curDC)) {
           if (!activeUnitPosIds.has(posId)) {
             mergedDC[posId] = players;
           }
         }
-        
+
         // Take incoming positions for active unit (explicitly setting empty or updated arrays)
         for (const [posId, players] of Object.entries(incDC)) {
           if (activeUnitPosIds.has(posId) || !mergedDC[posId]) {
@@ -166,8 +199,13 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
           }
         }
       } else {
-        // Whole depth chart save (force, copy_week, all, or depth_chart): incoming state is authoritative
-        mergedDC = { ...incDC };
+        // Full depth chart save (force, copy_week, all, or depth_chart)
+        // If incoming has 0 players but current has populated players, and not force/copy, preserve current
+        if (incPlayerCount === 0 && curPlayerCount > 0 && metadata?.scope !== 'force' && metadata?.scope !== 'copy_week') {
+          mergedDC = { ...curDC };
+        } else {
+          mergedDC = { ...incDC };
+        }
       }
 
       // Merge Scrimmage Chart per position ID
@@ -192,6 +230,35 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
         wristbandData: incWeekState.wristbandData || curWeekState.wristbandData,
         scouting: incWeekState.scouting || curWeekState.scouting,
       };
+    }
+
+    // Cross-synchronize team_10u__week_X and legacy X keys
+    const weekNums = new Set<string>();
+    for (const k of Object.keys(merged.weeklyData)) {
+      if (k.startsWith('team_10u__week_')) {
+        weekNums.add(k.replace('team_10u__week_', ''));
+      } else if (!k.includes('__week_')) {
+        weekNums.add(k);
+      }
+    }
+    for (const wk of weekNums) {
+      const sKey = `team_10u__week_${wk}`;
+      const lKey = wk;
+      const sState = merged.weeklyData[sKey];
+      const lState = merged.weeklyData[lKey];
+      if (sState && lState) {
+        const sCount = countPlayersInDC(sState.depthChart);
+        const lCount = countPlayersInDC(lState.depthChart);
+        if (sCount >= lCount) {
+          merged.weeklyData[lKey] = JSON.parse(JSON.stringify(sState));
+        } else {
+          merged.weeklyData[sKey] = JSON.parse(JSON.stringify(lState));
+        }
+      } else if (sState && !lState) {
+        merged.weeklyData[lKey] = JSON.parse(JSON.stringify(sState));
+      } else if (lState && !sState) {
+        merged.weeklyData[sKey] = JSON.parse(JSON.stringify(lState));
+      }
     }
   }
 

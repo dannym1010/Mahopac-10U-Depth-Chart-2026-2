@@ -35,7 +35,7 @@ export function normalizeWeeklyData(
         ? deepClone(weekState.formations)
         : deepClone(fallbackFormations);
 
-    // Guarantee that every week has formations for all 4 core units and specifically 11 Offense
+    // Guarantee that every week has formations for all 4 core units
     const hasOffense = formations.some((f) => f && f.unit === 'offense');
     if (!hasOffense) {
       const defaultOffense =
@@ -44,6 +44,35 @@ export function normalizeWeeklyData(
         INITIAL_DEFAULT_FORMATIONS[0];
       if (defaultOffense) {
         formations.unshift(deepClone(defaultOffense));
+      }
+    }
+
+    // Guarantee that every week specifically includes 11 formations (11 Personnel and 11 Offense)
+    const elevenCandidates = [
+      fallbackFormations.find((f) => f && (f.id === 'form_1788270435286' || f.name === '11 Personnel')),
+      fallbackFormations.find((f) => f && (f.id === 'form_11' || f.name === '11 Offense')) ||
+        INITIAL_DEFAULT_FORMATIONS.find((f) => f && (f.id === 'form_11' || f.name === '11 Offense')),
+    ].filter(Boolean);
+
+    for (const elf of elevenCandidates) {
+      if (!elf) continue;
+      const alreadyHas = formations.some(
+        (f) => f && (f.id === elf.id || f.name?.toLowerCase().trim() === elf.name?.toLowerCase().trim())
+      );
+      if (!alreadyHas) {
+        // Insert right after existing offense formations
+        let lastOffenseIdx = -1;
+        for (let i = formations.length - 1; i >= 0; i--) {
+          if (formations[i] && formations[i].unit === 'offense') {
+            lastOffenseIdx = i;
+            break;
+          }
+        }
+        if (lastOffenseIdx >= 0) {
+          formations.splice(lastOffenseIdx + 1, 0, deepClone(elf));
+        } else {
+          formations.unshift(deepClone(elf));
+        }
       }
     }
 
@@ -101,6 +130,65 @@ export function normalizeWeeklyData(
     }
 
     result[key] = sanitizedWeek;
+  }
+
+  // Cross-synchronize team_10u__week_X and legacy X keys so neither key suffers from missing formations or depth chart
+  const weekIdentifiers = new Set<string>();
+  for (const k of Object.keys(result)) {
+    if (k.startsWith('team_10u__week_')) {
+      weekIdentifiers.add(k.replace('team_10u__week_', ''));
+    } else if (!k.includes('__week_')) {
+      weekIdentifiers.add(k);
+    }
+  }
+
+  for (const wk of weekIdentifiers) {
+    const scopedKey = `team_10u__week_${wk}`;
+    const legacyKey = wk;
+    const scopedState = result[scopedKey];
+    const legacyState = result[legacyKey];
+
+    if (scopedState && legacyState) {
+      // Reconcile formations: union by ID to ensure 11 Offense and 11 Personnel are present in both
+      const combinedFormations: FormationBoard[] = [...(scopedState.formations || [])];
+      const seenIds = new Set(combinedFormations.map((f) => f && f.id));
+      (legacyState.formations || []).forEach((lf) => {
+        if (lf && lf.id && !seenIds.has(lf.id)) {
+          combinedFormations.push(lf);
+          seenIds.add(lf.id);
+        }
+      });
+
+      // Count placed players
+      const countPlayers = (dc?: Record<string, any[]>) =>
+        dc ? Object.values(dc).reduce((sum, p) => sum + (Array.isArray(p) ? p.length : 0), 0) : 0;
+      const scopedDCCount = countPlayers(scopedState.depthChart);
+      const legacyDCCount = countPlayers(legacyState.depthChart);
+
+      let reconciledDC = scopedState.depthChart;
+      if (legacyDCCount > scopedDCCount) {
+        reconciledDC = legacyState.depthChart;
+      } else if (scopedDCCount > 0 && legacyDCCount > 0) {
+        reconciledDC = { ...(legacyState.depthChart || {}), ...(scopedState.depthChart || {}) };
+      }
+
+      const reconciledSC =
+        countPlayers(legacyState.scrimmageChart) > countPlayers(scopedState.scrimmageChart)
+          ? legacyState.scrimmageChart
+          : scopedState.scrimmageChart;
+
+      scopedState.formations = combinedFormations;
+      scopedState.depthChart = reconciledDC;
+      scopedState.scrimmageChart = reconciledSC;
+
+      legacyState.formations = deepClone(combinedFormations);
+      legacyState.depthChart = deepClone(reconciledDC);
+      legacyState.scrimmageChart = deepClone(reconciledSC);
+    } else if (scopedState && !legacyState) {
+      result[legacyKey] = deepClone(scopedState);
+    } else if (legacyState && !scopedState) {
+      result[scopedKey] = deepClone(legacyState);
+    }
   }
 
   return result;
