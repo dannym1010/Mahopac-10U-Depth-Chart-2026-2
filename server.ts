@@ -45,6 +45,44 @@ interface PendingAdminReset {
 }
 const pendingAdminResets = new Map<string, PendingAdminReset>();
 
+// Active User / Coach Presence Tracking
+export interface ActiveUserSession {
+  clientId: string;
+  email: string;
+  displayName: string;
+  role: string;
+  activeTeamId: string;
+  activeUnit: string;
+  currentWeek: string;
+  connectedAt: number;
+  lastSeen: number;
+  isIdle?: boolean;
+}
+const activeSessions = new Map<string, ActiveUserSession>();
+
+function cleanExpiredSessions() {
+  const now = Date.now();
+  for (const [id, session] of activeSessions.entries()) {
+    // 2 minutes inactivity timeout for presence
+    if (now - session.lastSeen > 120000) {
+      activeSessions.delete(id);
+    }
+  }
+}
+
+function broadcastPresence() {
+  cleanExpiredSessions();
+  const sessionsArray = Array.from(activeSessions.values());
+  const payload = `data: ${JSON.stringify({ type: 'presence_update', users: sessionsArray })}\n\n`;
+  for (const client of sseClients) {
+    try {
+      client.write(payload);
+    } catch {
+      sseClients.delete(client);
+    }
+  }
+}
+
 const activeLocks = new Map<string, ServerSectionLock>();
 
 function cleanExpiredLocks() {
@@ -208,6 +246,21 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
 
       // Filter out any explicitly deleted or duplicate formations
       mergedFormations = dedupeAndFilterFormations(mergedFormations);
+
+      // Safety guarantee: never allow a week to completely lose its offensive formations
+      if (!mergedFormations.some((f: any) => f && f.unit === 'offense')) {
+        const fallbackOff = (Array.isArray(incoming.defaultFormations) ? incoming.defaultFormations : [])
+          .concat(Array.isArray(current.defaultFormations) ? current.defaultFormations : [])
+          .concat(Array.isArray(curWeekState.formations) ? curWeekState.formations : [])
+          .filter((f: any) => f && f.unit === 'offense');
+        const seenFIds = new Set<string>(mergedFormations.map((f: any) => f?.id));
+        for (const fo of fallbackOff) {
+          if (fo && fo.id && !seenFIds.has(fo.id)) {
+            mergedFormations.push(fo);
+            seenFIds.add(fo.id);
+          }
+        }
+      }
 
       // Merge Depth Chart per position ID without ghost retention or resurrecting removed players
       const curDC: Record<string, any> = curWeekState.depthChart || {};
@@ -809,6 +862,76 @@ async function startServer() {
     }
   });
 
+  // Active User Presence Endpoints
+  app.get('/api/presence', (req, res) => {
+    cleanExpiredSessions();
+    res.json({
+      success: true,
+      users: Array.from(activeSessions.values()),
+    });
+  });
+
+  app.post('/api/presence', (req, res) => {
+    try {
+      cleanExpiredSessions();
+      const { clientId, email, displayName, role, activeTeamId, activeUnit, currentWeek, isIdle } = req.body || {};
+      if (!clientId && !email) {
+        return res.status(400).json({ error: 'clientId or email is required.' });
+      }
+      const id = clientId || email;
+      const now = Date.now();
+      const existing = activeSessions.get(id);
+
+      activeSessions.set(id, {
+        clientId: id,
+        email: String(email || 'coach@portal.local').toLowerCase().trim(),
+        displayName: String(displayName || (email ? email.split('@')[0] : 'Coach')),
+        role: String(role || 'Coach'),
+        activeTeamId: String(activeTeamId || 'team_10u'),
+        activeUnit: String(activeUnit || 'depth_chart'),
+        currentWeek: String(currentWeek || '0'),
+        connectedAt: existing ? existing.connectedAt : now,
+        lastSeen: now,
+        isIdle: Boolean(isIdle),
+      });
+
+      broadcastPresence();
+
+      return res.json({
+        success: true,
+        users: Array.from(activeSessions.values()),
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: err?.message || 'Presence update error' });
+    }
+  });
+
+  app.post('/api/presence/leave', (req, res) => {
+    try {
+      const { clientId, email } = req.body || {};
+      if (clientId) activeSessions.delete(clientId);
+      if (email) {
+        const cleanEmail = email.toLowerCase().trim();
+        for (const [key, session] of activeSessions.entries()) {
+          if (session.email.toLowerCase().trim() === cleanEmail) {
+            activeSessions.delete(key);
+          }
+        }
+        // Also release any locks held by this user
+        for (const [lockId, lock] of activeLocks.entries()) {
+          if (lock.holderEmail.toLowerCase().trim() === cleanEmail) {
+            activeLocks.delete(lockId);
+          }
+        }
+        broadcastLocks();
+      }
+      broadcastPresence();
+      return res.json({ success: true });
+    } catch (err: any) {
+      return res.status(500).json({ error: err?.message || 'Presence leave error' });
+    }
+  });
+
   // Secure Admin Passcode Reset Endpoints
   app.post('/api/admin/request-passcode-reset', (req, res) => {
     try {
@@ -951,11 +1074,13 @@ async function startServer() {
     }
 
     cleanExpiredLocks();
+    cleanExpiredSessions();
     const initialPayload = {
       type: 'connected',
       version: stateVersion,
       updatedAt: stateUpdatedAt,
       locks: Array.from(activeLocks.values()),
+      activeUsers: Array.from(activeSessions.values()),
     };
     res.write(`data: ${JSON.stringify(initialPayload)}\n\n`);
     if (typeof (res as any).flush === 'function') {

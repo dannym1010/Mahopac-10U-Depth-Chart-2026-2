@@ -51,18 +51,20 @@ export function normalizeWeeklyData(
       formations.push(f);
     }
 
-    // Only populate fallback defaults if week had NO explicit formations defined
-    if (!hasExplicitFormations) {
-      for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
-        if (!formations.some((f) => f && f.unit === u)) {
-          const defsForUnit = fallbackFormations.filter(
-            (f) => f && f.unit === u && !deletedSet.has(f.id)
-          );
-          for (const df of defsForUnit) {
-            if (!seenIds.has(df.id)) {
-              formations.push(deepClone(df));
-              seenIds.add(df.id);
-            }
+    // Ensure every week has core units (Offense, Defense, ST, Groups) populated
+    for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
+      if (!formations.some((f) => f && f.unit === u)) {
+        const defsForUnit = fallbackFormations.filter(
+          (f) => f && f.unit === u && !deletedSet.has(f.id)
+        );
+        const toAdd =
+          defsForUnit.length > 0
+            ? defsForUnit
+            : INITIAL_DEFAULT_FORMATIONS.filter((f) => f.unit === u);
+        for (const df of toAdd) {
+          if (!seenIds.has(df.id)) {
+            formations.push(deepClone(df));
+            seenIds.add(df.id);
           }
         }
       }
@@ -522,16 +524,33 @@ export function normalizeFormationUnit(f: any): FormationBoard {
   return norm;
 }
 
+function ensureCoreUnitsPresent(list: FormationBoard[]): FormationBoard[] {
+  const result = [...list];
+  const seenIds = new Set<string>(result.map((f) => f.id));
+  for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
+    if (!result.some((f) => f && f.unit === u)) {
+      const defs = INITIAL_DEFAULT_FORMATIONS.filter((f) => f.unit === u);
+      for (const df of defs) {
+        if (!seenIds.has(df.id)) {
+          result.push(deepClone(df));
+          seenIds.add(df.id);
+        }
+      }
+    }
+  }
+  return result;
+}
+
 export function extractBackupFormations(parsed: any): FormationBoard[] | null {
   if (!parsed || typeof parsed !== 'object') return null;
 
   // 1. Direct parsed.defaultFormations
   if (Array.isArray(parsed.defaultFormations) && parsed.defaultFormations.length > 0) {
-    return parsed.defaultFormations.map(normalizeFormationUnit);
+    return ensureCoreUnitsPresent(parsed.defaultFormations.map(normalizeFormationUnit));
   }
   // 2. Direct parsed.formations
   if (Array.isArray(parsed.formations) && parsed.formations.length > 0) {
-    return parsed.formations.map(normalizeFormationUnit);
+    return ensureCoreUnitsPresent(parsed.formations.map(normalizeFormationUnit));
   }
   // 3. Direct parsed.offensiveFormations / parsed.offenseFormations / defensive
   if (Array.isArray(parsed.offensiveFormations) || Array.isArray(parsed.offenseFormations)) {
@@ -539,11 +558,11 @@ export function extractBackupFormations(parsed: any): FormationBoard[] | null {
     const def = (parsed.defensiveFormations || parsed.defenseFormations || []).map((f: any) => ({ ...f, unit: 'defense' }));
     const st = (parsed.stFormations || parsed.specialTeamsFormations || []).map((f: any) => ({ ...f, unit: 'st' }));
     const combined = [...off, ...def, ...st].map(normalizeFormationUnit);
-    if (combined.length > 0) return combined;
+    if (combined.length > 0) return ensureCoreUnitsPresent(combined);
   }
   // 4. Raw array of formations directly
   if (Array.isArray(parsed) && parsed.length > 0 && (parsed[0]?.rows || parsed[0]?.positions || parsed[0]?.unit)) {
-    return parsed.map(normalizeFormationUnit);
+    return ensureCoreUnitsPresent(parsed.map(normalizeFormationUnit));
   }
   // 5. Check weeklyData for formations across all weeks
   if (parsed.weeklyData && typeof parsed.weeklyData === 'object') {
@@ -566,7 +585,7 @@ export function extractBackupFormations(parsed: any): FormationBoard[] | null {
         }
       }
     }
-    if (collected.length > 0) return collected;
+    if (collected.length > 0) return ensureCoreUnitsPresent(collected);
   }
   // 6. Direct week-keyed objects: parsed['0'], parsed['team_10u__week_0'], etc.
   const weekLikeValues = Object.entries(parsed)
@@ -590,7 +609,7 @@ export function extractBackupFormations(parsed: any): FormationBoard[] | null {
         }
       }
     }
-    if (collected.length > 0) return collected;
+    if (collected.length > 0) return ensureCoreUnitsPresent(collected);
   }
   return null;
 }

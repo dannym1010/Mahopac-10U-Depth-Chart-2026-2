@@ -76,6 +76,10 @@ import {
   acquireServerLock,
   releaseServerLock,
   heartbeatServerLock,
+  fetchActiveUsers,
+  registerPresence,
+  leavePresence,
+  ActiveUserSession,
   normalizePracticeTemplates,
   normalizeCascadingDrills,
   CLIENT_ID,
@@ -125,6 +129,8 @@ import { PracticeWizardGeneratedResult } from './components/PracticeWizardModal'
 import { PreferencesModal } from './components/PreferencesModal';
 import { ThemeGalleryModal } from './components/ThemeGalleryModal';
 import { SeasonConfigModal } from './components/SeasonConfigModal';
+import { ActiveCoachesModal } from './components/ActiveCoachesModal';
+import { IdleTimeoutModal } from './components/IdleTimeoutModal';
 import {
   AuthModal,
   CopyWeekModal,
@@ -612,8 +618,13 @@ export default function App() {
     color: '#22c55e',
   });
 
-  // Real-Time Concurrency Section Locks
+  // Real-Time Concurrency Section Locks & Active Users Presence
   const [activeLocks, setActiveLocks] = useState<SectionLock[]>([]);
+  const [activeUsers, setActiveUsers] = useState<ActiveUserSession[]>([]);
+  const [isActiveCoachesModalOpen, setIsActiveCoachesModalOpen] = useState(false);
+  const [isIdleTimedOut, setIsIdleTimedOut] = useState(false);
+  const lastUserActivityTimeRef = useRef<number>(Date.now());
+  const isUserIdleRef = useRef<boolean>(false);
 
   // Modal Dialog States
   const [isPreferencesModalOpen, setIsPreferencesModalOpen] = useState(false);
@@ -1004,19 +1015,17 @@ export default function App() {
       formations.push(f);
     }
 
-    // Only inject fallback defaults if week had NO explicit formations defined
-    if (!hasExplicitFormations) {
-      for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
-        if (!formations.some((f) => f && f.unit === u)) {
-          let defsForUnit = (defaultFormations || []).filter((f) => f && f.unit === u && !curDeletedSet.has(f.id));
-          if (defsForUnit.length === 0) {
-            defsForUnit = INITIAL_DEFAULT_FORMATIONS.filter((f) => f && f.unit === u && !curDeletedSet.has(f.id));
-          }
-          for (const df of defsForUnit) {
-            if (!seenFormIds.has(df.id)) {
-              formations.push(deepClone(df));
-              seenFormIds.add(df.id);
-            }
+    // Ensure every week has core units (Offense, Defense, ST, Groups) populated
+    for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
+      if (!formations.some((f) => f && f.unit === u)) {
+        let defsForUnit = (defaultFormations || []).filter((f) => f && f.unit === u && !curDeletedSet.has(f.id));
+        if (defsForUnit.length === 0) {
+          defsForUnit = INITIAL_DEFAULT_FORMATIONS.filter((f) => f && f.unit === u);
+        }
+        for (const df of defsForUnit) {
+          if (!seenFormIds.has(df.id)) {
+            formations.push(deepClone(df));
+            seenFormIds.add(df.id);
           }
         }
       }
@@ -1333,6 +1342,17 @@ function mergeRemoteWeeklyData(
           seenIds.add(lf.id);
         }
       });
+
+      // Safety guarantee: never allow a week to lose its core offensive formations
+      if (!mergedFormations.some((f) => f && f.unit === 'offense')) {
+        const fallbackOff = (defaultFormations || []).concat(INITIAL_DEFAULT_FORMATIONS).filter((f) => f && f.unit === 'offense');
+        for (const fo of fallbackOff) {
+          if (!seenIds.has(fo.id)) {
+            mergedFormations.push(deepClone(fo));
+            seenIds.add(fo.id);
+          }
+        }
+      }
 
       // Merge depth chart safely: remote takes precedence so other coaches' edits show in real time
       const countPlayers = (dc?: Record<string, any[]>) =>
@@ -2000,26 +2020,48 @@ function mergeRemoteWeeklyData(
       // 3. Subscribe to real-time multi-coach updates via SSE
       const unsubscribeSSE = subscribeServerEvents((eventData) => {
         if (!isMounted) return;
-        if (eventData.type === 'connected' && Array.isArray(eventData.locks)) {
-          setActiveLocks(eventData.locks);
+        if (eventData.type === 'connected') {
+          if (Array.isArray(eventData.locks)) {
+            setActiveLocks(eventData.locks);
+          }
+          if (Array.isArray(eventData.activeUsers)) {
+            setActiveUsers(eventData.activeUsers);
+          }
         } else if (eventData.type === 'locks_update' && Array.isArray(eventData.locks)) {
           setActiveLocks(eventData.locks);
+        } else if (eventData.type === 'presence_update' && Array.isArray(eventData.users)) {
+          setActiveUsers(eventData.users);
         } else if (eventData.type === 'sync' && eventData.state) {
           if (eventData.senderClientId === CLIENT_ID) return;
           applyRemoteState(eventData.state, 'sse_live_update', eventData.version, eventData.updatedAt);
         }
       });
 
-      // 4. Resilient polling fallback every 4 seconds
+      // 4. Resilient polling fallback every 4 seconds (throttled when tab is hidden or idle)
       const pollInterval = setInterval(async () => {
         if (!isMounted) return;
+        // Optimization: pause polling when browser tab is hidden or user is idle to save CPU & memory
+        if (document.hidden || Date.now() - lastUserActivityTimeRef.current > 3 * 60 * 1000) {
+          return;
+        }
         try {
           const [health, currentLocks] = await Promise.all([
             checkServerHealth(),
             fetchServerLocks(),
           ]);
           if (Array.isArray(currentLocks)) {
-            setActiveLocks(currentLocks);
+            setActiveLocks((prev) => {
+              if (prev.length === currentLocks.length) {
+                const isIdentical = prev.every(
+                  (p, i) =>
+                    p.id === currentLocks[i].id &&
+                    p.holderEmail === currentLocks[i].holderEmail &&
+                    p.expiresAt === currentLocks[i].expiresAt
+                );
+                if (isIdentical) return prev;
+              }
+              return currentLocks;
+            });
           }
           if (health && health.hasCachedState) {
             if (
@@ -2090,6 +2132,153 @@ function mergeRemoteWeeklyData(
       });
     };
   }, []);
+
+  // User Presence & 10-Minute Idle Logout
+  const handleSignOut = useCallback(async () => {
+    try {
+      if (currentUser?.email) {
+        await leavePresence(currentUser.email);
+        await releaseServerLock({
+          teamId: activeTeamId,
+          week: String(currentWeek),
+          unit: currentDepthUnit,
+          holderEmail: currentUser.email,
+        });
+      }
+    } catch {}
+    sessionStorage.removeItem('football_admin_passcode_active');
+    sessionStorage.removeItem('football_dev_test_mode');
+    const { auth } = getFirebaseServices();
+    if (auth) {
+      try {
+        await auth.signOut();
+      } catch {}
+    }
+    setCurrentUser(null);
+    setIsPendingApproval(false);
+    window.location.reload();
+  }, [currentUser?.email, activeTeamId, currentWeek, currentDepthUnit]);
+
+  const handleIdleTimeoutLogout = useCallback(async () => {
+    try {
+      if (currentUser?.email) {
+        await leavePresence(currentUser.email);
+        await releaseServerLock({
+          teamId: activeTeamId,
+          week: String(currentWeek),
+          unit: currentDepthUnit,
+          holderEmail: currentUser.email,
+        });
+      }
+    } catch {}
+    sessionStorage.removeItem('football_admin_passcode_active');
+    sessionStorage.removeItem('football_dev_test_mode');
+    const { auth } = getFirebaseServices();
+    if (auth) {
+      try {
+        await auth.signOut();
+      } catch {}
+    }
+    setCurrentUser(null);
+    setIsPendingApproval(false);
+    setIsIdleTimedOut(true);
+  }, [currentUser?.email, activeTeamId, currentWeek, currentDepthUnit]);
+
+  // Global Idle Detection: 10 minutes inactivity triggers automatic logout
+  useEffect(() => {
+    const markActivity = () => {
+      const now = Date.now();
+      if (now - lastUserActivityTimeRef.current > 2000) {
+        lastUserActivityTimeRef.current = now;
+      }
+      if (isUserIdleRef.current) {
+        isUserIdleRef.current = false;
+        if (currentUser?.email && !isIdleTimedOut) {
+          registerPresence({
+            email: currentUser.email,
+            displayName: currentUser.displayName || currentUser.email.split('@')[0],
+            role: userRole === 'admin' ? 'Head Coach / Admin' : 'Assistant Coach',
+            activeTeamId,
+            activeUnit,
+            currentWeek: String(currentWeek),
+            isIdle: false,
+          }).then((users) => {
+            if (Array.isArray(users)) setActiveUsers(users);
+          }).catch(() => {});
+        }
+      }
+    };
+
+    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    activityEvents.forEach((ev) => window.addEventListener(ev, markActivity, { passive: true }));
+
+    // Idle timer check every 10 seconds
+    const idleCheckInterval = setInterval(() => {
+      if (!currentUser || isIdleTimedOut) return;
+
+      const idleDuration = Date.now() - lastUserActivityTimeRef.current;
+
+      // Mark idle if inactive for > 3 minutes (updates presence badge)
+      if (idleDuration > 3 * 60 * 1000 && !isUserIdleRef.current) {
+        isUserIdleRef.current = true;
+        registerPresence({
+          email: currentUser.email,
+          displayName: currentUser.displayName || currentUser.email.split('@')[0],
+          role: userRole === 'admin' ? 'Head Coach / Admin' : 'Assistant Coach',
+          activeTeamId,
+          activeUnit,
+          currentWeek: String(currentWeek),
+          isIdle: true,
+        }).then((users) => {
+          if (Array.isArray(users)) setActiveUsers(users);
+        }).catch(() => {});
+      }
+
+      // Hard logout after 10 minutes of inactivity
+      if (idleDuration >= 10 * 60 * 1000) {
+        handleIdleTimeoutLogout();
+      }
+    }, 10000);
+
+    return () => {
+      activityEvents.forEach((ev) => window.removeEventListener(ev, markActivity));
+      clearInterval(idleCheckInterval);
+    };
+  }, [currentUser, isIdleTimedOut, activeTeamId, activeUnit, currentWeek, userRole, handleIdleTimeoutLogout]);
+
+  // Real-Time Presence Heartbeat (every 30s while connected)
+  useEffect(() => {
+    if (!currentUser?.email || isIdleTimedOut) return;
+
+    const report = () => {
+      if (document.hidden) return;
+      const isIdle = Date.now() - lastUserActivityTimeRef.current > 3 * 60 * 1000;
+      registerPresence({
+        email: currentUser.email,
+        displayName: currentUser.displayName || currentUser.email.split('@')[0],
+        role: userRole === 'admin' ? 'Head Coach / Admin' : 'Assistant Coach',
+        activeTeamId,
+        activeUnit,
+        currentWeek: String(currentWeek),
+        isIdle,
+      }).then((users) => {
+        if (Array.isArray(users)) setActiveUsers(users);
+      }).catch(() => {});
+    };
+
+    report();
+    const presenceTimer = setInterval(report, 30000);
+
+    const handleBeforeUnload = () => {
+      leavePresence(currentUser?.email);
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      clearInterval(presenceTimer);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [currentUser?.email, isIdleTimedOut, activeTeamId, activeUnit, currentWeek, userRole]);
 
   // Apply favorite team & start screen associated with the user login
   const applyUserPreferencesOnLogin = (email: string) => {
@@ -5308,7 +5497,7 @@ function mergeRemoteWeeklyData(
       const importedSeasonConfig = shouldImport('scheduleEvents') ? parsed.seasonConfig || null : null;
       const importedAttendance = shouldImport('scheduleEvents') ? parsed.attendanceLogs || null : null;
 
-      // Un-delete any formations included in the backup
+      // Un-delete formations and ensure no formations are suppressed by stale deletedFormationIds
       const restoredFormationIds = new Set<string>();
       if (importedDefaults && Array.isArray(importedDefaults)) {
         importedDefaults.forEach((f: any) => { if (f?.id) restoredFormationIds.add(f.id); });
@@ -5320,7 +5509,7 @@ function mergeRemoteWeeklyData(
           }
         });
       }
-      if (restoredFormationIds.size > 0) {
+      if (importedDefaults || restoredFormationIds.size > 0) {
         const nextDeleted = (deletedFormationIds || []).filter((id) => !restoredFormationIds.has(id));
         setDeletedFormationIds(nextDeleted);
         latestStateRef.current.deletedFormationIds = nextDeleted;
@@ -6608,11 +6797,9 @@ function mergeRemoteWeeklyData(
         onNavigateToHome={() => navigateToUnit('home')}
         onNavigateToSchedule={() => setActiveUnit('schedule')}
         onNavigateToMobileHub={() => setActiveUnit('mobile_hub')}
-        onSignOut={() => {
-          const { auth } = getFirebaseServices();
-          if (auth) auth.signOut().then(() => window.location.reload());
-          else window.location.reload();
-        }}
+        onSignOut={handleSignOut}
+        activeCoachesCount={Math.max(1, activeUsers.length)}
+        onOpenActiveCoachesModal={() => setIsActiveCoachesModalOpen(true)}
         onToggleFullScreen={() => {
           if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen().catch(() => {});
@@ -8035,6 +8222,31 @@ function mergeRemoteWeeklyData(
         defaultUnit="offense"
         existingPlaysCount={masterPlayLibrary.length}
         onImportPlays={handleGlobalImportPlays}
+      />
+
+      {/* Active Coaches Live Presence Modal */}
+      <ActiveCoachesModal
+        isOpen={isActiveCoachesModalOpen}
+        onClose={() => setIsActiveCoachesModalOpen(false)}
+        activeUsers={activeUsers}
+        currentUserEmail={currentUser?.email}
+        activeLocks={activeLocks}
+        teamNameMap={teams.reduce((acc, t) => ({ ...acc, [t.id]: t.name }), {})}
+        onRefresh={async () => {
+          const fresh = await fetchActiveUsers();
+          if (Array.isArray(fresh)) setActiveUsers(fresh);
+        }}
+      />
+
+      {/* 10-Minute Idle Inactivity Timeout Modal */}
+      <IdleTimeoutModal
+        isOpen={isIdleTimedOut}
+        onLogInAgain={() => {
+          setIsIdleTimedOut(false);
+          lastUserActivityTimeRef.current = Date.now();
+          isUserIdleRef.current = false;
+          setIsAuthModalOpen(true);
+        }}
       />
     </div>
   );

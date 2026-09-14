@@ -678,3 +678,72 @@ export async function heartbeatServerLock(params: {
   } catch {}
   return false;
 }
+
+// Active Coaches / Users Presence Tracking
+export interface ActiveUserSession {
+  clientId: string;
+  email: string;
+  displayName: string;
+  role: string;
+  activeTeamId: string;
+  activeUnit: string;
+  currentWeek: string;
+  connectedAt: number;
+  lastSeen: number;
+  isIdle?: boolean;
+}
+
+export async function fetchActiveUsers(): Promise<ActiveUserSession[]> {
+  if (isServerApiAvailable === false) return [];
+  try {
+    const res = await fetch('/api/presence', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      return Array.isArray(data.users) ? data.users : [];
+    }
+  } catch {}
+  return [];
+}
+
+export async function registerPresence(params: {
+  email: string;
+  displayName?: string;
+  role?: string;
+  activeTeamId?: string;
+  activeUnit?: string;
+  currentWeek?: string;
+  isIdle?: boolean;
+}): Promise<ActiveUserSession[]> {
+  if (isServerApiAvailable === false) return [];
+  try {
+    const res = await fetch('/api/presence', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: safeJSONStringify({
+        clientId: CLIENT_ID,
+        ...params,
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return Array.isArray(data.users) ? data.users : [];
+    }
+  } catch {}
+  return [];
+}
+
+export async function leavePresence(email?: string): Promise<boolean> {
+  try {
+    const res = await fetch('/api/presence/leave', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
+      body: safeJSONStringify({
+        clientId: CLIENT_ID,
+        email,
+      }),
+    });
+    return res.ok;
+  } catch {}
+  return false;
+}
