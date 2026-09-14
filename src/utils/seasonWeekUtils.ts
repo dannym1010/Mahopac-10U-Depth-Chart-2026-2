@@ -34,42 +34,35 @@ export function normalizeWeeklyData(
   for (const [key, weekState] of Object.entries(wData)) {
     if (!weekState || typeof weekState !== 'object') continue;
 
+    const hasExplicitFormations = Array.isArray(weekState.formations);
     let rawFormations =
-      Array.isArray(weekState.formations) && weekState.formations.length > 0
+      hasExplicitFormations
         ? deepClone(weekState.formations)
         : deepClone(fallbackFormations);
 
-    // Deduplicate and filter out deleted formations
+    // Deduplicate by ID and filter out deleted formations
     const seenIds = new Set<string>();
-    const seenKeys = new Set<string>();
     let formations: FormationBoard[] = [];
 
     for (const f of rawFormations) {
       if (!f || !f.id || deletedSet.has(f.id)) continue;
-      const normalizedName = (f.name || '').toLowerCase().trim();
-      const uKey = `${f.unit}__${normalizedName}`;
-      if (seenIds.has(f.id) || seenKeys.has(uKey)) continue;
+      if (seenIds.has(f.id)) continue;
       seenIds.add(f.id);
-      seenKeys.add(uKey);
       formations.push(f);
     }
 
-    // Ensure core units have a fallback if none exist and not explicitly deleted
-    for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
-      if (!formations.some((f) => f && f.unit === u)) {
-        let defsForUnit = fallbackFormations.filter(
-          (f) => f && f.unit === u && !deletedSet.has(f.id)
-        );
-        if (defsForUnit.length === 0) {
-          defsForUnit = INITIAL_DEFAULT_FORMATIONS.filter((f) => f && f.unit === u);
-        }
-        for (const df of defsForUnit) {
-          const norm = (df.name || '').toLowerCase().trim();
-          const uKey = `${df.unit}__${norm}`;
-          if (!seenIds.has(df.id) && !seenKeys.has(uKey)) {
-            formations.push(deepClone(df));
-            seenIds.add(df.id);
-            seenKeys.add(uKey);
+    // Only populate fallback defaults if week had NO explicit formations defined
+    if (!hasExplicitFormations) {
+      for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
+        if (!formations.some((f) => f && f.unit === u)) {
+          const defsForUnit = fallbackFormations.filter(
+            (f) => f && f.unit === u && !deletedSet.has(f.id)
+          );
+          for (const df of defsForUnit) {
+            if (!seenIds.has(df.id)) {
+              formations.push(deepClone(df));
+              seenIds.add(df.id);
+            }
           }
         }
       }

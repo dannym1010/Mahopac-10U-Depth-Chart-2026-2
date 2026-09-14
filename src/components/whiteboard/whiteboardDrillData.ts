@@ -1,4 +1,5 @@
 import { WhiteboardToken, WhiteboardArrow, WhiteboardZoneBubble, WhiteboardTextElement, PlayResponsibility } from '../../types';
+import { safeJSONParse, safeJSONSet } from '../../services/storageService';
 import { SCHEME_DRILLS } from './drillsSchemes';
 import { TEAM_CIRCUIT_DRILLS } from './drillsTeam';
 import { EXTRA_YOUTH_DRILLS } from './drillsExtraYouth';
@@ -1494,41 +1495,19 @@ const WHITEBOARD_CUSTOM_DRILLS_KEY = 'footballCustomWhiteboardDrills';
 const WHITEBOARD_DELETED_DRILLS_KEY = 'footballDeletedWhiteboardDrills';
 
 export function getCustomWhiteboardDrills(): WhiteboardDrill[] {
-  try {
-    const raw = localStorage.getItem(WHITEBOARD_CUSTOM_DRILLS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return safeJSONParse<WhiteboardDrill[]>(WHITEBOARD_CUSTOM_DRILLS_KEY, []);
 }
 
 export function saveCustomWhiteboardDrills(drills: WhiteboardDrill[]): void {
-  try {
-    localStorage.setItem(WHITEBOARD_CUSTOM_DRILLS_KEY, JSON.stringify(drills));
-  } catch (e) {
-    console.warn('Failed to save custom whiteboard drills', e);
-  }
+  safeJSONSet(WHITEBOARD_CUSTOM_DRILLS_KEY, drills);
 }
 
 export function getDeletedWhiteboardDrillIds(): string[] {
-  try {
-    const raw = localStorage.getItem(WHITEBOARD_DELETED_DRILLS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return safeJSONParse<string[]>(WHITEBOARD_DELETED_DRILLS_KEY, []);
 }
 
 export function saveDeletedWhiteboardDrillIds(ids: string[]): void {
-  try {
-    localStorage.setItem(WHITEBOARD_DELETED_DRILLS_KEY, JSON.stringify(ids));
-  } catch (e) {
-    console.warn('Failed to save deleted whiteboard drill IDs', e);
-  }
+  safeJSONSet(WHITEBOARD_DELETED_DRILLS_KEY, ids);
 }
 
 export function loadEffectiveWhiteboardDrills(): WhiteboardDrill[] {

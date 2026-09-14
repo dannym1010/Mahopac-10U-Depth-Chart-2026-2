@@ -126,16 +126,18 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
   const dedupeAndFilterFormations = (forms: any[]): any[] => {
     if (!Array.isArray(forms)) return [];
     const seenIds = new Set<string>();
-    const seenKeys = new Set<string>();
     const res: any[] = [];
     for (const f of forms) {
       if (!f || !f.id) continue;
-      if (metadata?.scope !== 'import_backup' && deletedSet.has(f.id)) continue;
-      const normName = (f.name || '').toLowerCase().trim();
-      const uKey = `${f.unit}__${normName}`;
-      if (seenIds.has(f.id) || seenKeys.has(uKey)) continue;
+      if (
+        metadata?.scope !== 'import_backup' &&
+        metadata?.scope !== 'copy_week' &&
+        deletedSet.has(f.id)
+      ) {
+        continue;
+      }
+      if (seenIds.has(f.id)) continue;
       seenIds.add(f.id);
-      seenKeys.add(uKey);
       res.push(f);
     }
     return res;
@@ -166,12 +168,13 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
       // Merge formations array preserving the incoming requested order
       let mergedFormations = curWeekState.formations || [];
 
-      if (Array.isArray(incWeekState.formations) && incWeekState.formations.length > 0) {
+      if (Array.isArray(incWeekState.formations)) {
         if (
           metadata?.scope === 'all' ||
           metadata?.scope === 'force' ||
           metadata?.scope === 'copy_week' ||
           metadata?.scope === 'delete_formation' ||
+          metadata?.scope === 'move_formation' ||
           metadata?.scope === 'import_backup' ||
           !metadata?.activeUnit ||
           !isTargetWeek

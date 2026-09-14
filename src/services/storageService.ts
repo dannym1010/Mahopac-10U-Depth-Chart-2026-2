@@ -36,8 +36,39 @@ export function safeJSONParse<T>(key: string, fallback: T): T {
   return fallback;
 }
 
+export function isWindowOrDomObject(val: any): boolean {
+  if (!val || typeof val !== 'object') return false;
+  try {
+    if (typeof window !== 'undefined' && (val === window || val === window.self)) return true;
+    const proto = Object.prototype.toString.call(val);
+    if (
+      proto === '[object Window]' ||
+      proto === '[object global]' ||
+      proto === '[object DOMWindow]'
+    ) {
+      return true;
+    }
+    if (val.constructor && (val.constructor.name === 'Window' || val.constructor.name === 'DOMWindow')) {
+      return true;
+    }
+    if (val.window && val.window === val) return true;
+    if (typeof (val as any).setInterval === 'function' && typeof (val as any).document === 'object') {
+      return true;
+    }
+    if (typeof Node !== 'undefined' && val instanceof Node) return true;
+    if (typeof Event !== 'undefined' && val instanceof Event) return true;
+    if (typeof EventTarget !== 'undefined' && val instanceof EventTarget) return true;
+    if (val.$$typeof || val._owner || val._store) return true;
+  } catch {
+    return true;
+  }
+  return false;
+}
+
 export function safeJSONStringify(data: any, space?: number): string {
   if (data === undefined) return '{}';
+  if (isWindowOrDomObject(data)) return '{}';
+
   try {
     const seen = new WeakSet();
     const result = JSON.stringify(
@@ -45,28 +76,7 @@ export function safeJSONStringify(data: any, space?: number): string {
       (_k, val) => {
         if (typeof val === 'object' && val !== null) {
           try {
-            // Guard against Window, iframe window, or global scope objects
-            if (
-              (typeof window !== 'undefined' && (val === window || val === window.top || val === window.parent || val === window.self)) ||
-              val.constructor?.name === 'Window' ||
-              val.constructor?.name === 'global' ||
-              (typeof (val as any).setInterval === 'function' && typeof (val as any).document === 'object') ||
-              ((val as any).window && (val as any).window === val)
-            ) {
-              return undefined;
-            }
-            // Guard against DOM nodes, documents, events
-            if (
-              (typeof Node !== 'undefined' && val instanceof Node) ||
-              (typeof Event !== 'undefined' && val instanceof Event) ||
-              (typeof EventTarget !== 'undefined' && val instanceof EventTarget) ||
-              val.constructor?.name === 'HTMLDocument' ||
-              val.constructor?.name === 'Document'
-            ) {
-              return undefined;
-            }
-            // Ignore React internal fiber or element references that may contain circular DOM nodes
-            if ((val as any).$$typeof || (val as any)._owner || (val as any)._store) {
+            if (isWindowOrDomObject(val)) {
               return undefined;
             }
             if (seen.has(val)) {
@@ -92,6 +102,9 @@ export function deepClone<T>(obj: T): T {
   if (obj === null || typeof obj !== 'object') {
     return obj;
   }
+  if (isWindowOrDomObject(obj)) {
+    return (Array.isArray(obj) ? [] : {}) as unknown as T;
+  }
   try {
     const str = safeJSONStringify(obj);
     if (!str || str === 'undefined' || str === '{}') {
@@ -103,12 +116,18 @@ export function deepClone<T>(obj: T): T {
   }
 }
 
-export function safeJSONSet(key: string, data: any) {
+export function safeJSONSet(key: string, data: any): boolean {
   try {
+    if (isWindowOrDomObject(data)) {
+      console.warn(`Prevented saving Window or DOM object to localStorage key "${key}"`);
+      return false;
+    }
     const cleanStr = safeJSONStringify(data);
     localStorage.setItem(key, cleanStr);
+    return true;
   } catch (e) {
     console.warn(`Error setting localStorage key "${key}":`, e);
+    return false;
   }
 }
 
@@ -439,18 +458,20 @@ export const FIREBASE_CONFIG = {
  * Strips any `undefined` values from objects, converts `undefined` in arrays to `null`,
  * and drops non-serializable objects (DOM nodes, Window, functions).
  */
-export function cleanFirestoreData(data: any): any {
+export function cleanFirestoreData(data: any, seen: WeakSet<object> = new WeakSet()): any {
   if (data === undefined) return null;
   if (data === null || typeof data !== 'object') return data;
 
-  // Guard against DOM nodes, Window, functions
-  if (
-    (typeof window !== 'undefined' && (data === window || data === window.top || data === window.parent)) ||
-    (typeof Node !== 'undefined' && data instanceof Node) ||
-    typeof data === 'function'
-  ) {
+  // Guard against DOM nodes, Window, functions, and non-serializable objects
+  if (isWindowOrDomObject(data) || typeof data === 'function') {
     return null;
   }
+
+  // Prevent circular reference infinite loops
+  if (seen.has(data)) {
+    return null;
+  }
+  seen.add(data);
 
   // Preserve Firestore FieldValues (serverTimestamp, delete, increment, etc.)
   if (data.constructor && data.constructor.name && (data.constructor.name === 'FieldValue' || data._methodName)) {
@@ -463,13 +484,13 @@ export function cleanFirestoreData(data: any): any {
   }
 
   if (Array.isArray(data)) {
-    return data.map((item) => (item === undefined ? null : cleanFirestoreData(item)));
+    return data.map((item) => (item === undefined ? null : cleanFirestoreData(item, seen)));
   }
 
   const cleaned: Record<string, any> = {};
   for (const [key, value] of Object.entries(data)) {
     if (value !== undefined) {
-      cleaned[key] = cleanFirestoreData(value);
+      cleaned[key] = cleanFirestoreData(value, seen);
     }
   }
   return cleaned;
@@ -610,7 +631,7 @@ export async function acquireServerLock(params: {
     const res = await fetch('/api/locks/acquire', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
+      body: safeJSONStringify(params),
     });
     if (res.ok) {
       return await res.json();
@@ -633,7 +654,7 @@ export async function releaseServerLock(params: {
     const res = await fetch('/api/locks/release', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
+      body: safeJSONStringify(params),
     });
     return res.ok;
   } catch {}
@@ -651,7 +672,7 @@ export async function heartbeatServerLock(params: {
     const res = await fetch('/api/locks/heartbeat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
+      body: safeJSONStringify(params),
     });
     return res.ok;
   } catch {}

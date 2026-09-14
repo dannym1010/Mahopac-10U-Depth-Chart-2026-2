@@ -966,22 +966,26 @@ export default function App() {
     ]);
 
     let rawCandidateForms: FormationBoard[] = [];
-    if (Array.isArray(scopedState?.formations) && scopedState.formations.length > 0) {
+    let hasExplicitFormations = false;
+
+    if (Array.isArray(scopedState?.formations)) {
       rawCandidateForms = [...scopedState.formations];
-      if (Array.isArray(legacyState?.formations) && legacyState.formations.length > 0) {
-        rawCandidateForms.push(...legacyState.formations);
-      }
-    } else if (Array.isArray(legacyState?.formations) && legacyState.formations.length > 0) {
+      hasExplicitFormations = true;
+    } else if (Array.isArray(legacyState?.formations)) {
       rawCandidateForms = [...legacyState.formations];
-    } else if (Array.isArray(defScopedState?.formations) && defScopedState.formations.length > 0) {
+      hasExplicitFormations = true;
+    } else if (Array.isArray(defScopedState?.formations)) {
       rawCandidateForms = [...defScopedState.formations];
+      hasExplicitFormations = true;
     } else if (Array.isArray(wData['0']?.formations) && wData['0'].formations.length > 0) {
       rawCandidateForms = [...wData['0'].formations];
+      hasExplicitFormations = true;
     } else if (
       Array.isArray(wData[getScopedWeekKey('team_10u', '0')]?.formations) &&
       wData[getScopedWeekKey('team_10u', '0')].formations.length > 0
     ) {
       rawCandidateForms = [...wData[getScopedWeekKey('team_10u', '0')].formations];
+      hasExplicitFormations = true;
     } else {
       rawCandidateForms =
         defaultFormations && Array.isArray(defaultFormations) && defaultFormations.length > 0
@@ -989,39 +993,30 @@ export default function App() {
           : [...INITIAL_DEFAULT_FORMATIONS];
     }
 
-    // Deduplicate and filter out deleted formations
+    // Deduplicate by ID and filter out deleted formations
     const seenFormIds = new Set<string>();
-    const seenFormKeys = new Set<string>();
     let formations: FormationBoard[] = [];
 
     for (const f of rawCandidateForms) {
       if (!f || !f.id || curDeletedSet.has(f.id)) continue;
-      const normalizedName = (f.name || '').toLowerCase().trim();
-      const uKey = `${f.unit}__${normalizedName}`;
-      if (seenFormIds.has(f.id) || seenFormKeys.has(uKey)) continue;
+      if (seenFormIds.has(f.id)) continue;
       seenFormIds.add(f.id);
-      seenFormKeys.add(uKey);
       formations.push(f);
     }
 
-    // Ensure core units are never completely empty (especially offense / defense)
-    for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
-      if (!formations.some((f) => f && f.unit === u)) {
-        let defsForUnit = (defaultFormations || []).filter((f) => f && f.unit === u && !curDeletedSet.has(f.id));
-        if (defsForUnit.length === 0) {
-          defsForUnit = INITIAL_DEFAULT_FORMATIONS.filter((f) => f && f.unit === u && !curDeletedSet.has(f.id));
-        }
-        // If still empty (e.g. all were accidentally marked deleted), rescue with initial defaults
-        if (defsForUnit.length === 0) {
-          defsForUnit = INITIAL_DEFAULT_FORMATIONS.filter((f) => f && f.unit === u);
-        }
-        for (const df of defsForUnit) {
-          const norm = (df.name || '').toLowerCase().trim();
-          const uKey = `${df.unit}__${norm}`;
-          if (!seenFormIds.has(df.id) && !seenFormKeys.has(uKey)) {
-            formations.push(deepClone(df));
-            seenFormIds.add(df.id);
-            seenFormKeys.add(uKey);
+    // Only inject fallback defaults if week had NO explicit formations defined
+    if (!hasExplicitFormations) {
+      for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
+        if (!formations.some((f) => f && f.unit === u)) {
+          let defsForUnit = (defaultFormations || []).filter((f) => f && f.unit === u && !curDeletedSet.has(f.id));
+          if (defsForUnit.length === 0) {
+            defsForUnit = INITIAL_DEFAULT_FORMATIONS.filter((f) => f && f.unit === u && !curDeletedSet.has(f.id));
+          }
+          for (const df of defsForUnit) {
+            if (!seenFormIds.has(df.id)) {
+              formations.push(deepClone(df));
+              seenFormIds.add(df.id);
+            }
           }
         }
       }
@@ -3941,7 +3936,8 @@ function mergeRemoteWeeklyData(
     latestStateRef.current.defaultFormations = nextDefaultForms;
 
     if (selectedFormationId === formId) {
-      const remainingSameUnit = updated.filter((f) => f.unit === activeUnit);
+      const targetUnit = form.unit;
+      const remainingSameUnit = updated.filter((f) => f.unit === targetUnit);
       if (remainingSameUnit.length > 0) {
         setSelectedFormationId(remainingSameUnit[0].id);
       } else if (updated.length > 0) {
@@ -3954,20 +3950,25 @@ function mergeRemoteWeeklyData(
 
   const handleMoveFormation = (formId: string, direction: number) => {
     const forms = [...currentFormations];
-    const unitForms = forms.filter((f) => f.unit === activeUnit);
+    const targetForm = forms.find((f) => f.id === formId);
+    if (!targetForm) return;
+
+    const targetUnit = targetForm.unit;
+    const unitForms = forms.filter((f) => f.unit === targetUnit);
     const uIdx = unitForms.findIndex((f) => f.id === formId);
     if (uIdx === -1) return;
     const targetUIdx = uIdx + direction;
     if (targetUIdx < 0 || targetUIdx >= unitForms.length) return;
 
-    const targetFormId = unitForms[targetUIdx].id;
+    const targetNeighborId = unitForms[targetUIdx].id;
     const gIdx1 = forms.findIndex((f) => f.id === formId);
-    const gIdx2 = forms.findIndex((f) => f.id === targetFormId);
+    const gIdx2 = forms.findIndex((f) => f.id === targetNeighborId);
     if (gIdx1 !== -1 && gIdx2 !== -1) {
       const temp = forms[gIdx1];
       forms[gIdx1] = forms[gIdx2];
       forms[gIdx2] = temp;
       updateCurrentWeekFormations(forms, true);
+      flushAndSaveStateToStorage('move_formation');
     }
   };
 
@@ -5334,10 +5335,12 @@ function mergeRemoteWeeklyData(
         restoredList.push('📐 Formations & Alignments');
 
         // Merge restored formations across all weeks so active and subsequent weeks immediately have them
-        const baseWData = importedWeekly || latestStateRef.current.weeklyData || weeklyData || {};
+        const baseWData: Record<string, WeekState> =
+          importedWeekly || latestStateRef.current.weeklyData || weeklyData || {};
         const updatedWData: Record<string, WeekState> = {};
-        for (const [wKey, wState] of Object.entries(baseWData)) {
-          if (!wState) continue;
+        for (const [wKey, rawState] of Object.entries(baseWData)) {
+          if (!rawState || typeof rawState !== 'object') continue;
+          const wState = rawState as WeekState;
           const forms = Array.isArray(wState.formations) ? [...wState.formations] : [];
           const seenIds = new Set(forms.map((f: any) => f.id));
           const seenKeys = new Set(forms.map((f: any) => `${f.unit}__${(f.name || '').toLowerCase().trim()}`));
@@ -5607,17 +5610,19 @@ function mergeRemoteWeeklyData(
 
     if (mode === 'both') {
       updatedFormations = deepClone(
-        src.formations && src.formations.length > 0 ? src.formations : defaultFormations
+        src.formations && src.formations.length > 0 ? src.formations : (defaultFormations || [])
       );
       updatedDepthChart = deepClone(src.depthChart || {});
       updatedScrimmageChart = deepClone(src.scrimmageChart || {});
     } else if (mode === 'formations_only') {
       updatedFormations = deepClone(
-        src.formations && src.formations.length > 0 ? src.formations : defaultFormations
+        src.formations && src.formations.length > 0 ? src.formations : (defaultFormations || [])
       );
       updatedDepthChart = {};
       updatedScrimmageChart = {};
     } else if (mode === 'positions_only') {
+      // Keep target existing formations exactly as they are
+      updatedFormations = deepClone(targetExisting.formations || []);
       // Intelligently map player assignments from source to target formations
       const mappedDepthChart: Record<string, PlacedPlayer[]> = {};
       const srcDC = src.depthChart || {};
@@ -5677,41 +5682,14 @@ function mergeRemoteWeeklyData(
       updatedScrimmageChart = deepClone(src.scrimmageChart || {});
     }
 
-    // Guarantee that updatedFormations contains all 4 units without resurrecting deleted formations
-    const copyDeletedSet = new Set<string>([
-      ...(deletedFormationIds || []),
-      ...(latestStateRef.current?.deletedFormationIds || []),
-    ]);
-
-    if (!Array.isArray(updatedFormations) || updatedFormations.length === 0) {
-      updatedFormations = deepClone(defaultFormations || INITIAL_DEFAULT_FORMATIONS);
+    // When copying formations, un-mark copied formation IDs from deletedFormationIds so they are exactly preserved
+    if (mode === 'both' || mode === 'formations_only') {
+      const copiedIds = new Set(updatedFormations.map((f) => f.id).filter(Boolean));
+      const nextDeletedIds = (deletedFormationIds || []).filter((id) => !copiedIds.has(id));
+      setDeletedFormationIds(nextDeletedIds);
+      latestStateRef.current.deletedFormationIds = nextDeletedIds;
+      safeJSONSet('footballDeletedFormationIds', nextDeletedIds);
     }
-
-    // Deduplicate and filter out deleted formations
-    const seenCopyFormIds = new Set<string>();
-    const seenCopyKeys = new Set<string>();
-    const dedupedCopyForms: FormationBoard[] = [];
-    for (const f of updatedFormations) {
-      if (!f || !f.id || copyDeletedSet.has(f.id)) continue;
-      const uKey = `${f.unit}__${(f.name || '').toLowerCase().trim()}`;
-      if (seenCopyFormIds.has(f.id) || seenCopyKeys.has(uKey)) continue;
-      seenCopyFormIds.add(f.id);
-      seenCopyKeys.add(uKey);
-      dedupedCopyForms.push(f);
-    }
-
-    for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
-      if (!dedupedCopyForms.some((f) => f && f.unit === u)) {
-        const defaultForUnit =
-          (defaultFormations || []).find((f) => f && f.unit === u && !copyDeletedSet.has(f.id)) ||
-          INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.unit === u && !copyDeletedSet.has(f.id));
-        if (defaultForUnit && !seenCopyFormIds.has(defaultForUnit.id)) {
-          dedupedCopyForms.push(deepClone(defaultForUnit));
-          seenCopyFormIds.add(defaultForUnit.id);
-        }
-      }
-    }
-    updatedFormations = dedupedCopyForms;
 
     const updatedState: WeekState = {
       ...targetExisting,
