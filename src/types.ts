@@ -250,6 +250,7 @@ export interface PlacedPlayer {
 export interface PositionSlot {
   id: string;
   name: string;
+  tag?: string;
 }
 
 export interface FormationRow {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Plus,
   Printer,
@@ -326,6 +326,23 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
   const [formationNameInput, setFormationNameInput] = useState('');
   const [formationTemplateKey, setFormationTemplateKey] = useState('');
   const [isPlaybookActionsDropdownOpen, setIsPlaybookActionsDropdownOpen] = useState(false);
+  const actionsDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isPlaybookActionsDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (actionsDropdownRef.current && !actionsDropdownRef.current.contains(e.target as Node)) {
+        setIsPlaybookActionsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isPlaybookActionsDropdownOpen]);
+
   const [openFormationMenuId, setOpenFormationMenuId] = useState<string | null>(null);
 
   // Dedicated In-App Delete Formation Confirmation Modal Target
@@ -649,7 +666,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
       )}
 
       {/* Top Action & Filter Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-850/95 backdrop-blur-md p-4 rounded-3xl border border-slate-200 dark:border-slate-750/90 shadow-sm dark:shadow-xl print:hidden">
+      <div className="relative z-30 flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-850/95 backdrop-blur-md p-4 rounded-3xl border border-slate-200 dark:border-slate-750/90 shadow-sm dark:shadow-xl print:hidden">
         <div className="flex items-center gap-2.5 flex-wrap">
           {activeTeam && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-slate-900/90 rounded-xl border border-slate-200 dark:border-slate-700/80 text-xs shadow-inner">
@@ -737,7 +754,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
               </button>
 
               {/* Playbook Tools Dropdown */}
-              <div className="relative">
+              <div className="relative" ref={actionsDropdownRef}>
                 <button
                   type="button"
                   onClick={() => setIsPlaybookActionsDropdownOpen(!isPlaybookActionsDropdownOpen)}
@@ -754,127 +771,127 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                 </button>
 
                 {isPlaybookActionsDropdownOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setIsPlaybookActionsDropdownOpen(false)}
-                    />
-                    <div className="absolute right-0 top-full mt-1.5 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/90 rounded-2xl shadow-xl dark:shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-                      <div className="px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider border-b border-slate-100 dark:border-slate-800 mb-1">
-                        Playbook &amp; Depth Chart Actions
-                      </div>
-
-                      {onOpenCopyWeekModal && (
-                        <button
-                          onClick={() => {
-                            setIsPlaybookActionsDropdownOpen(false);
-                            onOpenCopyWeekModal();
-                          }}
-                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
-                        >
-                          <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-500/15 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center shrink-0">
-                            <Copy className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                          </div>
-                          <div>
-                            <div>Copy Week Lineup...</div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Copy formations or player spots to any week</div>
-                          </div>
-                        </button>
-                      )}
-
-                      {teams.length > 1 && onCopyFormationsFromTeam && (
-                        <button
-                          onClick={() => {
-                            setIsPlaybookActionsDropdownOpen(false);
-                            if (isLockedByOther) {
-                              if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Would you like to take over editing control?`)) {
-                                if (onTakeOverLock) onTakeOverLock();
-                              }
-                              return;
-                            }
-                            setShowCopyModal(true);
-                          }}
-                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-amber-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
-                        >
-                          <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-amber-400/15 border border-indigo-200 dark:border-amber-400/30 flex items-center justify-center shrink-0">
-                            <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-amber-400" />
-                          </div>
-                          <div>
-                            <div>Clone from Team...</div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Import formations from another team</div>
-                          </div>
-                        </button>
-                      )}
-
-                      <button
-                        onClick={() => {
-                          setIsPlaybookActionsDropdownOpen(false);
-                          setIsPocketPrintModalOpen(true);
-                        }}
-                        className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-amber-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
-                      >
-                        <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-amber-400/15 border border-indigo-200 dark:border-amber-400/30 flex items-center justify-center shrink-0">
-                          <Printer className="w-3.5 h-3.5 text-indigo-600 dark:text-amber-400" />
-                        </div>
-                        <div>
-                          <div>Print Pocket Depth Chart</div>
-                          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Laminated pocket card layout &amp; 2-deep</div>
-                        </div>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setIsPlaybookActionsDropdownOpen(false);
-                          onOpenSelectivePrintModal(unit);
-                        }}
-                        className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-amber-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
-                      >
-                        <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-amber-400/15 border border-indigo-200 dark:border-amber-400/30 flex items-center justify-center shrink-0">
-                          <Printer className="w-3.5 h-3.5 text-indigo-600 dark:text-amber-400" />
-                        </div>
-                        <div>
-                          <div>Selective Print Sheets</div>
-                          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Choose specific formations to print</div>
-                        </div>
-                      </button>
-
-                      {!isLockedByOther && !isHeldByMe && onAcquireLock && (
-                        <button
-                          onClick={() => {
-                            setIsPlaybookActionsDropdownOpen(false);
-                            onAcquireLock();
-                          }}
-                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
-                        >
-                          <div className="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center shrink-0">
-                            <Lock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                          </div>
-                          <div>
-                            <div>Lock Playbook for Me</div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Prevent edits from other coaches</div>
-                          </div>
-                        </button>
-                      )}
-
-                      {isHeldByMe && onReleaseLock && (
-                        <button
-                          onClick={() => {
-                            setIsPlaybookActionsDropdownOpen(false);
-                            onReleaseLock();
-                          }}
-                          className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/80 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
-                        >
-                          <div className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0">
-                            <Unlock className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
-                          </div>
-                          <div>
-                            <div>Release Lock</div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Allow other coaches to edit</div>
-                          </div>
-                        </button>
-                      )}
+                  <div className="absolute right-0 sm:right-0 max-sm:left-0 sm:left-auto top-full mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/90 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 ring-1 ring-black/10 dark:ring-white/10 space-y-1">
+                    <div className="px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider border-b border-slate-100 dark:border-slate-800 mb-1">
+                      Playbook &amp; Depth Chart Actions
                     </div>
-                  </>
+
+                    {onOpenCopyWeekModal && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsPlaybookActionsDropdownOpen(false);
+                          onOpenCopyWeekModal();
+                        }}
+                        className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-800 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-100 dark:hover:bg-slate-800/90 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center shrink-0">
+                          <Copy className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                        <div>
+                          <div>Copy Week Lineup...</div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Copy formations or player spots to any week</div>
+                        </div>
+                      </button>
+                    )}
+
+                    {teams.length > 1 && onCopyFormationsFromTeam && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsPlaybookActionsDropdownOpen(false);
+                          if (isLockedByOther) {
+                            if (confirm(`Editing is locked by Coach ${lockHolderName || lockHolderEmail}. Would you like to take over editing control?`)) {
+                              if (onTakeOverLock) onTakeOverLock();
+                            }
+                            return;
+                          }
+                          setShowCopyModal(true);
+                        }}
+                        className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-800 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-amber-300 hover:bg-slate-100 dark:hover:bg-slate-800/90 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-amber-400/20 border border-indigo-200 dark:border-amber-400/30 flex items-center justify-center shrink-0">
+                          <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-amber-400" />
+                        </div>
+                        <div>
+                          <div>Clone from Team...</div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Import formations from another team</div>
+                        </div>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlaybookActionsDropdownOpen(false);
+                        setIsPocketPrintModalOpen(true);
+                      }}
+                      className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-800 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-amber-300 hover:bg-slate-100 dark:hover:bg-slate-800/90 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                    >
+                      <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-amber-400/20 border border-indigo-200 dark:border-amber-400/30 flex items-center justify-center shrink-0">
+                        <Printer className="w-3.5 h-3.5 text-indigo-600 dark:text-amber-400" />
+                      </div>
+                      <div>
+                        <div>Print Pocket Depth Chart</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Laminated pocket card layout &amp; 2-deep</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlaybookActionsDropdownOpen(false);
+                        onOpenSelectivePrintModal(unit);
+                      }}
+                      className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-800 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-amber-300 hover:bg-slate-100 dark:hover:bg-slate-800/90 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                    >
+                      <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-amber-400/20 border border-indigo-200 dark:border-amber-400/30 flex items-center justify-center shrink-0">
+                        <Printer className="w-3.5 h-3.5 text-indigo-600 dark:text-amber-400" />
+                      </div>
+                      <div>
+                        <div>Selective Print Sheets</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Choose specific formations to print</div>
+                      </div>
+                    </button>
+
+                    {!isLockedByOther && !isHeldByMe && onAcquireLock && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsPlaybookActionsDropdownOpen(false);
+                          onAcquireLock();
+                        }}
+                        className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-800 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-300 hover:bg-slate-100 dark:hover:bg-slate-800/90 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center shrink-0">
+                          <Lock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                          <div>Lock Playbook for Me</div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Prevent edits from other coaches</div>
+                        </div>
+                      </button>
+                    )}
+
+                    {isHeldByMe && onReleaseLock && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsPlaybookActionsDropdownOpen(false);
+                          onReleaseLock();
+                        }}
+                        className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-800 dark:text-slate-100 hover:text-slate-950 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/90 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0">
+                          <Unlock className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
+                        </div>
+                        <div>
+                          <div>Release Lock</div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Allow other coaches to edit</div>
+                        </div>
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </>

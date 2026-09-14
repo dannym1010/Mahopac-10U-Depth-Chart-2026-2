@@ -924,6 +924,15 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isHeldByMe, activeTeamId, currentWeek, currentDepthUnit, currentUser?.email]);
 
+  // Helper to count placed players in depth chart or scrimmage chart
+  const countPlacedPlayers = (dc?: Record<string, PlacedPlayer[]>): number => {
+    if (!dc || typeof dc !== 'object') return 0;
+    return Object.values(dc).reduce(
+      (sum, list) => sum + (Array.isArray(list) ? list.length : 0),
+      0
+    );
+  };
+
   // Helper to compute team-scoped week key
   const getScopedWeekKey = (teamId: string, week: string) => `${teamId}__week_${week}`;
 
@@ -959,14 +968,6 @@ export default function App() {
           ? defaultFormations
           : INITIAL_DEFAULT_FORMATIONS;
     }
-
-    const countPlacedPlayers = (dc?: Record<string, PlacedPlayer[]>) => {
-      if (!dc || typeof dc !== 'object') return 0;
-      return Object.values(dc).reduce(
-        (sum, list) => sum + (Array.isArray(list) ? list.length : 0),
-        0
-      );
-    };
 
     // Depth chart resolution: prioritize the state with real player assignments so empty stubs never wipe valid depth charts
     let depthChart: Record<string, PlacedPlayer[]> = {};
@@ -1241,19 +1242,31 @@ function mergeRemoteWeeklyData(
       };
     } else {
       // Not actively editing locally:
-      // Remote cloud state is authoritative, but safeguard populated local wristband plays
+      // Remote cloud state is authoritative, but safeguard populated local depth charts and wristband plays
       const mergedFormations: FormationBoard[] =
         remoteFormations.length > 0
           ? remoteFormations
           : localFormations;
 
+      const localDCCount = countPlacedPlayers(localState.depthChart);
+      const remoteDCCount = countPlacedPlayers(remoteState.depthChart);
       const mergedDC: Record<string, PlacedPlayer[]> =
-        remoteState.depthChart !== undefined
+        remoteDCCount > 0
+          ? remoteState.depthChart!
+          : localDCCount > 0
+          ? localState.depthChart!
+          : remoteState.depthChart !== undefined
           ? remoteState.depthChart
           : localState.depthChart || {};
 
+      const localSCCount = countPlacedPlayers(localState.scrimmageChart);
+      const remoteSCCount = countPlacedPlayers(remoteState.scrimmageChart);
       const mergedSC: Record<string, PlacedPlayer[]> =
-        remoteState.scrimmageChart !== undefined
+        remoteSCCount > 0
+          ? remoteState.scrimmageChart!
+          : localSCCount > 0
+          ? localState.scrimmageChart!
+          : remoteState.scrimmageChart !== undefined
           ? remoteState.scrimmageChart
           : localState.scrimmageChart || {};
 
@@ -2265,11 +2278,8 @@ function mergeRemoteWeeklyData(
   // Check if current week needs prompt to copy players from previous week
   const depthChartCopyCandidate = useMemo(() => {
     if (dismissedCopyPrompts.has(currentWeek)) return null;
-    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
-    const targetState = weeklyData[scopedKey] || weeklyData[currentWeek];
-    const targetDepthCount = targetState?.depthChart
-      ? Object.values(targetState.depthChart).reduce((acc, list) => acc + (list?.length || 0), 0)
-      : 0;
+    const targetState = resolveWeekState(weeklyData, activeTeamId, currentWeek);
+    const targetDepthCount = countPlacedPlayers(targetState?.depthChart);
     if (targetDepthCount > 0) return null;
 
     let srcWk = '0';
@@ -2284,11 +2294,8 @@ function mergeRemoteWeeklyData(
       return null;
     }
 
-    const srcScopedKey = getScopedWeekKey(activeTeamId, srcWk);
-    const srcState = weeklyData[srcScopedKey] || weeklyData[srcWk];
-    const srcCount = srcState?.depthChart
-      ? Object.values(srcState.depthChart).reduce((acc, list) => acc + (list?.length || 0), 0)
-      : 0;
+    const srcState = resolveWeekState(weeklyData, activeTeamId, srcWk);
+    const srcCount = countPlacedPlayers(srcState?.depthChart);
 
     if (srcCount > 0) {
       return {
@@ -5360,26 +5367,16 @@ function mergeRemoteWeeklyData(
     targetWeek: string,
     copyModeOrPlayerSpots: 'both' | 'formations_only' | 'positions_only' | boolean = 'both',
     srcTeamIdParam?: string,
-    showAlert: boolean = false
+    showAlert: boolean = true
   ) => {
     const srcTeamId = srcTeamIdParam || activeTeamId;
     ensureWeekExists(srcWeek);
     ensureWeekExists(targetWeek);
 
-    const srcScopedKey = getScopedWeekKey(srcTeamId, srcWeek);
-    const targetScopedKey = getScopedWeekKey(activeTeamId, targetWeek);
-
-    const src = weeklyData[srcScopedKey] || weeklyData[srcWeek] || {
-      formations: defaultFormations,
-      depthChart: {},
-      scrimmageChart: {},
-    };
-
-    const targetExisting = weeklyData[targetScopedKey] || weeklyData[targetWeek] || {
-      formations: defaultFormations,
-      depthChart: {},
-      scrimmageChart: {},
-    };
+    // Combine current working weekly data with latest ref state for richest resolution
+    const currentAllWeekly = { ...weeklyData, ...latestStateRef.current.weeklyData };
+    const src = resolveWeekState(currentAllWeekly, srcTeamId, srcWeek);
+    const targetExisting = resolveWeekState(currentAllWeekly, activeTeamId, targetWeek);
 
     // Determine copy mode
     let mode: 'both' | 'formations_only' | 'positions_only' = 'both';
@@ -5389,54 +5386,127 @@ function mergeRemoteWeeklyData(
       mode = copyModeOrPlayerSpots;
     }
 
-    let updatedFormations = targetExisting.formations || defaultFormations;
+    let updatedFormations =
+      targetExisting.formations && targetExisting.formations.length > 0
+        ? targetExisting.formations
+        : defaultFormations;
     let updatedDepthChart = targetExisting.depthChart || {};
     let updatedScrimmageChart = targetExisting.scrimmageChart || {};
 
     if (mode === 'both') {
-      updatedFormations = deepClone(src.formations || defaultFormations);
+      updatedFormations = deepClone(
+        src.formations && src.formations.length > 0 ? src.formations : defaultFormations
+      );
       updatedDepthChart = deepClone(src.depthChart || {});
       updatedScrimmageChart = deepClone(src.scrimmageChart || {});
     } else if (mode === 'formations_only') {
-      updatedFormations = deepClone(src.formations || defaultFormations);
+      updatedFormations = deepClone(
+        src.formations && src.formations.length > 0 ? src.formations : defaultFormations
+      );
       updatedDepthChart = {};
       updatedScrimmageChart = {};
     } else if (mode === 'positions_only') {
-      // Retain target formations layout, clone player assignments from source
-      updatedDepthChart = deepClone(src.depthChart || {});
+      // Intelligently map player assignments from source to target formations
+      const mappedDepthChart: Record<string, PlacedPlayer[]> = {};
+      const srcDC = src.depthChart || {};
+
+      // 1. Direct position ID match
+      Object.keys(srcDC).forEach((posId) => {
+        if (srcDC[posId] && srcDC[posId].length > 0) {
+          mappedDepthChart[posId] = deepClone(srcDC[posId]);
+        }
+      });
+
+      // 2. Map by formation name + position name/tag/slot index if IDs don't match
+      const srcFormMap = new Map<string, Map<string, PlacedPlayer[]>>();
+      (src.formations || []).forEach((sf) => {
+        const formKey = (sf.name || '').toLowerCase().trim();
+        const posMap = new Map<string, PlacedPlayer[]>();
+        (sf.rows || []).forEach((row, rIdx) => {
+          (row.positions || []).forEach((pos, pIdx) => {
+            if (!pos) return;
+            const players = srcDC[pos.id];
+            if (players && players.length > 0) {
+              const nameKey = (pos.name || '').toLowerCase().trim();
+              const tagKey = ((pos as any)?.tag || '').toLowerCase().trim();
+              if (nameKey) posMap.set(nameKey, deepClone(players));
+              if (tagKey) posMap.set(tagKey, deepClone(players));
+              posMap.set(`slot_${rIdx}_${pIdx}`, deepClone(players));
+            }
+          });
+        });
+        srcFormMap.set(formKey, posMap);
+      });
+
+      (targetExisting.formations || []).forEach((tf) => {
+        const formKey = (tf.name || '').toLowerCase().trim();
+        const srcPosMap = srcFormMap.get(formKey);
+        if (srcPosMap) {
+          (tf.rows || []).forEach((row, rIdx) => {
+            (row.positions || []).forEach((pos, pIdx) => {
+              if (!pos) return;
+              if (!mappedDepthChart[pos.id] || mappedDepthChart[pos.id].length === 0) {
+                const nameKey = (pos.name || '').toLowerCase().trim();
+                const tagKey = ((pos as any)?.tag || '').toLowerCase().trim();
+                const matched =
+                  (nameKey && srcPosMap.get(nameKey)) ||
+                  (tagKey && srcPosMap.get(tagKey)) ||
+                  srcPosMap.get(`slot_${rIdx}_${pIdx}`);
+                if (matched && matched.length > 0) {
+                  mappedDepthChart[pos.id] = deepClone(matched);
+                }
+              }
+            });
+          });
+        }
+      });
+
+      updatedDepthChart = mappedDepthChart;
       updatedScrimmageChart = deepClone(src.scrimmageChart || {});
     }
 
     const updatedState: WeekState = {
+      ...targetExisting,
       formations: updatedFormations,
       depthChart: updatedDepthChart,
       scrimmageChart: updatedScrimmageChart,
     };
 
-    setWeeklyData((prev) => {
-      const nextWeekly = {
-        ...prev,
-        [targetScopedKey]: updatedState,
-        [targetWeek]: updatedState,
-      };
-      latestStateRef.current.weeklyData = nextWeekly;
-      return nextWeekly;
-    });
+    const targetScopedKey = getScopedWeekKey(activeTeamId, targetWeek);
 
+    // Synchronously update local edit timestamp and latest state ref
+    lastLocalEditTimeRef.current = Date.now();
+    currentWeekRef.current = targetWeek;
+
+    const nextWeekly: Record<string, WeekState> = {
+      ...latestStateRef.current.weeklyData,
+      ...weeklyData,
+      [targetScopedKey]: updatedState,
+      [targetWeek]: updatedState,
+    };
+
+    latestStateRef.current.weeklyData = nextWeekly;
+    safeJSONSet('footballWeeklyData', nextWeekly);
+
+    // Update React state
+    setWeeklyData(nextWeekly);
     setCurrentWeek(targetWeek);
 
     // Save and sync immediately to local and cloud
     saveStateToStorage('force');
 
     if (showAlert) {
+      const srcLabel = srcWeek === '0' ? 'Preseason / Week 0' : srcWeek === 'playoffs' ? 'Playoffs' : `Week ${srcWeek}`;
+      const targetLabel = targetWeek === '0' ? 'Preseason / Week 0' : targetWeek === 'playoffs' ? 'Playoffs' : `Week ${targetWeek}`;
+      const copiedCount = countPlacedPlayers(updatedDepthChart);
       alert(
         `Successfully copied ${
           mode === 'both'
-            ? 'formations and player depth chart assignments'
+            ? `all formations and player depth spots (${copiedCount} player placements)`
             : mode === 'formations_only'
             ? 'formations only'
-            : 'player depth chart positions only'
-        } from Week ${srcWeek} to Week ${targetWeek}!`
+            : `player depth spots (${copiedCount} player placements)`
+        } from ${srcLabel} to ${targetLabel}!`
       );
     }
   };
@@ -7552,6 +7622,7 @@ function mergeRemoteWeeklyData(
         seasonConfig={seasonConfig}
         scheduleEvents={scheduleEvents}
         weeklyData={weeklyData}
+        resolveWeekStateFn={resolveWeekState}
         onClose={() => setIsCopyWeekModalOpen(false)}
         onExecuteCopy={handleExecuteCopyWeek}
       />

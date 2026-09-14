@@ -907,12 +907,18 @@ interface CopyWeekModalProps {
   seasonConfig?: SeasonConfig;
   scheduleEvents?: ScheduleEvent[];
   weeklyData?: Record<string, WeekState>;
+  resolveWeekStateFn?: (
+    wData: Record<string, WeekState>,
+    teamId: string,
+    week: string
+  ) => WeekState;
   onClose: () => void;
   onExecuteCopy: (
     srcWeek: string,
     targetWeek: string,
     copyMode?: CopyWeekMode,
-    srcTeamId?: string
+    srcTeamId?: string,
+    showAlert?: boolean
   ) => void;
 }
 
@@ -924,6 +930,7 @@ export const CopyWeekModal: React.FC<CopyWeekModalProps> = ({
   seasonConfig,
   scheduleEvents = [],
   weeklyData = {},
+  resolveWeekStateFn,
   onClose,
   onExecuteCopy,
 }) => {
@@ -941,25 +948,29 @@ export const CopyWeekModal: React.FC<CopyWeekModalProps> = ({
 
   const allWeeks = getSeasonWeekList(seasonConfig);
 
-  // Compute live statistics for source week
+  // Compute live statistics for source week using resolved state
   const srcScopedKey = `${srcTeamId}__week_${srcWeek}`;
-  const srcState = weeklyData[srcScopedKey] || weeklyData[srcWeek] || {
-    formations: [],
-    depthChart: {},
-    scrimmageChart: {},
-  };
+  const srcState = resolveWeekStateFn
+    ? resolveWeekStateFn(weeklyData, srcTeamId, srcWeek)
+    : (weeklyData[srcScopedKey] || weeklyData[srcWeek] || {
+        formations: [],
+        depthChart: {},
+        scrimmageChart: {},
+      });
   const srcFormCount = srcState.formations?.length || 0;
   const srcPlayerAssignmentCount = Object.values(srcState.depthChart || {}).reduce(
-    (acc, list) => acc + (list?.length || 0),
+    (acc, list) => acc + (Array.isArray(list) ? list.length : 0),
     0
   );
 
   // Target stats
   const targetScopedKey = `${activeTeamId}__week_${targetWeek}`;
-  const targetState = weeklyData[targetScopedKey] || weeklyData[targetWeek];
+  const targetState = resolveWeekStateFn
+    ? resolveWeekStateFn(weeklyData, activeTeamId, targetWeek)
+    : (weeklyData[targetScopedKey] || weeklyData[targetWeek]);
   const targetFormCount = targetState?.formations?.length || 0;
   const targetPlayerCount = Object.values(targetState?.depthChart || {}).reduce(
-    (acc, list) => acc + (list?.length || 0),
+    (acc, list) => acc + (Array.isArray(list) ? list.length : 0),
     0
   );
 
@@ -971,7 +982,7 @@ export const CopyWeekModal: React.FC<CopyWeekModalProps> = ({
       alert('Source week and Target week cannot be the same within the same squad.');
       return;
     }
-    onExecuteCopy(srcWeek, targetWeek, copyMode, srcTeamId);
+    onExecuteCopy(srcWeek, targetWeek, copyMode, srcTeamId, true);
     onClose();
   };
 

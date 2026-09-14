@@ -674,7 +674,7 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
                           Sideline Visual Themes
                         </h4>
                         <p className="text-[11px] text-zinc-400">
-                          Preview 5 varsity presets: Carbon Gold, Electric Volt, Cyber Cobalt &amp; more
+                          12 modern professional themes: 6 dark stadium &amp; 6 daylight field schemes
                         </p>
                       </div>
                     </div>
