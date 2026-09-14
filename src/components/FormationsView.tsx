@@ -40,6 +40,8 @@ import {
   Layers,
   ArrowLeftRight,
   Upload,
+  RotateCcw,
+  UploadCloud,
 } from 'lucide-react';
 import {
   FormationBoard,
@@ -97,6 +99,7 @@ interface FormationsViewProps {
   onOpenSelectivePrintModal: (unit: 'offense' | 'defense' | 'st' | 'groups') => void;
   onOpenCopyWeekModal?: () => void;
   onOpenImportModal?: () => void;
+  onRestoreDefaultFormations?: (unit: 'offense' | 'defense' | 'st' | 'groups') => void;
   onDragStartPlacedPlayer: (
     e: React.DragEvent,
     posId: string,
@@ -229,6 +232,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
   onOpenSelectivePrintModal,
   onOpenCopyWeekModal,
   onOpenImportModal,
+  onRestoreDefaultFormations,
   onDragStartPlacedPlayer,
   onPositionCardDragStart,
   onPositionCardDropOnSlot,
@@ -769,6 +773,25 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                       </button>
                     )}
 
+                    {onRestoreDefaultFormations && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsPlaybookActionsDropdownOpen(false);
+                          onRestoreDefaultFormations(unit);
+                        }}
+                        className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-800 dark:text-slate-100 hover:text-amber-600 dark:hover:text-amber-300 hover:bg-slate-100 dark:hover:bg-slate-800/90 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-amber-50 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center shrink-0">
+                          <RotateCcw className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div>
+                          <div>Restore Default {unit === 'offense' ? 'Offensive' : unit === 'defense' ? 'Defensive' : unit === 'st' ? 'ST' : ''} Formations</div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Re-populate standard formations &amp; unhide deleted</div>
+                        </div>
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={() => {
@@ -898,28 +921,57 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
       </div>
 
       {displayedFormations.length === 0 && (
-        <div className="bg-slate-800/90 rounded-3xl border border-dashed border-slate-700 p-12 text-center text-slate-400 shadow-xl space-y-3">
-          <p className="text-sm font-bold text-slate-200">No formations found for this unit.</p>
-          <p className="text-xs text-slate-400 max-w-md mx-auto">
-            Create your first formation scheme or click Clone to import existing formations from
-            another squad.
-          </p>
-          {userRole === 'admin' && (
-            <button
-              onClick={() => {
-                setFormationNameInput('');
-                setFormationTemplateKey(FORMATION_TEMPLATES[unit]?.[0]?.key || '');
-                setFormationModalState({
-                  isOpen: true,
-                  mode: 'add',
-                  unit,
-                });
-              }}
-              className="mt-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl inline-flex items-center gap-1.5 shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4" /> Create New Formation
-            </button>
-          )}
+        <div className="bg-slate-800/90 rounded-3xl border border-dashed border-slate-700 p-10 text-center text-slate-400 shadow-xl space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto text-xl">
+            🏈
+          </div>
+          <div>
+            <p className="text-base font-bold text-slate-100">
+              No {unit === 'offense' ? 'offensive' : unit === 'defense' ? 'defensive' : unit === 'st' ? 'special teams' : ''} formations found
+            </p>
+            <p className="text-xs text-slate-400 max-w-md mx-auto mt-1">
+              Restore the standard base formations for this unit, import your formations from a backup file, or create custom schemes.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+            {onRestoreDefaultFormations && (
+              <button
+                type="button"
+                onClick={() => onRestoreDefaultFormations(unit)}
+                className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl inline-flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all cursor-pointer active:scale-95"
+              >
+                <Sparkles className="w-4 h-4" />
+                Restore Default {unit === 'offense' ? 'Offensive' : unit === 'defense' ? 'Defensive' : unit === 'st' ? 'Special Teams' : ''} Formations
+              </button>
+            )}
+            {onOpenImportModal && (
+              <button
+                type="button"
+                onClick={onOpenImportModal}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl inline-flex items-center gap-2 shadow-md shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
+              >
+                <UploadCloud className="w-4 h-4" />
+                Upload / Restore Backup...
+              </button>
+            )}
+            {userRole === 'admin' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFormationNameInput('');
+                  setFormationTemplateKey(FORMATION_TEMPLATES[unit]?.[0]?.key || '');
+                  setFormationModalState({
+                    isOpen: true,
+                    mode: 'add',
+                    unit,
+                  });
+                }}
+                className="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs rounded-xl inline-flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> Create Custom Formation
+              </button>
+            )}
+          </div>
         </div>
       )}
 

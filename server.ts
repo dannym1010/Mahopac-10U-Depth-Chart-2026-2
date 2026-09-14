@@ -93,17 +93,35 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
 
   const merged: any = { ...current };
 
-  // Merge deletedFormationIds so deleted formations can NEVER resurrect
-  const deletedSet = new Set<string>([
-    ...(Array.isArray(current.deletedFormationIds) ? current.deletedFormationIds : []),
-    ...(Array.isArray(incoming.deletedFormationIds) ? incoming.deletedFormationIds : []),
-    ...(metadata?.deletedFormationId ? [metadata.deletedFormationId] : []),
-    'form_11',
-    'form_44_base',
-    'form_st_base',
-    'form_groups_base',
-  ]);
-  merged.deletedFormationIds = Array.from(deletedSet);
+  // Merge deletedFormationIds: when importing backup, restored formations are authoritative and must NOT be filtered
+  let deletedSet: Set<string>;
+  if (metadata?.scope === 'import_backup') {
+    const incDeleted = Array.isArray(incoming.deletedFormationIds) ? incoming.deletedFormationIds : [];
+    deletedSet = new Set<string>(incDeleted);
+    // Remove any formation IDs that exist in incoming formations
+    if (Array.isArray(incoming.defaultFormations)) {
+      incoming.defaultFormations.forEach((f: any) => {
+        if (f?.id) deletedSet.delete(f.id);
+      });
+    }
+    if (incoming.weeklyData && typeof incoming.weeklyData === 'object') {
+      Object.values(incoming.weeklyData).forEach((wk: any) => {
+        if (wk && Array.isArray(wk.formations)) {
+          wk.formations.forEach((f: any) => {
+            if (f?.id) deletedSet.delete(f.id);
+          });
+        }
+      });
+    }
+    merged.deletedFormationIds = Array.from(deletedSet);
+  } else {
+    deletedSet = new Set<string>([
+      ...(Array.isArray(current.deletedFormationIds) ? current.deletedFormationIds : []),
+      ...(Array.isArray(incoming.deletedFormationIds) ? incoming.deletedFormationIds : []),
+      ...(metadata?.deletedFormationId ? [metadata.deletedFormationId] : []),
+    ]);
+    merged.deletedFormationIds = Array.from(deletedSet);
+  }
 
   const dedupeAndFilterFormations = (forms: any[]): any[] => {
     if (!Array.isArray(forms)) return [];
@@ -111,7 +129,8 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
     const seenKeys = new Set<string>();
     const res: any[] = [];
     for (const f of forms) {
-      if (!f || !f.id || deletedSet.has(f.id)) continue;
+      if (!f || !f.id) continue;
+      if (metadata?.scope !== 'import_backup' && deletedSet.has(f.id)) continue;
       const normName = (f.name || '').toLowerCase().trim();
       const uKey = `${f.unit}__${normName}`;
       if (seenIds.has(f.id) || seenKeys.has(uKey)) continue;

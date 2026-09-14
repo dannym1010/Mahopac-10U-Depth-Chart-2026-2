@@ -23,13 +23,7 @@ export function normalizeWeeklyData(
   if (!wData || typeof wData !== 'object') return {};
   const result: Record<string, WeekState> = {};
 
-  const deletedSet = new Set<string>([
-    ...(deletedFormationIds || []),
-    'form_11',
-    'form_44_base',
-    'form_st_base',
-    'form_groups_base',
-  ]);
+  const deletedSet = new Set<string>(deletedFormationIds || []);
 
   const fallbackFormations = (
     defaultForms && defaultForms.length > 0
@@ -63,12 +57,20 @@ export function normalizeWeeklyData(
     // Ensure core units have a fallback if none exist and not explicitly deleted
     for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
       if (!formations.some((f) => f && f.unit === u)) {
-        const defaultForUnit = fallbackFormations.find(
+        let defsForUnit = fallbackFormations.filter(
           (f) => f && f.unit === u && !deletedSet.has(f.id)
         );
-        if (defaultForUnit && !seenIds.has(defaultForUnit.id)) {
-          formations.push(deepClone(defaultForUnit));
-          seenIds.add(defaultForUnit.id);
+        if (defsForUnit.length === 0) {
+          defsForUnit = INITIAL_DEFAULT_FORMATIONS.filter((f) => f && f.unit === u);
+        }
+        for (const df of defsForUnit) {
+          const norm = (df.name || '').toLowerCase().trim();
+          const uKey = `${df.unit}__${norm}`;
+          if (!seenIds.has(df.id) && !seenKeys.has(uKey)) {
+            formations.push(deepClone(df));
+            seenIds.add(df.id);
+            seenKeys.add(uKey);
+          }
         }
       }
     }
@@ -508,4 +510,94 @@ export function checkNeedsDepthChartCopy(
     sourceWeek: srcWk,
     sourcePlayerCount: srcPlayerCount,
   };
+}
+
+export function normalizeFormationUnit(f: any): FormationBoard {
+  const norm = deepClone(f);
+  const rawUnit = (norm.unit || 'offense').toString().toLowerCase().trim();
+  if (rawUnit.includes('off') || rawUnit === 'o') {
+    norm.unit = 'offense';
+  } else if (rawUnit.includes('def') || rawUnit === 'd') {
+    norm.unit = 'defense';
+  } else if (rawUnit.includes('spec') || rawUnit === 'st') {
+    norm.unit = 'st';
+  } else if (rawUnit.includes('grp') || rawUnit.includes('group')) {
+    norm.unit = 'groups';
+  } else {
+    norm.unit = 'offense';
+  }
+  return norm;
+}
+
+export function extractBackupFormations(parsed: any): FormationBoard[] | null {
+  if (!parsed || typeof parsed !== 'object') return null;
+
+  // 1. Direct parsed.defaultFormations
+  if (Array.isArray(parsed.defaultFormations) && parsed.defaultFormations.length > 0) {
+    return parsed.defaultFormations.map(normalizeFormationUnit);
+  }
+  // 2. Direct parsed.formations
+  if (Array.isArray(parsed.formations) && parsed.formations.length > 0) {
+    return parsed.formations.map(normalizeFormationUnit);
+  }
+  // 3. Direct parsed.offensiveFormations / parsed.offenseFormations / defensive
+  if (Array.isArray(parsed.offensiveFormations) || Array.isArray(parsed.offenseFormations)) {
+    const off = (parsed.offensiveFormations || parsed.offenseFormations || []).map((f: any) => ({ ...f, unit: 'offense' }));
+    const def = (parsed.defensiveFormations || parsed.defenseFormations || []).map((f: any) => ({ ...f, unit: 'defense' }));
+    const st = (parsed.stFormations || parsed.specialTeamsFormations || []).map((f: any) => ({ ...f, unit: 'st' }));
+    const combined = [...off, ...def, ...st].map(normalizeFormationUnit);
+    if (combined.length > 0) return combined;
+  }
+  // 4. Raw array of formations directly
+  if (Array.isArray(parsed) && parsed.length > 0 && (parsed[0]?.rows || parsed[0]?.positions || parsed[0]?.unit)) {
+    return parsed.map(normalizeFormationUnit);
+  }
+  // 5. Check weeklyData for formations across all weeks
+  if (parsed.weeklyData && typeof parsed.weeklyData === 'object') {
+    const collected: FormationBoard[] = [];
+    const seenIds = new Set<string>();
+    const seenKeys = new Set<string>();
+    for (const wk of Object.values(parsed.weeklyData) as any[]) {
+      if (wk && Array.isArray(wk.formations)) {
+        for (const rawF of wk.formations) {
+          if (rawF && rawF.id) {
+            const f = normalizeFormationUnit(rawF);
+            const normName = (f.name || '').toLowerCase().trim();
+            const uKey = `${f.unit}__${normName}`;
+            if (!seenIds.has(f.id) && !seenKeys.has(uKey)) {
+              seenIds.add(f.id);
+              seenKeys.add(uKey);
+              collected.push(f);
+            }
+          }
+        }
+      }
+    }
+    if (collected.length > 0) return collected;
+  }
+  // 6. Direct week-keyed objects: parsed['0'], parsed['team_10u__week_0'], etc.
+  const weekLikeValues = Object.entries(parsed)
+    .filter(([k, v]: [string, any]) => v && typeof v === 'object' && Array.isArray(v.formations))
+    .map(([_, v]: [string, any]) => v);
+  if (weekLikeValues.length > 0) {
+    const collected: FormationBoard[] = [];
+    const seenIds = new Set<string>();
+    const seenKeys = new Set<string>();
+    for (const wk of weekLikeValues) {
+      for (const rawF of wk.formations) {
+        if (rawF && rawF.id) {
+          const f = normalizeFormationUnit(rawF);
+          const normName = (f.name || '').toLowerCase().trim();
+          const uKey = `${f.unit}__${normName}`;
+          if (!seenIds.has(f.id) && !seenKeys.has(uKey)) {
+            seenIds.add(f.id);
+            seenKeys.add(uKey);
+            collected.push(f);
+          }
+        }
+      }
+    }
+    if (collected.length > 0) return collected;
+  }
+  return null;
 }

@@ -1654,19 +1654,32 @@ export function inspectBackupModules(raw: any): ModuleInfo[] {
     countDrills(parsed.cascadingDrills);
   }
 
-  // Default Formations
-  const hasDefaults = Boolean(
-    (Array.isArray(parsed.defaultFormations) && parsed.defaultFormations.length > 0) ||
-    (Array.isArray(parsed.formations) && parsed.formations.length > 0) ||
-    (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.positions)
-  );
-  const defaultCount = Array.isArray(parsed.defaultFormations)
-    ? parsed.defaultFormations.length
-    : Array.isArray(parsed.formations)
-    ? parsed.formations.length
-    : Array.isArray(parsed) && parsed[0]?.positions
-    ? parsed.length
-    : 0;
+  // Default Formations & Offensive/Defensive Alignments
+  let defaultCount = 0;
+  if (Array.isArray(parsed.defaultFormations) && parsed.defaultFormations.length > 0) {
+    defaultCount = parsed.defaultFormations.length;
+  } else if (Array.isArray(parsed.formations) && parsed.formations.length > 0) {
+    defaultCount = parsed.formations.length;
+  } else if (Array.isArray(parsed.offensiveFormations) || Array.isArray(parsed.offenseFormations)) {
+    defaultCount =
+      (parsed.offensiveFormations?.length || 0) +
+      (parsed.offenseFormations?.length || 0) +
+      (parsed.defensiveFormations?.length || 0) +
+      (parsed.defenseFormations?.length || 0);
+  } else if (Array.isArray(parsed) && parsed.length > 0 && (parsed[0]?.positions || parsed[0]?.rows || parsed[0]?.unit)) {
+    defaultCount = parsed.length;
+  } else if (parsed.weeklyData && typeof parsed.weeklyData === 'object') {
+    const fIds = new Set<string>();
+    Object.values(parsed.weeklyData).forEach((wk: any) => {
+      if (wk && Array.isArray(wk.formations)) {
+        wk.formations.forEach((f: any) => {
+          if (f?.id) fIds.add(f.id);
+        });
+      }
+    });
+    defaultCount = fIds.size;
+  }
+  const hasDefaults = defaultCount > 0;
 
   // Guides
   const hasGuides = Boolean(
