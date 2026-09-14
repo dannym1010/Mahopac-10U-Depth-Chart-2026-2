@@ -153,6 +153,7 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
           metadata?.scope === 'force' ||
           metadata?.scope === 'copy_week' ||
           metadata?.scope === 'delete_formation' ||
+          metadata?.scope === 'import_backup' ||
           !metadata?.activeUnit ||
           !isTargetWeek
         ) {
@@ -239,7 +240,7 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
         } else {
           // Full depth chart save (force, copy_week, all, or depth_chart)
           // If incoming has 0 players but current has populated players, and not force/copy, preserve current
-          if (incPlayerCount === 0 && curPlayerCount > 0 && metadata?.scope !== 'force' && metadata?.scope !== 'copy_week') {
+          if (incPlayerCount === 0 && curPlayerCount > 0 && metadata?.scope !== 'force' && metadata?.scope !== 'copy_week' && metadata?.scope !== 'import_backup') {
             mergedDC = { ...curDC };
           } else {
             mergedDC = { ...incDC };
@@ -265,7 +266,7 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
             delete mergedSC[posId];
           }
         }
-      } else if (metadata?.activeUnit === 'scrimmage') {
+      } else if (metadata?.activeUnit === 'scrimmage' || metadata?.scope === 'import_backup') {
         mergedSC = { ...incSC };
       } else if (metadata?.scope === 'all' || !metadata?.activeUnit) {
         mergedSC = { ...incSC };
@@ -322,6 +323,7 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
       metadata?.scope === 'force' ||
       metadata?.scope === 'copy_week' ||
       metadata?.scope === 'delete_formation' ||
+      metadata?.scope === 'import_backup' ||
       !metadata?.activeUnit
     ) {
       merged.defaultFormations = incoming.defaultFormations;
@@ -511,6 +513,7 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
       metadata?.scope === 'call_sheet_winner' ||
       metadata?.scope === 'all' ||
       metadata?.scope === 'force' ||
+      metadata?.scope === 'import_backup' ||
       metadata?.scope === 'unit_transition';
 
     if (!current.callSheetData || incLastEdited >= curLastEdited || isCallSheetScope) {

@@ -6893,6 +6893,7 @@ function mergeRemoteWeeklyData(
                   setSelectivePrintUnit(unit)
                 }
                 onOpenCopyWeekModal={() => setIsCopyWeekModalOpen(true)}
+                onOpenImportModal={() => setIsImportModalOpen(true)}
                 onDragStartPlacedPlayer={handleDragStartPlacedPlayer}
                 onPositionCardDragStart={handlePositionCardDragStart}
                 onPositionCardDropOnSlot={handlePositionCardDropOnSlot}

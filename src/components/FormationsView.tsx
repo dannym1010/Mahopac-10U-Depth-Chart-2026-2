@@ -39,6 +39,7 @@ import {
   Sparkle,
   Layers,
   ArrowLeftRight,
+  Upload,
 } from 'lucide-react';
 import {
   FormationBoard,
@@ -95,6 +96,7 @@ interface FormationsViewProps {
   onRemovePlayerFromCard: (posId: string, playerIndex: number) => void;
   onOpenSelectivePrintModal: (unit: 'offense' | 'defense' | 'st' | 'groups') => void;
   onOpenCopyWeekModal?: () => void;
+  onOpenImportModal?: () => void;
   onDragStartPlacedPlayer: (
     e: React.DragEvent,
     posId: string,
@@ -226,6 +228,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
   onRemovePlayerFromCard,
   onOpenSelectivePrintModal,
   onOpenCopyWeekModal,
+  onOpenImportModal,
   onDragStartPlacedPlayer,
   onPositionCardDragStart,
   onPositionCardDropOnSlot,
@@ -743,6 +746,25 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                         <div>
                           <div>Clone from Team...</div>
                           <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Import formations from another team</div>
+                        </div>
+                      </button>
+                    )}
+
+                    {onOpenImportModal && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsPlaybookActionsDropdownOpen(false);
+                          onOpenImportModal();
+                        }}
+                        className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-800 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-300 hover:bg-slate-100 dark:hover:bg-slate-800/90 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center shrink-0">
+                          <Upload className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                          <div>Upload / Restore Backup...</div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Restore depth charts &amp; game plans from backup JSON</div>
                         </div>
                       </button>
                     )}

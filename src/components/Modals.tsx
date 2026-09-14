@@ -1556,24 +1556,76 @@ interface ModuleInfo {
   isAvailable: boolean;
 }
 
-export function inspectBackupModules(parsed: any): ModuleInfo[] {
-  if (!parsed || typeof parsed !== 'object') return [];
+export function unwrapBackupData(raw: any): any {
+  if (!raw || typeof raw !== 'object') return raw;
+  if (raw.state && typeof raw.state === 'object') {
+    return unwrapBackupData(raw.state);
+  }
+  if (raw.payloadToSave && typeof raw.payloadToSave === 'object') {
+    return unwrapBackupData(raw.payloadToSave);
+  }
+  if (raw.backup && typeof raw.backup === 'object') {
+    return unwrapBackupData(raw.backup);
+  }
+  if (raw.data && typeof raw.data === 'object' && !raw.weeklyData && !raw.depthChart && !raw.roster) {
+    return unwrapBackupData(raw.data);
+  }
+  return raw;
+}
 
-  // Weekly data
+export function inspectBackupModules(raw: any): ModuleInfo[] {
+  if (!raw || typeof raw !== 'object') return [];
+  const parsed = unwrapBackupData(raw);
+
+  // Weekly data and depth chart detection
+  const hasDirectDepthChart = Boolean(
+    parsed.depthChart && typeof parsed.depthChart === 'object' && Object.keys(parsed.depthChart).length > 0
+  );
+
+  const rawEntries = Object.entries(parsed || {});
+  const isRawDepthChartMap =
+    !hasDirectDepthChart &&
+    !parsed.weeklyData &&
+    rawEntries.length > 0 &&
+    rawEntries.every(
+      ([k, v]) =>
+        Array.isArray(v) &&
+        !['cascadingDrills', 'practiceData', 'scheduleEvents', 'roster', 'savedCoaches', 'staffList', 'playDatabase'].includes(k)
+    );
+
+  const weekEntries = rawEntries.filter(
+    ([k, v]: [string, any]) =>
+      v && typeof v === 'object' && !Array.isArray(v) && (v.depthChart || v.formations || v.scrimmageChart)
+  );
+  const hasWeekDepthCharts = weekEntries.length > 0;
+
   const hasWeekly = Boolean(
     parsed.weeklyData ||
+      hasDirectDepthChart ||
+      isRawDepthChartMap ||
+      hasWeekDepthCharts ||
       (parsed['0'] && parsed['0'].depthChart) ||
       (parsed.wk1 && parsed.wk1.depthChart)
   );
-  const weeklySource = parsed.weeklyData || (hasWeekly ? parsed : null);
-  const weekCount = weeklySource
-    ? Object.keys(weeklySource).filter(
+
+  let weekCount = 0;
+  let directDCSlots = 0;
+  if (parsed.weeklyData && typeof parsed.weeklyData === 'object') {
+    const wSource = parsed.weeklyData;
+    weekCount =
+      Object.keys(wSource).filter(
         (k) =>
           k.toLowerCase().includes('week') ||
           k.toLowerCase().includes('wk') ||
           !isNaN(Number(k))
-      ).length || Object.keys(weeklySource).length
-    : 0;
+      ).length || Object.keys(wSource).length;
+  } else if (hasWeekDepthCharts) {
+    weekCount = weekEntries.length;
+  } else if (hasDirectDepthChart) {
+    directDCSlots = Object.keys(parsed.depthChart).length;
+  } else if (isRawDepthChartMap) {
+    directDCSlots = rawEntries.length;
+  }
 
   // Practice plans
   const hasPractice = Array.isArray(parsed.practiceData) && parsed.practiceData.length > 0;
@@ -1603,8 +1655,18 @@ export function inspectBackupModules(parsed: any): ModuleInfo[] {
   }
 
   // Default Formations
-  const hasDefaults = Array.isArray(parsed.defaultFormations) && parsed.defaultFormations.length > 0;
-  const defaultCount = hasDefaults ? parsed.defaultFormations.length : 0;
+  const hasDefaults = Boolean(
+    (Array.isArray(parsed.defaultFormations) && parsed.defaultFormations.length > 0) ||
+    (Array.isArray(parsed.formations) && parsed.formations.length > 0) ||
+    (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.positions)
+  );
+  const defaultCount = Array.isArray(parsed.defaultFormations)
+    ? parsed.defaultFormations.length
+    : Array.isArray(parsed.formations)
+    ? parsed.formations.length
+    : Array.isArray(parsed) && parsed[0]?.positions
+    ? parsed.length
+    : 0;
 
   // Guides
   const hasGuides = Boolean(
@@ -1638,8 +1700,11 @@ export function inspectBackupModules(parsed: any): ModuleInfo[] {
   const scheduleCount = hasSchedule ? parsed.scheduleEvents.length : 0;
 
   // Roster
-  const hasRoster = Array.isArray(parsed.roster) && parsed.roster.length > 0;
-  const rosterCount = hasRoster ? parsed.roster.length : 0;
+  const hasRoster = Boolean(
+    (Array.isArray(parsed.roster) && parsed.roster.length > 0) ||
+    (Array.isArray(parsed.players) && parsed.players.length > 0)
+  );
+  const rosterCount = (parsed.roster || parsed.players || []).length;
 
   // Call Sheet Data
   const csObj = parsed.callSheetData || parsed.callSheet;
@@ -1712,7 +1777,11 @@ export function inspectBackupModules(parsed: any): ModuleInfo[] {
       name: '🏈 Weekly Game Plans & Depth Charts',
       category: 'Playbook Core',
       icon: <Layers className="w-5 h-5 text-indigo-400" />,
-      countLabel: hasWeekly ? `${weekCount} game weeks` : 'Not found in file',
+      countLabel: hasWeekly
+        ? directDCSlots > 0
+          ? `${directDCSlots} depth chart positions (Current Game Plan)`
+          : `${weekCount} game weeks • Depth Charts`
+        : 'Not found in file',
       description: 'Weekly offensive/defensive formation charts, player spot assignments, & notes',
       isAvailable: hasWeekly,
     },
@@ -1862,7 +1931,11 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const text = evt.target?.result as string;
+        let text = evt.target?.result as string;
+        if (text.charCodeAt(0) === 0xfeff) {
+          text = text.slice(1);
+        }
+        text = text.trim();
         const parsed = JSON.parse(text);
         handleProcessParsedData(parsed, file.name, sizeStr);
       } catch (err: any) {
@@ -1882,7 +1955,11 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const text = evt.target?.result as string;
+        let text = evt.target?.result as string;
+        if (text.charCodeAt(0) === 0xfeff) {
+          text = text.slice(1);
+        }
+        text = text.trim();
         const parsed = JSON.parse(text);
         handleProcessParsedData(parsed, file.name, sizeStr);
       } catch (err: any) {
@@ -1899,7 +1976,11 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
       return;
     }
     try {
-      const parsed = JSON.parse(pastedText.trim());
+      let text = pastedText.trim();
+      if (text.charCodeAt(0) === 0xfeff) {
+        text = text.slice(1);
+      }
+      const parsed = JSON.parse(text);
       handleProcessParsedData(parsed, 'Pasted Backup Code', `${(pastedText.length / 1024).toFixed(1)} KB`);
     } catch (e: any) {
       setError(`Invalid JSON: ${e.message}`);
@@ -1932,7 +2013,7 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
       setError('Please select at least one module to restore.');
       return;
     }
-    onApplySelectiveImport(parsedData, selectedModules);
+    onApplySelectiveImport(unwrapBackupData(parsedData), selectedModules);
     onClose();
   };
 
@@ -1946,7 +2027,7 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
         type="file"
         ref={fileInputRef}
         className="hidden"
-        accept=".json"
+        accept=".json,.txt,application/json,text/plain,*"
         onChange={handleFileChange}
       />
 
