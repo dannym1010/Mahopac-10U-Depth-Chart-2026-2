@@ -17,74 +17,58 @@ export interface AutoWeekResult {
  */
 export function normalizeWeeklyData(
   wData: Record<string, WeekState> | undefined,
-  defaultForms: FormationBoard[] = INITIAL_DEFAULT_FORMATIONS
+  defaultForms: FormationBoard[] = INITIAL_DEFAULT_FORMATIONS,
+  deletedFormationIds: string[] = []
 ): Record<string, WeekState> {
   if (!wData || typeof wData !== 'object') return {};
   const result: Record<string, WeekState> = {};
 
-  const fallbackFormations =
+  const deletedSet = new Set<string>([
+    ...(deletedFormationIds || []),
+    'form_11',
+    'form_44_base',
+    'form_st_base',
+    'form_groups_base',
+  ]);
+
+  const fallbackFormations = (
     defaultForms && defaultForms.length > 0
       ? defaultForms
-      : INITIAL_DEFAULT_FORMATIONS;
+      : INITIAL_DEFAULT_FORMATIONS
+  ).filter((f) => f && f.id && !deletedSet.has(f.id));
 
   for (const [key, weekState] of Object.entries(wData)) {
     if (!weekState || typeof weekState !== 'object') continue;
 
-    let formations =
+    let rawFormations =
       Array.isArray(weekState.formations) && weekState.formations.length > 0
         ? deepClone(weekState.formations)
         : deepClone(fallbackFormations);
 
-    // Guarantee that every week has formations for all 4 core units
-    const hasOffense = formations.some((f) => f && f.unit === 'offense');
-    if (!hasOffense) {
-      const defaultOffense =
-        fallbackFormations.find((f) => f && f.unit === 'offense') ||
-        INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.unit === 'offense') ||
-        INITIAL_DEFAULT_FORMATIONS[0];
-      if (defaultOffense) {
-        formations.unshift(deepClone(defaultOffense));
-      }
+    // Deduplicate and filter out deleted formations
+    const seenIds = new Set<string>();
+    const seenKeys = new Set<string>();
+    let formations: FormationBoard[] = [];
+
+    for (const f of rawFormations) {
+      if (!f || !f.id || deletedSet.has(f.id)) continue;
+      const normalizedName = (f.name || '').toLowerCase().trim();
+      const uKey = `${f.unit}__${normalizedName}`;
+      if (seenIds.has(f.id) || seenKeys.has(uKey)) continue;
+      seenIds.add(f.id);
+      seenKeys.add(uKey);
+      formations.push(f);
     }
 
-    // Guarantee that every week specifically includes 11 formations (11 Personnel and 11 Offense)
-    const elevenCandidates = [
-      fallbackFormations.find((f) => f && (f.id === 'form_1788270435286' || f.name === '11 Personnel')),
-      fallbackFormations.find((f) => f && (f.id === 'form_11' || f.name === '11 Offense')) ||
-        INITIAL_DEFAULT_FORMATIONS.find((f) => f && (f.id === 'form_11' || f.name === '11 Offense')),
-    ].filter(Boolean);
-
-    for (const elf of elevenCandidates) {
-      if (!elf) continue;
-      const alreadyHas = formations.some(
-        (f) => f && (f.id === elf.id || f.name?.toLowerCase().trim() === elf.name?.toLowerCase().trim())
-      );
-      if (!alreadyHas) {
-        // Insert right after existing offense formations
-        let lastOffenseIdx = -1;
-        for (let i = formations.length - 1; i >= 0; i--) {
-          if (formations[i] && formations[i].unit === 'offense') {
-            lastOffenseIdx = i;
-            break;
-          }
-        }
-        if (lastOffenseIdx >= 0) {
-          formations.splice(lastOffenseIdx + 1, 0, deepClone(elf));
-        } else {
-          formations.unshift(deepClone(elf));
-        }
-      }
-    }
-
-    const existingFormIds = new Set(formations.map((f) => f && f.id));
-    for (const u of ['defense', 'st', 'groups'] as const) {
+    // Ensure core units have a fallback if none exist and not explicitly deleted
+    for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
       if (!formations.some((f) => f && f.unit === u)) {
-        const defaultForUnit =
-          fallbackFormations.find((f) => f && f.unit === u) ||
-          INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.unit === u);
-        if (defaultForUnit && !existingFormIds.has(defaultForUnit.id)) {
+        const defaultForUnit = fallbackFormations.find(
+          (f) => f && f.unit === u && !deletedSet.has(f.id)
+        );
+        if (defaultForUnit && !seenIds.has(defaultForUnit.id)) {
           formations.push(deepClone(defaultForUnit));
-          existingFormIds.add(defaultForUnit.id);
+          seenIds.add(defaultForUnit.id);
         }
       }
     }
@@ -149,15 +133,23 @@ export function normalizeWeeklyData(
     const legacyState = result[legacyKey];
 
     if (scopedState && legacyState) {
-      // Reconcile formations: union by ID to ensure 11 Offense and 11 Personnel are present in both
-      const combinedFormations: FormationBoard[] = [...(scopedState.formations || [])];
-      const seenIds = new Set(combinedFormations.map((f) => f && f.id));
-      (legacyState.formations || []).forEach((lf) => {
-        if (lf && lf.id && !seenIds.has(lf.id)) {
-          combinedFormations.push(lf);
-          seenIds.add(lf.id);
-        }
-      });
+      // Reconcile formations without resurrecting deleted ones
+      const combinedFormations: FormationBoard[] = [];
+      const seenIds = new Set<string>();
+      const seenKeys = new Set<string>();
+
+      const addFormationIfValid = (f: FormationBoard) => {
+        if (!f || !f.id || deletedSet.has(f.id)) return;
+        const normalizedName = (f.name || '').toLowerCase().trim();
+        const uKey = `${f.unit}__${normalizedName}`;
+        if (seenIds.has(f.id) || seenKeys.has(uKey)) return;
+        seenIds.add(f.id);
+        seenKeys.add(uKey);
+        combinedFormations.push(f);
+      };
+
+      (scopedState.formations || []).forEach(addFormationIfValid);
+      (legacyState.formations || []).forEach(addFormationIfValid);
 
       // Count placed players
       const countPlayers = (dc?: Record<string, any[]>) =>

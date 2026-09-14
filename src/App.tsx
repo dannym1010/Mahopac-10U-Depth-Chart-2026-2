@@ -960,98 +960,64 @@ export default function App() {
     const defScopedState = wData[defScopedKey];
 
     // Formations resolution
-    let formations: FormationBoard[] = [];
+    const curDeletedSet = new Set<string>([
+      ...(deletedFormationIds || []),
+      ...(latestStateRef.current?.deletedFormationIds || []),
+      'form_11',
+      'form_44_base',
+      'form_st_base',
+      'form_groups_base',
+    ]);
+
+    let rawCandidateForms: FormationBoard[] = [];
     if (Array.isArray(scopedState?.formations) && scopedState.formations.length > 0) {
-      formations = [...scopedState.formations];
-      // If legacyState also has formations, union any missing formations
+      rawCandidateForms = [...scopedState.formations];
       if (Array.isArray(legacyState?.formations) && legacyState.formations.length > 0) {
-        const seen = new Set(formations.map((f) => f && f.id));
-        legacyState.formations.forEach((lf) => {
-          if (lf && lf.id && !seen.has(lf.id)) {
-            formations.push(lf);
-            seen.add(lf.id);
-          }
-        });
+        rawCandidateForms.push(...legacyState.formations);
       }
     } else if (Array.isArray(legacyState?.formations) && legacyState.formations.length > 0) {
-      formations = [...legacyState.formations];
+      rawCandidateForms = [...legacyState.formations];
     } else if (Array.isArray(defScopedState?.formations) && defScopedState.formations.length > 0) {
-      formations = [...defScopedState.formations];
+      rawCandidateForms = [...defScopedState.formations];
     } else if (Array.isArray(wData['0']?.formations) && wData['0'].formations.length > 0) {
-      formations = [...wData['0'].formations];
+      rawCandidateForms = [...wData['0'].formations];
     } else if (
       Array.isArray(wData[getScopedWeekKey('team_10u', '0')]?.formations) &&
       wData[getScopedWeekKey('team_10u', '0')].formations.length > 0
     ) {
-      formations = [...wData[getScopedWeekKey('team_10u', '0')].formations];
+      rawCandidateForms = [...wData[getScopedWeekKey('team_10u', '0')].formations];
     } else {
-      formations =
+      rawCandidateForms =
         defaultFormations && Array.isArray(defaultFormations) && defaultFormations.length > 0
           ? [...defaultFormations]
           : [...INITIAL_DEFAULT_FORMATIONS];
     }
 
-    // Guarantee that every resolved week always includes all 4 units
-    const hasOff = formations.some((f) => f && f.unit === 'offense');
-    if (!hasOff) {
-      const defaultOffense =
-        (defaultFormations || []).find((f) => f && f.unit === 'offense') ||
-        INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.unit === 'offense') ||
-        INITIAL_DEFAULT_FORMATIONS[0];
-      if (defaultOffense) {
-        formations = [deepClone(defaultOffense), ...formations];
-      }
+    // Deduplicate and filter out deleted formations
+    const seenFormIds = new Set<string>();
+    const seenFormKeys = new Set<string>();
+    let formations: FormationBoard[] = [];
+
+    for (const f of rawCandidateForms) {
+      if (!f || !f.id || curDeletedSet.has(f.id)) continue;
+      const normalizedName = (f.name || '').toLowerCase().trim();
+      const uKey = `${f.unit}__${normalizedName}`;
+      if (seenFormIds.has(f.id) || seenFormKeys.has(uKey)) continue;
+      seenFormIds.add(f.id);
+      seenFormKeys.add(uKey);
+      formations.push(f);
     }
 
-    // Guarantee that 11 Personnel and 11 Offense are NEVER missing from any week
-    const elevenCandidates = [
-      (defaultFormations || []).find((f) => f && (f.id === 'form_1788270435286' || f.name === '11 Personnel')) ||
-        wData['team_10u__week_2']?.formations?.find((f) => f && (f.id === 'form_1788270435286' || f.name === '11 Personnel')),
-      (defaultFormations || []).find((f) => f && (f.id === 'form_11' || f.name === '11 Offense')) ||
-        INITIAL_DEFAULT_FORMATIONS.find((f) => f && (f.id === 'form_11' || f.name === '11 Offense')),
-    ].filter(Boolean);
-
-    for (const elf of elevenCandidates) {
-      if (!elf) continue;
-      const alreadyHas = formations.some(
-        (f) => f && (f.id === elf.id || f.name?.toLowerCase().trim() === elf.name?.toLowerCase().trim())
-      );
-      if (!alreadyHas) {
-        let lastOffenseIdx = -1;
-        for (let i = formations.length - 1; i >= 0; i--) {
-          if (formations[i] && formations[i].unit === 'offense') {
-            lastOffenseIdx = i;
-            break;
-          }
-        }
-        if (lastOffenseIdx >= 0) {
-          formations.splice(lastOffenseIdx + 1, 0, deepClone(elf));
-        } else {
-          formations.unshift(deepClone(elf));
-        }
-      }
-    }
-
-    // Ensure all default formations (e.g. customized user formations) are present
-    if (defaultFormations && Array.isArray(defaultFormations)) {
-      const currentIds = new Set(formations.map((f) => f && f.id));
-      for (const df of defaultFormations) {
-        if (df && df.id && !currentIds.has(df.id)) {
-          formations.push(deepClone(df));
-          currentIds.add(df.id);
-        }
-      }
-    }
-
-    const seenFormIds = new Set(formations.map((f) => f && f.id));
-    for (const u of ['defense', 'st', 'groups'] as const) {
+    // Ensure core units have at least one formation if available and not deleted
+    for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
       if (!formations.some((f) => f && f.unit === u)) {
         const defaultForUnit =
-          (defaultFormations || []).find((f) => f && f.unit === u) ||
-          INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.unit === u);
+          (defaultFormations || []).find((f) => f && f.unit === u && !curDeletedSet.has(f.id)) ||
+          INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.unit === u && !curDeletedSet.has(f.id));
         if (defaultForUnit && !seenFormIds.has(defaultForUnit.id)) {
-          formations = [...formations, deepClone(defaultForUnit)];
+          formations.push(deepClone(defaultForUnit));
           seenFormIds.add(defaultForUnit.id);
+          seenFormKeys.add(`${defaultForUnit.unit}__${(defaultForUnit.name || '').toLowerCase().trim()}`);
         }
       }
     }
@@ -1231,7 +1197,29 @@ function mergeRemoteWeeklyData(
   const timeSinceEdit = Date.now() - lastLocalEditTime;
   // Local edit guard window: only shield local state if a local edit occurred within the last 4 seconds
   const isActivelyEditingLocally = timeSinceEdit < 4000;
-  const deletedSet = new Set<string>(deletedFormationIds || []);
+  const deletedSet = new Set<string>([
+    ...(deletedFormationIds || []),
+    'form_11',
+    'form_44_base',
+    'form_st_base',
+    'form_groups_base',
+  ]);
+
+  const dedupeForms = (forms: FormationBoard[]): FormationBoard[] => {
+    const seenIds = new Set<string>();
+    const seenKeys = new Set<string>();
+    const res: FormationBoard[] = [];
+    for (const f of forms) {
+      if (!f || !f.id || deletedSet.has(f.id)) continue;
+      const normName = (f.name || '').toLowerCase().trim();
+      const uKey = `${f.unit}__${normName}`;
+      if (seenIds.has(f.id) || seenKeys.has(uKey)) continue;
+      seenIds.add(f.id);
+      seenKeys.add(uKey);
+      res.push(f);
+    }
+    return res;
+  };
 
   for (const weekKey of Object.keys(localWeekly)) {
     const localState = localWeekly[weekKey];
@@ -1267,13 +1255,10 @@ function mergeRemoteWeeklyData(
         }
       });
 
-      // Ensure 11 Offense and all 4 core units are present (unless explicitly deleted)
-      if (!deletedSet.has('form_11') && !mergedFormations.some((f) => f && f.unit === 'offense')) {
-        mergedFormations.unshift(deepClone(INITIAL_DEFAULT_FORMATIONS[0]));
-      }
-      for (const u of ['defense', 'st', 'groups'] as const) {
+      // Ensure core units are present if available (unless explicitly deleted)
+      for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
         if (!mergedFormations.some((f) => f && f.unit === u)) {
-          const defForm = INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.unit === u);
+          const defForm = INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.unit === u && !deletedSet.has(f.id));
           if (defForm && !localFormIds.has(defForm.id) && !deletedSet.has(defForm.id)) {
             mergedFormations.push(deepClone(defForm));
             localFormIds.add(defForm.id);
@@ -1332,7 +1317,7 @@ function mergeRemoteWeeklyData(
 
       merged[weekKey] = {
         ...remoteState,
-        formations: mergedFormations.filter((f) => f && f.id && !deletedSet.has(f.id)),
+        formations: dedupeForms(mergedFormations),
         depthChart: mergedDC,
         scrimmageChart: mergedSC,
         opponent: remoteState.opponent || localState.opponent || '',
@@ -1347,23 +1332,13 @@ function mergeRemoteWeeklyData(
       ).filter((f) => f && f.id && !deletedSet.has(f.id));
       const seenIds = new Set(mergedFormations.map((f) => f && f.id));
 
-      // Retain any local formations that are missing from remote (e.g. 11 Personnel or custom formations)
+      // Retain any local formations that are missing from remote (e.g. custom formations)
       localFormations.forEach((lf) => {
         if (lf && lf.id && !seenIds.has(lf.id) && !deletedSet.has(lf.id)) {
           mergedFormations.push(lf);
           seenIds.add(lf.id);
         }
       });
-
-      // Guarantee that 11 Personnel and 11 Offense are always present UNLESS explicitly deleted
-      const elevenCandidates = [
-        INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.id === 'form_11') || { id: 'form_11', name: '11 Offense', unit: 'offense' },
-      ];
-      for (const elf of elevenCandidates) {
-        if (elf && !deletedSet.has(elf.id) && !mergedFormations.some((f) => f && (f.id === elf.id || f.name?.toLowerCase().includes('11')))) {
-          mergedFormations.push(deepClone(elf as FormationBoard));
-        }
-      }
 
       // Merge depth chart safely: remote takes precedence so other coaches' edits show in real time
       const countPlayers = (dc?: Record<string, any[]>) =>
@@ -1426,7 +1401,7 @@ function mergeRemoteWeeklyData(
       merged[weekKey] = {
         ...localState,
         ...remoteState,
-        formations: mergedFormations.filter((f) => f && f.id && !deletedSet.has(f.id)),
+        formations: dedupeForms(mergedFormations),
         depthChart: mergedDC,
         scrimmageChart: mergedSC,
         opponent: remoteState.opponent || localState.opponent || '',
@@ -3928,44 +3903,43 @@ function mergeRemoteWeeklyData(
     const updated = currentFormations.filter((f) => f.id !== formId);
 
     // Track deleted formation ID to prevent resurrection
-    setDeletedFormationIds((prev) => {
-      const merged = Array.from(new Set([...prev, formId]));
-      latestStateRef.current.deletedFormationIds = merged;
-      safeJSONSet('footballDeletedFormationIds', merged);
-      return merged;
-    });
+    const nextDeletedIds = Array.from(
+      new Set([...(deletedFormationIds || []), ...(latestStateRef.current.deletedFormationIds || []), formId])
+    );
+    setDeletedFormationIds(nextDeletedIds);
+    latestStateRef.current.deletedFormationIds = nextDeletedIds;
+    safeJSONSet('footballDeletedFormationIds', nextDeletedIds);
 
     lastLocalEditTimeRef.current = Date.now();
-    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
     setWeeklyData((prev) => {
-      const existing = resolveWeekState(prev, activeTeamId, currentWeek);
-      const newDepthChart = { ...(existing.depthChart || {}) };
-      const newScrimmageChart = { ...(existing.scrimmageChart || {}) };
-      deletedPosIds.forEach((posId) => {
-        delete newDepthChart[posId];
-        delete newScrimmageChart[posId];
-      });
-
-      const updatedWeekState: WeekState = {
-        ...existing,
-        formations: updated,
-        depthChart: newDepthChart,
-        scrimmageChart: newScrimmageChart,
-      };
-
-      const updatedAll = {
-        ...prev,
-        [scopedKey]: updatedWeekState,
-        [currentWeek]: updatedWeekState,
-      };
+      const updatedAll: Record<string, WeekState> = {};
+      for (const [wKey, wState] of Object.entries(prev)) {
+        if (!wState) continue;
+        const newFormations = (wState.formations || []).filter((f) => f && f.id !== formId);
+        const newDepthChart = { ...(wState.depthChart || {}) };
+        const newScrimmageChart = { ...(wState.scrimmageChart || {}) };
+        deletedPosIds.forEach((posId) => {
+          delete newDepthChart[posId];
+          delete newScrimmageChart[posId];
+        });
+        updatedAll[wKey] = {
+          ...wState,
+          formations: newFormations,
+          depthChart: newDepthChart,
+          scrimmageChart: newScrimmageChart,
+        };
+      }
       safeJSONSet('footballWeeklyData', updatedAll);
       latestStateRef.current.weeklyData = updatedAll;
       return updatedAll;
     });
 
-    setDefaultFormations(updated);
-    safeJSONSet('footballDefaultFormations', updated);
-    latestStateRef.current.defaultFormations = updated;
+    const nextDefaultForms = (latestStateRef.current.defaultFormations || []).filter(
+      (f) => f && f.id !== formId
+    );
+    setDefaultFormations(nextDefaultForms);
+    safeJSONSet('footballDefaultFormations', nextDefaultForms);
+    latestStateRef.current.defaultFormations = nextDefaultForms;
 
     if (selectedFormationId === formId) {
       const remainingSameUnit = updated.filter((f) => f.unit === activeUnit);
@@ -3976,7 +3950,7 @@ function mergeRemoteWeeklyData(
       }
     }
 
-    flushAndSaveStateToStorage('delete_formation');
+    flushAndSaveStateToStorage('delete_formation', { deletedFormationId: formId });
   };
 
   const handleMoveFormation = (formId: string, direction: number) => {
@@ -5657,63 +5631,45 @@ function mergeRemoteWeeklyData(
       updatedScrimmageChart = deepClone(src.scrimmageChart || {});
     }
 
-    // Guarantee that updatedFormations contains all 4 units and specifically 11 Personnel and 11 Offense
+    // Guarantee that updatedFormations contains all 4 units without resurrecting deleted formations
+    const copyDeletedSet = new Set<string>([
+      ...(deletedFormationIds || []),
+      ...(latestStateRef.current?.deletedFormationIds || []),
+      'form_11',
+      'form_44_base',
+      'form_st_base',
+      'form_groups_base',
+    ]);
+
     if (!Array.isArray(updatedFormations) || updatedFormations.length === 0) {
       updatedFormations = deepClone(defaultFormations || INITIAL_DEFAULT_FORMATIONS);
     }
-    const hasOffenseInCopy = updatedFormations.some((f) => f && f.unit === 'offense');
-    if (!hasOffenseInCopy) {
-      const defaultOffense =
-        (defaultFormations || []).find((f) => f && f.unit === 'offense') ||
-        INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.unit === 'offense') ||
-        INITIAL_DEFAULT_FORMATIONS[0];
-      if (defaultOffense) {
-        updatedFormations = [deepClone(defaultOffense), ...updatedFormations];
-      }
+
+    // Deduplicate and filter out deleted formations
+    const seenCopyFormIds = new Set<string>();
+    const seenCopyKeys = new Set<string>();
+    const dedupedCopyForms: FormationBoard[] = [];
+    for (const f of updatedFormations) {
+      if (!f || !f.id || copyDeletedSet.has(f.id)) continue;
+      const uKey = `${f.unit}__${(f.name || '').toLowerCase().trim()}`;
+      if (seenCopyFormIds.has(f.id) || seenCopyKeys.has(uKey)) continue;
+      seenCopyFormIds.add(f.id);
+      seenCopyKeys.add(uKey);
+      dedupedCopyForms.push(f);
     }
 
-    // Guarantee 11 Personnel and 11 Offense are preserved in the copied formations
-    const elevenCandidates = [
-      (src.formations || []).find((f) => f && (f.id === 'form_1788270435286' || f.name === '11 Personnel')) ||
-        (defaultFormations || []).find((f) => f && (f.id === 'form_1788270435286' || f.name === '11 Personnel')),
-      (src.formations || []).find((f) => f && (f.id === 'form_11' || f.name === '11 Offense')) ||
-        (defaultFormations || []).find((f) => f && (f.id === 'form_11' || f.name === '11 Offense')) ||
-        INITIAL_DEFAULT_FORMATIONS.find((f) => f && (f.id === 'form_11' || f.name === '11 Offense')),
-    ].filter(Boolean);
-
-    for (const elf of elevenCandidates) {
-      if (!elf) continue;
-      const alreadyInCopy = updatedFormations.some(
-        (f) => f && (f.id === elf.id || f.name?.toLowerCase().trim() === elf.name?.toLowerCase().trim())
-      );
-      if (!alreadyInCopy) {
-        let lastOffenseIdx = -1;
-        for (let i = updatedFormations.length - 1; i >= 0; i--) {
-          if (updatedFormations[i] && updatedFormations[i].unit === 'offense') {
-            lastOffenseIdx = i;
-            break;
-          }
-        }
-        if (lastOffenseIdx >= 0) {
-          updatedFormations.splice(lastOffenseIdx + 1, 0, deepClone(elf));
-        } else {
-          updatedFormations.unshift(deepClone(elf));
-        }
-      }
-    }
-
-    const seenFormIdsInCopy = new Set(updatedFormations.map((f) => f && f.id));
-    for (const u of ['defense', 'st', 'groups'] as const) {
-      if (!updatedFormations.some((f) => f && f.unit === u)) {
+    for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
+      if (!dedupedCopyForms.some((f) => f && f.unit === u)) {
         const defaultForUnit =
-          (defaultFormations || []).find((f) => f && f.unit === u) ||
-          INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.unit === u);
-        if (defaultForUnit && !seenFormIdsInCopy.has(defaultForUnit.id)) {
-          updatedFormations = [...updatedFormations, deepClone(defaultForUnit)];
-          seenFormIdsInCopy.add(defaultForUnit.id);
+          (defaultFormations || []).find((f) => f && f.unit === u && !copyDeletedSet.has(f.id)) ||
+          INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.unit === u && !copyDeletedSet.has(f.id));
+        if (defaultForUnit && !seenCopyFormIds.has(defaultForUnit.id)) {
+          dedupedCopyForms.push(deepClone(defaultForUnit));
+          seenCopyFormIds.add(defaultForUnit.id);
         }
       }
     }
+    updatedFormations = dedupedCopyForms;
 
     const updatedState: WeekState = {
       ...targetExisting,

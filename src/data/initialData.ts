@@ -435,52 +435,85 @@ export const MASTER_ROSTER: RosterPlayer[] = [
 
 export const INITIAL_DEFAULT_FORMATIONS: FormationBoard[] = [
   {
-    id: "form_10_spread",
-    unit: "offense",
-    name: "10 Spread Offense",
-    collapsed: false,
-    subtitle: "1 RB - 0 TE - 4 WRs (Spread)",
-    rows: [
+    "id": "form_10_spread",
+    "unit": "offense",
+    "name": "10 Spread Offense",
+    "collapsed": false,
+    "subtitle": "1 RB - 0 TE - 4 WRs (Spread)",
+    "rows": [
       {
-        id: "row_10sp_ol",
-        label: "Offensive Line",
-        slotCount: 7,
-        rowClass: "oline",
-        positions: [
+        "id": "row_10sp_ol",
+        "label": "Offensive Line",
+        "slotCount": 7,
+        "rowClass": "oline",
+        "positions": [
           null,
-          { id: "10sp-LT", name: "LT" },
-          { id: "10sp-LG", name: "LG" },
-          { id: "10sp-C", name: "C" },
-          { id: "10sp-RG", name: "RG" },
-          { id: "10sp-RT", name: "RT" },
+          {
+            "id": "10sp-LT",
+            "name": "LT"
+          },
+          {
+            "id": "10sp-LG",
+            "name": "LG"
+          },
+          {
+            "id": "10sp-C",
+            "name": "C"
+          },
+          {
+            "id": "10sp-RG",
+            "name": "RG"
+          },
+          {
+            "id": "10sp-RT",
+            "name": "RT"
+          },
           null
         ]
       },
       {
-        id: "row_10sp_wr",
-        label: "Wideouts & QB (X, H, 1, Y, Z)",
-        slotCount: 7,
-        rowClass: "receivers",
-        positions: [
-          { id: "10sp-X", name: "X" },
-          { id: "10sp-H", name: "H" },
+        "id": "row_10sp_wr",
+        "label": "Wideouts & QB (X, H, 1, Y, Z)",
+        "slotCount": 7,
+        "rowClass": "receivers",
+        "positions": [
+          {
+            "id": "10sp-X",
+            "name": "X"
+          },
+          {
+            "id": "10sp-H",
+            "name": "H"
+          },
           null,
-          { id: "10sp-1", name: "1 (QB)" },
+          {
+            "id": "10sp-1",
+            "name": "1 (QB)"
+          },
           null,
-          { id: "10sp-Y", name: "Y" },
-          { id: "10sp-Z", name: "Z" }
+          {
+            "id": "10sp-Y",
+            "name": "Y"
+          },
+          {
+            "id": "10sp-Z",
+            "name": "Z"
+          }
         ]
       },
       {
-        id: "row_10sp_bk",
-        label: "Backfield ( 2 RB )",
-        slotCount: 7,
-        rowClass: "backfield",
-        positions: [
+        "id": "row_10sp_bk",
+        "label": "Backfield ( 2 RB )",
+        "slotCount": 7,
+        "rowClass": "backfield",
+        "positions": [
           null,
           null,
           null,
-          { id: "10sp-2", name: "2 (RB)" },
+          {
+            "id": "10sp-2",
+            "name": "2 (RB)"
+          },
           null,
           null,
           null
@@ -489,161 +522,1106 @@ export const INITIAL_DEFAULT_FORMATIONS: FormationBoard[] = [
     ]
   },
   {
-    id: "form_11",
-    unit: "offense",
-    name: "11 Offense",
-    collapsed: false,
-    rows: [
+    "name": "21 Offense",
+    "rows": [
       {
-        id: "row_11_ol",
-        label: "Offensive Line & TE (Y1)",
-        slotCount: 7,
-        positions: [
-          { id: "11-LT", name: "LT" },
-          { id: "11-LG", name: "LG" },
-          { id: "11-C", name: "C" },
-          { id: "11-RG", name: "RG" },
-          { id: "11-RT", name: "RT" },
-          { id: "11-Y1", name: "Y1" },
+        "positions": [
+          null,
+          {
+            "id": "21-LT",
+            "name": "LT"
+          },
+          {
+            "id": "21-LG",
+            "name": "LG"
+          },
+          {
+            "id": "21-C",
+            "name": "C"
+          },
+          {
+            "id": "21-RG",
+            "name": "RG"
+          },
+          {
+            "id": "21-RT",
+            "name": "RT"
+          },
+          {
+            "id": "21-Y1",
+            "name": "Y1"
+          }
+        ],
+        "rowClass": "oline",
+        "id": "row_21_ol",
+        "label": "Offensive Line & TE (Y1)",
+        "slotCount": 7
+      },
+      {
+        "rowClass": "receivers",
+        "slotCount": 7,
+        "label": "Wideouts and QB (X, Z,1)",
+        "id": "row_21_wr",
+        "positions": [
+          {
+            "id": "21-X",
+            "name": "X"
+          },
+          null,
+          null,
+          {
+            "id": "21-1",
+            "name": "1 (QB)"
+          },
+          null,
+          null,
+          {
+            "id": "21-Z",
+            "name": "Z"
+          }
+        ]
+      },
+      {
+        "label": "Backfield ( 2 )",
+        "slotCount": 7,
+        "id": "row_21_bk",
+        "rowClass": "backfield",
+        "positions": [
+          null,
+          null,
+          null,
+          {
+            "id": "21-2",
+            "name": "2 (FB)"
+          },
+          null,
+          null,
           null
         ]
       },
       {
-        id: "row_11_wr",
-        label: "Wide Receivers (X, W, Z)",
-        slotCount: 7,
-        positions: [
-          { id: "11-X", name: "X" },
+        "id": "row_t8haslrig",
+        "positions": [
           null,
           null,
           null,
-          { id: "11-W", name: "W" },
+          {
+            "id": "21-3",
+            "name": "3 (HB)"
+          },
           null,
-          { id: "11-Z", name: "Z" }
-        ]
-      },
-      {
-        id: "row_11_bk",
-        label: "Backfield (1 - 4)",
-        slotCount: 7,
-        positions: [
-          null,
-          null,
-          { id: "11-1", name: "1 (QB)" },
-          null,
-          { id: "11-4", name: "4 (RB)" },
           null,
           null
-        ]
+        ],
+        "label": "Backfield (3)",
+        "slotCount": 7,
+        "rowClass": "oline"
       }
-    ]
+    ],
+    "unit": "offense",
+    "collapsed": false,
+    "id": "form_21",
+    "subtitle": "2 RBs - 1 TE (Y1) - 2 WRs (X Left, Z Right)"
   },
   {
-    id: "form_44_base",
-    unit: "defense",
-    name: "4-4 Base Defense",
-    collapsed: false,
-    rows: [
+    "rows": [
       {
-        id: "row_44_dl",
-        label: "Defensive Line (E9, T3, T1, E5)",
-        slotCount: 7,
-        positions: [
-          { id: "def-e9", name: "E9" },
-          { id: "def-t3", name: "T3" },
-          { id: "def-t1", name: "T1" },
-          { id: "def-e5", name: "E5" },
-          null,
-          null,
-          null
-        ]
+        "id": "row_1787860064353_0",
+        "positions": [
+          {
+            "id": "form_1787860064353-X-1787860064353_0",
+            "name": "Y2"
+          },
+          {
+            "id": "form_1787860064353-LT-1787860064353_1",
+            "name": "LT"
+          },
+          {
+            "id": "form_1787860064353-LG-1787860064353_2",
+            "name": "LG"
+          },
+          {
+            "id": "form_1787860064353-C-1787860064353_3",
+            "name": "C"
+          },
+          {
+            "id": "form_1787860064353-RG-1787860064353_4",
+            "name": "RG"
+          },
+          {
+            "id": "form_1787860064353-RT-1787860064353_5",
+            "name": "RT"
+          },
+          {
+            "id": "form_1787860064353-Y1-1787860064353_6",
+            "name": "Y1"
+          }
+        ],
+        "label": "Offensive Line & TE (Y1)",
+        "slotCount": 7
       },
       {
-        id: "row_44_lb",
-        label: "Linebackers (M, W, S, R)",
-        slotCount: 7,
-        positions: [
-          { id: "def-m", name: "M" },
-          { id: "def-w", name: "W" },
-          { id: "def-s", name: "S" },
-          { id: "def-r", name: "R" },
+        "id": "row_1787860064353_1",
+        "positions": [
           null,
           null,
-          null
-        ]
+          null,
+          {
+            "id": "form_1787860064353-1 (QB)-1787860064353_3",
+            "name": "1 (QB)"
+          },
+          null,
+          null,
+          {
+            "id": "form_1787860064353-Z-1787860064353_6",
+            "name": "Z"
+          }
+        ],
+        "label": "Wideouts (X, Z)",
+        "slotCount": 7
       },
       {
-        id: "row_44_sec",
-        label: "Secondary (CB, FS)",
-        slotCount: 7,
-        positions: [
-          { id: "def-lcb", name: "LCB" },
-          { id: "def-fs", name: "FS" },
-          { id: "def-rcb", name: "RCB" },
+        "positions": [
           null,
+          null,
+          null,
+          {
+            "id": "form_1787860064353-2 (FB)-1787860064354_3",
+            "name": "2 (FB)"
+          },
           null,
           null,
           null
-        ]
+        ],
+        "label": "Backfield (1 - 2 - 3 Stack)",
+        "id": "row_1787860064354_2",
+        "slotCount": 7
+      },
+      {
+        "positions": [
+          null,
+          null,
+          null,
+          {
+            "id": "form_1787860064353-3 (HB)-1787860064354_3",
+            "name": "3 (HB)"
+          },
+          null,
+          null,
+          null
+        ],
+        "id": "row_1787860064354_3",
+        "slotCount": 7,
+        "label": "New Level"
       }
-    ]
+    ],
+    "unit": "offense",
+    "collapsed": false,
+    "name": "22 Offense",
+    "id": "form_1787860064353"
   },
   {
-    id: "form_st_base",
-    unit: "st",
-    name: "Kickoff Return / Coverage",
-    collapsed: false,
-    rows: [
+    "name": "32 Offense",
+    "unit": "offense",
+    "id": "form_1787860077403",
+    "rows": [
       {
-        id: "row_st_unit",
-        label: "Special Teams Positions",
-        slotCount: 10,
-        positions: [
-          { id: "st-k", name: "K" },
-          { id: "st-p", name: "P" },
-          { id: "st-ls", name: "LS" },
-          { id: "st-h", name: "H" },
-          { id: "st-ret", name: "RET" },
+        "slotCount": 7,
+        "label": "Offensive Line & TE (Y1)",
+        "positions": [
+          {
+            "id": "form_1787860077403-X-1787860077403_0",
+            "name": "Y2"
+          },
+          {
+            "id": "form_1787860077403-LT-1787860077403_1",
+            "name": "LT"
+          },
+          {
+            "id": "form_1787860077403-LG-1787860077403_2",
+            "name": "LG"
+          },
+          {
+            "id": "form_1787860077403-C-1787860077403_3",
+            "name": "C"
+          },
+          {
+            "id": "form_1787860077403-RG-1787860077403_4",
+            "name": "RG"
+          },
+          {
+            "id": "form_1787860077403-RT-1787860077403_5",
+            "name": "RT"
+          },
+          {
+            "id": "form_1787860077403-Y1-1787860077403_6",
+            "name": "Y1"
+          }
+        ],
+        "id": "row_1787860077403_0"
+      },
+      {
+        "positions": [
           null,
           null,
           null,
+          {
+            "id": "form_1787860077403-1 (QB)-1787860077403_3",
+            "name": "1 (QB)"
+          },
+          null,
+          null,
+          null
+        ],
+        "id": "row_1787860077403_1",
+        "label": "Wideouts (X, Z)",
+        "slotCount": 7
+      },
+      {
+        "positions": [
+          null,
+          null,
+          null,
+          {
+            "id": "form_1787860077403-2 (FB)-1787860077403_3",
+            "name": "2 (FB)"
+          },
+          null,
+          null,
+          null
+        ],
+        "id": "row_1787860077403_2",
+        "slotCount": 7,
+        "label": "Backfield (1 - 2 - 3 Stack)"
+      },
+      {
+        "label": "New Level",
+        "slotCount": 7,
+        "id": "row_1787860077403_3",
+        "positions": [
+          null,
+          null,
+          {
+            "id": "form_1787860077403-3 (HB)-1787860077403_3",
+            "name": "3 (HB)"
+          },
+          null,
+          {
+            "id": "form_1787860077403-Z-1787860077403_6",
+            "name": "4"
+          },
           null,
           null
         ]
       }
-    ]
+    ],
+    "collapsed": false
   },
   {
-    id: "form_groups_base",
-    unit: "groups",
-    name: "Depth Chart Groups",
-    collapsed: false,
-    rows: [
+    "id": "form_1788270435286",
+    "rows": [
       {
-        id: "row_group_qb",
-        label: "Quarterbacks",
-        slotCount: 5,
-        positions: [
-          { id: "grp-qb1", name: "QB1" },
-          { id: "grp-qb2", name: "QB2" },
+        "id": "row_1788270435286_0",
+        "positions": [
           null,
+          {
+            "id": "form_1788270435286-LT-1788282198844",
+            "name": "LT"
+          },
+          {
+            "id": "form_1788270435286-LG-1788282193352",
+            "name": "LG"
+          },
+          {
+            "id": "form_1788270435286-C-1788282189705",
+            "name": "C"
+          },
+          {
+            "id": "form_1788270435286-RG-1788282183399",
+            "name": "RG"
+          },
+          {
+            "id": "form_1788270435286-RT-1788282180009",
+            "name": "RT"
+          },
+          {
+            "id": "form_1788270435286-Y1-1788282176233",
+            "name": "Y1"
+          }
+        ],
+        "slotCount": 7,
+        "label": "Offensive Line & TE (Y1)"
+      },
+      {
+        "positions": [
+          {
+            "id": "form_1788270435286-X",
+            "name": "X"
+          },
+          null,
+          null,
+          null,
+          null,
+          {
+            "id": "form_1788270435286-W",
+            "name": "W"
+          },
+          {
+            "id": "form_1788270435286-Z",
+            "name": "Z"
+          }
+        ],
+        "label": "Wide Receivers (X, W, Z)",
+        "id": "row_1788270435286_1",
+        "slotCount": 7
+      },
+      {
+        "id": "row_1788270435286_2",
+        "slotCount": 7,
+        "label": "Backfield (1 - 4)",
+        "positions": [
+          null,
+          null,
+          null,
+          {
+            "id": "form_1788270435286-1",
+            "name": "1 (QB)"
+          },
+          {
+            "id": "form_1788270435286-4",
+            "name": "4 (RB)"
+          },
+          null,
+          null
+        ]
+      }
+    ],
+    "collapsed": false,
+    "unit": "offense",
+    "name": "11 Personnel"
+  },
+  {
+    "name": "53 Defense",
+    "id": "form_53",
+    "rows": [
+      {
+        "positions": [
+          null,
+          null,
+          null,
+          {
+            "id": "53-FS",
+            "name": "FS"
+          },
+          null,
+          null,
+          null
+        ],
+        "slotCount": 7,
+        "rowClass": "secondary-safety",
+        "label": "Single Free Safety",
+        "id": "row_53_fs"
+      },
+      {
+        "positions": [
+          {
+            "id": "53-CB1",
+            "name": "CB 2"
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "id": "53-CB2",
+            "name": "CB 1"
+          }
+        ],
+        "label": "Cornerbacks",
+        "slotCount": 7,
+        "id": "row_53_cb",
+        "rowClass": "secondary-corners"
+      },
+      {
+        "id": "row_53_lb",
+        "slotCount": 7,
+        "label": "Linebacker Level (WILL - MIKE - SAM)",
+        "rowClass": "linebackers-tight",
+        "positions": [
+          null,
+          null,
+          {
+            "id": "53-WILL",
+            "name": "WILL"
+          },
+          {
+            "id": "53-MIKE",
+            "name": "MIKE"
+          },
+          {
+            "id": "53-SAM",
+            "name": "SAM"
+          },
           null,
           null
         ]
       },
       {
-        id: "row_group_rb",
-        label: "Running Backs",
-        slotCount: 5,
-        positions: [
-          { id: "grp-rb1", name: "Tailback" },
-          { id: "grp-rb2", name: "Fullback" },
+        "id": "row_53_dl",
+        "rowClass": "dl",
+        "positions": [
+          null,
+          {
+            "id": "53-DE1",
+            "name": "DE 1"
+          },
+          {
+            "id": "53-DT1",
+            "name": "DT 1"
+          },
+          {
+            "id": "53-NT",
+            "name": "NT"
+          },
+          {
+            "id": "53-DT2",
+            "name": "DT 2"
+          },
+          {
+            "id": "53-DE2",
+            "name": "DE 2"
+          },
+          null
+        ],
+        "label": "Defensive Line (DE1 - DT1 - NT - DT2 - DE2)",
+        "slotCount": 7
+      }
+    ],
+    "subtitle": "Odd Front (11 Positions)",
+    "collapsed": false,
+    "unit": "defense"
+  },
+  {
+    "name": "44 Defense",
+    "id": "form_44",
+    "rows": [
+      {
+        "id": "row_44_fs",
+        "positions": [
+          null,
+          null,
+          null,
+          {
+            "id": "44-FS",
+            "name": "FS"
+          },
           null,
           null,
           null
-        ]
+        ],
+        "slotCount": 7,
+        "rowClass": "secondary-safety",
+        "label": "Free Safety (Deep Center)"
+      },
+      {
+        "rowClass": "secondary-corners",
+        "slotCount": 7,
+        "label": "Secondary / Cornerbacks",
+        "positions": [
+          {
+            "id": "44-CB2",
+            "name": "CB 2"
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "id": "44-CB1",
+            "name": "CB 1"
+          }
+        ],
+        "id": "row_44_cb"
+      },
+      {
+        "label": "Linebacker Level (ROVER - WILL - MIKE - SAM)",
+        "rowClass": "linebackers-tight",
+        "slotCount": 6,
+        "positions": [
+          null,
+          {
+            "id": "44-ROVER",
+            "name": "ROVER"
+          },
+          {
+            "id": "44-WILL",
+            "name": "WILL"
+          },
+          {
+            "id": "44-MIKE",
+            "name": "MIKE"
+          },
+          {
+            "id": "44-SAM",
+            "name": "SAM"
+          },
+          null
+        ],
+        "id": "row_44_lb"
+      },
+      {
+        "id": "row_44_dl",
+        "rowClass": "dl",
+        "positions": [
+          null,
+          {
+            "id": "44-WDE",
+            "name": "WDE"
+          },
+          {
+            "id": "44-DT1",
+            "name": "DT 1"
+          },
+          {
+            "id": "44-DT2",
+            "name": "DT 2"
+          },
+          {
+            "id": "44-SDE",
+            "name": "SDE"
+          },
+          null
+        ],
+        "slotCount": 6,
+        "label": "Defensive Line (WDE - DT1 - DT2 - SDE)"
       }
-    ]
+    ],
+    "collapsed": false,
+    "unit": "defense",
+    "subtitle": "Stack Front (11 Positions)"
+  },
+  {
+    "name": "Kickoff Team",
+    "id": "form_ko",
+    "unit": "st",
+    "subtitle": "8 Coverage + 3 Backs",
+    "rows": [
+      {
+        "label": "Front Coverage Line (L1-L4, R4-R1)",
+        "slotCount": 8,
+        "rowClass": "oline",
+        "positions": [
+          {
+            "id": "KO-L1",
+            "name": "L1"
+          },
+          {
+            "id": "KO-L2",
+            "name": "L2"
+          },
+          {
+            "id": "KO-L3",
+            "name": "L3"
+          },
+          {
+            "id": "KO-L4",
+            "name": "L4"
+          },
+          {
+            "id": "KO-R4",
+            "name": "R4"
+          },
+          {
+            "id": "KO-R3",
+            "name": "R3"
+          },
+          {
+            "id": "KO-R2",
+            "name": "R2"
+          },
+          {
+            "id": "form_ko-R1-1788283739249_7",
+            "name": "R1"
+          }
+        ],
+        "id": "row_ko_line"
+      },
+      {
+        "id": "row_ko_bk",
+        "positions": [
+          null,
+          {
+            "id": "KO-LBH",
+            "name": "LBH"
+          },
+          null,
+          {
+            "id": "KO-KICKER",
+            "name": "Kicker"
+          },
+          null,
+          {
+            "id": "KO-RBH",
+            "name": "RBH"
+          },
+          null
+        ],
+        "label": "Backfield Level (LBH - Kicker - RBH)",
+        "slotCount": 7,
+        "rowClass": "oline"
+      }
+    ],
+    "collapsed": false
+  },
+  {
+    "name": "Kick Return Team",
+    "id": "form_kr",
+    "collapsed": false,
+    "rows": [
+      {
+        "label": "Front Blocking Line (T - G - C - G - T)",
+        "slotCount": 7,
+        "id": "row_kr_line",
+        "positions": [
+          {
+            "id": "KR-T1",
+            "name": "T1"
+          },
+          null,
+          {
+            "id": "KR-G1",
+            "name": "G1"
+          },
+          {
+            "id": "KR-C",
+            "name": "C"
+          },
+          {
+            "id": "KR-G2",
+            "name": "G2"
+          },
+          null,
+          {
+            "id": "KR-T2",
+            "name": "T2"
+          }
+        ],
+        "rowClass": "oline"
+      },
+      {
+        "id": "row_kr_w1",
+        "positions": [
+          null,
+          null,
+          {
+            "id": "KR-XL1",
+            "name": "XL1"
+          },
+          null,
+          {
+            "id": "KR-XR1",
+            "name": "XR1"
+          },
+          null,
+          null
+        ],
+        "label": "Wedge Level 1",
+        "rowClass": "oline",
+        "slotCount": 7
+      },
+      {
+        "label": "Wedge Level 2",
+        "slotCount": 7,
+        "id": "row_kr_w2",
+        "positions": [
+          null,
+          {
+            "id": "KR-XL2",
+            "name": "XL2"
+          },
+          null,
+          null,
+          null,
+          {
+            "id": "KR-XR2",
+            "name": "XR2"
+          },
+          null
+        ],
+        "rowClass": "oline"
+      },
+      {
+        "rowClass": "oline",
+        "positions": [
+          null,
+          null,
+          {
+            "id": "KR-XL3",
+            "name": "XL3"
+          },
+          null,
+          {
+            "id": "KR-XR3",
+            "name": "XR3"
+          },
+          null,
+          null
+        ],
+        "id": "row_kr_w3",
+        "slotCount": 7,
+        "label": "Deep Returners"
+      }
+    ],
+    "subtitle": "5 Line + 6 Staggered Returners",
+    "unit": "st"
+  },
+  {
+    "name": "Punt Team",
+    "subtitle": "Protection Line - Wings - Backfield",
+    "collapsed": false,
+    "id": "form_punt",
+    "rows": [
+      {
+        "positions": [
+          {
+            "id": "PUNT-Y2",
+            "name": "Y2"
+          },
+          {
+            "id": "PUNT-LT",
+            "name": "LT"
+          },
+          {
+            "id": "PUNT-LG",
+            "name": "LG"
+          },
+          {
+            "id": "PUNT-C",
+            "name": "C"
+          },
+          {
+            "id": "PUNT-RG",
+            "name": "RG"
+          },
+          {
+            "id": "PUNT-RT",
+            "name": "RT"
+          },
+          {
+            "id": "PUNT-Y1",
+            "name": "Y1"
+          }
+        ],
+        "rowClass": "oline",
+        "slotCount": 7,
+        "id": "row_punt_ol",
+        "label": "Punt Protection Line"
+      },
+      {
+        "slotCount": 7,
+        "id": "row_punt_gn",
+        "rowClass": "receivers",
+        "label": "Wide Gunners (3 & 4)",
+        "positions": [
+          {
+            "id": "PUNT-3",
+            "name": "Gunner 3"
+          },
+          null,
+          null,
+          null,
+          {
+            "id": "PUNT-2",
+            "name": "PP (#2)"
+          },
+          null,
+          {
+            "id": "PUNT-4",
+            "name": "Gunner 4"
+          }
+        ]
+      },
+      {
+        "positions": [
+          null,
+          null,
+          null,
+          {
+            "id": "PUNT-KICKER",
+            "name": "Punter"
+          },
+          null,
+          null,
+          null
+        ],
+        "id": "row_punt_bk",
+        "slotCount": 7,
+        "rowClass": "backfield",
+        "label": "Personal Protector & Punter"
+      }
+    ],
+    "unit": "st"
+  },
+  {
+    "rows": [
+      {
+        "id": "row_fg_ol",
+        "label": "Protection Line",
+        "slotCount": 7,
+        "rowClass": "oline",
+        "positions": [
+          {
+            "id": "FG-LE",
+            "name": "LE"
+          },
+          {
+            "id": "FG-LT",
+            "name": "LT"
+          },
+          {
+            "id": "FG-LG",
+            "name": "LG"
+          },
+          {
+            "id": "FG-LS",
+            "name": "LS"
+          },
+          {
+            "id": "FG-RG",
+            "name": "RG"
+          },
+          {
+            "id": "FG-RT",
+            "name": "RT"
+          },
+          {
+            "id": "FG-RE",
+            "name": "RE"
+          }
+        ]
+      },
+      {
+        "rowClass": "receivers",
+        "slotCount": 7,
+        "label": "Wing Blockers",
+        "positions": [
+          {
+            "id": "FG-WL",
+            "name": "Wing L"
+          },
+          {
+            "id": "FG-WR",
+            "name": "Wing R"
+          },
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "id": "row_fg_wg"
+      },
+      {
+        "rowClass": "backfield",
+        "slotCount": 7,
+        "label": "Holder & Kicker",
+        "positions": [
+          {
+            "id": "FG-H",
+            "name": "Holder"
+          },
+          {
+            "id": "FG-K",
+            "name": "Kicker"
+          },
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "id": "row_fg_bk"
+      }
+    ],
+    "unit": "st",
+    "collapsed": false,
+    "name": "Field Goal / PAT Team",
+    "id": "form_fg",
+    "subtitle": "Line - Wings - Holder - Kicker"
+  },
+  {
+    "name": "Defensive Depth Chart",
+    "subtitle": "44 Stack Format",
+    "rows": [
+      {
+        "rowClass": "secondary-corners",
+        "slotCount": 7,
+        "positions": [
+          {
+            "id": "GRP-CB1",
+            "name": "CB 1"
+          },
+          null,
+          null,
+          {
+            "id": "GRP-FS",
+            "name": "FS"
+          },
+          null,
+          null,
+          {
+            "id": "GRP-CB2",
+            "name": "CB 2"
+          }
+        ],
+        "id": "row_grp_sec",
+        "label": "Secondary Level"
+      },
+      {
+        "rowClass": "linebackers-tight",
+        "slotCount": 6,
+        "id": "row_grp_lb",
+        "positions": [
+          null,
+          {
+            "id": "GRP-ROVER",
+            "name": "ROVER"
+          },
+          {
+            "id": "GRP-WILL",
+            "name": "WILL"
+          },
+          {
+            "id": "GRP-MIKE",
+            "name": "MIKE"
+          },
+          {
+            "id": "GRP-SAM",
+            "name": "SAM"
+          },
+          null
+        ],
+        "label": "Linebacker Level (ROVER - WILL - MIKE - SAM)"
+      },
+      {
+        "label": "Defensive Line (WDE - DT1 - DT2 - SDE)",
+        "id": "row_grp_dl",
+        "positions": [
+          null,
+          {
+            "id": "GRP-WDE",
+            "name": "WDE"
+          },
+          {
+            "id": "GRP-DT1",
+            "name": "DT 1"
+          },
+          {
+            "id": "GRP-DT2",
+            "name": "DT 2"
+          },
+          {
+            "id": "GRP-SDE",
+            "name": "SDE"
+          },
+          null
+        ],
+        "rowClass": "dl",
+        "slotCount": 6
+      }
+    ],
+    "id": "form_grp_def",
+    "unit": "groups",
+    "collapsed": false
+  },
+  {
+    "name": "Offensive Depth Chart",
+    "subtitle": "Standard Format",
+    "collapsed": false,
+    "rows": [
+      {
+        "label": "Offensive Line & Tight Ends",
+        "id": "row_grp_ol",
+        "slotCount": 7,
+        "positions": [
+          null,
+          {
+            "id": "GRP-LT",
+            "name": "LT"
+          },
+          {
+            "id": "GRP-LG",
+            "name": "LG"
+          },
+          {
+            "id": "GRP-C",
+            "name": "C"
+          },
+          {
+            "id": "GRP-RG",
+            "name": "RG"
+          },
+          {
+            "id": "GRP-RT",
+            "name": "RT"
+          },
+          {
+            "id": "GRP-TES",
+            "name": "TEs"
+          }
+        ],
+        "rowClass": "oline"
+      },
+      {
+        "id": "row_grp_wr",
+        "label": "Wide Receivers",
+        "slotCount": 7,
+        "positions": [
+          null,
+          null,
+          null,
+          {
+            "id": "GRP-QB",
+            "name": "QB"
+          },
+          null,
+          {
+            "id": "GRP-X",
+            "name": "X"
+          },
+          {
+            "id": "GRP-Z",
+            "name": "Z"
+          }
+        ],
+        "rowClass": "receivers"
+      },
+      {
+        "positions": [
+          null,
+          null,
+          null,
+          {
+            "id": "GRP-RB",
+            "name": "RB"
+          },
+          {
+            "id": "GRP-FB",
+            "name": "FB"
+          },
+          null,
+          null
+        ],
+        "label": "Backfield Stack",
+        "id": "row_grp_bk",
+        "rowClass": "backfield",
+        "slotCount": 7
+      }
+    ],
+    "unit": "groups",
+    "id": "form_grp_off"
   }
 ];
 

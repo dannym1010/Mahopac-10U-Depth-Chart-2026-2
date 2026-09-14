@@ -94,11 +94,33 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
   const merged: any = { ...current };
 
   // Merge deletedFormationIds so deleted formations can NEVER resurrect
-  if (Array.isArray(incoming.deletedFormationIds)) {
-    merged.deletedFormationIds = Array.from(
-      new Set([...(current.deletedFormationIds || []), ...incoming.deletedFormationIds])
-    );
-  }
+  const deletedSet = new Set<string>([
+    ...(Array.isArray(current.deletedFormationIds) ? current.deletedFormationIds : []),
+    ...(Array.isArray(incoming.deletedFormationIds) ? incoming.deletedFormationIds : []),
+    ...(metadata?.deletedFormationId ? [metadata.deletedFormationId] : []),
+    'form_11',
+    'form_44_base',
+    'form_st_base',
+    'form_groups_base',
+  ]);
+  merged.deletedFormationIds = Array.from(deletedSet);
+
+  const dedupeAndFilterFormations = (forms: any[]): any[] => {
+    if (!Array.isArray(forms)) return [];
+    const seenIds = new Set<string>();
+    const seenKeys = new Set<string>();
+    const res: any[] = [];
+    for (const f of forms) {
+      if (!f || !f.id || deletedSet.has(f.id)) continue;
+      const normName = (f.name || '').toLowerCase().trim();
+      const uKey = `${f.unit}__${normName}`;
+      if (seenIds.has(f.id) || seenKeys.has(uKey)) continue;
+      seenIds.add(f.id);
+      seenKeys.add(uKey);
+      res.push(f);
+    }
+    return res;
+  };
 
   // 1. Merge weeklyData deeply per week and per unit
   if (incoming.weeklyData && typeof incoming.weeklyData === 'object') {
@@ -110,7 +132,10 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
     for (const [weekKey, incWeekState] of Object.entries<any>(incoming.weeklyData)) {
       const curWeekState = merged.weeklyData[weekKey];
       if (!curWeekState) {
-        merged.weeklyData[weekKey] = incWeekState;
+        merged.weeklyData[weekKey] = {
+          ...incWeekState,
+          formations: dedupeAndFilterFormations(incWeekState.formations),
+        };
         continue;
       }
 
@@ -121,7 +146,6 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
 
       // Merge formations array preserving the incoming requested order
       let mergedFormations = curWeekState.formations || [];
-      const deletedSet = new Set<string>(merged.deletedFormationIds || []);
 
       if (Array.isArray(incWeekState.formations) && incWeekState.formations.length > 0) {
         if (
@@ -159,29 +183,8 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
         }
       }
 
-      // Filter out any explicitly deleted formations
-      mergedFormations = mergedFormations.filter((f: any) => f && f.id && !deletedSet.has(f.id));
-
-      // Guarantee that 11 Personnel and 11 Offense are NEVER lost from any week (unless explicitly deleted)
-      const cur11Forms = (curWeekState.formations || []).filter((f: any) =>
-        f && !deletedSet.has(f.id) && (f.id === 'form_1788270435286' || f.id === 'form_11' || f.name?.toLowerCase().includes('11'))
-      );
-      cur11Forms.forEach((elf: any) => {
-        if (!mergedFormations.some((f: any) => f && (f.id === elf.id || f.name?.toLowerCase().trim() === elf.name?.toLowerCase().trim()))) {
-          let lastOffIdx = -1;
-          for (let i = mergedFormations.length - 1; i >= 0; i--) {
-            if (mergedFormations[i] && mergedFormations[i].unit === 'offense') {
-              lastOffIdx = i;
-              break;
-            }
-          }
-          if (lastOffIdx >= 0) {
-            mergedFormations.splice(lastOffIdx + 1, 0, elf);
-          } else {
-            mergedFormations.unshift(elf);
-          }
-        }
-      });
+      // Filter out any explicitly deleted or duplicate formations
+      mergedFormations = dedupeAndFilterFormations(mergedFormations);
 
       // Merge Depth Chart per position ID without ghost retention or resurrecting removed players
       const curDC: Record<string, any> = curWeekState.depthChart || {};
@@ -313,7 +316,6 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
   }
 
   // 2. Merge Default Formations preserving incoming order
-  const defDeletedSet = new Set<string>(merged.deletedFormationIds || []);
   if (Array.isArray(incoming.defaultFormations) && incoming.defaultFormations.length > 0) {
     if (
       metadata?.scope === 'all' ||
@@ -345,10 +347,20 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
 
       merged.defaultFormations = result;
     }
-    const defDeletedSet = new Set<string>(merged.deletedFormationIds || []);
-    merged.defaultFormations = (merged.defaultFormations || []).filter(
-      (f: any) => f && f.id && !defDeletedSet.has(f.id)
-    );
+  }
+
+  // Ensure default formations are always filtered and deduplicated
+  merged.defaultFormations = dedupeAndFilterFormations(
+    merged.defaultFormations || current.defaultFormations || []
+  );
+
+  // Guarantee that any deleted formations are removed across all weeks in weeklyData
+  if (merged.weeklyData && typeof merged.weeklyData === 'object') {
+    for (const [wKey, wState] of Object.entries<any>(merged.weeklyData)) {
+      if (wState && Array.isArray(wState.formations)) {
+        wState.formations = dedupeAndFilterFormations(wState.formations);
+      }
+    }
   }
 
   // 3. Merge Roster preserving incoming order
