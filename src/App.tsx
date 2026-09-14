@@ -142,12 +142,26 @@ import {
 
 export default function App() {
   // State Initialization from LocalStorage or Defaults
-  const [weeklyData, setWeeklyData] = useState<Record<string, WeekState>>(() =>
-    normalizeWeeklyData(safeJSONParse('footballWeeklyData', {}))
-  );
-  const [defaultFormations, setDefaultFormations] = useState<FormationBoard[]>(
-    () => safeJSONParse('footballDefaultFormations', INITIAL_DEFAULT_FORMATIONS)
-  );
+  const [weeklyData, setWeeklyData] = useState<Record<string, WeekState>>(() => {
+    const raw = safeJSONParse('footballWeeklyData', {});
+    const normalized = normalizeWeeklyData(raw);
+    // Sanitize any existing form_10_spread or 10 Spread Offense entries
+    for (const w of Object.values(normalized)) {
+      if (w && Array.isArray(w.formations)) {
+        w.formations = w.formations.filter(
+          (f) => f && f.id !== 'form_10_spread' && f.name !== '10 Spread Offense'
+        );
+      }
+    }
+    return normalized;
+  });
+  const [defaultFormations, setDefaultFormations] = useState<FormationBoard[]>(() => {
+    const raw = safeJSONParse('footballDefaultFormations', INITIAL_DEFAULT_FORMATIONS);
+    const forms = Array.isArray(raw) ? raw : INITIAL_DEFAULT_FORMATIONS;
+    return forms.filter(
+      (f: any) => f && f.id !== 'form_10_spread' && f.name !== '10 Spread Offense'
+    );
+  });
   const [practiceData, setPracticeData] = useState<PracticePlan[]>(() => {
     const saved = safeJSONParse('footballPracticeData', null);
     let plansToUse: PracticePlan[] = [];
@@ -228,8 +242,11 @@ export default function App() {
   });
   const [deletedFormationIds, setDeletedFormationIds] = useState<string[]>(() => {
     const saved = safeJSONParse('footballDeletedFormationIds', null);
-    if (saved && Array.isArray(saved)) return saved;
-    return [];
+    const list = saved && Array.isArray(saved) ? [...saved] : [];
+    if (!list.includes('form_10_spread')) {
+      list.push('form_10_spread');
+    }
+    return list;
   });
   const [playDatabase, setPlayDatabase] = useState<PlayDatabaseEntry[]>(() => {
     const saved = safeJSONParse('footballPlayDatabase', null);
@@ -1009,7 +1026,14 @@ export default function App() {
     let formations: FormationBoard[] = [];
 
     for (const f of rawCandidateForms) {
-      if (!f || !f.id || curDeletedSet.has(f.id)) continue;
+      if (
+        !f ||
+        !f.id ||
+        curDeletedSet.has(f.id) ||
+        f.id === 'form_10_spread' ||
+        f.name === '10 Spread Offense'
+      )
+        continue;
       if (seenFormIds.has(f.id)) continue;
       seenFormIds.add(f.id);
       formations.push(f);
@@ -1018,12 +1042,30 @@ export default function App() {
     // Ensure every week has core units (Offense, Defense, ST, Groups) populated
     for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
       if (!formations.some((f) => f && f.unit === u)) {
-        let defsForUnit = (defaultFormations || []).filter((f) => f && f.unit === u && !curDeletedSet.has(f.id));
+        let defsForUnit = (defaultFormations || []).filter(
+          (f) =>
+            f &&
+            f.unit === u &&
+            !curDeletedSet.has(f.id) &&
+            f.id !== 'form_10_spread' &&
+            f.name !== '10 Spread Offense'
+        );
         if (defsForUnit.length === 0) {
-          defsForUnit = INITIAL_DEFAULT_FORMATIONS.filter((f) => f && f.unit === u);
+          defsForUnit = INITIAL_DEFAULT_FORMATIONS.filter(
+            (f) =>
+              f &&
+              f.unit === u &&
+              !curDeletedSet.has(f.id) &&
+              f.id !== 'form_10_spread' &&
+              f.name !== '10 Spread Offense'
+          );
         }
         for (const df of defsForUnit) {
-          if (!seenFormIds.has(df.id)) {
+          if (
+            !seenFormIds.has(df.id) &&
+            !curDeletedSet.has(df.id) &&
+            df.id !== 'form_10_spread'
+          ) {
             formations.push(deepClone(df));
             seenFormIds.add(df.id);
           }
@@ -1345,9 +1387,22 @@ function mergeRemoteWeeklyData(
 
       // Safety guarantee: never allow a week to lose its core offensive formations
       if (!mergedFormations.some((f) => f && f.unit === 'offense')) {
-        const fallbackOff = (defaultFormations || []).concat(INITIAL_DEFAULT_FORMATIONS).filter((f) => f && f.unit === 'offense');
+        const fallbackOff = (defaultFormations || [])
+          .concat(INITIAL_DEFAULT_FORMATIONS)
+          .filter(
+            (f) =>
+              f &&
+              f.unit === 'offense' &&
+              !deletedSet.has(f.id) &&
+              f.id !== 'form_10_spread' &&
+              f.name !== '10 Spread Offense'
+          );
         for (const fo of fallbackOff) {
-          if (!seenIds.has(fo.id)) {
+          if (
+            !seenIds.has(fo.id) &&
+            !deletedSet.has(fo.id) &&
+            fo.id !== 'form_10_spread'
+          ) {
             mergedFormations.push(deepClone(fo));
             seenIds.add(fo.id);
           }
@@ -4149,16 +4204,89 @@ function mergeRemoteWeeklyData(
     const targetUIdx = uIdx + direction;
     if (targetUIdx < 0 || targetUIdx >= unitForms.length) return;
 
-    const targetNeighborId = unitForms[targetUIdx].id;
-    const gIdx1 = forms.findIndex((f) => f.id === formId);
-    const gIdx2 = forms.findIndex((f) => f.id === targetNeighborId);
-    if (gIdx1 !== -1 && gIdx2 !== -1) {
-      const temp = forms[gIdx1];
-      forms[gIdx1] = forms[gIdx2];
-      forms[gIdx2] = temp;
-      updateCurrentWeekFormations(forms, true);
-      flushAndSaveStateToStorage('move_formation');
-    }
+    // Create cleanly reordered array for this unit
+    const reorderedUnitForms = [...unitForms];
+    const [movedItem] = reorderedUnitForms.splice(uIdx, 1);
+    reorderedUnitForms.splice(targetUIdx, 0, movedItem);
+
+    // Reconstruct full formations array replacing targetUnit formations in-place
+    let repIdx = 0;
+    const nextFormations = forms.map((f) => {
+      if (f.unit === targetUnit) {
+        const rep = reorderedUnitForms[repIdx];
+        repIdx++;
+        return rep || f;
+      }
+      return f;
+    });
+
+    lastLocalEditTimeRef.current = Date.now();
+    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+
+    // Synchronize across all weeks for active team and legacy key
+    setWeeklyData((prev) => {
+      const updatedAll: Record<string, WeekState> = {};
+      for (const [wKey, wState] of Object.entries(prev)) {
+        if (!wState) continue;
+        const isCurrentTeamWeek =
+          wKey.startsWith(`${activeTeamId}__`) ||
+          (!wKey.includes('__') && activeTeamId === 'team_10u');
+
+        if (isCurrentTeamWeek && Array.isArray(wState.formations)) {
+          // Reorder unit formations in this week to match new order
+          const weekUnitForms = wState.formations.filter((f) => f && f.unit === targetUnit);
+          const thisUnitOrdered = reorderedUnitForms.filter((rf) =>
+            weekUnitForms.some((f) => f && f.id === rf.id)
+          );
+          let wRepIdx = 0;
+          const finalWeekForms = wState.formations.map((f) => {
+            if (f && f.unit === targetUnit) {
+              const rep = thisUnitOrdered[wRepIdx];
+              wRepIdx++;
+              return rep || f;
+            }
+            return f;
+          });
+
+          updatedAll[wKey] = {
+            ...wState,
+            formations: finalWeekForms,
+          };
+        } else {
+          updatedAll[wKey] = wState;
+        }
+      }
+
+      // Explicitly set target scoped week and currentWeek
+      const curState = resolveWeekState(prev, activeTeamId, currentWeek);
+      updatedAll[scopedKey] = { ...curState, formations: nextFormations };
+      updatedAll[currentWeek] = { ...curState, formations: nextFormations };
+
+      latestStateRef.current.weeklyData = updatedAll;
+      safeJSONSet('footballWeeklyData', updatedAll);
+      return updatedAll;
+    });
+
+    // Reorder defaultFormations
+    const curDefaults = latestStateRef.current.defaultFormations || defaultFormations || [];
+    let dRepIdx = 0;
+    const nextDefaults = curDefaults.map((df) => {
+      if (df.unit === targetUnit) {
+        const rep = reorderedUnitForms[dRepIdx];
+        dRepIdx++;
+        return rep || df;
+      }
+      return df;
+    });
+    setDefaultFormations(nextDefaults);
+    latestStateRef.current.defaultFormations = nextDefaults;
+    safeJSONSet('footballDefaultFormations', nextDefaults);
+
+    flushAndSaveStateToStorage('move_formation', {
+      movedFormationId: formId,
+      direction,
+      activeUnit: targetUnit,
+    });
   };
 
   const handleAddRow = (formId: string) => {

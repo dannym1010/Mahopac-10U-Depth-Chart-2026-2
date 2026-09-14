@@ -167,6 +167,9 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
     const res: any[] = [];
     for (const f of forms) {
       if (!f || !f.id) continue;
+      if (f.id === 'form_10_spread' || f.name === '10 Spread Offense') {
+        continue;
+      }
       if (
         metadata?.scope !== 'import_backup' &&
         metadata?.scope !== 'copy_week' &&
@@ -252,10 +255,17 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
         const fallbackOff = (Array.isArray(incoming.defaultFormations) ? incoming.defaultFormations : [])
           .concat(Array.isArray(current.defaultFormations) ? current.defaultFormations : [])
           .concat(Array.isArray(curWeekState.formations) ? curWeekState.formations : [])
-          .filter((f: any) => f && f.unit === 'offense');
+          .filter(
+            (f: any) =>
+              f &&
+              f.unit === 'offense' &&
+              !deletedSet.has(f.id) &&
+              f.id !== 'form_10_spread' &&
+              f.name !== '10 Spread Offense'
+          );
         const seenFIds = new Set<string>(mergedFormations.map((f: any) => f?.id));
         for (const fo of fallbackOff) {
-          if (fo && fo.id && !seenFIds.has(fo.id)) {
+          if (fo && fo.id && !seenFIds.has(fo.id) && !deletedSet.has(fo.id)) {
             mergedFormations.push(fo);
             seenFIds.add(fo.id);
           }
@@ -398,6 +408,7 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
       metadata?.scope === 'force' ||
       metadata?.scope === 'copy_week' ||
       metadata?.scope === 'delete_formation' ||
+      metadata?.scope === 'move_formation' ||
       metadata?.scope === 'import_backup' ||
       !metadata?.activeUnit
     ) {
@@ -642,6 +653,27 @@ function loadStateFromDisk() {
       if (raw && raw.trim().length > 0) {
         const parsed = JSON.parse(raw);
         cachedState = parsed.state || parsed;
+        if (cachedState && typeof cachedState === 'object') {
+          if (Array.isArray(cachedState.defaultFormations)) {
+            cachedState.defaultFormations = cachedState.defaultFormations.filter(
+              (f: any) => f && f.id !== 'form_10_spread' && f.name !== '10 Spread Offense'
+            );
+          }
+          if (cachedState.weeklyData && typeof cachedState.weeklyData === 'object') {
+            for (const w of Object.values<any>(cachedState.weeklyData)) {
+              if (w && Array.isArray(w.formations)) {
+                w.formations = w.formations.filter(
+                  (f: any) => f && f.id !== 'form_10_spread' && f.name !== '10 Spread Offense'
+                );
+              }
+            }
+          }
+          const delSet = new Set<string>(
+            Array.isArray(cachedState.deletedFormationIds) ? cachedState.deletedFormationIds : []
+          );
+          delSet.add('form_10_spread');
+          cachedState.deletedFormationIds = Array.from(delSet);
+        }
         stateUpdatedAt = parsed.updatedAt || Date.now();
         stateVersion = parsed.version || 1;
         console.log(`[Server] Loaded persistent football state (v${stateVersion}, updated: ${new Date(stateUpdatedAt).toLocaleTimeString()})`);

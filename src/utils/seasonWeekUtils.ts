@@ -60,7 +60,14 @@ export function normalizeWeeklyData(
         const toAdd =
           defsForUnit.length > 0
             ? defsForUnit
-            : INITIAL_DEFAULT_FORMATIONS.filter((f) => f.unit === u);
+            : INITIAL_DEFAULT_FORMATIONS.filter(
+                (f) =>
+                  f &&
+                  f.unit === u &&
+                  !deletedSet.has(f.id) &&
+                  f.id !== 'form_10_spread' &&
+                  f.name !== '10 Spread Offense'
+              );
         for (const df of toAdd) {
           if (!seenIds.has(df.id)) {
             formations.push(deepClone(df));

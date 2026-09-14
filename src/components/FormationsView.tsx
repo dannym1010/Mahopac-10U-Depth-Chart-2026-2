@@ -5,6 +5,7 @@ import {
   Filter,
   ArrowUp,
   ArrowDown,
+  ArrowUpDown,
   Copy,
   Edit2,
   Trash2,
@@ -333,6 +334,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
   const [formationNameInput, setFormationNameInput] = useState('');
   const [formationTemplateKey, setFormationTemplateKey] = useState('');
   const [isPlaybookActionsDropdownOpen, setIsPlaybookActionsDropdownOpen] = useState(false);
+  const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
   const actionsDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -375,6 +377,16 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
   const [selectedTargetFormId, setSelectedTargetFormId] = useState<string>('');
 
   const unitFormations = formations.filter((f) => f && f.unit === unit);
+
+  // Auto-reset stale filter or active tab if formation was deleted or moved
+  useEffect(() => {
+    if (activeMobileFormationTab !== 'ALL' && !unitFormations.some((f) => f && f.id === activeMobileFormationTab)) {
+      setActiveMobileFormationTab('ALL');
+    }
+    if (filterViewId !== 'ALL' && !unitFormations.some((f) => f && f.id === filterViewId)) {
+      setFilterViewId('ALL');
+    }
+  }, [unitFormations, activeMobileFormationTab, filterViewId]);
   const displayedFormations =
     filterViewId === 'ALL'
       ? unitFormations
@@ -715,6 +727,25 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                     <div className="px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider border-b border-slate-100 dark:border-slate-800 mb-1">
                       Playbook &amp; Depth Chart Actions
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlaybookActionsDropdownOpen(false);
+                        setIsReorderModalOpen(true);
+                      }}
+                      className="w-full px-2.5 py-2 text-left text-xs font-bold text-slate-800 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-100 dark:hover:bg-slate-800/90 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer"
+                    >
+                      <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center shrink-0">
+                        <ArrowUpDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                      </div>
+                      <div>
+                        <div>Reorder Formations</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">
+                          Move formations up or down in order
+                        </div>
+                      </div>
+                    </button>
 
                     {onOpenCopyWeekModal && (
                       <button
@@ -1160,24 +1191,41 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                 <Plus className="w-3.5 h-3.5" />
                                 <span>Level</span>
                               </button>
-                              <div className="flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-0.5 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => onMoveFormation(form.id, -1)}
-                                  title="Move formation up"
-                                  className="p-1 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded transition-all cursor-pointer"
-                                >
-                                  <ArrowUp className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => onMoveFormation(form.id, 1)}
-                                  title="Move formation down"
-                                  className="p-1 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded transition-all cursor-pointer"
-                                >
-                                  <ArrowDown className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
+                              {(() => {
+                                const uIdx = unitFormations.findIndex((f) => f.id === form.id);
+                                const isFirst = uIdx <= 0;
+                                const isLast = uIdx === -1 || uIdx >= unitFormations.length - 1;
+                                return (
+                                  <div className="flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-0.5 shrink-0">
+                                    <button
+                                      type="button"
+                                      disabled={isFirst}
+                                      onClick={() => onMoveFormation(form.id, -1)}
+                                      title={isFirst ? 'Already at top' : 'Move formation up'}
+                                      className={`p-1 rounded transition-all ${
+                                        isFirst
+                                          ? 'opacity-25 cursor-not-allowed text-slate-400'
+                                          : 'text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300 hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer'
+                                      }`}
+                                    >
+                                      <ArrowUp className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={isLast}
+                                      onClick={() => onMoveFormation(form.id, 1)}
+                                      title={isLast ? 'Already at bottom' : 'Move formation down'}
+                                      className={`p-1 rounded transition-all ${
+                                        isLast
+                                          ? 'opacity-25 cursor-not-allowed text-slate-400'
+                                          : 'text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300 hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer'
+                                      }`}
+                                    >
+                                      <ArrowDown className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                );
+                              })()}
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1754,22 +1802,41 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                     className="flex items-center gap-1.5 flex-wrap print:hidden"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div className="flex items-center bg-slate-900 border border-slate-750 rounded-xl p-0.5 shadow-xs">
-                      <button
-                        onClick={() => onMoveFormation(form.id, -1)}
-                        title="Move Formation Up"
-                        className="p-1 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 rounded-lg text-xs transition-all cursor-pointer"
-                      >
-                        <ArrowUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => onMoveFormation(form.id, 1)}
-                        title="Move Formation Down"
-                        className="p-1 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 rounded-lg text-xs transition-all cursor-pointer"
-                      >
-                        <ArrowDown className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    {(() => {
+                      const uIdx = unitFormations.findIndex((f) => f.id === form.id);
+                      const isFirst = uIdx <= 0;
+                      const isLast = uIdx === -1 || uIdx >= unitFormations.length - 1;
+                      return (
+                        <div className="flex items-center bg-slate-900 border border-slate-750 rounded-xl p-0.5 shadow-xs">
+                          <button
+                            type="button"
+                            disabled={isFirst}
+                            onClick={() => onMoveFormation(form.id, -1)}
+                            title={isFirst ? 'Already at top' : 'Move Formation Up'}
+                            className={`p-1 rounded-lg text-xs transition-all ${
+                              isFirst
+                                ? 'opacity-25 cursor-not-allowed text-slate-500'
+                                : 'text-slate-400 hover:text-indigo-300 hover:bg-slate-800 cursor-pointer'
+                            }`}
+                          >
+                            <ArrowUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isLast}
+                            onClick={() => onMoveFormation(form.id, 1)}
+                            title={isLast ? 'Already at bottom' : 'Move Formation Down'}
+                            className={`p-1 rounded-lg text-xs transition-all ${
+                              isLast
+                                ? 'opacity-25 cursor-not-allowed text-slate-500'
+                                : 'text-slate-400 hover:text-indigo-300 hover:bg-slate-800 cursor-pointer'
+                            }`}
+                          >
+                            <ArrowDown className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })()}
                     <button
                       onClick={() => {
                         setRowLabelInput('Secondary Level');
@@ -3495,12 +3562,130 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                 onClick={() => {
                   const idToDelete = deleteFormationTarget.formId;
                   setDeleteFormationTarget(null);
+                  if (activeMobileFormationTab === idToDelete) {
+                    setActiveMobileFormationTab('ALL');
+                  }
+                  if (filterViewId === idToDelete) {
+                    setFilterViewId('ALL');
+                  }
                   onDeleteFormation(idToDelete);
                 }}
                 className="px-4 py-2 text-xs font-black bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow-lg shadow-rose-600/30 flex items-center gap-1.5 cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Delete Formation</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dedicated Reorder Formations Modal */}
+      {isReorderModalOpen && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in duration-150"
+          onClick={() => setIsReorderModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-750 rounded-2xl shadow-2xl p-5 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-600/20 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                  <ArrowUpDown className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">
+                    Reorder Formations
+                  </h3>
+                  <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    {unit.toUpperCase()} UNIT ({unitFormations.length} Formations)
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsReorderModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5 max-h-[60vh] overflow-y-auto pr-1">
+              {unitFormations.length === 0 ? (
+                <div className="py-8 text-center text-xs text-slate-500">
+                  No {unit} formations found.
+                </div>
+              ) : (
+                unitFormations.map((form, idx) => {
+                  const isFirst = idx === 0;
+                  const isLast = idx === unitFormations.length - 1;
+                  return (
+                    <div
+                      key={form.id}
+                      className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-xl transition-all"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="w-6 h-6 flex items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-black shrink-0">
+                          {idx + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                            {form.name}
+                          </div>
+                          {form.subtitle && (
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                              {form.subtitle}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0 ml-2">
+                        <button
+                          type="button"
+                          disabled={isFirst}
+                          onClick={() => onMoveFormation(form.id, -1)}
+                          title={isFirst ? 'Already at top' : 'Move Up'}
+                          className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                            isFirst
+                              ? 'opacity-25 cursor-not-allowed text-slate-400 bg-transparent'
+                              : 'bg-white dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-600/30 text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-300 border border-slate-200 dark:border-slate-600 shadow-xs cursor-pointer'
+                          }`}
+                        >
+                          <ArrowUp className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline text-[10px]">Up</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isLast}
+                          onClick={() => onMoveFormation(form.id, 1)}
+                          title={isLast ? 'Already at bottom' : 'Move Down'}
+                          className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                            isLast
+                              ? 'opacity-25 cursor-not-allowed text-slate-400 bg-transparent'
+                              : 'bg-white dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-600/30 text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-300 border border-slate-200 dark:border-slate-600 shadow-xs cursor-pointer'
+                          }`}
+                        >
+                          <ArrowDown className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline text-[10px]">Down</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsReorderModalOpen(false)}
+                className="px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-md cursor-pointer transition-all"
+              >
+                Done
               </button>
             </div>
           </div>
