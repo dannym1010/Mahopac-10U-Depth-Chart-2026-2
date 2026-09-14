@@ -107,27 +107,32 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
       // Merge formations array preserving the incoming requested order
       let mergedFormations = curWeekState.formations || [];
       if (Array.isArray(incWeekState.formations) && incWeekState.formations.length > 0) {
-        const seenIds = new Set<string>();
-        const result: any[] = [];
+        if (metadata?.scope === 'all' || metadata?.scope === 'force' || metadata?.scope === 'copy_week' || !metadata?.activeUnit) {
+          // Full formations update: incoming array is authoritative
+          mergedFormations = incWeekState.formations;
+        } else {
+          // Single unit or partial save: retain formations for other units, do not resurrect deleted formations in active unit
+          const seenIds = new Set<string>();
+          const result: any[] = [];
 
-        // 1. Keep incoming formations in their exact received order
-        incWeekState.formations.forEach((f: any) => {
-          if (f && f.id) {
-            seenIds.add(f.id);
-            result.push(f);
-          }
-        });
-
-        // 2. Append any existing formations from other units not present in incoming (unless full force or copy_week save)
-        if (metadata?.scope !== 'force' && metadata?.scope !== 'copy_week') {
-          (curWeekState.formations || []).forEach((f: any) => {
-            if (f && f.id && !seenIds.has(f.id)) {
+          incWeekState.formations.forEach((f: any) => {
+            if (f && f.id) {
+              seenIds.add(f.id);
               result.push(f);
             }
           });
-        }
 
-        mergedFormations = result;
+          const activeU = metadata?.activeUnit;
+          (curWeekState.formations || []).forEach((f: any) => {
+            if (f && f.id && !seenIds.has(f.id)) {
+              if (!activeU || f.unit !== activeU) {
+                result.push(f);
+              }
+            }
+          });
+
+          mergedFormations = result;
+        }
       }
 
       // Merge Depth Chart per position ID without ghost retention or resurrecting removed players
@@ -141,7 +146,6 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
         metadata?.scope !== 'all' &&
         metadata?.activeUnit &&
         metadata.activeUnit !== 'all' &&
-        metadata.activeUnit !== 'depth_chart' &&
         metadata.activeUnit !== 'scrimmage' &&
         metadata.activeUnit !== 'practice';
 
@@ -193,23 +197,30 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
 
   // 2. Merge Default Formations preserving incoming order
   if (Array.isArray(incoming.defaultFormations) && incoming.defaultFormations.length > 0) {
-    const seenIds = new Set<string>();
-    const result: any[] = [];
+    if (metadata?.scope === 'all' || metadata?.scope === 'force' || metadata?.scope === 'copy_week' || !metadata?.activeUnit) {
+      merged.defaultFormations = incoming.defaultFormations;
+    } else {
+      const seenIds = new Set<string>();
+      const result: any[] = [];
 
-    incoming.defaultFormations.forEach((f: any) => {
-      if (f && f.id) {
-        seenIds.add(f.id);
-        result.push(f);
-      }
-    });
+      incoming.defaultFormations.forEach((f: any) => {
+        if (f && f.id) {
+          seenIds.add(f.id);
+          result.push(f);
+        }
+      });
 
-    (current.defaultFormations || []).forEach((f: any) => {
-      if (f && f.id && !seenIds.has(f.id)) {
-        result.push(f);
-      }
-    });
+      const activeU = metadata?.activeUnit;
+      (current.defaultFormations || []).forEach((f: any) => {
+        if (f && f.id && !seenIds.has(f.id)) {
+          if (!activeU || f.unit !== activeU) {
+            result.push(f);
+          }
+        }
+      });
 
-    merged.defaultFormations = result;
+      merged.defaultFormations = result;
+    }
   }
 
   // 3. Merge Roster preserving incoming order
@@ -457,6 +468,9 @@ function broadcastStateUpdate(data: any, senderClientId?: string) {
   for (const client of sseClients) {
     try {
       client.write(message);
+      if (typeof (client as any).flush === 'function') {
+        (client as any).flush();
+      }
     } catch (err) {
       sseClients.delete(client);
     }
@@ -763,10 +777,13 @@ async function startServer() {
   app.get('/api/state/events', (req, res) => {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
       'X-Accel-Buffering': 'no',
     });
+    if (typeof (res as any).flushHeaders === 'function') {
+      (res as any).flushHeaders();
+    }
 
     cleanExpiredLocks();
     const initialPayload = {
@@ -776,18 +793,24 @@ async function startServer() {
       locks: Array.from(activeLocks.values()),
     };
     res.write(`data: ${JSON.stringify(initialPayload)}\n\n`);
+    if (typeof (res as any).flush === 'function') {
+      (res as any).flush();
+    }
 
     sseClients.add(res);
 
-    // Heartbeat ping every 25 seconds to keep connection alive through proxies
+    // Heartbeat ping every 15 seconds to keep connection alive through proxies
     const heartbeat = setInterval(() => {
       try {
         res.write(`: ping\n\n`);
+        if (typeof (res as any).flush === 'function') {
+          (res as any).flush();
+        }
       } catch {
         clearInterval(heartbeat);
         sseClients.delete(res);
       }
-    }, 25000);
+    }, 15000);
 
     req.on('close', () => {
       clearInterval(heartbeat);
