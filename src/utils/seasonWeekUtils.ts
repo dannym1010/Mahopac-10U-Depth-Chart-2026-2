@@ -154,23 +154,20 @@ export function normalizeWeeklyData(
       (scopedState.formations || []).forEach(addFormationIfValid);
       (legacyState.formations || []).forEach(addFormationIfValid);
 
-      // Count placed players
-      const countPlayers = (dc?: Record<string, any[]>) =>
-        dc ? Object.values(dc).reduce((sum, p) => sum + (Array.isArray(p) ? p.length : 0), 0) : 0;
-      const scopedDCCount = countPlayers(scopedState.depthChart);
-      const legacyDCCount = countPlayers(legacyState.depthChart);
-
+      // Prefer the scopedState depth chart if it exists, falling back to legacyState only if scoped is completely missing
       let reconciledDC = scopedState.depthChart;
-      if (legacyDCCount > scopedDCCount) {
-        reconciledDC = legacyState.depthChart;
-      } else if (scopedDCCount > 0 && legacyDCCount > 0) {
-        reconciledDC = { ...(legacyState.depthChart || {}), ...(scopedState.depthChart || {}) };
+      if (!scopedState.depthChart || Object.keys(scopedState.depthChart).length === 0) {
+        reconciledDC = legacyState.depthChart || {};
+      } else {
+        reconciledDC = scopedState.depthChart;
       }
 
-      const reconciledSC =
-        countPlayers(legacyState.scrimmageChart) > countPlayers(scopedState.scrimmageChart)
-          ? legacyState.scrimmageChart
-          : scopedState.scrimmageChart;
+      let reconciledSC = scopedState.scrimmageChart;
+      if (!scopedState.scrimmageChart || Object.keys(scopedState.scrimmageChart).length === 0) {
+        reconciledSC = legacyState.scrimmageChart || {};
+      } else {
+        reconciledSC = scopedState.scrimmageChart;
+      }
 
       scopedState.formations = combinedFormations;
       scopedState.depthChart = reconciledDC;

@@ -234,22 +234,35 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
           mergedFormations = [...incWeekState.formations];
         } else {
           // Single unit or partial save: retain formations for other units, do not resurrect deleted formations in active unit
+          const activeU = metadata?.activeUnit;
           const seenIds = new Set<string>();
           const result: any[] = [];
 
+          // 1. Authoritative incoming formations for the active unit
           incWeekState.formations.forEach((f: any) => {
             if (f && f.id && !deletedSet.has(f.id)) {
-              seenIds.add(f.id);
-              result.push(f);
+              if (f.unit === activeU) {
+                seenIds.add(f.id);
+                result.push(f);
+              }
             }
           });
 
-          const activeU = metadata?.activeUnit;
+          // 2. Retain existing formations for other units from current server state
           (curWeekState.formations || []).forEach((f: any) => {
-            if (f && f.id && !seenIds.has(f.id) && !deletedSet.has(f.id)) {
-              if (!activeU || f.unit !== activeU) {
+            if (f && f.id && !deletedSet.has(f.id)) {
+              if (f.unit !== activeU && !seenIds.has(f.id)) {
+                seenIds.add(f.id);
                 result.push(f);
               }
+            }
+          });
+
+          // 3. Fallback: add any remaining formations from incoming that don't collide
+          incWeekState.formations.forEach((f: any) => {
+            if (f && f.id && !deletedSet.has(f.id) && !seenIds.has(f.id)) {
+              seenIds.add(f.id);
+              result.push(f);
             }
           });
 
@@ -330,9 +343,18 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
             ...getFormationUnitPosIds(cachedState?.defaultFormations, metadata.activeUnit),
           ]);
 
+          if (Array.isArray(metadata?.modifiedPosIds)) {
+            metadata.modifiedPosIds.forEach((id: string) => {
+              if (id) activeUnitPosIds.add(id);
+            });
+          }
+
           // Also match standard unit position prefixes to guarantee defensive/ST positions are recognized
           const isUnitPos = (posId: string): boolean => {
             if (activeUnitPosIds.has(posId)) return true;
+            for (const pId of activeUnitPosIds) {
+              if (posId.startsWith(pId) || pId.startsWith(posId)) return true;
+            }
             const u = metadata.activeUnit;
             if (u === 'defense') {
               return posId.startsWith('53-') || posId.startsWith('44-') || posId.includes('form_53') || posId.includes('form_44') || posId.startsWith('def-');
@@ -411,32 +433,34 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
       };
     }
 
-    // Cross-synchronize team_10u__week_X and legacy X keys
-    const weekNums = new Set<string>();
-    for (const k of Object.keys(merged.weeklyData)) {
-      if (k.startsWith('team_10u__week_')) {
-        weekNums.add(k.replace('team_10u__week_', ''));
-      } else if (!k.includes('__week_')) {
-        weekNums.add(k);
-      }
-    }
-    for (const wk of weekNums) {
-      const sKey = `team_10u__week_${wk}`;
-      const lKey = wk;
-      const sState = merged.weeklyData[sKey];
-      const lState = merged.weeklyData[lKey];
-      if (sState && lState) {
-        if (incoming.weeklyData[sKey] || metadata?.activeTeamId === 'team_10u') {
-          merged.weeklyData[lKey] = JSON.parse(JSON.stringify(sState));
-        } else if (incoming.weeklyData[lKey]) {
-          merged.weeklyData[sKey] = JSON.parse(JSON.stringify(lState));
-        } else {
-          merged.weeklyData[lKey] = JSON.parse(JSON.stringify(sState));
+    // Cross-synchronize team_10u__week_X and legacy X keys only when active team is team_10u or unscoped
+    if (!metadata?.activeTeamId || metadata.activeTeamId === 'team_10u') {
+      const weekNums = new Set<string>();
+      for (const k of Object.keys(merged.weeklyData)) {
+        if (k.startsWith('team_10u__week_')) {
+          weekNums.add(k.replace('team_10u__week_', ''));
+        } else if (!k.includes('__week_')) {
+          weekNums.add(k);
         }
-      } else if (sState && !lState) {
-        merged.weeklyData[lKey] = JSON.parse(JSON.stringify(sState));
-      } else if (lState && !sState) {
-        merged.weeklyData[sKey] = JSON.parse(JSON.stringify(lState));
+      }
+      for (const wk of weekNums) {
+        const sKey = `team_10u__week_${wk}`;
+        const lKey = wk;
+        const sState = merged.weeklyData[sKey];
+        const lState = merged.weeklyData[lKey];
+        if (sState && lState) {
+          if (incoming.weeklyData[sKey] || metadata?.activeTeamId === 'team_10u') {
+            merged.weeklyData[lKey] = JSON.parse(JSON.stringify(sState));
+          } else if (incoming.weeklyData[lKey]) {
+            merged.weeklyData[sKey] = JSON.parse(JSON.stringify(lState));
+          } else {
+            merged.weeklyData[lKey] = JSON.parse(JSON.stringify(sState));
+          }
+        } else if (sState && !lState) {
+          merged.weeklyData[lKey] = JSON.parse(JSON.stringify(sState));
+        } else if (lState && !sState) {
+          merged.weeklyData[sKey] = JSON.parse(JSON.stringify(lState));
+        }
       }
     }
   }
@@ -454,22 +478,35 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
     ) {
       merged.defaultFormations = incoming.defaultFormations;
     } else {
+      const activeU = metadata?.activeUnit;
       const seenIds = new Set<string>();
       const result: any[] = [];
 
+      // 1. Authoritative incoming formations for active unit
       incoming.defaultFormations.forEach((f: any) => {
         if (f && f.id) {
-          seenIds.add(f.id);
-          result.push(f);
+          if (f.unit === activeU) {
+            seenIds.add(f.id);
+            result.push(f);
+          }
         }
       });
 
-      const activeU = metadata?.activeUnit;
+      // 2. Retain current default formations for other units
       (current.defaultFormations || []).forEach((f: any) => {
         if (f && f.id && !seenIds.has(f.id)) {
-          if (!activeU || f.unit !== activeU) {
+          if (f.unit !== activeU) {
+            seenIds.add(f.id);
             result.push(f);
           }
+        }
+      });
+
+      // 3. Fallback for any remaining from incoming
+      incoming.defaultFormations.forEach((f: any) => {
+        if (f && f.id && !seenIds.has(f.id)) {
+          seenIds.add(f.id);
+          result.push(f);
         }
       });
 
