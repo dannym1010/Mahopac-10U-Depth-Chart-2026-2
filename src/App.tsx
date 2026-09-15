@@ -798,14 +798,41 @@ export default function App() {
   const lastSavedPayloadRef = useRef<string>('');
   const localServerVersionRef = useRef<number>(0);
   const localServerUpdatedAtRef = useRef<number>(0);
-  const lastLocalEditTimeRef = useRef<number>(0);
+  const lastLocalEditTimeRef = useRef<number>(
+    typeof window !== 'undefined' ? safeJSONParse('footballLastLocalEditTime', 0) : 0
+  );
   const lastLocalCallSheetEditTimeRef = useRef<number>(0);
   const activeUnitRef = useRef<string>(activeUnit);
   const activeTeamIdRef = useRef<string>(activeTeamId);
   const currentWeekRef = useRef<string>(currentWeek);
   const currentPracticeIdRef = useRef<string | null>(currentPracticeId);
-  const recentlyModifiedPositionsRef = useRef<Map<string, number>>(new Map());
+  const recentlyModifiedPositionsRef = useRef<Map<string, number>>(
+    new Map(
+      typeof window !== 'undefined'
+        ? (safeJSONParse('footballRecentlyModifiedPositions', []) || [])
+        : []
+    )
+  );
   const recentlyModifiedFormationsRef = useRef<Map<string, number>>(new Map());
+
+  // Helper to persistently record local position modifications
+  const recordPositionEdit = (posId: string) => {
+    const now = Date.now();
+    lastLocalEditTimeRef.current = now;
+    safeJSONSet('footballLastLocalEditTime', now);
+    recentlyModifiedPositionsRef.current.set(posId, now);
+    safeJSONSet(
+      'footballRecentlyModifiedPositions',
+      Array.from(recentlyModifiedPositionsRef.current.entries())
+    );
+  };
+
+  // Helper to change current week and persist to localStorage
+  const changeCurrentWeek = (wk: string) => {
+    setCurrentWeek(wk);
+    currentWeekRef.current = wk;
+    safeJSONSet('footballCurrentWeek', wk);
+  };
 
   activeUnitRef.current = activeUnit;
   activeTeamIdRef.current = activeTeamId;
@@ -1096,18 +1123,19 @@ export default function App() {
     const scopedDCCount = countPlacedPlayers(scopedState?.depthChart);
     const legacyDCCount = countPlacedPlayers(legacyState?.depthChart);
     const defScopedDCCount = countPlacedPlayers(defScopedState?.depthChart);
+    const is10U = !teamId || teamId === 'team_10u';
 
     if (scopedDCCount > 0) {
       depthChart = scopedState!.depthChart!;
-    } else if (legacyDCCount > 0) {
+    } else if (is10U && legacyDCCount > 0) {
       depthChart = legacyState!.depthChart!;
-    } else if (defScopedDCCount > 0) {
+    } else if (is10U && defScopedDCCount > 0) {
       depthChart = defScopedState!.depthChart!;
     } else if (scopedState && scopedState.depthChart !== undefined) {
       depthChart = scopedState.depthChart;
-    } else if (legacyState && legacyState.depthChart !== undefined) {
+    } else if (is10U && legacyState && legacyState.depthChart !== undefined) {
       depthChart = legacyState.depthChart;
-    } else if (defScopedState && defScopedState.depthChart !== undefined) {
+    } else if (is10U && defScopedState && defScopedState.depthChart !== undefined) {
       depthChart = defScopedState.depthChart;
     } else {
       depthChart = {};
@@ -1121,15 +1149,15 @@ export default function App() {
 
     if (scopedSCCount > 0) {
       scrimmageChart = scopedState!.scrimmageChart!;
-    } else if (legacySCCount > 0) {
+    } else if (is10U && legacySCCount > 0) {
       scrimmageChart = legacyState!.scrimmageChart!;
-    } else if (defScopedSCCount > 0) {
+    } else if (is10U && defScopedSCCount > 0) {
       scrimmageChart = defScopedState!.scrimmageChart!;
     } else if (scopedState && scopedState.scrimmageChart !== undefined) {
       scrimmageChart = scopedState.scrimmageChart;
-    } else if (legacyState && legacyState.scrimmageChart !== undefined) {
+    } else if (is10U && legacyState && legacyState.scrimmageChart !== undefined) {
       scrimmageChart = legacyState.scrimmageChart;
-    } else if (defScopedState && defScopedState.scrimmageChart !== undefined) {
+    } else if (is10U && defScopedState && defScopedState.scrimmageChart !== undefined) {
       scrimmageChart = defScopedState.scrimmageChart;
     } else {
       scrimmageChart = {};
@@ -1265,8 +1293,8 @@ function mergeRemoteWeeklyData(
   const merged: Record<string, WeekState> = { ...remoteWeekly };
   const scopedKey = `${activeTeamId}__week_${currentWeek}`;
   const timeSinceEdit = Date.now() - lastLocalEditTime;
-  // Local edit guard window: shield local state if a local edit occurred within the last 25 seconds
-  const isActivelyEditingLocally = timeSinceEdit < 25000;
+  // Local edit guard window: shield local state if a local edit occurred within the last 120 seconds (survives refreshes)
+  const isActivelyEditingLocally = timeSinceEdit < 120000;
   const deletedSet = new Set<string>(deletedFormationIds || []);
   const CORE_DEFAULT_FORMATION_IDS = new Set([
     'form_21', 'form_1787860064353', 'form_1787860077403', 'form_1788270435286', // Offense
@@ -1349,14 +1377,14 @@ function mergeRemoteWeeklyData(
     const isRecentlyModifiedFormation = (formId: string) => {
       if (!recentlyModifiedFormations) return false;
       const t = recentlyModifiedFormations.get(formId);
-      return t !== undefined && now - t < 25000;
+      return t !== undefined && now - t < 120000;
     };
 
     const mergedFormations: FormationBoard[] = [];
     const seenIds = new Set<string>();
 
     if (isActivelyEditingLocally && isCurrentActiveWeek) {
-      // 1. Prioritize local formations for the active unit and any formations touched within 25 seconds
+      // 1. Prioritize local formations for the active unit and any formations touched within 120 seconds
       localFormations.forEach((lf) => {
         if (lf && lf.id && !deletedSet.has(lf.id)) {
           if (lf.unit === activeUnit || isRecentlyModifiedFormation(lf.id)) {
@@ -1366,7 +1394,7 @@ function mergeRemoteWeeklyData(
         }
       });
     } else {
-      // 1b. Even if not actively editing in this week, shield any formation touched locally within 25s
+      // 1b. Even if not actively editing in this week, shield any formation touched locally within 120s
       localFormations.forEach((lf) => {
         if (lf && lf.id && !deletedSet.has(lf.id) && isRecentlyModifiedFormation(lf.id)) {
           mergedFormations.push(lf);
@@ -1416,13 +1444,13 @@ function mergeRemoteWeeklyData(
 
     if (isActivelyEditingLocally && isCurrentActiveWeek) {
       // Local coach is actively editing this week
-      // 1. Any position edited locally within 25 seconds takes precedence
+      // 1. Any position edited locally within 120 seconds takes precedence
       if (recentlyModifiedPositions && recentlyModifiedPositions.size > 0) {
         for (const [posId, editTime] of recentlyModifiedPositions.entries()) {
-          if (now - editTime < 25000 && localDC[posId] !== undefined) {
+          if (now - editTime < 120000 && localDC[posId] !== undefined) {
             mergedDC[posId] = localDC[posId];
           }
-          if (now - editTime < 25000 && localSC[posId] !== undefined) {
+          if (now - editTime < 120000 && localSC[posId] !== undefined) {
             mergedSC[posId] = localSC[posId];
           }
         }
@@ -1464,13 +1492,13 @@ function mergeRemoteWeeklyData(
     } else {
       // Not actively editing locally in this specific week:
       // Remote takes precedence for real-time multi-coach updates,
-      // but protect recently modified positions (< 25s) and retain local-only positions
+      // but protect recently modified positions (< 120s) and retain local-only positions
       if (recentlyModifiedPositions && recentlyModifiedPositions.size > 0) {
         for (const [posId, editTime] of recentlyModifiedPositions.entries()) {
-          if (now - editTime < 25000 && localDC[posId] !== undefined) {
+          if (now - editTime < 120000 && localDC[posId] !== undefined) {
             mergedDC[posId] = localDC[posId];
           }
-          if (now - editTime < 25000 && localSC[posId] !== undefined) {
+          if (now - editTime < 120000 && localSC[posId] !== undefined) {
             mergedSC[posId] = localSC[posId];
           }
         }
@@ -1496,10 +1524,10 @@ function mergeRemoteWeeklyData(
     }
 
     const localHasWristbandPlays = localState.wristbandData?.wristbands?.some((wb: any) =>
-      wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
+      wb?.columns?.some((c: any) => c?.plays?.some((p: any) => p && p.text && p.text.trim()))
     );
     const remoteHasWristbandPlays = remoteState.wristbandData?.wristbands?.some((wb: any) =>
-      wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
+      wb?.columns?.some((c: any) => c?.plays?.some((p: any) => p && p.text && p.text.trim()))
     );
     let safeWristbandData = remoteState.wristbandData;
     if (localHasWristbandPlays && !remoteHasWristbandPlays) {
@@ -1532,11 +1560,27 @@ function mergeRemoteWeeklyData(
   ) => {
     if (!data || typeof data !== 'object') return;
 
+    const remoteTimestamp =
+      typeof updatedAt === 'number'
+        ? updatedAt
+        : typeof data.updatedAt === 'number'
+        ? data.updatedAt
+        : 0;
+
+    // Guard against stale remote updates
+    if (
+      remoteTimestamp > 0 &&
+      localServerUpdatedAtRef.current > 0 &&
+      remoteTimestamp < localServerUpdatedAtRef.current
+    ) {
+      return;
+    }
+
     if (typeof version === 'number' && version > localServerVersionRef.current) {
       localServerVersionRef.current = version;
     }
-    if (typeof updatedAt === 'number' && updatedAt > localServerUpdatedAtRef.current) {
-      localServerUpdatedAtRef.current = updatedAt;
+    if (remoteTimestamp > localServerUpdatedAtRef.current) {
+      localServerUpdatedAtRef.current = remoteTimestamp;
     }
 
     isRemoteSyncRef.current = true;
@@ -1959,6 +2003,13 @@ function mergeRemoteWeeklyData(
     safeJSONSet('footballTeams', currentState.teams);
     safeJSONSet('footballSeasonConfig', currentState.seasonConfig);
     safeJSONSet('footballAttendanceLogs', currentState.attendanceLogs);
+    safeJSONSet('footballCurrentWeek', currentWeekRef.current);
+    safeJSONSet('footballActiveTeamId', activeTeamIdRef.current);
+    safeJSONSet('footballLastLocalEditTime', lastLocalEditTimeRef.current);
+    safeJSONSet(
+      'footballRecentlyModifiedPositions',
+      Array.from(recentlyModifiedPositionsRef.current.entries())
+    );
 
     const payload = {
       weeklyData: currentState.weeklyData,
@@ -2194,6 +2245,9 @@ function mergeRemoteWeeklyData(
         if (serverRes && serverRes.hasData && serverRes.state) {
           applyRemoteState(serverRes.state, 'server_init', serverRes.version, serverRes.updatedAt);
           initialCloudLoadDoneRef.current = true;
+          if (lastLocalEditTimeRef.current > (serverRes.updatedAt || 0)) {
+            flushAndSaveStateToStorage('client_local_catchup');
+          }
         } else if (!firestoreLoaded) {
           initialCloudLoadDoneRef.current = true;
         }
@@ -3561,13 +3615,17 @@ function mergeRemoteWeeklyData(
       ...existing,
       formations: newFormations,
     };
-    const updatedAll = {
+    const updatedAll: Record<string, WeekState> = {
       ...prev,
       [scopedKey]: updatedWeekState,
-      [currentWeek]: updatedWeekState,
     };
+    if (activeTeamId === 'team_10u' || !activeTeamId) {
+      updatedAll[currentWeek] = updatedWeekState;
+    }
     latestStateRef.current.weeklyData = updatedAll;
     safeJSONSet('footballWeeklyData', updatedAll);
+    safeJSONSet('footballCurrentWeek', currentWeek);
+    safeJSONSet('footballActiveTeamId', activeTeamId);
     setWeeklyData(updatedAll);
 
     if (syncToDefaults) {
@@ -3602,7 +3660,12 @@ function mergeRemoteWeeklyData(
   const updateCurrentWeekDepthChart = (
     newDepthChart: Record<string, PlacedPlayer[]>
   ) => {
-    lastLocalEditTimeRef.current = Date.now();
+    const now = Date.now();
+    lastLocalEditTimeRef.current = now;
+    safeJSONSet('footballLastLocalEditTime', now);
+    safeJSONSet('footballCurrentWeek', currentWeek);
+    safeJSONSet('footballActiveTeamId', activeTeamId);
+
     const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
     const prev = latestStateRef.current.weeklyData || weeklyData;
     const existing = resolveWeekState(prev, activeTeamId, currentWeek);
@@ -3610,11 +3673,13 @@ function mergeRemoteWeeklyData(
       ...existing,
       depthChart: newDepthChart,
     };
-    const updatedAll = {
+    const updatedAll: Record<string, WeekState> = {
       ...prev,
       [scopedKey]: updatedWeekState,
-      [currentWeek]: updatedWeekState,
     };
+    if (activeTeamId === 'team_10u' || !activeTeamId) {
+      updatedAll[currentWeek] = updatedWeekState;
+    }
     latestStateRef.current.weeklyData = updatedAll;
     safeJSONSet('footballWeeklyData', updatedAll);
     setWeeklyData(updatedAll);
@@ -3624,7 +3689,12 @@ function mergeRemoteWeeklyData(
   const updateCurrentWeekScrimmageChart = (
     newScrimChart: Record<string, PlacedPlayer[]>
   ) => {
-    lastLocalEditTimeRef.current = Date.now();
+    const now = Date.now();
+    lastLocalEditTimeRef.current = now;
+    safeJSONSet('footballLastLocalEditTime', now);
+    safeJSONSet('footballCurrentWeek', currentWeek);
+    safeJSONSet('footballActiveTeamId', activeTeamId);
+
     const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
     const prev = latestStateRef.current.weeklyData || weeklyData;
     const existing = resolveWeekState(prev, activeTeamId, currentWeek);
@@ -3632,11 +3702,13 @@ function mergeRemoteWeeklyData(
       ...existing,
       scrimmageChart: newScrimChart,
     };
-    const updatedAll = {
+    const updatedAll: Record<string, WeekState> = {
       ...prev,
       [scopedKey]: updatedWeekState,
-      [currentWeek]: updatedWeekState,
     };
+    if (activeTeamId === 'team_10u' || !activeTeamId) {
+      updatedAll[currentWeek] = updatedWeekState;
+    }
     latestStateRef.current.weeklyData = updatedAll;
     safeJSONSet('footballWeeklyData', updatedAll);
     setWeeklyData(updatedAll);
@@ -3717,12 +3789,12 @@ function mergeRemoteWeeklyData(
 
     let playerObj: PlacedPlayer | null = null;
     const modifiedPosIds: string[] = [targetPosId];
-    recentlyModifiedPositionsRef.current.set(targetPosId, Date.now());
+    recordPositionEdit(targetPosId);
 
     if (dragged.type === 'placed_player' && dragged.sourcePosId !== undefined) {
       if (dragged.sourcePosId !== targetPosId) {
         modifiedPosIds.push(dragged.sourcePosId);
-        recentlyModifiedPositionsRef.current.set(dragged.sourcePosId, Date.now());
+        recordPositionEdit(dragged.sourcePosId);
       }
       if (chart[dragged.sourcePosId] && dragged.sourceIndex !== undefined) {
         playerObj = chart[dragged.sourcePosId][dragged.sourceIndex];
@@ -3755,7 +3827,7 @@ function mergeRemoteWeeklyData(
 
     if (chart[posId]) {
       chart[posId].splice(playerIndex, 1);
-      recentlyModifiedPositionsRef.current.set(posId, Date.now());
+      recordPositionEdit(posId);
       if (isScrimmage) updateCurrentWeekScrimmageChart(chart);
       else updateCurrentWeekDepthChart(chart);
       flushAndSaveStateToStorage('player_remove', { modifiedPosIds: [posId] });
@@ -3783,7 +3855,7 @@ function mergeRemoteWeeklyData(
       filtered.push(player);
     }
     chart[posId] = filtered;
-    recentlyModifiedPositionsRef.current.set(posId, Date.now());
+    recordPositionEdit(posId);
 
     if (isScrimmage) {
       updateCurrentWeekScrimmageChart(chart);
@@ -3810,7 +3882,7 @@ function mergeRemoteWeeklyData(
     const clampedToIndex = Math.max(0, Math.min(list.length, toIndex));
     list.splice(clampedToIndex, 0, moved);
     chart[posId] = list;
-    recentlyModifiedPositionsRef.current.set(posId, Date.now());
+    recordPositionEdit(posId);
 
     if (isScrimmage) {
       updateCurrentWeekScrimmageChart(chart);
@@ -4456,12 +4528,12 @@ function mergeRemoteWeeklyData(
 
     const updated = [...currentFormations, clonedForm];
     const targetUnit = form.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
+    updateCurrentWeekDepthChart(dc);
+    updateCurrentWeekScrimmageChart(sc);
     updateCurrentWeekFormations(updated, true, true, {
       scope: 'formation_duplicate',
       activeUnit: targetUnit,
     });
-    updateCurrentWeekDepthChart(dc);
-    updateCurrentWeekScrimmageChart(sc);
     setSelectedFormationId(newFormId);
   };
 
@@ -4548,12 +4620,12 @@ function mergeRemoteWeeklyData(
 
     const targetUnit = targetForm.unit || srcForm.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
 
+    updateCurrentWeekDepthChart(dc);
     updateCurrentWeekFormations(forms, true, true, {
       scope: 'position_copy',
       modifiedPosIds: [pos.id, newPosId],
       activeUnit: targetUnit,
     });
-    updateCurrentWeekDepthChart(dc);
   };
 
   const handleAddFormation = (unit: 'offense' | 'defense' | 'st' | 'groups') => {
@@ -5055,7 +5127,7 @@ function mergeRemoteWeeklyData(
     const match = rawWeek.match(/Week\s*(\d+)/i);
     const weekNum = match ? match[1] : rawWeek.replace(/\D/g, '') || '1';
     ensureWeekExists(weekNum);
-    setCurrentWeek(weekNum);
+    changeCurrentWeek(weekNum);
     setCurrentPracticeId(planId);
     setActiveUnit('practice');
   };
@@ -6587,7 +6659,7 @@ function mergeRemoteWeeklyData(
 
     // Update React state
     setWeeklyData(nextWeekly);
-    setCurrentWeek(targetWeek);
+    changeCurrentWeek(targetWeek);
 
     // Save and sync immediately to local and cloud with authoritative copy_week scope
     saveStateToStorage('copy_week');
@@ -7153,7 +7225,7 @@ function mergeRemoteWeeklyData(
     const weekKey = match ? match[1] : weekFolder.replace(/\D/g, '') || '1';
 
     ensureWeekExists(weekKey);
-    setCurrentWeek(weekKey);
+    changeCurrentWeek(weekKey);
 
     if (practiceId) {
       setCurrentPracticeId(practiceId);
@@ -7442,7 +7514,7 @@ function mergeRemoteWeeklyData(
         <Header
         currentWeek={currentWeek}
         onWeekChange={(wk) => {
-          setCurrentWeek(wk);
+          changeCurrentWeek(wk);
           ensureWeekExists(wk);
         }}
         opponent={currentWeekState.opponent || ''}
@@ -7530,7 +7602,7 @@ function mergeRemoteWeeklyData(
                 userRole={userRole}
                 onNavigateToUnit={(unit, options) => {
                   if (options?.week) {
-                    setCurrentWeek(options.week);
+                    changeCurrentWeek(options.week);
                     ensureWeekExists(options.week);
                   }
                   if (options?.practiceId) {
@@ -7558,7 +7630,7 @@ function mergeRemoteWeeklyData(
                 onSelectTeam={setActiveTeamId}
                 currentWeek={currentWeek}
                 onSelectWeek={(wk) => {
-                  setCurrentWeek(wk);
+                  changeCurrentWeek(wk);
                   ensureWeekExists(wk);
                 }}
                 userRole={userRole}
@@ -7573,7 +7645,7 @@ function mergeRemoteWeeklyData(
                 onNavigateToUnit={(unit, optionsOrSubUnit) => {
                   if (typeof optionsOrSubUnit === 'object' && optionsOrSubUnit !== null) {
                     if (optionsOrSubUnit.week) {
-                      setCurrentWeek(optionsOrSubUnit.week);
+                      changeCurrentWeek(optionsOrSubUnit.week);
                       ensureWeekExists(optionsOrSubUnit.week);
                     }
                     if (optionsOrSubUnit.practiceId) {

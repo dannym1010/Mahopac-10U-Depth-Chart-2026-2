@@ -1,7 +1,7 @@
 {
-  "version": 125,
-  "updatedAt": 1789420297127,
-  "lastAuthor": "defense_coach@test.com",
+  "version": 126,
+  "updatedAt": 1789490074752,
+  "lastAuthor": "test@test.com",
   "state": {
     "weeklyData": {
       "0": {
@@ -7113,6 +7113,12 @@
             {
               "name": "Jones",
               "num": "44"
+            }
+          ],
+          "21-pos-1": [
+            {
+              "name": "TEST PERSIST PLAYER",
+              "num": "99"
             }
           ]
         },
@@ -32957,6 +32963,12 @@
               "name": "Jones",
               "num": "44"
             }
+          ],
+          "21-pos-1": [
+            {
+              "name": "TEST PERSIST PLAYER",
+              "num": "99"
+            }
           ]
         },
         "scrimmageChart": {},
@@ -53492,302 +53504,6 @@
         },
         "formations": [
           {
-            "id": "form_44",
-            "subtitle": "Stack Front (11 Positions)",
-            "unit": "defense",
-            "name": "44 Defense",
-            "collapsed": false,
-            "rows": [
-              {
-                "rowClass": "secondary-safety",
-                "id": "row_44_fs",
-                "label": "Free Safety (Deep Center)",
-                "positions": [
-                  {
-                    "name": "FS",
-                    "id": "44-FS"
-                  }
-                ]
-              },
-              {
-                "id": "row_44_cb",
-                "positions": [
-                  {
-                    "name": "CB 1",
-                    "id": "44-CB1"
-                  },
-                  {
-                    "id": "44-CB2",
-                    "name": "CB 2"
-                  }
-                ],
-                "rowClass": "secondary-corners",
-                "label": "Secondary / Cornerbacks"
-              },
-              {
-                "rowClass": "linebackers-tight",
-                "label": "Linebacker Level (ROVER - WILL - MIKE - SAM)",
-                "positions": [
-                  {
-                    "name": "ROVER",
-                    "id": "44-ROVER"
-                  },
-                  {
-                    "id": "44-WILL",
-                    "name": "WILL"
-                  },
-                  {
-                    "name": "MIKE",
-                    "id": "44-MIKE"
-                  },
-                  {
-                    "id": "44-SAM",
-                    "name": "SAM"
-                  }
-                ],
-                "id": "row_44_lb"
-              },
-              {
-                "id": "row_44_dl",
-                "positions": [
-                  {
-                    "name": "WDE",
-                    "id": "44-WDE"
-                  },
-                  {
-                    "name": "DT 1",
-                    "id": "44-DT1"
-                  },
-                  {
-                    "id": "44-DT2",
-                    "name": "DT 2"
-                  },
-                  {
-                    "name": "SDE",
-                    "id": "44-SDE"
-                  }
-                ],
-                "rowClass": "dl",
-                "label": "Defensive Line (WDE - DT1 - DT2 - SDE)"
-              }
-            ]
-          },
-          {
-            "collapsed": false,
-            "unit": "st",
-            "id": "form_ko",
-            "name": "Kickoff Team",
-            "subtitle": "8 Coverage + 3 Backs",
-            "rows": [
-              {
-                "positions": [
-                  {
-                    "id": "KO-L1",
-                    "name": "L1"
-                  },
-                  {
-                    "name": "L2",
-                    "id": "KO-L2"
-                  },
-                  {
-                    "name": "L3",
-                    "id": "KO-L3"
-                  },
-                  {
-                    "id": "KO-L4",
-                    "name": "L4"
-                  },
-                  {
-                    "name": "R4",
-                    "id": "KO-R4"
-                  },
-                  {
-                    "name": "R3",
-                    "id": "KO-R3"
-                  },
-                  {
-                    "id": "KO-R2",
-                    "name": "R2"
-                  },
-                  {
-                    "name": "R1",
-                    "id": "KO-R1"
-                  }
-                ],
-                "label": "Front Coverage Line (L1-L4, R4-R1)",
-                "rowClass": "oline",
-                "id": "row_ko_line"
-              },
-              {
-                "label": "Backfield Level (LBH - Kicker - RBH)",
-                "positions": [
-                  {
-                    "id": "KO-LBH",
-                    "name": "LBH"
-                  },
-                  {
-                    "name": "Kicker",
-                    "id": "KO-KICKER"
-                  },
-                  {
-                    "id": "KO-RBH",
-                    "name": "RBH"
-                  }
-                ],
-                "rowClass": "oline",
-                "id": "row_ko_bk"
-              }
-            ]
-          },
-          {
-            "unit": "groups",
-            "collapsed": false,
-            "subtitle": "Standard Format",
-            "rows": [
-              {
-                "id": "row_grp_ol",
-                "rowClass": "oline",
-                "positions": [
-                  {
-                    "id": "GRP-LT",
-                    "name": "LT"
-                  },
-                  {
-                    "id": "GRP-LG",
-                    "name": "LG"
-                  },
-                  {
-                    "id": "GRP-C",
-                    "name": "C"
-                  },
-                  {
-                    "name": "RG",
-                    "id": "GRP-RG"
-                  },
-                  {
-                    "name": "RT",
-                    "id": "GRP-RT"
-                  },
-                  {
-                    "id": "GRP-TES",
-                    "name": "TEs"
-                  }
-                ],
-                "label": "Offensive Line & Tight Ends"
-              },
-              {
-                "rowClass": "receivers",
-                "positions": [
-                  {
-                    "id": "GRP-X",
-                    "name": "X"
-                  },
-                  {
-                    "name": "Z",
-                    "id": "GRP-Z"
-                  }
-                ],
-                "id": "row_grp_wr",
-                "label": "Wide Receivers"
-              },
-              {
-                "label": "Backfield Stack",
-                "positions": [
-                  {
-                    "name": "QB",
-                    "id": "GRP-QB"
-                  },
-                  {
-                    "id": "GRP-FB",
-                    "name": "FB"
-                  },
-                  {
-                    "name": "RB",
-                    "id": "GRP-RB"
-                  }
-                ],
-                "id": "row_grp_bk",
-                "rowClass": "backfield"
-              }
-            ],
-            "id": "form_grp_off",
-            "name": "Offensive Depth Chart"
-          },
-          {
-            "unit": "groups",
-            "subtitle": "Standard 4-4 Front",
-            "id": "form_grp_def",
-            "rows": [
-              {
-                "id": "row_grp_d_sec",
-                "label": "Secondary Level",
-                "rowClass": "secondary-corners",
-                "positions": [
-                  {
-                    "id": "GRP-CB1",
-                    "name": "CB 1"
-                  },
-                  {
-                    "name": "FS",
-                    "id": "GRP-FS"
-                  },
-                  {
-                    "id": "GRP-CB2",
-                    "name": "CB 2"
-                  }
-                ]
-              },
-              {
-                "positions": [
-                  {
-                    "name": "ROVER",
-                    "id": "GRP-ROVER"
-                  },
-                  {
-                    "name": "WILL",
-                    "id": "GRP-WILL"
-                  },
-                  {
-                    "id": "GRP-MIKE",
-                    "name": "MIKE"
-                  },
-                  {
-                    "name": "SAM",
-                    "id": "GRP-SAM"
-                  }
-                ],
-                "rowClass": "linebackers-tight",
-                "id": "row_grp_d_lb",
-                "label": "Linebacker Level"
-              },
-              {
-                "rowClass": "dl",
-                "id": "row_grp_d_dl",
-                "positions": [
-                  {
-                    "name": "WDE",
-                    "id": "GRP-WDE"
-                  },
-                  {
-                    "id": "GRP-DT1",
-                    "name": "DT 1"
-                  },
-                  {
-                    "name": "DT 2",
-                    "id": "GRP-DT2"
-                  },
-                  {
-                    "id": "GRP-SDE",
-                    "name": "SDE"
-                  }
-                ],
-                "label": "Defensive Line"
-              }
-            ],
-            "name": "Defensive Depth Chart",
-            "collapsed": false
-          },
-          {
             "name": "21 Offense",
             "rows": [
               {
@@ -54165,6 +53881,302 @@
             "collapsed": false,
             "unit": "offense",
             "name": "11 Personnel"
+          },
+          {
+            "id": "form_44",
+            "subtitle": "Stack Front (11 Positions)",
+            "unit": "defense",
+            "name": "44 Defense",
+            "collapsed": false,
+            "rows": [
+              {
+                "rowClass": "secondary-safety",
+                "id": "row_44_fs",
+                "label": "Free Safety (Deep Center)",
+                "positions": [
+                  {
+                    "name": "FS",
+                    "id": "44-FS"
+                  }
+                ]
+              },
+              {
+                "id": "row_44_cb",
+                "positions": [
+                  {
+                    "name": "CB 1",
+                    "id": "44-CB1"
+                  },
+                  {
+                    "id": "44-CB2",
+                    "name": "CB 2"
+                  }
+                ],
+                "rowClass": "secondary-corners",
+                "label": "Secondary / Cornerbacks"
+              },
+              {
+                "rowClass": "linebackers-tight",
+                "label": "Linebacker Level (ROVER - WILL - MIKE - SAM)",
+                "positions": [
+                  {
+                    "name": "ROVER",
+                    "id": "44-ROVER"
+                  },
+                  {
+                    "id": "44-WILL",
+                    "name": "WILL"
+                  },
+                  {
+                    "name": "MIKE",
+                    "id": "44-MIKE"
+                  },
+                  {
+                    "id": "44-SAM",
+                    "name": "SAM"
+                  }
+                ],
+                "id": "row_44_lb"
+              },
+              {
+                "id": "row_44_dl",
+                "positions": [
+                  {
+                    "name": "WDE",
+                    "id": "44-WDE"
+                  },
+                  {
+                    "name": "DT 1",
+                    "id": "44-DT1"
+                  },
+                  {
+                    "id": "44-DT2",
+                    "name": "DT 2"
+                  },
+                  {
+                    "name": "SDE",
+                    "id": "44-SDE"
+                  }
+                ],
+                "rowClass": "dl",
+                "label": "Defensive Line (WDE - DT1 - DT2 - SDE)"
+              }
+            ]
+          },
+          {
+            "collapsed": false,
+            "unit": "st",
+            "id": "form_ko",
+            "name": "Kickoff Team",
+            "subtitle": "8 Coverage + 3 Backs",
+            "rows": [
+              {
+                "positions": [
+                  {
+                    "id": "KO-L1",
+                    "name": "L1"
+                  },
+                  {
+                    "name": "L2",
+                    "id": "KO-L2"
+                  },
+                  {
+                    "name": "L3",
+                    "id": "KO-L3"
+                  },
+                  {
+                    "id": "KO-L4",
+                    "name": "L4"
+                  },
+                  {
+                    "name": "R4",
+                    "id": "KO-R4"
+                  },
+                  {
+                    "name": "R3",
+                    "id": "KO-R3"
+                  },
+                  {
+                    "id": "KO-R2",
+                    "name": "R2"
+                  },
+                  {
+                    "name": "R1",
+                    "id": "KO-R1"
+                  }
+                ],
+                "label": "Front Coverage Line (L1-L4, R4-R1)",
+                "rowClass": "oline",
+                "id": "row_ko_line"
+              },
+              {
+                "label": "Backfield Level (LBH - Kicker - RBH)",
+                "positions": [
+                  {
+                    "id": "KO-LBH",
+                    "name": "LBH"
+                  },
+                  {
+                    "name": "Kicker",
+                    "id": "KO-KICKER"
+                  },
+                  {
+                    "id": "KO-RBH",
+                    "name": "RBH"
+                  }
+                ],
+                "rowClass": "oline",
+                "id": "row_ko_bk"
+              }
+            ]
+          },
+          {
+            "unit": "groups",
+            "collapsed": false,
+            "subtitle": "Standard Format",
+            "rows": [
+              {
+                "id": "row_grp_ol",
+                "rowClass": "oline",
+                "positions": [
+                  {
+                    "id": "GRP-LT",
+                    "name": "LT"
+                  },
+                  {
+                    "id": "GRP-LG",
+                    "name": "LG"
+                  },
+                  {
+                    "id": "GRP-C",
+                    "name": "C"
+                  },
+                  {
+                    "name": "RG",
+                    "id": "GRP-RG"
+                  },
+                  {
+                    "name": "RT",
+                    "id": "GRP-RT"
+                  },
+                  {
+                    "id": "GRP-TES",
+                    "name": "TEs"
+                  }
+                ],
+                "label": "Offensive Line & Tight Ends"
+              },
+              {
+                "rowClass": "receivers",
+                "positions": [
+                  {
+                    "id": "GRP-X",
+                    "name": "X"
+                  },
+                  {
+                    "name": "Z",
+                    "id": "GRP-Z"
+                  }
+                ],
+                "id": "row_grp_wr",
+                "label": "Wide Receivers"
+              },
+              {
+                "label": "Backfield Stack",
+                "positions": [
+                  {
+                    "name": "QB",
+                    "id": "GRP-QB"
+                  },
+                  {
+                    "id": "GRP-FB",
+                    "name": "FB"
+                  },
+                  {
+                    "name": "RB",
+                    "id": "GRP-RB"
+                  }
+                ],
+                "id": "row_grp_bk",
+                "rowClass": "backfield"
+              }
+            ],
+            "id": "form_grp_off",
+            "name": "Offensive Depth Chart"
+          },
+          {
+            "unit": "groups",
+            "subtitle": "Standard 4-4 Front",
+            "id": "form_grp_def",
+            "rows": [
+              {
+                "id": "row_grp_d_sec",
+                "label": "Secondary Level",
+                "rowClass": "secondary-corners",
+                "positions": [
+                  {
+                    "id": "GRP-CB1",
+                    "name": "CB 1"
+                  },
+                  {
+                    "name": "FS",
+                    "id": "GRP-FS"
+                  },
+                  {
+                    "id": "GRP-CB2",
+                    "name": "CB 2"
+                  }
+                ]
+              },
+              {
+                "positions": [
+                  {
+                    "name": "ROVER",
+                    "id": "GRP-ROVER"
+                  },
+                  {
+                    "name": "WILL",
+                    "id": "GRP-WILL"
+                  },
+                  {
+                    "id": "GRP-MIKE",
+                    "name": "MIKE"
+                  },
+                  {
+                    "name": "SAM",
+                    "id": "GRP-SAM"
+                  }
+                ],
+                "rowClass": "linebackers-tight",
+                "id": "row_grp_d_lb",
+                "label": "Linebacker Level"
+              },
+              {
+                "rowClass": "dl",
+                "id": "row_grp_d_dl",
+                "positions": [
+                  {
+                    "name": "WDE",
+                    "id": "GRP-WDE"
+                  },
+                  {
+                    "id": "GRP-DT1",
+                    "name": "DT 1"
+                  },
+                  {
+                    "name": "DT 2",
+                    "id": "GRP-DT2"
+                  },
+                  {
+                    "id": "GRP-SDE",
+                    "name": "SDE"
+                  }
+                ],
+                "label": "Defensive Line"
+              }
+            ],
+            "name": "Defensive Depth Chart",
+            "collapsed": false
           }
         ]
       },
@@ -67522,6 +67534,7 @@
     "deletedPlayIds": [],
     "deletedFormationIds": [
       "form_10_spread"
-    ]
+    ],
+    "deletedPracticePlanIds": []
   }
 }

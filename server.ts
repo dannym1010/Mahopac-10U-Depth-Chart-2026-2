@@ -213,8 +213,10 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
 
       const isTargetWeek =
         !metadata?.currentWeek ||
-        weekKey === metadata.currentWeek ||
-        weekKey.endsWith(`__week_${metadata.currentWeek}`);
+        (metadata.activeTeamId
+          ? (weekKey === `${metadata.activeTeamId}__week_${metadata.currentWeek}` ||
+             (metadata.activeTeamId === 'team_10u' && weekKey === metadata.currentWeek))
+          : (weekKey === metadata.currentWeek || weekKey.endsWith(`__week_${metadata.currentWeek}`)));
 
       // Merge formations array preserving the incoming requested order
       let mergedFormations = curWeekState.formations || [];

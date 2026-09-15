@@ -339,25 +339,32 @@ export async function saveServerState(
   metadata?: any
 ): Promise<{ success: boolean; version?: number; updatedAt?: number } | null> {
   try {
+    const bodyString = safeJSONStringify({
+      state,
+      author,
+      clientId: CLIENT_ID,
+      metadata,
+    });
+    // Chrome/Safari strictly enforce a 64KiB quota for fetch requests with keepalive: true.
+    // If the body exceeds ~60KB, keepalive MUST NOT be set, otherwise fetch throws TypeError.
+    const isSmallPayload = typeof bodyString === 'string' && bodyString.length < 60000;
     const res = await fetch('/api/state', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      keepalive: true,
-      body: safeJSONStringify({
-        state,
-        author,
-        clientId: CLIENT_ID,
-        metadata,
-      }),
+      ...(isSmallPayload ? { keepalive: true } : {}),
+      body: bodyString,
     });
     if (res.ok) {
       isServerApiAvailable = true;
       consecutiveServerErrors = 0;
       return await res.json();
+    } else {
+      console.warn('saveServerState failed with status:', res.status);
     }
   } catch (err) {
+    console.warn('saveServerState fetch error:', err);
     consecutiveServerErrors++;
   }
   return null;
