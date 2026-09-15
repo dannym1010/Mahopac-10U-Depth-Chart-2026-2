@@ -1312,18 +1312,18 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                         <div className="min-w-[490px] grid grid-cols-[48px_repeat(4,minmax(0,1fr))] bg-slate-100 dark:bg-slate-900/95 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 px-2 py-2 border-b border-slate-200 dark:border-slate-800 tracking-wider items-center gap-1.5">
                           <div className="text-left font-black text-slate-600 dark:text-slate-400">POS</div>
                           <div className="flex items-center gap-1 text-slate-900 dark:text-zinc-100 min-w-0 truncate">
-                            <span className="w-2 h-2 rounded-full bg-slate-800 dark:bg-zinc-300 ring-1 ring-slate-400 dark:ring-zinc-600 shrink-0"></span>
+                            <span className="w-2 h-2 rounded-full bg-slate-900 dark:bg-zinc-100 ring-1 ring-slate-400 dark:ring-zinc-600 shrink-0"></span>
                             <span className="truncate">BLACK</span>
                           </div>
-                          <div className="flex items-center gap-1 text-amber-800 dark:text-amber-300 min-w-0 truncate">
-                            <span className="w-2 h-2 rounded-full bg-amber-500/80 ring-1 ring-amber-300 dark:ring-amber-700 shrink-0"></span>
+                          <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 min-w-0 truncate font-black">
+                            <span className="w-2 h-2 rounded-full bg-amber-400 ring-1 ring-amber-500 shrink-0"></span>
                             <span className="truncate">GOLD</span>
                           </div>
-                          <div className="flex items-center gap-1 text-sky-800 dark:text-sky-300 min-w-0 truncate">
-                            <span className="w-2 h-2 rounded-full bg-sky-500/80 ring-1 ring-sky-300 dark:ring-sky-700 shrink-0"></span>
+                          <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 min-w-0 truncate font-black">
+                            <span className="w-2 h-2 rounded-full bg-blue-600 ring-1 ring-blue-500 shrink-0"></span>
                             <span className="truncate">BLUE</span>
                           </div>
-                          <div className="flex items-center gap-1 text-slate-600 dark:text-slate-300 min-w-0 truncate">
+                          <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400 min-w-0 truncate">
                             <span className="w-2 h-2 rounded-full bg-slate-400 ring-1 ring-slate-400 dark:ring-slate-600 shrink-0"></span>
                             <span className="truncate">BACKUPS</span>
                           </div>
@@ -1365,17 +1365,17 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="p-1 bg-white dark:bg-black border border-slate-300 dark:border-zinc-700 hover:border-amber-400 rounded-lg flex items-center justify-between gap-1 shadow-xs cursor-pointer group"
+                                    className="p-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 rounded-lg flex items-center justify-between gap-1 shadow-xs cursor-pointer group transition-colors"
                                   >
-                                    <div className="flex items-center gap-1 min-w-0 flex-1">
-                                      <span className="w-5 h-5 rounded bg-slate-900 text-white dark:bg-amber-400 dark:text-slate-950 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
+                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                      <span className="w-5 h-5 rounded bg-slate-900 text-white dark:bg-slate-950 dark:text-white border border-slate-850 dark:border-slate-700 font-mono font-black text-[10px] flex items-center justify-center shrink-0 shadow-xs">
                                         #{blackPlayer.num}
                                       </span>
                                       <div className="min-w-0 flex-1">
-                                        <span className="text-[11px] font-black uppercase text-slate-900 dark:text-white tracking-tight truncate block group-hover:text-amber-500 leading-tight">
+                                        <span className="text-[11px] font-black uppercase text-slate-900 dark:text-white tracking-tight truncate block group-hover:text-indigo-600 dark:group-hover:text-indigo-400 leading-tight">
                                           {blackPlayer.name}
                                         </span>
-                                        <span className="text-[7.5px] font-black uppercase text-slate-500 dark:text-zinc-400 tracking-wider block leading-none">
+                                        <span className="text-[7.5px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider block leading-none">
                                           BLACK
                                         </span>
                                       </div>
@@ -1395,9 +1395,9 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="w-full py-1.5 px-1 border border-dashed border-slate-300 dark:border-zinc-700 hover:border-amber-400 bg-slate-50 dark:bg-black/40 hover:bg-slate-100 dark:hover:bg-black/70 rounded-lg text-center text-[10px] font-black text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-amber-300 flex items-center justify-center gap-0.5 cursor-pointer"
+                                    className="w-full py-1.5 px-1 border border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-400 bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800/80 rounded-lg text-center text-[10px] font-black text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-0.5 cursor-pointer transition-colors"
                                   >
-                                    <Plus className="w-3 h-3 text-slate-400 dark:text-zinc-300 shrink-0" />
+                                    <Plus className="w-3 h-3 text-slate-400 dark:text-slate-400 shrink-0" />
                                     <span className="truncate">+ BLACK</span>
                                   </button>
                                 )}
@@ -1419,17 +1419,17 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="p-1 bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-500/40 hover:border-amber-400 rounded-lg flex items-center justify-between gap-1 shadow-xs cursor-pointer group"
+                                    className="p-1 bg-white dark:bg-slate-900 border border-amber-400/80 dark:border-amber-500/50 hover:border-amber-500 rounded-lg flex items-center justify-between gap-1 shadow-xs cursor-pointer group transition-colors"
                                   >
-                                    <div className="flex items-center gap-1 min-w-0 flex-1">
-                                      <span className="w-5 h-5 rounded bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
+                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                      <span className="w-5 h-5 rounded bg-amber-400 text-slate-950 border border-amber-300 font-mono font-black text-[10px] flex items-center justify-center shrink-0 shadow-xs">
                                         #{goldPlayer.num}
                                       </span>
                                       <div className="min-w-0 flex-1">
-                                        <span className="text-[11px] font-black uppercase text-amber-950 dark:text-amber-200 tracking-tight truncate block group-hover:text-amber-600 dark:group-hover:text-amber-100 leading-tight">
+                                        <span className="text-[11px] font-black uppercase text-slate-900 dark:text-white tracking-tight truncate block group-hover:text-amber-500 dark:group-hover:text-amber-400 leading-tight">
                                           {goldPlayer.name}
                                         </span>
-                                        <span className="text-[7.5px] font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider block leading-none">
+                                        <span className="text-[7.5px] font-black uppercase text-amber-600 dark:text-amber-400 tracking-wider block leading-none">
                                           GOLD
                                         </span>
                                       </div>
@@ -1449,7 +1449,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="w-full py-1.5 px-1 border border-dashed border-amber-300 dark:border-amber-700/50 hover:border-amber-400 bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-100/60 dark:hover:bg-amber-950/40 rounded-lg text-center text-[10px] font-black text-amber-800 dark:text-amber-400/80 hover:text-amber-950 dark:hover:text-amber-300 flex items-center justify-center gap-0.5 cursor-pointer"
+                                    className="w-full py-1.5 px-1 border border-dashed border-amber-400/60 dark:border-amber-500/50 hover:border-amber-500 bg-amber-50/40 dark:bg-slate-900/60 hover:bg-amber-100/50 dark:hover:bg-slate-800/80 rounded-lg text-center text-[10px] font-black text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-300 flex items-center justify-center gap-0.5 cursor-pointer transition-colors"
                                   >
                                     <Plus className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
                                     <span className="truncate">+ GOLD</span>
@@ -1473,17 +1473,17 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="p-1 bg-sky-50/90 dark:bg-blue-950/30 border border-sky-200/80 dark:border-blue-500/40 hover:border-sky-400 rounded-lg flex items-center justify-between gap-1 shadow-xs cursor-pointer group"
+                                    className="p-1 bg-white dark:bg-slate-900 border border-blue-400/80 dark:border-blue-500/50 hover:border-blue-500 rounded-lg flex items-center justify-between gap-1 shadow-xs cursor-pointer group transition-colors"
                                   >
-                                    <div className="flex items-center gap-1 min-w-0 flex-1">
-                                      <span className="w-5 h-5 rounded bg-sky-100 text-sky-900 border border-sky-300 dark:bg-blue-600/30 dark:text-blue-300 dark:border-blue-500/40 font-mono font-black text-[10px] flex items-center justify-center shrink-0">
+                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                      <span className="w-5 h-5 rounded bg-blue-600 text-white border border-blue-500 font-mono font-black text-[10px] flex items-center justify-center shrink-0 shadow-xs">
                                         #{bluePlayer.num}
                                       </span>
                                       <div className="min-w-0 flex-1">
-                                        <span className="text-[11px] font-black uppercase text-sky-950 dark:text-blue-200 tracking-tight truncate block group-hover:text-sky-600 dark:group-hover:text-blue-100 leading-tight">
+                                        <span className="text-[11px] font-black uppercase text-slate-900 dark:text-white tracking-tight truncate block group-hover:text-blue-500 dark:group-hover:text-blue-400 leading-tight">
                                           {bluePlayer.name}
                                         </span>
-                                        <span className="text-[7.5px] font-black uppercase text-sky-700 dark:text-blue-400 tracking-wider block leading-none">
+                                        <span className="text-[7.5px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-wider block leading-none">
                                           BLUE
                                         </span>
                                       </div>
@@ -1503,9 +1503,9 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                         });
                                       }
                                     }}
-                                    className="w-full py-1.5 px-1 border border-dashed border-sky-300 dark:border-blue-700/50 hover:border-sky-400 bg-sky-50/50 dark:bg-blue-950/20 hover:bg-sky-100/60 dark:hover:bg-blue-950/40 rounded-lg text-center text-[10px] font-black text-sky-800 dark:text-blue-400/80 hover:text-sky-950 dark:hover:text-blue-300 flex items-center justify-center gap-0.5 cursor-pointer"
+                                    className="w-full py-1.5 px-1 border border-dashed border-blue-400/60 dark:border-blue-500/50 hover:border-blue-500 bg-blue-50/40 dark:bg-slate-900/60 hover:bg-blue-100/50 dark:hover:bg-slate-800/80 rounded-lg text-center text-[10px] font-black text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 flex items-center justify-center gap-0.5 cursor-pointer transition-colors"
                                   >
-                                    <Plus className="w-3 h-3 text-sky-600 dark:text-blue-400 shrink-0" />
+                                    <Plus className="w-3 h-3 text-blue-600 dark:text-blue-400 shrink-0" />
                                     <span className="truncate">+ BLUE</span>
                                   </button>
                                 )}
@@ -1531,11 +1531,11 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                           });
                                         }
                                       }}
-                                      className="px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all shrink-0 max-w-full"
+                                      className="px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all shrink-0 max-w-full"
                                       title={`Backup (D${realIdx + 1}): #${bk.num} ${bk.name}`}
                                     >
-                                      <span className="font-mono font-black text-[9.5px]">#{bk.num}</span>
-                                      <span className="truncate max-w-[55px] font-extrabold">{bk.name}</span>
+                                      <span className="font-mono font-black text-[9.5px] text-slate-900 dark:text-white">#{bk.num}</span>
+                                      <span className="truncate max-w-[55px] font-extrabold text-slate-900 dark:text-white">{bk.name}</span>
                                     </button>
                                   );
                                 })}
@@ -1603,8 +1603,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                   onClick={() => setMatrixFilter('GOLD')}
                   className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                     matrixFilter === 'GOLD'
-                      ? 'bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300 dark:border-amber-600 font-bold shadow-xs'
-                      : 'bg-white dark:bg-slate-900 text-amber-800 dark:text-amber-300/90 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs'
+                      ? 'bg-amber-400 text-slate-950 border border-amber-500 font-black shadow-xs'
+                      : 'bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs'
                   }`}
                 >
                   GOLD ({playerAssignmentsMatrix.filter((p) => p.goldCount > 0).length})
@@ -1614,8 +1614,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                   onClick={() => setMatrixFilter('BLUE')}
                   className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                     matrixFilter === 'BLUE'
-                      ? 'bg-sky-100 text-sky-900 dark:bg-sky-950/80 dark:text-sky-200 border border-sky-300 dark:border-sky-600 font-bold shadow-xs'
-                      : 'bg-white dark:bg-slate-900 text-sky-800 dark:text-sky-300/90 hover:bg-sky-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs'
+                      ? 'bg-blue-600 text-white border border-blue-500 font-black shadow-xs'
+                      : 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs'
                   }`}
                 >
                   BLUE ({playerAssignmentsMatrix.filter((p) => p.blueCount > 0).length})
@@ -1658,11 +1658,11 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                           <div
                             className={`w-10 h-10 rounded-xl font-mono font-black text-sm flex items-center justify-center shrink-0 border ${
                               item.blackCount > 0
-                                ? 'bg-slate-900 text-amber-400 dark:bg-black dark:text-amber-400 border-slate-700 dark:border-zinc-600 shadow-xs'
+                                ? 'bg-slate-900 text-white dark:bg-black dark:text-white border-slate-700 dark:border-zinc-600 shadow-xs'
                                 : item.goldCount > 0
-                                ? 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300 border-amber-300 dark:border-amber-500/40'
+                                ? 'bg-amber-400 text-slate-950 border-amber-500 font-black shadow-xs'
                                 : item.blueCount > 0
-                                ? 'bg-sky-100 text-sky-900 dark:bg-blue-950/80 dark:text-blue-300 border-sky-300 dark:border-blue-600/40'
+                                ? 'bg-blue-600 text-white border-blue-500 font-black shadow-xs'
                                 : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                             }`}
                           >
@@ -1700,12 +1700,12 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                             </span>
                           )}
                           {item.goldCount > 0 && (
-                            <span className="px-2 py-0.5 bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 font-black text-[10.5px] rounded-lg">
+                            <span className="px-2 py-0.5 bg-amber-400 text-slate-950 border border-amber-500 font-black text-[10.5px] rounded-lg shadow-xs">
                               {item.goldCount} GOLD
                             </span>
                           )}
                           {item.blueCount > 0 && (
-                            <span className="px-2 py-0.5 bg-sky-100 text-sky-900 dark:bg-blue-950/80 dark:text-blue-300 border border-sky-300 dark:border-blue-600/50 font-black text-[10.5px] rounded-lg">
+                            <span className="px-2 py-0.5 bg-blue-600 text-white border border-blue-500 font-black text-[10.5px] rounded-lg shadow-xs">
                               {item.blueCount} BLUE
                             </span>
                           )}
@@ -1732,14 +1732,14 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                 asgn.depthIndex === 0
                                   ? 'bg-slate-900 border-slate-700 text-zinc-100 dark:bg-black/90 dark:border-zinc-700 dark:text-zinc-100 shadow-xs'
                                   : asgn.depthIndex === 1
-                                  ? 'bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-950/40 dark:border-amber-500/40 dark:text-amber-200'
+                                  ? 'bg-white dark:bg-slate-900 border-amber-400 dark:border-amber-500/60 text-slate-900 dark:text-white shadow-xs'
                                   : asgn.depthIndex === 2
-                                  ? 'bg-sky-50 border-sky-200 text-sky-900 dark:bg-blue-950/40 dark:border-blue-500/40 dark:text-blue-200'
+                                  ? 'bg-white dark:bg-slate-900 border-blue-400 dark:border-blue-500/60 text-slate-900 dark:text-white shadow-xs'
                                   : 'bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800/90 dark:border-slate-700 dark:text-slate-300'
                               }`}
                             >
-                              <span className="font-extrabold text-slate-400">{asgn.formName}:</span>
-                              <span className="text-white">{asgn.posName}</span>
+                              <span className="font-extrabold text-slate-500 dark:text-slate-400">{asgn.formName}:</span>
+                              <span className="text-slate-900 dark:text-white">{asgn.posName}</span>
                               <span
                                 className={`text-[9.5px] px-1.5 py-0.5 rounded font-black uppercase ${
                                   asgn.depthIndex === 0
@@ -1747,7 +1747,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                                     : asgn.depthIndex === 1
                                     ? 'bg-amber-400 text-slate-950'
                                     : asgn.depthIndex === 2
-                                    ? 'bg-blue-500 text-white'
+                                    ? 'bg-blue-600 text-white'
                                     : 'bg-slate-700 text-slate-200'
                                 }`}
                               >
@@ -3435,11 +3435,11 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                 <div
                   className={`w-10 h-10 rounded-xl font-mono font-black text-sm flex items-center justify-center shrink-0 border ${
                     quickSwapTarget.currentIndex === 0
-                      ? 'bg-amber-400 text-slate-950 border-amber-300'
+                      ? 'bg-slate-900 text-white border-slate-700'
                       : quickSwapTarget.currentIndex === 1
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                      ? 'bg-amber-400 text-slate-950 border-amber-300 font-black'
                       : quickSwapTarget.currentIndex === 2
-                      ? 'bg-blue-600/30 text-blue-300 border-blue-500/40'
+                      ? 'bg-blue-600 text-white border-blue-400 font-black'
                       : 'bg-slate-800 text-slate-300 border-slate-700'
                   }`}
                 >
@@ -3450,11 +3450,11 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                     {quickSwapTarget.currentPlayer.name}
                   </div>
                   <span
-                    className={`text-[10.5px] font-black uppercase ${
+                    className={`text-[10.5px] font-black uppercase tracking-wider ${
                       quickSwapTarget.currentIndex === 0
-                        ? 'text-amber-400'
+                        ? 'text-slate-300'
                         : quickSwapTarget.currentIndex === 1
-                        ? 'text-amber-300'
+                        ? 'text-amber-400'
                         : quickSwapTarget.currentIndex === 2
                         ? 'text-blue-400'
                         : 'text-slate-400'
