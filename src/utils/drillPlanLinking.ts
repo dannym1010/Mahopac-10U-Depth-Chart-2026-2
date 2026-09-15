@@ -1,6 +1,11 @@
 import { WhiteboardDrill } from '../components/whiteboard/whiteboardDrillData';
-import { PracticePlan, PracticePeriod, PracticeStation } from '../types';
-import { generatePracticePlanHTML, printCleanHTML, openCleanPrintTab } from './printUtils';
+import { PracticePlan, PracticePeriod, PracticeStation, FormationBoard, PlacedPlayer } from '../types';
+import {
+  generatePracticePlanHTML,
+  generatePocketDepthChartPrintHTML,
+  printCleanHTML,
+  openCleanPrintTab,
+} from './printUtils';
 import { extractDrillCardMarkup, extractDrillPrintStyles } from '../components/whiteboard/drillPrintHelper';
 
 export interface PlanDrillItem {
@@ -27,6 +32,10 @@ export interface PracticePlanPrintPackageOptions {
   fontSize?: number;
   includePlanTable?: boolean;
   selectedDrills?: { drill: WhiteboardDrill; phaseIndex?: number }[];
+  includeFormations?: boolean;
+  formations?: FormationBoard[];
+  depthChart?: Record<string, PlacedPlayer[]>;
+  activeTeamName?: string;
   documentTitle?: string;
 }
 
@@ -161,6 +170,27 @@ export function findMatchingWhiteboardDrill(
       'force player',
       'box defender',
       'perimeter run fit',
+    ],
+    'scrape & spill': [
+      'scrape and spill',
+      'spill to alley',
+      'spill and alley',
+      'alley tackle',
+      'scrape over trash',
+      'lb scrape',
+      'scrape spill',
+      'spill alley',
+    ],
+    'cutback lanes': [
+      'cutback',
+      'cutbacks',
+      'cut back',
+      'outside and cutback',
+      'press edge and cutback',
+      'perimeter press',
+      'outside cutback',
+      'cutback lane',
+      'outside vs cutback',
     ],
   };
 
@@ -405,6 +435,38 @@ export function generatePracticePlanPackageHTML(options: PracticePlanPrintPackag
   const sampleDrill = selectedDrills[0]?.drill;
   const drillStyles = sampleDrill ? extractDrillPrintStyles(sampleDrill) : '';
 
+  // 3. Generate formations pocket depth chart if requested
+  let formationsStyles = '';
+  let formationsBody = '';
+  if (options.includeFormations && options.formations && options.formations.length > 0) {
+    try {
+      const rawFormationsHtml = generatePocketDepthChartPrintHTML(
+        options.formations,
+        options.depthChart || {},
+        {
+          unitFilter: 'all',
+          layout: 'side_by_side',
+          columnsCount: 2,
+          selectedFormationIds: options.formations.map((f) => f.id),
+          teamName: options.activeTeamName || options.plan?.title || 'Football Team',
+          seasonLabel: 'Practice Formations',
+        }
+      );
+      const fStyleStart = rawFormationsHtml.indexOf('<style>');
+      const fStyleEnd = rawFormationsHtml.indexOf('</style>');
+      if (fStyleStart !== -1 && fStyleEnd !== -1) {
+        formationsStyles = rawFormationsHtml.substring(fStyleStart + 7, fStyleEnd);
+      }
+      const fBodyStart = rawFormationsHtml.indexOf('<body>') + 6;
+      const fBodyEnd = rawFormationsHtml.indexOf('</body>');
+      if (fBodyStart !== -1 && fBodyEnd !== -1) {
+        formationsBody = rawFormationsHtml.substring(fBodyStart, fBodyEnd);
+      }
+    } catch (err) {
+      console.warn('Failed to compile formation sheets for practice package:', err);
+    }
+  }
+
   const drillSheetsHtml = selectedDrills
     .map((item, idx) => {
       const cardMarkup = extractDrillCardMarkup(item.drill, item.phaseIndex || 0);
@@ -421,6 +483,18 @@ export function generatePracticePlanPackageHTML(options: PracticePlanPrintPackag
     })
     .join('\n');
 
+  const formationsSheetHtml = formationsBody
+    ? `
+      <div class="drill-page-wrapper page-break-before">
+        <div class="drill-header-plan-banner print:block">
+          <span class="banner-title">${options.activeTeamName || plan?.title || 'TEAM FORMATIONS'}</span>
+          <span class="banner-meta">POCKET DEPTH CHARTS • ALL FORMATIONS</span>
+        </div>
+        ${formationsBody}
+      </div>
+    `
+    : '';
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -429,6 +503,7 @@ export function generatePracticePlanPackageHTML(options: PracticePlanPrintPackag
   <style>
     ${planStyles}
     ${drillStyles}
+    ${formationsStyles}
 
     /* Page Break & Combined Print Rules */
     @media print {
@@ -504,6 +579,7 @@ export function generatePracticePlanPackageHTML(options: PracticePlanPrintPackag
   }
 
   ${drillSheetsHtml}
+  ${formationsSheetHtml}
 </body>
 </html>`;
 }

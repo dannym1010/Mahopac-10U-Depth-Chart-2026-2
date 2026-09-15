@@ -1727,52 +1727,55 @@ function mergeRemoteWeeklyData(
         data.scheduleEvents || latestStateRef.current.scheduleEvents || DEFAULT_SCHEDULE_EVENTS
       ).filter((p) => p && p.id && !effectiveDeletedPlanIds.has(p.id));
 
-      if (Date.now() - lastLocalEditTimeRef.current < 25000 && activeUnitRef.current === 'practice') {
-        // Local coach is actively editing practice plans, merge remote updates preserving recent local edits
-        const localPlans = (latestStateRef.current.practiceData || []).filter(
-          (lp) => lp && lp.id && !effectiveDeletedPlanIds.has(lp.id)
-        );
-        const localMap = new Map<string, PracticePlan>();
-        localPlans.forEach((lp) => {
-          if (lp && lp.id) localMap.set(lp.id, lp);
-        });
+      // Robust bi-directional merge: always preserve whichever version (local vs remote) is newer per plan
+      const localPlans = (latestStateRef.current.practiceData || []).filter(
+        (lp) => lp && lp.id && !effectiveDeletedPlanIds.has(lp.id)
+      );
+      const localMap = new Map<string, PracticePlan>();
+      localPlans.forEach((lp) => {
+        if (lp && lp.id) localMap.set(lp.id, lp);
+      });
 
-        const mergedPlans: PracticePlan[] = [];
-        const seenIds = new Set<string>();
+      const mergedPlans: PracticePlan[] = [];
+      const seenIds = new Set<string>();
 
-        sanitized.forEach((rp) => {
-          if (rp && rp.id) {
-            seenIds.add(rp.id);
-            const localP = localMap.get(rp.id);
-            if (localP) {
-              mergedPlans.push((localP.lastEdited || 0) >= (rp.lastEdited || 0) ? localP : rp);
-            } else {
-              mergedPlans.push(rp);
-            }
+      sanitized.forEach((rp) => {
+        if (rp && rp.id) {
+          seenIds.add(rp.id);
+          const localP = localMap.get(rp.id);
+          if (localP) {
+            // Keep local version if it has equal or newer timestamp, or if local coach edited within recent window
+            const localIsNewer = (localP.lastEdited || 0) >= (rp.lastEdited || 0);
+            const isActivelyEditingLocal =
+              Date.now() - lastLocalEditTimeRef.current < 60000 &&
+              (localP.id === currentPracticeIdRef.current || activeUnitRef.current === 'practice');
+            mergedPlans.push(localIsNewer || isActivelyEditingLocal ? localP : rp);
+          } else {
+            mergedPlans.push(rp);
           }
-        });
+        }
+      });
 
-        localPlans.forEach((lp) => {
-          if (lp && lp.id && !seenIds.has(lp.id)) {
-            mergedPlans.push(lp);
-          }
-        });
+      // Preserve any locally created plans that remote has not received yet
+      localPlans.forEach((lp) => {
+        if (lp && lp.id && !seenIds.has(lp.id)) {
+          mergedPlans.push(lp);
+        }
+      });
 
-        setPracticeData(mergedPlans);
-        latestStateRef.current.practiceData = mergedPlans;
-        safeJSONSet('footballPracticeData', mergedPlans);
-      } else {
-        setPracticeData(sanitized);
-        latestStateRef.current.practiceData = sanitized;
-        safeJSONSet('footballPracticeData', sanitized);
+      setPracticeData(mergedPlans);
+      latestStateRef.current.practiceData = mergedPlans;
+      safeJSONSet('footballPracticeData', mergedPlans);
 
-        // If current practice is not set or invalid, auto-select the best active practice
-        if (!currentPracticeId || !sanitized.some((p) => p && p.id === currentPracticeId)) {
-          const bestId = findBestActivePracticeId(sanitized, currentPracticeId, currentWeek);
-          if (bestId) {
-            setCurrentPracticeId(bestId);
-            safeJSONSet('footballCurrentPracticeId', bestId);
-          }
+      // Protect active practice ID from flipping unexpectedly while coach is editing
+      const activeId = currentPracticeIdRef.current;
+      const isValidActive = mergedPlans.some((p) => p && p.id === activeId);
+      if (!isValidActive) {
+        const bestId = findBestActivePracticeId(mergedPlans, activeId, currentWeekRef.current);
+        if (bestId) {
+          setCurrentPracticeId(bestId);
+          currentPracticeIdRef.current = bestId;
+          safeJSONSet('footballCurrentPracticeId', bestId);
         }
       }
     }
@@ -2042,6 +2045,7 @@ function mergeRemoteWeeklyData(
       scope.startsWith('position_') ||
       scope.startsWith('player_') ||
       scope.startsWith('formation_') ||
+      scope.startsWith('practice') ||
       scope === 'delete_formation' ||
       scope === 'move_formation' ||
       scope === 'copy_week' ||
@@ -4984,16 +4988,24 @@ function mergeRemoteWeeklyData(
      ========================================================================= */
   const updatePracticeDataAndSave = (
     updater: (prev: PracticePlan[]) => PracticePlan[],
-    immediate: boolean = false
+    immediate: boolean = false,
+    modifiedPlanId?: string
   ) => {
+    const now = Date.now();
+    lastLocalEditTimeRef.current = now;
     setPracticeData((prev) => {
-      const updated = updater(prev).map((p) => ({
-        ...p,
-        lastEdited: p.lastEdited || Date.now(),
-      }));
+      const targetId = modifiedPlanId || currentPracticeIdRef.current;
+      const rawUpdated = updater(prev);
+      const updated = rawUpdated.map((p) => {
+        if (!p) return p;
+        const wasTargeted = targetId ? p.id === targetId : true;
+        return {
+          ...p,
+          lastEdited: wasTargeted ? now : (p.lastEdited || now),
+        };
+      });
       latestStateRef.current.practiceData = updated;
       safeJSONSet('footballPracticeData', updated);
-      lastLocalEditTimeRef.current = Date.now();
       return updated;
     });
     if (immediate) {
@@ -5441,9 +5453,10 @@ function mergeRemoteWeeklyData(
     field: keyof PracticePlan,
     value: any
   ) => {
+    const targetId = currentPracticeId || currentPracticeIdRef.current || (activeTeamPracticeData[0]?.id) || (practiceData[0]?.id);
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
-        if (p.id === currentPracticeId) {
+        if (p.id === targetId) {
           const updated = { ...p, [field]: value, lastEdited: Date.now() };
           if (field === 'date' && value) {
             const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -5465,7 +5478,9 @@ function mergeRemoteWeeklyData(
           return updated;
         }
         return p;
-      })
+      }),
+      false,
+      targetId
     );
   };
 
@@ -5478,9 +5493,10 @@ function mergeRemoteWeeklyData(
   };
 
   const handleAddPeriod = () => {
+    const targetId = currentPracticeId || currentPracticeIdRef.current || (activeTeamPracticeData[0]?.id) || (practiceData[0]?.id);
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
-        if (p.id === currentPracticeId) {
+        if (p.id === targetId) {
           const defaultCat =
             cascadingDrills[0]?.name || '⚡ (Warm-up, Agility and Conditioning)';
           const currentPlan = getPlanPeriods(p);
@@ -5508,15 +5524,18 @@ function mergeRemoteWeeklyData(
           };
         }
         return p;
-      })
+      }),
+      false,
+      targetId
     );
   };
 
   const handleRemovePeriod = (pIdx: number) => {
     if (confirm('Delete this period?')) {
+      const targetId = currentPracticeId || currentPracticeIdRef.current || (activeTeamPracticeData[0]?.id) || (practiceData[0]?.id);
       updatePracticeDataAndSave((prev) =>
         prev.map((p) => {
-          if (p.id === currentPracticeId) {
+          if (p.id === targetId) {
             const plan = [...getPlanPeriods(p)];
             if (pIdx >= 0 && pIdx < plan.length) {
               plan.splice(pIdx, 1);
@@ -5524,15 +5543,18 @@ function mergeRemoteWeeklyData(
             return { ...p, plan, periods: plan, lastEdited: Date.now() };
           }
           return p;
-        })
+        }),
+        false,
+        targetId
       );
     }
   };
 
   const handleMovePeriod = (pIdx: number, direction: number) => {
+    const targetId = currentPracticeId || currentPracticeIdRef.current || (activeTeamPracticeData[0]?.id) || (practiceData[0]?.id);
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
-        if (p.id === currentPracticeId) {
+        if (p.id === targetId) {
           const plan = [...getPlanPeriods(p)];
           const newIdx = pIdx + direction;
           if (newIdx < 0 || newIdx >= plan.length) return p;
@@ -5541,14 +5563,17 @@ function mergeRemoteWeeklyData(
           return { ...p, plan, periods: plan, lastEdited: Date.now() };
         }
         return p;
-      })
+      }),
+      false,
+      targetId
     );
   };
 
   const handleUpdatePeriodTime = (pIdx: number, time: number) => {
+    const targetId = currentPracticeId || currentPracticeIdRef.current || (activeTeamPracticeData[0]?.id) || (practiceData[0]?.id);
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
-        if (p.id === currentPracticeId) {
+        if (p.id === targetId) {
           const plan = [...getPlanPeriods(p)];
           if (plan[pIdx]) {
             plan[pIdx] = { ...plan[pIdx], time };
@@ -5556,14 +5581,17 @@ function mergeRemoteWeeklyData(
           return { ...p, plan, periods: plan, lastEdited: Date.now() };
         }
         return p;
-      })
+      }),
+      false,
+      targetId
     );
   };
 
   const handleUpdatePeriodCategory = (pIdx: number, category: string) => {
+    const targetId = currentPracticeId || currentPracticeIdRef.current || (activeTeamPracticeData[0]?.id) || (practiceData[0]?.id);
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
-        if (p.id === currentPracticeId) {
+        if (p.id === targetId) {
           const plan = [...getPlanPeriods(p)];
           if (plan[pIdx]) {
             plan[pIdx] = { ...plan[pIdx], category };
@@ -5571,7 +5599,9 @@ function mergeRemoteWeeklyData(
           return { ...p, plan, periods: plan, lastEdited: Date.now() };
         }
         return p;
-      })
+      }),
+      false,
+      targetId
     );
   };
 
@@ -5579,9 +5609,10 @@ function mergeRemoteWeeklyData(
     pIdx: number,
     format: 'static' | 'rotating'
   ) => {
+    const targetId = currentPracticeId || currentPracticeIdRef.current || (activeTeamPracticeData[0]?.id) || (practiceData[0]?.id);
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
-        if (p.id === currentPracticeId) {
+        if (p.id === targetId) {
           const plan = [...getPlanPeriods(p)];
           if (plan[pIdx]) {
             plan[pIdx] = { ...plan[pIdx], format };
@@ -5589,14 +5620,17 @@ function mergeRemoteWeeklyData(
           return { ...p, plan, periods: plan, lastEdited: Date.now() };
         }
         return p;
-      })
+      }),
+      false,
+      targetId
     );
   };
 
   const handleAddStationToPeriod = (pIdx: number) => {
+    const targetId = currentPracticeId || currentPracticeIdRef.current || (activeTeamPracticeData[0]?.id) || (practiceData[0]?.id);
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
-        if (p.id === currentPracticeId) {
+        if (p.id === targetId) {
           const plan = [...getPlanPeriods(p)];
           if (plan[pIdx]) {
             const currentStations = Array.isArray(plan[pIdx].stations) ? plan[pIdx].stations : [];
@@ -5616,14 +5650,17 @@ function mergeRemoteWeeklyData(
           return { ...p, plan, periods: plan, lastEdited: Date.now() };
         }
         return p;
-      })
+      }),
+      false,
+      targetId
     );
   };
 
   const handleRemoveStationFromPeriod = (pIdx: number, sIdx: number) => {
+    const targetId = currentPracticeId || currentPracticeIdRef.current || (activeTeamPracticeData[0]?.id) || (practiceData[0]?.id);
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
-        if (p.id === currentPracticeId) {
+        if (p.id === targetId) {
           const plan = [...getPlanPeriods(p)];
           if (!plan[pIdx]) return p;
           const currentStations = Array.isArray(plan[pIdx].stations) ? plan[pIdx].stations : [];
@@ -5646,7 +5683,9 @@ function mergeRemoteWeeklyData(
           return { ...p, plan, periods: plan, lastEdited: Date.now() };
         }
         return p;
-      })
+      }),
+      false,
+      targetId
     );
     flushAndSaveStateToStorage('remove_station');
   };
@@ -5657,9 +5696,10 @@ function mergeRemoteWeeklyData(
     field: keyof PracticeStation,
     value: string
   ) => {
+    const targetId = currentPracticeId || currentPracticeIdRef.current || (activeTeamPracticeData[0]?.id) || (practiceData[0]?.id);
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
-        if (p.id === currentPracticeId) {
+        if (p.id === targetId) {
           const plan = [...getPlanPeriods(p)];
           if (!plan[pIdx]) return p;
           const stations = Array.isArray(plan[pIdx].stations) ? [...plan[pIdx].stations] : [{ name: '', desc: '', coach: '', focus: '' }];
@@ -5672,7 +5712,9 @@ function mergeRemoteWeeklyData(
           return { ...p, plan, periods: plan, lastEdited: Date.now() };
         }
         return p;
-      })
+      }),
+      false,
+      targetId
     );
   };
 
@@ -5681,9 +5723,10 @@ function mergeRemoteWeeklyData(
     sIdx: number,
     drill: DrillItem
   ) => {
+    const targetId = currentPracticeId || currentPracticeIdRef.current || (activeTeamPracticeData[0]?.id) || (practiceData[0]?.id);
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
-        if (p.id === currentPracticeId) {
+        if (p.id === targetId) {
           const plan = [...getPlanPeriods(p)];
           if (!plan[pIdx]) return p;
           const stations = Array.isArray(plan[pIdx].stations) ? [...plan[pIdx].stations] : [{ name: '', desc: '', coach: '', focus: '' }];
@@ -5697,7 +5740,9 @@ function mergeRemoteWeeklyData(
           return { ...p, plan, periods: plan, lastEdited: Date.now() };
         }
         return p;
-      })
+      }),
+      false,
+      targetId
     );
   };
 
@@ -8475,6 +8520,9 @@ function mergeRemoteWeeklyData(
                     drillCategory: cat as any,
                   });
                 }}
+                formations={currentFormations}
+                depthChart={currentDepthChart}
+                activeTeamName={teams.find((t) => t.id === activeTeamId)?.name || 'Football Team'}
               />
             )}
 

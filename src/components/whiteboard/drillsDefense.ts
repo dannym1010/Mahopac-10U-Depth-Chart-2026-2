@@ -715,6 +715,103 @@ export const DEFENSE_MATRIX_DRILLS: WhiteboardDrill[] = [
       },
     ],
   },
+  {
+    id: 'matrix-lb-scrape-spill-alley-tackle',
+    category: 'LB',
+    categoryLabel: 'Linebackers (LB)',
+    title: 'LB: Read-Step, Scrape & Spill to Alley Tackle',
+    subtitle: 'Key Diagnose, Lateral Scrape Over Trash, Block Spill & Wrap Tackle',
+    objective: 'Linebacker executes rapid 6-inch downhill read step on snap flow, scrapes laterally across agile bag trash with square shoulders, delivers violent inside flipper strike to spill oncoming lead blocker, and buzzes feet into the alley to finish with chest-to-chest form tackle.',
+    setup: 'Place 3 step-over agile bags on ground simulating line-of-scrimmage trash. LB aligns 4 yards off ball in balanced 2-point stance. Offense sets QB, offset RB, and lead blocker (Fullback/H-Back) with hit shield. 4 boundary cones define the tackle alley.',
+    instructions: [
+      'Assume balanced 2-point stance: shoulder-width base, knees bent inside ankles, flat back, eyes focused on guard triangle.',
+      'On snap/flow, take a 6-inch downhill read step, diagnosing guard/lead blocker track without false stepping.',
+      'Scrape laterally across the step-over bags with quick choppy feet, keeping pad level low and shoulders parallel to LOS.',
+      'Meet the oncoming lead blocker at the edge with violent inside-shoulder flipper contact to spill runner wide toward the sideline.',
+      'Disengage with upward punch, buzz feet into the tackle alley, and finish with chest-to-chest wrap tackle running feet through contact.'
+    ],
+    equipment: '3 Agile step-over bags, 1 hit shield, 1 football, 4 boundary cones.',
+    cues: [
+      '6-inch read step downhill (never step back)',
+      'High knees over bags, square shoulders',
+      'Inside flipper strike to spill outside',
+      'Buzz feet into alley, sink hips',
+      'Eyes to the chest, wrap and squeeze'
+    ],
+    faults: [
+      'False-stepping backward on snap before diagnosing',
+      'Crossing feet or hopping while scraping across bags',
+      'Accepting contact from lead blocker instead of attacking first',
+      'Lunging with arms at runner feet instead of driving hips'
+    ],
+    diagramKeys: [
+      { text: 'Agility Bags: Interior Line Trash', isHighlight: false },
+      { text: 'Lead Blocker: Spill Target (Inside Flipper)', isHighlight: true },
+      { text: 'Tackle Alley: Form Fit & Finish', isHighlight: true }
+    ],
+    videoUrl: 'https://www.facebook.com/reel/1072116722201615',
+    phases: [
+      {
+        name: 'PHASE 1: SNAP READ & 6-INCH KEY DIAGNOSE',
+        description: 'Snap of the ball. Linebacker fires 6-inch downhill read step, reading the guard triangle and lead blocker path.',
+        tokens: [
+          { id: 'c-1', type: 'O', label: 'C', x: 350, y: 190, color: '#1a1a24' },
+          { id: 'bag-1', type: 'bag', label: 'BAG 1', x: 280, y: 240, color: '#64748b' },
+          { id: 'bag-2', type: 'bag', label: 'BAG 2', x: 340, y: 240, color: '#64748b' },
+          { id: 'bag-3', type: 'bag', label: 'BAG 3', x: 400, y: 240, color: '#64748b' },
+          { id: 'qb-1', type: 'O', label: 'QB', x: 350, y: 150, color: '#d91b24' },
+          { id: 'fb-1', type: 'O', label: 'FB/LEAD', x: 310, y: 170, color: '#d91b24', subLabel: 'Lead Blocker' },
+          { id: 'rb-1', type: 'O', label: 'RB', x: 360, y: 120, color: '#d91b24', subLabel: 'Runner' },
+          { id: 'lb-1', type: 'X', label: 'MIKE', x: 350, y: 315, color: '#10b981', subLabel: 'Read Step' },
+        ],
+        arrows: [
+          { id: 'a-read', type: 'run', startX: 350, startY: 315, endX: 350, endY: 290, color: '#10b981', label: '6" Read Step' },
+          { id: 'a-lead-flow', type: 'run', startX: 310, startY: 170, endX: 240, endY: 235, color: '#d91b24', label: 'Lead Flow' },
+          { id: 'a-rb-flow', type: 'run', startX: 360, startY: 120, endX: 250, endY: 180, color: '#d91b24', label: 'Mesh Track' },
+        ],
+        zones: [
+          { id: 'z-read-key', name: 'READ TRIANGLE / KEY', cx: 330, cy: 180, rx: 70, ry: 25, color: '#10b981', opacity: 0.2 },
+        ],
+      },
+      {
+        name: 'PHASE 2: LATERAL SCRAPE OVER TRASH & SPILL STRIKE',
+        description: 'LB high-knees laterally over bags, meets lead blocker at C-gap, delivers inside flipper strike to spill runner wide.',
+        tokens: [
+          { id: 'bag-1', type: 'bag', label: 'BAG 1', x: 280, y: 240, color: '#64748b' },
+          { id: 'bag-2', type: 'bag', label: 'BAG 2', x: 340, y: 240, color: '#64748b' },
+          { id: 'bag-3', type: 'bag', label: 'BAG 3', x: 400, y: 240, color: '#64748b' },
+          { id: 'fb-block', type: 'O', label: 'LEAD', x: 240, y: 240, color: '#d91b24', subLabel: 'Contact' },
+          { id: 'lb-spill', type: 'X', label: 'MIKE', x: 240, y: 270, color: '#10b981', subLabel: 'Inside Flipper' },
+          { id: 'rb-bounce', type: 'O', label: 'RB', x: 200, y: 200, color: '#d91b24', subLabel: 'Bounced' },
+        ],
+        arrows: [
+          { id: 'a-scrape', type: 'run', startX: 350, startY: 290, endX: 250, endY: 275, color: '#10b981', label: 'Scrape Over Trash' },
+          { id: 'a-spill-hit', type: 'block', startX: 240, startY: 270, endX: 240, endY: 245, color: '#10b981', label: 'Inside Flipper Spill' },
+          { id: 'a-rb-spilled', type: 'run', startX: 250, startY: 180, endX: 170, endY: 215, color: '#d91b24', label: 'Forced Wide Outside' },
+        ],
+        zones: [
+          { id: 'z-spill', name: 'SPILL ZONE (FORCE WIDE)', cx: 240, cy: 255, rx: 50, ry: 30, color: '#f59e0b', opacity: 0.25 },
+        ],
+      },
+      {
+        name: 'PHASE 3: ALLEY TRIGGER, DECELERATION & FINISH WRAP TACKLE',
+        description: 'LB disengages from spilled block, triggers downhill into the perimeter alley, buzzes feet, and finishes chest-to-chest form tackle.',
+        tokens: [
+          { id: 'cone-1', type: 'cone', label: 'ALLEY', x: 140, y: 200, color: '#ea580c' },
+          { id: 'cone-2', type: 'cone', label: 'ALLEY', x: 140, y: 280, color: '#ea580c' },
+          { id: 'rb-tackled', type: 'O', label: 'RB', x: 170, y: 235, color: '#d91b24', subLabel: 'Wrapped' },
+          { id: 'lb-tackle', type: 'X', label: 'MIKE', x: 180, y: 245, color: '#10b981', subLabel: 'Form Fit' },
+        ],
+        arrows: [
+          { id: 'a-disengage', type: 'run', startX: 240, startY: 260, endX: 190, endY: 250, color: '#10b981', label: 'Disengage & Trigger' },
+          { id: 'a-finish-tackle', type: 'tackle', startX: 180, startY: 245, endX: 170, endY: 235, color: '#10b981', label: 'Wrap & Drive Feet' },
+        ],
+        zones: [
+          { id: 'z-alley-finish', name: 'TACKLE ALLEY (FINISH RUNNER)', cx: 165, cy: 240, rx: 55, ry: 45, color: '#10b981', opacity: 0.2 },
+        ],
+      },
+    ],
+  },
 
   // ==========================================
   // DEFENSIVE BACKS (DB) - 6 DRILLS

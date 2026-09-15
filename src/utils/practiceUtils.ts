@@ -248,9 +248,9 @@ export function sanitizePracticePlans(
     .filter((p): p is PracticePlan => Boolean(p && typeof p === 'object'))
     .map((p) => {
       const dateStr = p.date || '';
-      const correctDay = dateStr ? getDayOfWeekForDate(dateStr) : (p.day || 'Wednesday');
-      const correctWeek = dateStr ? calculateWeekFolderForDate(dateStr, scheduleEvents) : (p.weekFolder || 'Week 1');
-      const correctDayFolder = dateStr ? getFormattedDayFolder(dateStr) : (p.dayFolder || p.day || 'Day 1');
+      const correctDay = p.day || (dateStr ? getDayOfWeekForDate(dateStr) : 'Wednesday');
+      const correctWeek = p.weekFolder || (dateStr ? calculateWeekFolderForDate(dateStr, scheduleEvents) : 'Week 1');
+      const correctDayFolder = p.dayFolder || (dateStr ? getFormattedDayFolder(dateStr) : (p.day || 'Day 1'));
 
       const rawPeriods = Array.isArray(p.plan) && p.plan.length > 0
         ? p.plan

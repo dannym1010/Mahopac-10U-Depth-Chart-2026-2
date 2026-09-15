@@ -3762,9 +3762,23 @@ export function generatePocketDepthChartPrintHTML(
   } else if (layout === 'side_by_side' || options?.unitFilter === 'both_off_def') {
     const offForms = targetFormations.filter((f) => f.unit === 'offense');
     const defForms = targetFormations.filter((f) => f.unit === 'defense');
+    const stAndOtherForms = targetFormations.filter((f) => f.unit !== 'offense' && f.unit !== 'defense');
 
     const offCards = offForms.map((f) => renderSingleFormationCard(f, 'OFF')).join('');
     const defCards = defForms.map((f) => renderSingleFormationCard(f, 'DEF')).join('');
+    const otherCards = stAndOtherForms.map((f) => renderSingleFormationCard(f, f.unit === 'st' ? 'ST' : 'GRP')).join('');
+
+    const otherSectionHtml = stAndOtherForms.length > 0 ? `
+      <div style="margin-top: 14px; border-top: 2px dashed #94a3b8; padding-top: 10px; page-break-inside: avoid; break-inside: avoid;">
+        <div style="font-weight: 900; font-size: ${headerFs + 1}px; text-transform: uppercase; color: #000; border-bottom: 2px solid #000; padding-bottom: 2px; margin-bottom: 6px; display: flex; justify-content: space-between;">
+          <span>SPECIAL TEAMS &amp; ADDITIONAL FORMATIONS</span>
+          <span style="font-size: ${subFs}px; color: #475569;">${stAndOtherForms.length} Formations</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(${options?.columnsCount || (orientation === 'landscape' ? 2 : 1)}, 1fr); gap: 10px;">
+          ${otherCards}
+        </div>
+      </div>
+    ` : '';
 
     contentHtml = `
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; position: relative;">
@@ -3790,6 +3804,7 @@ export function generatePocketDepthChartPrintHTML(
           ${defCards || '<div style="padding: 12px; font-weight: 700; color: #64748b;">No defensive formations found.</div>'}
         </div>
       </div>
+      ${otherSectionHtml}
     `;
   } else {
     const cols = options?.columnsCount || (orientation === 'landscape' ? 2 : 1);

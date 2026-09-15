@@ -21,6 +21,7 @@ import {
   ArrowUpDown,
   ListOrdered,
   Highlighter,
+  Target,
 } from 'lucide-react';
 import { FormationBoard, PlacedPlayer } from '../types';
 import {
@@ -35,7 +36,7 @@ interface PocketDepthChartPrintModalProps {
   onClose: () => void;
   formations: FormationBoard[];
   depthChart: Record<string, PlacedPlayer[]>;
-  activeUnit: 'offense' | 'defense' | 'st' | 'groups';
+  activeUnit: 'offense' | 'defense' | 'st' | 'groups' | 'all';
   activeTeamName?: string;
   seasonLabel?: string;
   initialSelectedFormationId?: string | null;
@@ -54,7 +55,7 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
   // Modal state
   const [unitMode, setUnitMode] = useState<
     'current' | 'both_off_def' | 'all' | 'offense' | 'defense' | 'st'
-  >(() => (initialSelectedFormationId ? 'current' : 'both_off_def'));
+  >(() => (initialSelectedFormationId ? 'current' : 'all'));
   const [depthLevels, setDepthLevels] = useState<'starters_only' | '2_deep' | '3_deep' | 'all'>('2_deep');
   const [layout, setLayout] = useState<'pocket_grid' | 'side_by_side' | 'full_table' | 'single_column'>('pocket_grid');
   const [columnsCount, setColumnsCount] = useState<1 | 2 | 3>(2);
@@ -357,6 +358,29 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                 <button
                   type="button"
                   onClick={() => {
+                    setUnitMode('all');
+                    setSelectedFormationIds(formations.map((f) => f.id));
+                  }}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    unitMode === 'all'
+                      ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-300 dark:border-emerald-500/60 text-emerald-900 dark:text-emerald-200 shadow-xs'
+                      : 'bg-white hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-black">All Formations</span>
+                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500 text-white">
+                      All ({formations.length})
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
+                    Print all formations across entire team
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
                     setUnitMode('both_off_def');
                     setOneChartPerColumn(false);
                     setLayout('side_by_side');
@@ -423,6 +447,21 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
                   <div className="text-xs font-bold flex items-center gap-1">
                     <Shield className="w-3.5 h-3.5 text-rose-600 dark:text-red-400" />
                     <span>Defense Only</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setUnitMode('st')}
+                  className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                    unitMode === 'st'
+                      ? 'bg-purple-50 dark:bg-purple-600/20 border-purple-300 dark:border-purple-500/60 text-purple-900 dark:text-purple-200 shadow-xs'
+                      : 'bg-white hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700/60 text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  <div className="text-xs font-bold flex items-center gap-1">
+                    <Target className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                    <span>Special Teams Only</span>
                   </div>
                 </button>
               </div>

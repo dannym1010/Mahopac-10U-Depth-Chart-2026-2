@@ -1730,6 +1730,11 @@ export const DEFAULT_CASCADING_DRILLS: DrillFolder[] = [
             "name": "Offense RB: Pass Protection & Blitz Pickup",
             "key": "Meet the blitzer at the line of scrimmage; do not wait in the backfield. Strike with the heel of the hands",
             "desc": "RB steps up into A/B gap, square shoulders, strike oncoming linebacker in the chest plate, and anchor"
+          },
+          {
+            "name": "Offense RB: Perimeter Press & Cutback Reaction (Outside vs Cutback Lanes)",
+            "key": "Press the perimeter edge with speed to stretch defense horizontally; read force defender to bounce wide or plant outside foot violently at 90 degrees into cutback lane",
+            "desc": "Wide zone/stretch track drill. RB presses edge track to force defense pursuit flow. If edge is won/pinned, RB accelerates around corner cone up the numbers. If defender sets hard outside edge, RB violently plants outside foot, drops hips, and slashes 90 degrees downhill through cutback crease. Mix 2 outside bounce runs with surprise cutback reads."
           }
         ]
       },
@@ -1988,6 +1993,11 @@ export const DEFAULT_CASCADING_DRILLS: DrillFolder[] = [
             "name": "Defense LB: Triangle Block Pop & Directional Peek Drill",
             "desc": "Triangle alignment with LB at apex, blocker 2 yards ahead, and ball carrier 2-3 yards behind blocker. Coach calls out 'Right' or 'Left' lead foot to the LB (determining peek direction) while flashing a hand signal to the ball carrier to attack right or left. On movement, LB fires downhill with designated lead foot, delivers explosive two-hand pop strike to blocker's breastplate to create instant separation, and peeks into designated gap. When ball carrier cuts to opposite lane, LB disengages cleanly without grabbing cloth, resets his hips/feet, and redirects downhill to track and make the tackle.",
             "key": "Don't grab cloth on the pop-off!. Pop the blocker violently to create separation so he cannot latch on. Designated lead foot dictates your peek (Right lead = peek right; Left lead = peek left). Never guess or get tied up—strike, peek through the blocker, and reset hips instantly to redirect on cutbacks"
+          },
+          {
+            "name": "Defense LB: Read-Step, Scrape & Spill to Alley Tackle",
+            "key": "6-inch read step downhill without false stepping; high knees scraping laterally over bags with square shoulders; inside flipper strike to spill runner wide, then buzz feet into alley for chest-to-chest wrap tackle",
+            "desc": "Place 3 step-over agile bags simulating interior LOS trash. LB takes 6-inch downhill read step on snap flow, scrapes laterally across bags with square shoulders, strikes oncoming lead blocker with inside shoulder flipper to spill the ball carrier wide into the perimeter alley, and disengages to finish with chest-to-chest wrap tackle."
           }
         ]
       },

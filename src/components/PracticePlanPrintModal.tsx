@@ -13,7 +13,7 @@ import {
   Shield,
   Eye,
 } from 'lucide-react';
-import { PracticePlan, PracticePeriod } from '../types';
+import { PracticePlan, PracticePeriod, FormationBoard, PlacedPlayer } from '../types';
 import { WhiteboardDrill } from './whiteboard/whiteboardDrillData';
 import {
   extractPlanDrillItems,
@@ -31,6 +31,9 @@ interface PracticePlanPrintModalProps {
   whiteboardDrills: WhiteboardDrill[];
   initialPrintFontSize?: string;
   onOpenWhiteboardDrill?: (drillId: string, category?: string) => void;
+  formations?: FormationBoard[];
+  depthChart?: Record<string, PlacedPlayer[]>;
+  activeTeamName?: string;
 }
 
 export const PracticePlanPrintModal: React.FC<PracticePlanPrintModalProps> = ({
@@ -42,9 +45,13 @@ export const PracticePlanPrintModal: React.FC<PracticePlanPrintModalProps> = ({
   whiteboardDrills,
   initialPrintFontSize = '12',
   onOpenWhiteboardDrill,
+  formations = [],
+  depthChart = {},
+  activeTeamName,
 }) => {
   const [includePlanTable, setIncludePlanTable] = useState(true);
   const [includeDrillSheets, setIncludeDrillSheets] = useState(true);
+  const [includeFormations, setIncludeFormations] = useState(false);
   const [fontSize, setFontSize] = useState<number>(parseInt(initialPrintFontSize, 10) || 12);
 
   // Extract all drills available in this plan
@@ -104,7 +111,8 @@ export const PracticePlanPrintModal: React.FC<PracticePlanPrintModalProps> = ({
       phaseIndex: phaseSelections[item.key] !== undefined ? phaseSelections[item.key] : 0,
     }));
 
-  const totalPages = (includePlanTable ? 1 : 0) + selectedDrillPackages.length;
+  const formationsPageEstimate = includeFormations && formations.length > 0 ? Math.ceil(formations.length / 2) : 0;
+  const totalPages = (includePlanTable ? 1 : 0) + selectedDrillPackages.length + formationsPageEstimate;
 
   const handlePrint = () => {
     printPracticePlanPackage({
@@ -114,6 +122,10 @@ export const PracticePlanPrintModal: React.FC<PracticePlanPrintModalProps> = ({
       fontSize,
       includePlanTable,
       selectedDrills: selectedDrillPackages,
+      includeFormations,
+      formations,
+      depthChart,
+      activeTeamName,
       documentTitle: `${plan?.title || 'Practice Plan'} - Full Coaching Package`,
     });
   };
@@ -126,6 +138,10 @@ export const PracticePlanPrintModal: React.FC<PracticePlanPrintModalProps> = ({
       fontSize,
       includePlanTable,
       selectedDrills: selectedDrillPackages,
+      includeFormations,
+      formations,
+      depthChart,
+      activeTeamName,
       documentTitle: `${plan?.title || 'Practice Plan'} - Full Coaching Package`,
     });
   };
@@ -366,6 +382,34 @@ export const PracticePlanPrintModal: React.FC<PracticePlanPrintModalProps> = ({
               </div>
             )}
           </div>
+
+          {/* Section 3: Team Formations & Depth Chart */}
+          {formations && formations.length > 0 && (
+            <div className="p-4 bg-slate-950/50 border border-slate-800 rounded-xl space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={includeFormations}
+                    onChange={(e) => setIncludeFormations(e.target.checked)}
+                    className="w-4 h-4 rounded-sm text-amber-500 focus:ring-amber-400 bg-slate-800 border-slate-700 cursor-pointer"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-amber-400" />
+                    <span className="text-sm font-bold text-slate-200">
+                      Include Team Formations ({formations.length} Formations)
+                    </span>
+                  </div>
+                </label>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                  Pocket Depth Chart
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 pl-6.5">
+                Appends side-by-side pocket depth charts for all offense, defense, special teams, and position groups so coaches have complete personnel alignments on the field.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Footer Summary & Actions */}
@@ -378,9 +422,15 @@ export const PracticePlanPrintModal: React.FC<PracticePlanPrintModalProps> = ({
             {includePlanTable && <span className="text-[11px] text-slate-400">(1 Plan Table</span>}
             {selectedDrillPackages.length > 0 && (
               <span className="text-[11px] text-slate-400">
-                + {selectedDrillPackages.length} Drill {selectedDrillPackages.length === 1 ? 'Sheet' : 'Sheets'})
+                + {selectedDrillPackages.length} Drill {selectedDrillPackages.length === 1 ? 'Sheet' : 'Sheets'}
               </span>
             )}
+            {includeFormations && formations.length > 0 && (
+              <span className="text-[11px] text-slate-400">
+                + {formationsPageEstimate} Formation {formationsPageEstimate === 1 ? 'Page' : 'Pages'}
+              </span>
+            )}
+            <span className="text-[11px] text-slate-400">)</span>
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">

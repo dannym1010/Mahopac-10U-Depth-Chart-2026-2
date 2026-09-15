@@ -33,6 +33,7 @@ import {
   Eye,
   PenTool,
   BookOpen,
+  Shield,
 } from 'lucide-react';
 import {
   PracticePlan,
@@ -42,6 +43,8 @@ import {
   DrillItem,
   UserRole,
   ScheduleEvent,
+  FormationBoard,
+  PlacedPlayer,
 } from '../types';
 import { formatTimeMinutes, parseTimeString } from '../services/storageService';
 import { PracticeWizardModal, PracticeWizardGeneratedResult } from './PracticeWizardModal';
@@ -63,6 +66,7 @@ import { findMatchingWhiteboardDrill, createCustomDrillFromStation } from '../ut
 import { printDrillSheet } from './whiteboard/drillPrintHelper';
 import { PracticePlanPrintModal } from './PracticePlanPrintModal';
 import { DrillInstructionsModal } from './whiteboard/DrillInstructionsModal';
+import { PocketDepthChartPrintModal } from './PocketDepthChartPrintModal';
 
 interface PracticePlanViewProps {
   practices: PracticePlan[];
@@ -73,6 +77,9 @@ interface PracticePlanViewProps {
   printFontSize: string;
   userRole: UserRole;
   scheduleEvents?: ScheduleEvent[];
+  formations?: FormationBoard[];
+  depthChart?: Record<string, PlacedPlayer[]>;
+  activeTeamName?: string;
   onSelectPractice: (id: string) => void;
   onOpenNewPracticeModal: () => void;
   onEditPracticeDetails: () => void;
@@ -149,6 +156,9 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   onQuickCreateFromSchedule,
   onOpenWhiteboardDrill,
   whiteboardDrills,
+  formations = [],
+  depthChart = {},
+  activeTeamName,
 }) => {
   const [isPlanLibraryOpen, setIsPlanLibraryOpen] = useState(false);
   const [dropdownSearchTerm, setDropdownSearchTerm] = useState('');
@@ -162,6 +172,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   const [stationGroupFilters, setStationGroupFilters] = useState<Record<string, string>>({});
   const [isPrintMenuOpen, setIsPrintMenuOpen] = useState(false);
   const [isPrintPackageModalOpen, setIsPrintPackageModalOpen] = useState(false);
+  const [isPocketModalOpen, setIsPocketModalOpen] = useState(false);
   const printMenuRef = useRef<HTMLDivElement>(null);
   const effectiveWhiteboardDrills = useMemo(
     () => (whiteboardDrills && whiteboardDrills.length > 0 ? whiteboardDrills : WHITEBOARD_DRILLS),
@@ -956,6 +967,20 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                     <div>
                       <div>Print Plan & Drill Sheets...</div>
                       <div className="text-[10px] text-indigo-200 font-normal">Select drills to print alongside plan</div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPrintMenuOpen(false);
+                      setIsPocketModalOpen(true);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-amber-300 hover:bg-amber-600 hover:text-white flex items-center gap-2 transition-all cursor-pointer bg-amber-950/40 border border-amber-700/40"
+                  >
+                    <Shield className="w-3.5 h-3.5 text-amber-400" />
+                    <div>
+                      <div>Pocket Depth Chart (All Formations)...</div>
+                      <div className="text-[10px] text-amber-200 font-normal">Print all formations (Offense, Defense, ST)</div>
                     </div>
                   </button>
                   <button
@@ -3025,6 +3050,22 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
           whiteboardDrills={effectiveWhiteboardDrills}
           initialPrintFontSize={printFontSize}
           onOpenWhiteboardDrill={onOpenWhiteboardDrill}
+          formations={formations}
+          depthChart={depthChart}
+          activeTeamName={activeTeamName}
+        />
+      )}
+
+      {/* Pocket Depth Chart Print Modal (All Formations) */}
+      {isPocketModalOpen && (
+        <PocketDepthChartPrintModal
+          isOpen={isPocketModalOpen}
+          onClose={() => setIsPocketModalOpen(false)}
+          formations={formations}
+          depthChart={depthChart}
+          activeUnit="all"
+          activeTeamName={activeTeamName || 'Football Manager'}
+          seasonLabel="Practice & Game Formations"
         />
       )}
 

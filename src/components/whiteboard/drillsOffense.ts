@@ -436,6 +436,99 @@ export const OFFENSE_MATRIX_DRILLS: WhiteboardDrill[] = [
       },
     ],
   },
+  {
+    id: 'matrix-rb-outside-press-cutback-lanes',
+    category: 'OFF_RB',
+    categoryLabel: 'Running Backs (RB)',
+    title: 'RB: Perimeter Press & Cutback Reaction (Outside vs Cutback Lanes)',
+    subtitle: 'Press Outside Edge, Read Force Defender, Bounce Wide or Plant & Slash Vertical',
+    objective: 'Train running backs on wide zone and perimeter stretch reads. RB presses the outside track with speed to stretch the defense laterally. Read the force defender: when the edge is won, accelerate around the perimeter and turn corner up the numbers; when the defender over-pursues or sets a hard outside edge, violently plant outside foot 90 degrees and explode downhill through the cutback crease.',
+    setup: 'Align QB in shotgun with RB offset. Place 4 cones establishing the outside perimeter track and corner turn. Place 2 agile bags defining the cutback crease lane. Position coach or defender with hit shield at the C-gap/perimeter force landmark.',
+    instructions: [
+      'Receive handoff/mesh on wide zone track, tucking football instantly into 4 points of pressure.',
+      'Press the outside perimeter track at full speed toward the edge cone, forcing linebacker and safety pursuit wide.',
+      'Read the force defender or coach hand signal: Rep A (Outside Bounce): Edge is sealed -> maintain perimeter speed, bend around corner cone, burst vertical up the numbers.',
+      'Rep B (Cutback Lane): Defender flows hard outside -> plant outside cleat violently into turf, drop hips, bend 90 degrees back downhill through the cutback lane without stuttering.',
+      'Cadence: Run 2 outside bounce repetitions to establish edge speed, then mix in surprise cutbacks to test instant vision and deceleration-to-acceleration burst.'
+    ],
+    equipment: '6 Cones, 2 Agile step-over bags (lane borders), 1 Handheld shield, footballs.',
+    cues: [
+      'Press the edge with speed first',
+      'Eyes on force defender helmet',
+      'Violent outside plant foot (no rounding)',
+      'One cut and get vertical downhill',
+      '4 points of ball security through contact'
+    ],
+    faults: [
+      'Rounding off cutback angle into curved loop instead of sharp 90-degree plant',
+      'Cutting back prematurely before forcing edge defender to commit wide',
+      'Stutter-stepping or pitter-pattering feet before making cut',
+      'Carrying football loosely away from ribcage'
+    ],
+    diagramKeys: [
+      { text: 'Perimeter Cones: Outside Stretch Track', isHighlight: false },
+      { text: 'Force Defender: Visual Read Key', isHighlight: true },
+      { text: 'Cutback Lane: 90° Downhill Crease', isHighlight: true }
+    ],
+    videoUrl: 'https://www.facebook.com/reel/1443688096826333',
+    phases: [
+      {
+        name: 'PHASE 1: SNAP & OUTSIDE STRETCH PRESS (SETTING UP PERIMETER)',
+        description: 'RB takes wide zone mesh, presses track toward sideline cone with high speed to force defense to scrape laterally.',
+        tokens: [
+          { id: 'qb-1', type: 'O', label: 'QB', x: 350, y: 180, color: '#1a1a24' },
+          { id: 'rb-1', type: 'O', label: 'RB', x: 320, y: 220, color: '#059669', subLabel: 'Stretch Track' },
+          { id: 'c-cone1', type: 'cone', label: 'C-GAP', x: 270, y: 200, color: '#ea580c' },
+          { id: 'c-cone2', type: 'cone', label: 'PERIMETER', x: 200, y: 200, color: '#ea580c' },
+          { id: 'c-cone3', type: 'cone', label: 'BOUNDARY', x: 140, y: 200, color: '#ea580c' },
+          { id: 'def-force', type: 'X', label: 'FORCE / DE', x: 210, y: 170, color: '#ef4444', subLabel: 'Read Key' },
+        ],
+        arrows: [
+          { id: 'a-mesh', type: 'pass', startX: 350, startY: 180, endX: 320, endY: 220, color: '#1a1a24', label: 'Mesh' },
+          { id: 'a-press', type: 'run', startX: 320, startY: 220, endX: 220, endY: 215, color: '#059669', label: 'Press Outside Track' },
+          { id: 'a-force-read', type: 'run', startX: 210, startY: 170, endX: 200, endY: 185, color: '#ef4444', label: 'Flow' },
+        ],
+        zones: [
+          { id: 'z-stretch', name: 'OUTSIDE STRETCH TRACK', cx: 240, cy: 215, rx: 80, ry: 25, color: '#059669', opacity: 0.18 },
+        ],
+      },
+      {
+        name: 'PHASE 2: REP OPTION A - OUTSIDE BOUNCE & CORNER TURN (EDGE WON)',
+        description: 'Defender pinches inside or gets sealed. RB maintains speed to sideline, clears perimeter cone, and turns corner vertical up numbers.',
+        tokens: [
+          { id: 'c-cone2', type: 'cone', label: 'EDGE CONE', x: 200, y: 200, color: '#ea580c' },
+          { id: 'def-hooked', type: 'X', label: 'DE', x: 220, y: 195, color: '#ef4444', subLabel: 'Pinched Inside' },
+          { id: 'rb-bounce', type: 'O', label: 'RB', x: 150, y: 170, color: '#059669', subLabel: 'Turn Corner' },
+        ],
+        arrows: [
+          { id: 'a-bounce', type: 'curved', startX: 220, startY: 215, endX: 150, endY: 170, controlX: 170, controlY: 215, color: '#059669', label: 'Speed Outside Bounce' },
+          { id: 'a-burst-numbers', type: 'run', startX: 150, startY: 170, endX: 150, endY: 110, color: '#059669', label: 'Burst Up Numbers' },
+        ],
+        zones: [
+          { id: 'z-bounce', name: 'PERIMETER BOUNCE ALLEY', cx: 150, cy: 150, rx: 45, ry: 40, color: '#2563eb', opacity: 0.2 },
+        ],
+      },
+      {
+        name: 'PHASE 3: REP OPTION B - SHARP PLANT & VERTICAL CUTBACK LANE (SLASHING DOWNHILL)',
+        description: 'Force defender sets hard outside edge / over-pursues. RB plants outside right cleat into turf, drops hips 90°, and bursts downhill through cutback crease.',
+        tokens: [
+          { id: 'bag-cut1', type: 'bag', label: 'BAG 1', x: 260, y: 190, color: '#64748b' },
+          { id: 'bag-cut2', type: 'bag', label: 'BAG 2', x: 300, y: 190, color: '#64748b' },
+          { id: 'def-wide', type: 'X', label: 'FORCE', x: 180, y: 190, color: '#ef4444', subLabel: 'Over-Pursuit' },
+          { id: 'rb-plant', type: 'O', label: 'RB', x: 210, y: 220, color: '#059669', subLabel: 'Plant Foot' },
+          { id: 'rb-burst', type: 'O', label: 'RB', x: 280, y: 150, color: '#059669', subLabel: 'Vertical Cut' },
+        ],
+        arrows: [
+          { id: 'a-plant-cut', type: 'run', startX: 210, startY: 220, endX: 280, endY: 160, color: '#10b981', label: '90° Plant & Cutback' },
+          { id: 'a-vertical', type: 'run', startX: 280, startY: 160, endX: 280, endY: 100, color: '#10b981', label: 'North-South Explosion' },
+          { id: 'a-flow-wide', type: 'run', startX: 190, startY: 180, endX: 150, endY: 190, color: '#ef4444', label: 'Washed Out' },
+        ],
+        zones: [
+          { id: 'z-cutback-lane', name: 'CUTBACK CREASE / LANE', cx: 280, cy: 160, rx: 40, ry: 35, color: '#f59e0b', opacity: 0.25 },
+        ],
+      },
+    ],
+  },
 
   // ==========================================
   // OFFENSIVE LINE (OL) - 5 DRILLS
