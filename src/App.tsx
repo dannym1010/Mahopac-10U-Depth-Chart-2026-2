@@ -7489,7 +7489,7 @@ function mergeRemoteWeeklyData(
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 print:bg-white print:text-black flex flex-row font-sans text-slate-900 dark:text-slate-100 selection:bg-indigo-600 selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 print:bg-white print:text-black flex flex-row print:block print:h-auto print:min-h-0 print:overflow-visible font-sans text-slate-900 dark:text-slate-100 selection:bg-indigo-600 selection:text-white overflow-x-hidden print:overflow-x-visible">
       {/* Hidden File Inputs for Import */}
       <input
         type="file"
@@ -7554,7 +7554,7 @@ function mergeRemoteWeeklyData(
       />
 
       {/* Main Right Scrollable Viewport (Header + Active Screen) */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto print:h-auto print:min-h-0 print:max-h-none print:overflow-visible print:block print:w-full">
         {/* Main Athletic Header */}
         <Header
         currentWeek={currentWeek}
@@ -7629,10 +7629,10 @@ function mergeRemoteWeeklyData(
       />
 
       {/* Main Layout Area */}
-      <main className="flex-1 max-w-[1700px] w-full mx-auto p-4 md:p-6 pb-24 md:pb-6">
-        <div className="flex flex-col lg:flex-row gap-6 items-start">
+      <main className="flex-1 max-w-[1700px] w-full mx-auto p-4 md:p-6 pb-24 md:pb-6 print:p-0 print:m-0 print:max-w-none print:w-full print:block print:overflow-visible">
+        <div className="flex flex-col lg:flex-row gap-6 items-start print:block print:gap-0 print:w-full print:overflow-visible">
           {/* Main Board / Panel Column */}
-          <div className="flex-1 min-w-0 w-full">
+          <div className="flex-1 min-w-0 w-full print:block print:w-full print:overflow-visible">
             {/* 0.0. PC / Desktop Clean Home Splash Screen */}
             {activeUnit === 'home' && (
               <HomeView
@@ -8868,6 +8868,9 @@ function mergeRemoteWeeklyData(
             setSelectivePrintUnit(null);
 
             triggerPrint({
+              orientation: 'landscape',
+              bodyClasses: ['is-printing-formations'],
+              documentTitle: `${currentActiveTeam ? `${currentActiveTeam.name.toUpperCase()}_` : ''}${selectivePrintUnit.toUpperCase()}_FORMATION_DEPTH_CHARTS`,
               beforePrint: () => {
                 document
                   .querySelectorAll('.formation-container')

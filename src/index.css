@@ -520,21 +520,56 @@ body.theme-light {
 
   #root,
   #root > div,
+  #root div,
   main,
+  main div,
   .min-h-screen,
-  [class*="min-h-screen"] {
+  [class*="min-h-screen"],
+  .h-screen,
+  [class*="h-screen"],
+  [class*="overflow-y-auto"],
+  [class*="overflow-x-hidden"],
+  [class*="overflow-x-auto"],
+  [class*="overflow-hidden"],
+  [class*="overflow-auto"],
+  body.is-printing div,
+  body.is-printing-formations div {
     background-color: #ffffff !important;
     background: #ffffff !important;
     color: #000000 !important;
-    width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
     overflow: visible !important;
     position: static !important;
+  }
+
+  #root,
+  main {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
     display: block !important;
+  }
+
+  /* When printing formations or general print, suppress interactive shell UI, sticky headers, and navigation */
+  body.is-printing-formations header,
+  body.is-printing-formations nav,
+  body.is-printing-formations aside,
+  body.is-printing-formations #side-navigation-folder-system,
+  body.is-printing-formations .mobile-bottom-nav,
+  body.is-printing-formations [role="navigation"],
+  body.is-printing-formations [role="dialog"],
+  body.is-printing header,
+  body.is-printing nav,
+  body.is-printing aside,
+  body.is-printing #side-navigation-folder-system,
+  body.is-printing .mobile-bottom-nav,
+  body.is-printing [role="navigation"] {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
   }
 
   /* Call Sheet and multi-page print container resets (Prevents height/overflow clipping) */
@@ -885,8 +920,8 @@ body.theme-light {
     border: 2px solid #000000 !important;
     border-radius: 6px !important;
     box-shadow: none !important;
-    padding: 6px 8px !important;
-    margin-bottom: 12px !important;
+    padding: 8px 10px !important;
+    margin: 0 0 16px 0 !important;
     background: #ffffff !important;
     background-color: #ffffff !important;
     page-break-inside: avoid !important;
@@ -895,6 +930,12 @@ body.theme-light {
     break-after: page !important;
     display: block !important;
     clear: both !important;
+    position: static !important;
+    float: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+    transform: none !important;
     color: #0f172a !important;
     overflow: visible !important;
     -webkit-print-color-adjust: exact !important;
@@ -904,6 +945,7 @@ body.theme-light {
   .formation-container:last-child {
     page-break-after: auto !important;
     break-after: auto !important;
+    margin-bottom: 0 !important;
   }
 
   .formation-card-header {

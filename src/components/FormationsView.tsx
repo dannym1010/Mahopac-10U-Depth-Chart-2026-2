@@ -947,12 +947,11 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
 
           <button
             onClick={() => {
-              if (viewMode === 'mobile_cards' && mobileSubTab === 'pocket_chart') {
-                setSelectedPocketPrintFormId(null);
-                setIsPocketPrintModalOpen(true);
-              } else {
-                triggerPrint();
-              }
+              triggerPrint({
+                orientation: 'landscape',
+                bodyClasses: ['is-printing-formations'],
+                documentTitle: `${teamDisplayName ? `${teamDisplayName.toUpperCase()}_` : ''}${unit.toUpperCase()}_FORMATION_DEPTH_CHARTS`,
+              });
             }}
             className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-950 dark:text-slate-200 dark:hover:text-white font-bold text-xs rounded-xl border border-slate-200 dark:border-slate-750 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
             title="Print Depth Chart Formations"
@@ -1040,7 +1039,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
          MERGED MOBILE DEPTH VIEW (Pocket Laminated Table #5 + Player Assignment Matrix #3)
          ========================================================================= */}
       {viewMode === 'mobile_cards' && (
-        <div className={`space-y-4 ${mobileSubTab === 'pocket_chart' ? '' : 'print:hidden'}`}>
+        <div className="space-y-4 print:hidden">
           {/* Sub-View Switcher: Pocket Table vs Player Matrix */}
           <div className="flex items-center justify-between gap-2 bg-slate-100 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700/80 p-1.5 rounded-2xl shadow-xs dark:shadow-xl">
             <button
@@ -1779,7 +1778,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
       {/* =========================================================================
          TACTICAL FIELD DIAGRAM VIEW (Grid Layout for Wide Screens & Printing)
          ========================================================================= */}
-      <div className={`space-y-6 print:space-y-3 ${viewMode === 'mobile_cards' ? (mobileSubTab === 'pocket_chart' ? 'hidden print:hidden' : 'hidden print:block') : 'block'}`}>
+      <div className={`space-y-6 print:space-y-0 print:block ${viewMode === 'mobile_cards' ? 'hidden print:block' : 'block'}`}>
         {/* Mobile Swipe Tip when in field view */}
         <div className="md:hidden flex items-center justify-between gap-2 p-3 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl text-xs font-bold text-indigo-200 print:hidden">
           <div className="flex items-center gap-2 min-w-0">
@@ -1795,7 +1794,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
           </button>
         </div>
 
-        {displayedFormations.map((form) => {
+        {unitFormations.map((form) => {
+          const isFilterMatch = safeFilterViewId === 'ALL' || form.id === safeFilterViewId;
           const isSelected = selectedFormationId === form.id;
 
           return (
@@ -1804,6 +1804,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
               data-form-id={form.id}
               onClick={() => onSelectFormation(form.id)}
               className={`formation-container bg-slate-800/90 backdrop-blur-md rounded-3xl border transition-all p-5 relative shadow-xl print:block print:w-full print:clear-both print:break-after-page [&:last-child]:print:break-after-auto ${
+                !isFilterMatch ? 'hidden print:block' : ''
+              } ${
                 isSelected
                   ? 'border-indigo-500/80 shadow-indigo-500/20 ring-2 ring-indigo-500/30'
                   : 'border-slate-700/80 hover:border-slate-600'

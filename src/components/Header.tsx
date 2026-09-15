@@ -168,7 +168,7 @@ export const Header: React.FC<HeaderProps> = ({
   const autoWeekInfo = useMemo(() => getAutoActiveWeek(scheduleEvents), [scheduleEvents]);
 
   return (
-    <header className="bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 shadow-xs dark:shadow-xl sticky top-0 z-40">
+    <header className="bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 shadow-xs dark:shadow-xl sticky top-0 z-40 print:hidden">
       {/* =========================================================================
           1. SLEEK COMPACT MOBILE HEADER (< md: 768px)
           ========================================================================= */}
