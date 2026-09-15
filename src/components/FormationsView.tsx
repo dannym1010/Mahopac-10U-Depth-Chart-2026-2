@@ -1803,7 +1803,7 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
               key={form.id}
               data-form-id={form.id}
               onClick={() => onSelectFormation(form.id)}
-              className={`formation-container bg-slate-800/90 backdrop-blur-md rounded-3xl border transition-all p-5 relative shadow-xl ${
+              className={`formation-container bg-slate-800/90 backdrop-blur-md rounded-3xl border transition-all p-5 relative shadow-xl print:block print:w-full print:clear-both print:break-after-page [&:last-child]:print:break-after-auto ${
                 isSelected
                   ? 'border-indigo-500/80 shadow-indigo-500/20 ring-2 ring-indigo-500/30'
                   : 'border-slate-700/80 hover:border-slate-600'

@@ -447,6 +447,7 @@ export function generatePracticePlanPackageHTML(options: PracticePlanPrintPackag
           unitFilter: 'all',
           layout: 'side_by_side',
           columnsCount: 2,
+          orientation: 'portrait',
           selectedFormationIds: options.formations.map((f) => f.id),
           teamName: options.activeTeamName || options.plan?.title || 'Football Team',
           seasonLabel: 'Practice Formations',
@@ -485,7 +486,8 @@ export function generatePracticePlanPackageHTML(options: PracticePlanPrintPackag
 
   const formationsSheetHtml = formationsBody
     ? `
-      <div class="drill-page-wrapper page-break-before">
+      <div class="print-page-break" style="page-break-before: always !important; break-before: page !important; display: block !important; clear: both !important; height: 0; margin: 0; padding: 0;"></div>
+      <div class="drill-page-wrapper formations-sheet-wrapper page-break-before" style="page-break-before: always !important; break-before: page !important; display: block !important; clear: both !important; width: 100% !important;">
         <div class="drill-header-plan-banner print:block">
           <span class="banner-title">${options.activeTeamName || plan?.title || 'TEAM FORMATIONS'}</span>
           <span class="banner-meta">POCKET DEPTH CHARTS • ALL FORMATIONS</span>
@@ -494,6 +496,8 @@ export function generatePracticePlanPackageHTML(options: PracticePlanPrintPackag
       </div>
     `
     : '';
+
+  const hasFollowingContent = selectedDrills.length > 0 || Boolean(formationsSheetHtml);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -511,9 +515,45 @@ export function generatePracticePlanPackageHTML(options: PracticePlanPrintPackag
         size: letter portrait;
         margin: 0.25in 0.3in;
       }
+      .plan-screen-card.has-following-pages,
+      .plan-screen-card.page-break-after {
+        page-break-after: always !important;
+        break-after: page !important;
+        display: block !important;
+        clear: both !important;
+      }
+      .drill-page-wrapper {
+        display: block !important;
+        clear: both !important;
+        width: 100% !important;
+      }
+      .formations-sheet-wrapper {
+        page-break-before: always !important;
+        break-before: page !important;
+        display: block !important;
+        clear: both !important;
+        width: 100% !important;
+      }
       .page-break-before {
         page-break-before: always !important;
         break-before: page !important;
+        display: block !important;
+        clear: both !important;
+      }
+      .page-break-after {
+        page-break-after: always !important;
+        break-after: page !important;
+        display: block !important;
+        clear: both !important;
+      }
+      .print-page-break {
+        page-break-before: always !important;
+        break-before: page !important;
+        display: block !important;
+        clear: both !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
       }
       .no-break {
         page-break-inside: avoid !important;
@@ -571,7 +611,7 @@ export function generatePracticePlanPackageHTML(options: PracticePlanPrintPackag
   ${
     includePlanTable
       ? `
-    <div class="plan-screen-card">
+    <div class="plan-screen-card ${hasFollowingContent ? 'has-following-pages page-break-after' : ''}">
       ${planBody}
     </div>
   `
