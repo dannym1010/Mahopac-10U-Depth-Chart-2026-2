@@ -228,7 +228,8 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
           metadata?.scope === 'move_formation' ||
           metadata?.scope === 'import_backup' ||
           !metadata?.activeUnit ||
-          !isTargetWeek
+          !isTargetWeek ||
+          !['offense', 'defense', 'st', 'groups'].includes(metadata?.activeUnit)
         ) {
           // Full formations update: incoming array is authoritative
           mergedFormations = [...incWeekState.formations];
@@ -474,7 +475,8 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
       metadata?.scope === 'delete_formation' ||
       metadata?.scope === 'move_formation' ||
       metadata?.scope === 'import_backup' ||
-      !metadata?.activeUnit
+      !metadata?.activeUnit ||
+      !['offense', 'defense', 'st', 'groups'].includes(metadata?.activeUnit)
     ) {
       merged.defaultFormations = incoming.defaultFormations;
     } else {

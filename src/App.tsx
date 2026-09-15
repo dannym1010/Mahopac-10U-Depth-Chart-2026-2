@@ -1552,10 +1552,16 @@ function mergeRemoteWeeklyData(
     }
 
     if (data.weeklyData && Object.keys(data.weeklyData).length > 0) {
-      const effectiveUnit =
+      const rawUnit =
         activeUnitRef.current === 'depth_chart'
-          ? (depthSubUnitRef.current === 'scrimmage' ? 'scrimmage' : (currentDepthUnitRef.current || 'offense'))
-          : (activeUnitRef.current === 'scrimmage' ? 'scrimmage' : activeUnitRef.current);
+          ? currentDepthUnitRef.current
+          : activeUnitRef.current;
+      const effectiveUnit: 'offense' | 'defense' | 'st' | 'groups' =
+        ['offense', 'defense', 'st', 'groups'].includes(rawUnit)
+          ? (rawUnit as 'offense' | 'defense' | 'st' | 'groups')
+          : (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current)
+              ? (currentDepthUnitRef.current as 'offense' | 'defense' | 'st' | 'groups')
+              : 'offense');
 
       const normalizedWeekly = normalizeWeeklyData(
         data.weeklyData,
@@ -1581,10 +1587,16 @@ function mergeRemoteWeeklyData(
       Array.isArray(data.defaultFormations) &&
       data.defaultFormations.length > 0
     ) {
-      const effectiveUnit =
+      const rawUnit =
         activeUnitRef.current === 'depth_chart'
-          ? (depthSubUnitRef.current === 'scrimmage' ? 'scrimmage' : (currentDepthUnitRef.current || 'offense'))
-          : (activeUnitRef.current === 'scrimmage' ? 'scrimmage' : activeUnitRef.current);
+          ? currentDepthUnitRef.current
+          : activeUnitRef.current;
+      const effectiveUnit: 'offense' | 'defense' | 'st' | 'groups' =
+        ['offense', 'defense', 'st', 'groups'].includes(rawUnit)
+          ? (rawUnit as 'offense' | 'defense' | 'st' | 'groups')
+          : (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current)
+              ? (currentDepthUnitRef.current as 'offense' | 'defense' | 'st' | 'groups')
+              : 'offense');
 
       if (Date.now() - lastLocalEditTimeRef.current < 25000) {
         const localDefs = latestStateRef.current.defaultFormations || [];
@@ -1959,7 +1971,18 @@ function mergeRemoteWeeklyData(
     };
 
     const payloadJson = safeJSONStringify(payload);
-    if (payloadJson === lastSavedPayloadRef.current && scope !== 'force' && scope !== 'initial_seed') {
+    const isExplicitUserAction =
+      scope.startsWith('position_') ||
+      scope.startsWith('player_') ||
+      scope.startsWith('formation_') ||
+      scope === 'delete_formation' ||
+      scope === 'move_formation' ||
+      scope === 'copy_week' ||
+      scope === 'force' ||
+      scope === 'initial_seed' ||
+      (Array.isArray(extraMeta?.modifiedPosIds) && extraMeta.modifiedPosIds.length > 0);
+
+    if (payloadJson === lastSavedPayloadRef.current && !isExplicitUserAction) {
       return;
     }
 
@@ -1976,10 +1999,16 @@ function mergeRemoteWeeklyData(
 
     // 2. Persistent Server Sync
     try {
-      const effectiveUnit =
-        activeUnitRef.current === 'depth_chart'
+      const fallbackUnit =
+        ['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current)
           ? currentDepthUnitRef.current
-          : activeUnitRef.current;
+          : (['offense', 'defense', 'st', 'groups'].includes(activeUnitRef.current)
+              ? activeUnitRef.current
+              : 'offense');
+      const effectiveUnit =
+        extraMeta?.activeUnit && ['offense', 'defense', 'st', 'groups'].includes(extraMeta.activeUnit)
+          ? extraMeta.activeUnit
+          : fallbackUnit;
       const metadata = {
         activeTeamId: activeTeamIdRef.current,
         currentWeek: currentWeekRef.current,
@@ -3374,7 +3403,8 @@ function mergeRemoteWeeklyData(
   const updateCurrentWeekFormations = (
     newFormations: FormationBoard[],
     syncToDefaults = false,
-    saveImmediate = false
+    saveImmediate = false,
+    extraMeta?: Record<string, any>
   ) => {
     const now = Date.now();
     lastLocalEditTimeRef.current = now;
@@ -3395,6 +3425,12 @@ function mergeRemoteWeeklyData(
             });
           }
         }
+      });
+    }
+
+    if (Array.isArray(extraMeta?.modifiedPosIds)) {
+      extraMeta.modifiedPosIds.forEach((pid: string) => {
+        if (pid) recentlyModifiedPositionsRef.current.set(pid, now);
       });
     }
 
@@ -3420,13 +3456,23 @@ function mergeRemoteWeeklyData(
       latestStateRef.current.defaultFormations = newFormations;
     }
 
+    const fallbackUnit =
+      ['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current)
+        ? currentDepthUnitRef.current
+        : (['offense', 'defense', 'st', 'groups'].includes(activeUnitRef.current)
+            ? activeUnitRef.current
+            : 'offense');
     const effectiveUnit =
-      activeUnitRef.current === 'depth_chart'
-        ? (depthSubUnitRef.current === 'scrimmage' ? 'scrimmage' : (currentDepthUnitRef.current || 'offense'))
-        : (activeUnitRef.current === 'scrimmage' ? 'scrimmage' : activeUnitRef.current);
+      extraMeta?.activeUnit && ['offense', 'defense', 'st', 'groups'].includes(extraMeta.activeUnit)
+        ? extraMeta.activeUnit
+        : fallbackUnit;
 
     if (saveImmediate) {
-      flushAndSaveStateToStorage('formation_edit', { activeUnit: effectiveUnit });
+      const scope = extraMeta?.scope || 'formation_edit';
+      flushAndSaveStateToStorage(scope, {
+        activeUnit: effectiveUnit,
+        ...(extraMeta || {}),
+      });
     } else {
       debouncedSave('formation');
     }
@@ -3714,15 +3760,12 @@ function mergeRemoteWeeklyData(
         recentlyModifiedFormationsRef.current.set(srcFormId, Date.now());
         recentlyModifiedFormationsRef.current.set(targetFormId, Date.now());
 
-        const effectiveUnit =
-          activeUnitRef.current === 'depth_chart'
-            ? (depthSubUnitRef.current === 'scrimmage' ? 'scrimmage' : (currentDepthUnitRef.current || 'offense'))
-            : (activeUnitRef.current === 'scrimmage' ? 'scrimmage' : activeUnitRef.current);
+        const targetUnit = srcForm.unit || targetForm.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
 
-        updateCurrentWeekFormations(forms, true, true);
-        flushAndSaveStateToStorage('position_card_move', {
+        updateCurrentWeekFormations(forms, true, true, {
+          scope: 'position_card_move',
           modifiedPosIds: modPosIds,
-          activeUnit: effectiveUnit,
+          activeUnit: targetUnit,
         });
       }
     }
@@ -3732,7 +3775,9 @@ function mergeRemoteWeeklyData(
   /* =========================================================================
      FORMATION ACTIONS
      ========================================================================= */
+
   const handleSetRowSlots = (formId: string, rIdx: number, newCount: number) => {
+    const form = currentFormations.find((f) => f.id === formId);
     const safeCount = Math.max(1, Math.min(12, newCount));
     recentlyModifiedFormationsRef.current.set(formId, Date.now());
     const forms = currentFormations.map((f) => {
@@ -3747,7 +3792,11 @@ function mergeRemoteWeeklyData(
       }
       return f;
     });
-    updateCurrentWeekFormations(forms, true, true);
+    const targetUnit = form?.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
+    updateCurrentWeekFormations(forms, true, true, {
+      scope: 'formation_set_slots',
+      activeUnit: targetUnit,
+    });
   };
 
   const handleAddSlotToRow = (formId: string, rIdx: number) => {
@@ -3759,7 +3808,11 @@ function mergeRemoteWeeklyData(
   };
 
   const handleRemoveSlotFromRow = (formId: string, rIdx: number, pIdx?: number) => {
-    recentlyModifiedFormationsRef.current.set(formId, Date.now());
+    const now = Date.now();
+    recentlyModifiedFormationsRef.current.set(formId, now);
+    const form = currentFormations.find((f) => f.id === formId);
+    const modPosIds: string[] = [];
+
     const forms = currentFormations.map((f) => {
       if (f.id === formId) {
         const rows = [...f.rows];
@@ -3767,13 +3820,22 @@ function mergeRemoteWeeklyData(
         let positions = [...rows[rIdx].positions];
         if (positions.length <= 1) return f;
         if (typeof pIdx === 'number' && pIdx >= 0 && pIdx < positions.length) {
+          const removed = positions[pIdx];
+          if (removed?.id) {
+            modPosIds.push(removed.id);
+            recentlyModifiedPositionsRef.current.set(removed.id, now);
+          }
           positions.splice(pIdx, 1);
         } else {
           const lastNullIdx = positions.lastIndexOf(null);
           if (lastNullIdx !== -1) {
             positions.splice(lastNullIdx, 1);
           } else {
-            positions.pop();
+            const popped = positions.pop();
+            if (popped?.id) {
+              modPosIds.push(popped.id);
+              recentlyModifiedPositionsRef.current.set(popped.id, now);
+            }
           }
         }
         rows[rIdx] = { ...rows[rIdx], slotCount: positions.length, positions };
@@ -3781,10 +3843,17 @@ function mergeRemoteWeeklyData(
       }
       return f;
     });
-    updateCurrentWeekFormations(forms, true, true);
+
+    const targetUnit = form?.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
+    updateCurrentWeekFormations(forms, true, true, {
+      scope: 'formation_slot_remove',
+      modifiedPosIds: modPosIds,
+      activeUnit: targetUnit,
+    });
   };
 
   const handleInsertSlotAt = (formId: string, rIdx: number, pIdx: number) => {
+    const form = currentFormations.find((f) => f.id === formId);
     recentlyModifiedFormationsRef.current.set(formId, Date.now());
     const forms = currentFormations.map((f) => {
       if (f.id === formId) {
@@ -3799,11 +3868,24 @@ function mergeRemoteWeeklyData(
       }
       return f;
     });
-    updateCurrentWeekFormations(forms, true, true);
+    const targetUnit = form?.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
+    updateCurrentWeekFormations(forms, true, true, {
+      scope: 'formation_slot_insert',
+      activeUnit: targetUnit,
+    });
   };
 
   const handleClearPositionToEmpty = (formId: string, rIdx: number, pIdx: number) => {
-    recentlyModifiedFormationsRef.current.set(formId, Date.now());
+    const now = Date.now();
+    recentlyModifiedFormationsRef.current.set(formId, now);
+    const form = currentFormations.find((f) => f.id === formId);
+    const oldPos = form?.rows[rIdx]?.positions[pIdx];
+    const modPosIds: string[] = [];
+    if (oldPos?.id) {
+      modPosIds.push(oldPos.id);
+      recentlyModifiedPositionsRef.current.set(oldPos.id, now);
+    }
+
     const forms = currentFormations.map((f) => {
       if (f.id === formId) {
         const rows = [...f.rows];
@@ -3817,7 +3899,13 @@ function mergeRemoteWeeklyData(
       }
       return f;
     });
-    updateCurrentWeekFormations(forms, true, true);
+
+    const targetUnit = form?.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
+    updateCurrentWeekFormations(forms, true, true, {
+      scope: 'position_clear_slot',
+      modifiedPosIds: modPosIds,
+      activeUnit: targetUnit,
+    });
   };
 
   const handleAssignPositionToSlot = (
@@ -3831,8 +3919,16 @@ function mergeRemoteWeeklyData(
     const newPosId = `${formId}-${cleanName}-${Date.now()}_${pIdx}`;
     const newPos: PositionSlot = { id: newPosId, name: cleanName };
 
-    recentlyModifiedFormationsRef.current.set(formId, Date.now());
-    recentlyModifiedPositionsRef.current.set(newPosId, Date.now());
+    const form = currentFormations.find((f) => f.id === formId);
+    const oldPos = form?.rows[rIdx]?.positions[pIdx];
+    const now = Date.now();
+    const modPosIds: string[] = [newPosId];
+    if (oldPos?.id) {
+      modPosIds.push(oldPos.id);
+      recentlyModifiedPositionsRef.current.set(oldPos.id, now);
+    }
+    recentlyModifiedFormationsRef.current.set(formId, now);
+    recentlyModifiedPositionsRef.current.set(newPosId, now);
 
     const forms = currentFormations.map((f) => {
       if (f.id === formId) {
@@ -3849,15 +3945,12 @@ function mergeRemoteWeeklyData(
       return f;
     });
 
-    const effectiveUnit =
-      activeUnitRef.current === 'depth_chart'
-        ? (depthSubUnitRef.current === 'scrimmage' ? 'scrimmage' : (currentDepthUnitRef.current || 'offense'))
-        : (activeUnitRef.current === 'scrimmage' ? 'scrimmage' : activeUnitRef.current);
+    const targetUnit = form?.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
 
-    updateCurrentWeekFormations(forms, true, true);
-    flushAndSaveStateToStorage('formation_slot_assign', {
-      modifiedPosIds: [newPosId],
-      activeUnit: effectiveUnit,
+    updateCurrentWeekFormations(forms, true, true, {
+      scope: 'formation_slot_assign',
+      modifiedPosIds: modPosIds,
+      activeUnit: targetUnit,
     });
   };
 
@@ -3870,10 +3963,12 @@ function mergeRemoteWeeklyData(
     const cleanName = posName.trim();
     const newPosId = `${formId}-${cleanName}-${Date.now()}`;
     const newPos: PositionSlot = { id: newPosId, name: cleanName };
+    const now = Date.now();
 
-    recentlyModifiedFormationsRef.current.set(formId, Date.now());
-    recentlyModifiedPositionsRef.current.set(newPosId, Date.now());
+    recentlyModifiedFormationsRef.current.set(formId, now);
+    recentlyModifiedPositionsRef.current.set(newPosId, now);
 
+    const form = currentFormations.find((f) => f.id === formId);
     const forms = currentFormations.map((f) => {
       if (f.id === formId) {
         const rows = [...f.rows];
@@ -3890,7 +3985,13 @@ function mergeRemoteWeeklyData(
       }
       return f;
     });
-    updateCurrentWeekFormations(forms, true, true);
+
+    const targetUnit = form?.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
+    updateCurrentWeekFormations(forms, true, true, {
+      scope: 'position_add',
+      modifiedPosIds: [newPosId],
+      activeUnit: targetUnit,
+    });
   };
 
   const handleRenamePositionDirect = (
@@ -3901,6 +4002,14 @@ function mergeRemoteWeeklyData(
   ) => {
     if (!newName || !newName.trim()) return;
     const cleanName = newName.trim();
+    const form = currentFormations.find((f) => f.id === formId);
+    const oldPos = form?.rows[rIdx]?.positions[pIdx];
+    if (!oldPos) return;
+
+    const now = Date.now();
+    recentlyModifiedFormationsRef.current.set(formId, now);
+    recentlyModifiedPositionsRef.current.set(oldPos.id, now);
+
     const forms = currentFormations.map((f) => {
       if (f.id === formId) {
         const rows = [...f.rows];
@@ -3912,7 +4021,13 @@ function mergeRemoteWeeklyData(
       }
       return f;
     });
-    updateCurrentWeekFormations(forms, true);
+
+    const targetUnit = form.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
+    updateCurrentWeekFormations(forms, true, true, {
+      scope: 'position_rename',
+      modifiedPosIds: [oldPos.id],
+      activeUnit: targetUnit,
+    });
   };
 
   const handleRenameRowDirect = (
@@ -3922,6 +4037,8 @@ function mergeRemoteWeeklyData(
   ) => {
     if (!newName || !newName.trim()) return;
     const cleanName = newName.trim();
+    const form = currentFormations.find((f) => f.id === formId);
+    recentlyModifiedFormationsRef.current.set(formId, Date.now());
     const forms = currentFormations.map((f) => {
       if (f.id === formId) {
         const rows = [...f.rows];
@@ -3931,7 +4048,11 @@ function mergeRemoteWeeklyData(
       }
       return f;
     });
-    updateCurrentWeekFormations(forms, true);
+    const targetUnit = form?.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
+    updateCurrentWeekFormations(forms, true, true, {
+      scope: 'row_rename',
+      activeUnit: targetUnit,
+    });
   };
 
   const handleAddRowDirect = (
@@ -3941,6 +4062,8 @@ function mergeRemoteWeeklyData(
   ) => {
     const cleanLabel = (label && label.trim()) || 'Secondary Level';
     const safeSlots = Math.max(1, Math.min(12, slotCount || 7));
+    const form = currentFormations.find((f) => f.id === formId);
+    recentlyModifiedFormationsRef.current.set(formId, Date.now());
     const forms = currentFormations.map((f) => {
       if (f.id === formId) {
         return {
@@ -3958,7 +4081,11 @@ function mergeRemoteWeeklyData(
       }
       return f;
     });
-    updateCurrentWeekFormations(forms, true);
+    const targetUnit = form?.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
+    updateCurrentWeekFormations(forms, true, true, {
+      scope: 'row_add',
+      activeUnit: targetUnit,
+    });
   };
 
   const handleAddFormationDirect = (
@@ -4155,17 +4282,25 @@ function mergeRemoteWeeklyData(
     };
 
     const updated = [...currentFormations, newForm];
-    updateCurrentWeekFormations(updated, true);
+    updateCurrentWeekFormations(updated, true, true, {
+      scope: 'formation_add',
+      activeUnit: unit,
+    });
     setSelectedFormationId(newId);
   };
 
   const handleRenameFormationDirect = (formId: string, newName: string) => {
     if (!newName || !newName.trim()) return;
     const clean = newName.trim();
+    const form = currentFormations.find((f) => f.id === formId);
     const updated = currentFormations.map((f) =>
       f.id === formId ? { ...f, name: clean } : f
     );
-    updateCurrentWeekFormations(updated, true);
+    const targetUnit = form?.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
+    updateCurrentWeekFormations(updated, true, true, {
+      scope: 'formation_rename',
+      activeUnit: targetUnit,
+    });
   };
 
   const handleDuplicateFormationDirect = (formId: string, newName: string) => {
@@ -4200,7 +4335,11 @@ function mergeRemoteWeeklyData(
     };
 
     const updated = [...currentFormations, clonedForm];
-    updateCurrentWeekFormations(updated, true);
+    const targetUnit = form.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
+    updateCurrentWeekFormations(updated, true, true, {
+      scope: 'formation_duplicate',
+      activeUnit: targetUnit,
+    });
     updateCurrentWeekDepthChart(dc);
     updateCurrentWeekScrimmageChart(sc);
     setSelectedFormationId(newFormId);
@@ -4217,12 +4356,22 @@ function mergeRemoteWeeklyData(
     const pos = form.rows[srcRIdx].positions[srcPIdx]!;
     if (targetRIdx < 0 || targetRIdx >= form.rows.length) return;
 
+    const now = Date.now();
+    const modPosIds: string[] = [pos.id];
+    recentlyModifiedPositionsRef.current.set(pos.id, now);
+    recentlyModifiedFormationsRef.current.set(formId, now);
+
     const forms = currentFormations.map((f) => {
       if (f.id === formId) {
         const rows = deepClone(f.rows);
         rows[srcRIdx].positions[srcPIdx] = null;
         const emptyIdx = rows[targetRIdx].positions.indexOf(null);
         if (emptyIdx !== -1) {
+          const displaced = rows[targetRIdx].positions[emptyIdx];
+          if (displaced?.id) {
+            modPosIds.push(displaced.id);
+            recentlyModifiedPositionsRef.current.set(displaced.id, now);
+          }
           rows[targetRIdx].positions[emptyIdx] = pos;
         } else {
           rows[targetRIdx].positions.push(pos);
@@ -4232,7 +4381,14 @@ function mergeRemoteWeeklyData(
       }
       return f;
     });
-    updateCurrentWeekFormations(forms, true);
+
+    const targetUnit = form.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
+
+    updateCurrentWeekFormations(forms, true, true, {
+      scope: 'position_move_direct',
+      modifiedPosIds: modPosIds,
+      activeUnit: targetUnit,
+    });
   };
 
   const handleCopyPositionDirect = (
@@ -4250,6 +4406,12 @@ function mergeRemoteWeeklyData(
 
     const newPosId = `${targetForm.id}-${pos.name}-${Date.now()}`;
     const newPos = { id: newPosId, name: pos.name };
+    const now = Date.now();
+
+    recentlyModifiedFormationsRef.current.set(formId, now);
+    recentlyModifiedFormationsRef.current.set(targetFormId, now);
+    recentlyModifiedPositionsRef.current.set(pos.id, now);
+    recentlyModifiedPositionsRef.current.set(newPosId, now);
 
     const forms = currentFormations.map((f) => {
       if (f.id === targetForm.id) {
@@ -4264,7 +4426,13 @@ function mergeRemoteWeeklyData(
     const dc = { ...currentDepthChart };
     if (dc[pos.id]) dc[newPosId] = deepClone(dc[pos.id]);
 
-    updateCurrentWeekFormations(forms, true);
+    const targetUnit = targetForm.unit || srcForm.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
+
+    updateCurrentWeekFormations(forms, true, true, {
+      scope: 'position_copy',
+      modifiedPosIds: [pos.id, newPosId],
+      activeUnit: targetUnit,
+    });
     updateCurrentWeekDepthChart(dc);
   };
 
@@ -4521,6 +4689,19 @@ function mergeRemoteWeeklyData(
 
   const handleDeleteRow = (formId: string, rIdx: number) => {
     if (!confirm('Delete this row?')) return;
+    const form = currentFormations.find((f) => f.id === formId);
+    if (!form || !form.rows[rIdx]) return;
+
+    const now = Date.now();
+    const modPosIds: string[] = [];
+    form.rows[rIdx].positions.forEach((p) => {
+      if (p?.id) {
+        modPosIds.push(p.id);
+        recentlyModifiedPositionsRef.current.set(p.id, now);
+      }
+    });
+    recentlyModifiedFormationsRef.current.set(formId, now);
+
     const forms = currentFormations.map((f) => {
       if (f.id === formId) {
         const rows = [...f.rows];
@@ -4529,7 +4710,13 @@ function mergeRemoteWeeklyData(
       }
       return f;
     });
-    updateCurrentWeekFormations(forms, true);
+
+    const targetUnit = form.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
+    updateCurrentWeekFormations(forms, true, true, {
+      scope: 'row_delete',
+      modifiedPosIds: modPosIds,
+      activeUnit: targetUnit,
+    });
   };
 
   const handleAddPosition = (formId: string, rIdx: number) => {
@@ -4572,6 +4759,16 @@ function mergeRemoteWeeklyData(
     rIdx: number,
     pIdx: number
   ) => {
+    const form = currentFormations.find((f) => f.id === formId);
+    const pos = form?.rows[rIdx]?.positions[pIdx];
+    const now = Date.now();
+    const modPosIds: string[] = [];
+    if (pos?.id) {
+      modPosIds.push(pos.id);
+      recentlyModifiedPositionsRef.current.set(pos.id, now);
+    }
+    recentlyModifiedFormationsRef.current.set(formId, now);
+
     const forms = currentFormations.map((f) => {
       if (f.id === formId) {
         const rows = [...f.rows];
@@ -4581,7 +4778,13 @@ function mergeRemoteWeeklyData(
       }
       return f;
     });
-    updateCurrentWeekFormations(forms, true);
+
+    const targetUnit = form?.unit || (['offense', 'defense', 'st', 'groups'].includes(currentDepthUnitRef.current) ? currentDepthUnitRef.current : 'offense');
+    updateCurrentWeekFormations(forms, true, true, {
+      scope: 'position_delete',
+      modifiedPosIds: modPosIds,
+      activeUnit: targetUnit,
+    });
   };
 
   /* =========================================================================
