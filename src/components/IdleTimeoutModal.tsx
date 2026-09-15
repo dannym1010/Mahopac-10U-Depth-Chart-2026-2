@@ -4,13 +4,24 @@ import { Clock, LogIn, ShieldAlert } from 'lucide-react';
 interface IdleTimeoutModalProps {
   isOpen: boolean;
   onLogInAgain: () => void;
+  timeoutMinutes?: number;
 }
 
 export const IdleTimeoutModal: React.FC<IdleTimeoutModalProps> = ({
   isOpen,
   onLogInAgain,
+  timeoutMinutes = 10,
 }) => {
   if (!isOpen) return null;
+
+  const formatDuration = (mins: number) => {
+    if (mins >= 60) {
+      const hrs = Math.floor(mins / 60);
+      const rem = mins % 60;
+      return `${hrs} ${hrs === 1 ? 'hour' : 'hours'}${rem > 0 ? ` ${rem} min` : ''}`;
+    }
+    return `${mins} minutes`;
+  };
 
   return (
     <div
@@ -30,12 +41,12 @@ export const IdleTimeoutModal: React.FC<IdleTimeoutModalProps> = ({
         </h3>
 
         <p className="text-sm text-slate-600 mt-2 leading-relaxed">
-          You have been automatically logged out due to <strong>10 minutes of inactivity</strong>. Any active section locks have been safely released to allow other coaches to collaborate.
+          You have been automatically logged out due to <strong>{formatDuration(timeoutMinutes)} of inactivity</strong>. Any active section locks have been safely released to allow other coaches to collaborate.
         </p>
 
         <div className="my-5 p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500 flex items-center gap-2.5 text-left">
           <ShieldAlert className="w-5 h-5 text-slate-400 shrink-0" />
-          <span>All team formations, game plans, and depth charts are securely saved on the server.</span>
+          <span>All team formations, game plans, and depth charts were securely saved to the server before logout.</span>
         </div>
 
         <button

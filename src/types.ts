@@ -455,6 +455,7 @@ export interface StaffCoach {
   favoriteTeamId?: string; // Startup / favorite team linked to this user login
   startScreen?: UnitType; // Startup screen linked to this user login
   startDepthSubUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage';
+  idleTimeoutMinutes?: number; // Inactivity logout timeout in minutes (e.g. 10, 15, 30, 60, 120, 240, or 0 = disabled/never)
 }
 
 export interface PlaybookGuideTree {

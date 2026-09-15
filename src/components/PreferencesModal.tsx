@@ -27,6 +27,7 @@ import {
   PenTool,
   Sun,
   Moon,
+  Clock,
 } from 'lucide-react';
 import { UnitType, Team, UserRole } from '../types';
 
@@ -57,6 +58,8 @@ interface PreferencesModalProps {
   onForceRefresh?: () => void;
   themeMode?: 'dark' | 'light';
   onToggleThemeMode?: (mode: 'dark' | 'light') => void;
+  idleTimeoutMinutes?: number;
+  onUpdateIdleTimeout?: (minutes: number) => void;
 }
 
 interface ScreenOption {
@@ -207,6 +210,8 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
   onForceRefresh,
   themeMode = 'dark',
   onToggleThemeMode,
+  idleTimeoutMinutes,
+  onUpdateIdleTimeout,
 }) => {
   const [activeTab, setActiveTab] = useState<'screen' | 'team' | 'tools' | 'data'>('screen');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -623,6 +628,62 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
                       </p>
                     </div>
                   </button>
+                </div>
+              </div>
+
+              {/* Inactivity Automatic Logout Setting */}
+              <div className="p-4 rounded-2xl bg-zinc-900/90 border border-zinc-800 flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-xs font-black text-zinc-100 flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-cyan-400" />
+                      <span>Automatic Inactivity Logout</span>
+                    </h4>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                      Adjust your session idle timeout. Depth charts, scrimmage cards, and game plans are automatically saved before any logout occurs.
+                    </p>
+                  </div>
+                  {idleTimeoutMinutes !== undefined && (
+                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 self-start sm:self-center">
+                      Current: {idleTimeoutMinutes === 0 ? 'Disabled (Never)' : `${idleTimeoutMinutes} Minutes`}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-3 sm:grid-cols-7 gap-1.5 pt-1">
+                  {[
+                    { label: '10 Min', value: 10, desc: 'Default' },
+                    { label: '15 Min', value: 15 },
+                    { label: '30 Min', value: 30 },
+                    { label: '1 Hour', value: 60 },
+                    { label: '2 Hours', value: 120 },
+                    { label: '4 Hours', value: 240 },
+                    { label: 'Disabled', value: 0, desc: 'Never' },
+                  ].map((opt) => {
+                    const isSelected = (idleTimeoutMinutes ?? 10) === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          if (onUpdateIdleTimeout) {
+                            onUpdateIdleTimeout(opt.value);
+                            showToast(`⏱️ Idle logout set to: ${opt.value === 0 ? 'Disabled (Never)' : `${opt.value} minutes`}`);
+                          }
+                        }}
+                        className={`py-2 px-2 rounded-xl text-xs font-black border transition-all flex flex-col items-center justify-center cursor-pointer ${
+                          isSelected
+                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500 ring-1 ring-cyan-500/40 shadow-xs'
+                            : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-850'
+                        }`}
+                      >
+                        <span>{opt.label}</span>
+                        {opt.desc && (
+                          <span className="text-[9px] font-medium opacity-75">{opt.desc}</span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

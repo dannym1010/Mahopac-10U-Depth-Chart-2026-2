@@ -1442,14 +1442,22 @@ function mergeRemoteWeeklyData(
           }
         }
       }
-      // 3. Any position in local with players that remote does not have is preserved
+      // 3. Any position in local with players that remote does not have or is empty is preserved
       for (const [posId, players] of Object.entries(localDC)) {
-        if (remoteDC[posId] === undefined && Array.isArray(players) && players.length > 0) {
+        if (
+          (remoteDC[posId] === undefined || (Array.isArray(remoteDC[posId]) && remoteDC[posId].length === 0)) &&
+          Array.isArray(players) &&
+          players.length > 0
+        ) {
           mergedDC[posId] = players;
         }
       }
       for (const [posId, players] of Object.entries(localSC)) {
-        if (remoteSC[posId] === undefined && Array.isArray(players) && players.length > 0) {
+        if (
+          (remoteSC[posId] === undefined || (Array.isArray(remoteSC[posId]) && remoteSC[posId].length === 0)) &&
+          Array.isArray(players) &&
+          players.length > 0
+        ) {
           mergedSC[posId] = players;
         }
       }
@@ -1468,12 +1476,20 @@ function mergeRemoteWeeklyData(
         }
       }
       for (const [posId, players] of Object.entries(localDC)) {
-        if (remoteDC[posId] === undefined && Array.isArray(players) && players.length > 0) {
+        if (
+          (remoteDC[posId] === undefined || (Array.isArray(remoteDC[posId]) && remoteDC[posId].length === 0)) &&
+          Array.isArray(players) &&
+          players.length > 0
+        ) {
           mergedDC[posId] = players;
         }
       }
       for (const [posId, players] of Object.entries(localSC)) {
-        if (remoteSC[posId] === undefined && Array.isArray(players) && players.length > 0) {
+        if (
+          (remoteSC[posId] === undefined || (Array.isArray(remoteSC[posId]) && remoteSC[posId].length === 0)) &&
+          Array.isArray(players) &&
+          players.length > 0
+        ) {
           mergedSC[posId] = players;
         }
       }
@@ -2330,7 +2346,66 @@ function mergeRemoteWeeklyData(
     window.location.reload();
   }, [currentUser?.email, activeTeamId, currentWeek, currentDepthUnit]);
 
+  const getActiveUserIdleTimeoutMinutes = useCallback((): number => {
+    const cleanEmail = (currentUser?.email || '').toLowerCase().trim();
+    if (!cleanEmail) {
+      return safeJSONParse<number>('footballGlobalIdleTimeoutMinutes', 10);
+    }
+    const userStored = safeJSONParse<number | null>(
+      'footballIdleTimeoutMinutes_' + cleanEmail,
+      null
+    );
+    if (typeof userStored === 'number') {
+      return userStored;
+    }
+    const coach = staffList.find(
+      (c) => c.email.toLowerCase().trim() === cleanEmail
+    );
+    if (typeof coach?.idleTimeoutMinutes === 'number') {
+      return coach.idleTimeoutMinutes;
+    }
+    return safeJSONParse<number>('footballGlobalIdleTimeoutMinutes', 10);
+  }, [currentUser?.email, staffList]);
+
+  const handleUpdateActiveUserIdleTimeout = useCallback(
+    (minutes: number) => {
+      const cleanEmail = (currentUser?.email || '').toLowerCase().trim();
+      safeJSONSet('footballGlobalIdleTimeoutMinutes', minutes);
+      if (cleanEmail) {
+        safeJSONSet('footballIdleTimeoutMinutes_' + cleanEmail, minutes);
+        const coachIdx = staffList.findIndex(
+          (c) => c.email.toLowerCase().trim() === cleanEmail
+        );
+        if (coachIdx !== -1) {
+          handleUpdateStaffPreferences(
+            coachIdx,
+            staffList[coachIdx].favoriteTeamId,
+            staffList[coachIdx].startScreen,
+            minutes
+          );
+        }
+      }
+    },
+    [currentUser?.email, staffList]
+  );
+
   const handleIdleTimeoutLogout = useCallback(async () => {
+    // 1. Flush and save all pending depth chart, roster, and season changes to disk and cloud
+    try {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      await flushAndSaveStateToStorage('force_idle_logout_flush', {
+        scope: 'force',
+        timestamp: Date.now(),
+      });
+      console.log('✅ State successfully flushed to storage, disk & cloud before idle logout');
+    } catch (saveErr) {
+      console.warn('Warning: error saving state before idle logout:', saveErr);
+    }
+
+    // 2. Safely release multi-coach lock & leave live presence
     try {
       if (currentUser?.email) {
         await leavePresence(currentUser.email);
@@ -2342,6 +2417,8 @@ function mergeRemoteWeeklyData(
         });
       }
     } catch {}
+
+    // 3. Clear session and transition to idle modal
     sessionStorage.removeItem('football_admin_passcode_active');
     sessionStorage.removeItem('football_dev_test_mode');
     const { auth } = getFirebaseServices();
@@ -2355,7 +2432,7 @@ function mergeRemoteWeeklyData(
     setIsIdleTimedOut(true);
   }, [currentUser?.email, activeTeamId, currentWeek, currentDepthUnit]);
 
-  // Global Idle Detection: 10 minutes inactivity triggers automatic logout
+  // Global Idle Detection: Configurable per-user and system-level inactivity timer
   useEffect(() => {
     const markActivity = () => {
       const now = Date.now();
@@ -2388,9 +2465,14 @@ function mergeRemoteWeeklyData(
       if (!currentUser || isIdleTimedOut) return;
 
       const idleDuration = Date.now() - lastUserActivityTimeRef.current;
+      const timeoutMinutes = getActiveUserIdleTimeoutMinutes();
 
-      // Mark idle if inactive for > 3 minutes (updates presence badge)
-      if (idleDuration > 3 * 60 * 1000 && !isUserIdleRef.current) {
+      // Mark idle badge in presence (warning threshold)
+      const idleWarningThreshold = timeoutMinutes > 0
+        ? Math.min(3 * 60 * 1000, (timeoutMinutes * 60 * 1000) / 2)
+        : 5 * 60 * 1000;
+
+      if (idleDuration > idleWarningThreshold && !isUserIdleRef.current) {
         isUserIdleRef.current = true;
         registerPresence({
           email: currentUser.email,
@@ -2405,8 +2487,8 @@ function mergeRemoteWeeklyData(
         }).catch(() => {});
       }
 
-      // Hard logout after 10 minutes of inactivity
-      if (idleDuration >= 10 * 60 * 1000) {
+      // Hard logout after configured inactivity duration (0 = Disabled / Never)
+      if (timeoutMinutes > 0 && idleDuration >= timeoutMinutes * 60 * 1000) {
         handleIdleTimeoutLogout();
       }
     }, 10000);
@@ -2415,7 +2497,16 @@ function mergeRemoteWeeklyData(
       activityEvents.forEach((ev) => window.removeEventListener(ev, markActivity));
       clearInterval(idleCheckInterval);
     };
-  }, [currentUser, isIdleTimedOut, activeTeamId, activeUnit, currentWeek, userRole, handleIdleTimeoutLogout]);
+  }, [
+    currentUser,
+    isIdleTimedOut,
+    activeTeamId,
+    activeUnit,
+    currentWeek,
+    userRole,
+    handleIdleTimeoutLogout,
+    getActiveUserIdleTimeoutMinutes,
+  ]);
 
   // Real-Time Presence Heartbeat (every 30s while connected)
   useEffect(() => {
@@ -2506,6 +2597,15 @@ function mergeRemoteWeeklyData(
         setDefaultDepthSubUnit(targetSubUnit);
         safeJSONSet('footballDefaultDepthSubUnit', targetSubUnit);
       }
+    }
+
+    const targetIdleTimeout =
+      typeof savedUserPref?.idleTimeoutMinutes === 'number'
+        ? savedUserPref.idleTimeoutMinutes
+        : (typeof coachEntry?.idleTimeoutMinutes === 'number' ? coachEntry.idleTimeoutMinutes : null);
+
+    if (typeof targetIdleTimeout === 'number') {
+      safeJSONSet('footballIdleTimeoutMinutes_' + cleanEmail, targetIdleTimeout);
     }
   };
 
@@ -3167,7 +3267,8 @@ function mergeRemoteWeeklyData(
   const handleUpdateStaffPreferences = (
     idx: number,
     favoriteTeamId?: string,
-    startScreen?: UnitType
+    startScreen?: UnitType,
+    idleTimeoutMinutes?: number
   ) => {
     let updated: StaffCoach[] = [];
     setStaffList((prev) => {
@@ -3177,6 +3278,7 @@ function mergeRemoteWeeklyData(
         ...updated[idx],
         ...(favoriteTeamId ? { favoriteTeamId } : {}),
         ...(startScreen ? { startScreen } : {}),
+        ...(typeof idleTimeoutMinutes === 'number' ? { idleTimeoutMinutes } : {}),
       };
       safeJSONSet('footballTeamCoaches', updated);
       latestStateRef.current.staffList = updated;
@@ -3187,7 +3289,12 @@ function mergeRemoteWeeklyData(
         ...currentPref,
         ...(favoriteTeamId ? { favoriteTeamId } : {}),
         ...(startScreen ? { startScreen } : {}),
+        ...(typeof idleTimeoutMinutes === 'number' ? { idleTimeoutMinutes } : {}),
       });
+
+      if (typeof idleTimeoutMinutes === 'number') {
+        safeJSONSet('footballIdleTimeoutMinutes_' + coachEmail, idleTimeoutMinutes);
+      }
 
       // If updating the currently logged in coach, apply active changes
       const currentEmail = (currentUser?.email || '').toLowerCase().trim();
@@ -3216,6 +3323,11 @@ function mergeRemoteWeeklyData(
         .set({ staffList: updated, updatedAt: Date.now() }, { merge: true })
         .catch((err: any) => console.warn('Firestore staff pref update sync error:', err));
     }
+
+    saveServerState(latestStateRef.current, currentUser?.email || 'Admin', {
+      scope: 'staff_pref_update',
+      timestamp: Date.now(),
+    }).catch(() => {});
   };
 
   const handleAddStaffCoach = (
@@ -3223,7 +3335,8 @@ function mergeRemoteWeeklyData(
     role: string = 'Assistant Coach',
     assignedTeamIds: string[] = [activeTeamId],
     favoriteTeamId: string = activeTeamId || 'team_10u',
-    startScreen: UnitType = 'schedule'
+    startScreen: UnitType = 'schedule',
+    idleTimeoutMinutes: number = 10
   ) => {
     const cleanEmail = email.toLowerCase().trim();
     if (staffList.some((c) => c.email.toLowerCase().trim() === cleanEmail)) {
@@ -3237,11 +3350,13 @@ function mergeRemoteWeeklyData(
       assignedTeamIds: assignedTeamIds && assignedTeamIds.length > 0 ? assignedTeamIds : [activeTeamId],
       favoriteTeamId,
       startScreen,
+      idleTimeoutMinutes,
     };
     let updatedStaff: StaffCoach[] = [];
     setStaffList((prev) => {
       updatedStaff = [...prev, newEntry];
       safeJSONSet('footballTeamCoaches', updatedStaff);
+      safeJSONSet('footballIdleTimeoutMinutes_' + cleanEmail, idleTimeoutMinutes);
       latestStateRef.current.staffList = updatedStaff;
       return updatedStaff;
     });
@@ -3253,6 +3368,11 @@ function mergeRemoteWeeklyData(
         .set({ staffList: updatedStaff, updatedAt: Date.now() }, { merge: true })
         .catch((err: any) => console.warn('Firestore add staff sync error:', err));
     }
+
+    saveServerState(latestStateRef.current, currentUser?.email || 'Admin', {
+      scope: 'staff_add',
+      timestamp: Date.now(),
+    }).catch(() => {});
   };
 
   const handleAddNewSavedCoach = (rawName: string, targetTeamId?: string) => {
@@ -8756,6 +8876,8 @@ function mergeRemoteWeeklyData(
         onForceRefresh={handleForceRefresh}
         themeMode={themeMode}
         onToggleThemeMode={handleToggleThemeMode}
+        idleTimeoutMinutes={getActiveUserIdleTimeoutMinutes()}
+        onUpdateIdleTimeout={handleUpdateActiveUserIdleTimeout}
       />
 
       <ThemeGalleryModal
@@ -8806,9 +8928,10 @@ function mergeRemoteWeeklyData(
         }}
       />
 
-      {/* 10-Minute Idle Inactivity Timeout Modal */}
+      {/* Configurable Idle Inactivity Timeout Modal */}
       <IdleTimeoutModal
         isOpen={isIdleTimedOut}
+        timeoutMinutes={getActiveUserIdleTimeoutMinutes()}
         onLogInAgain={() => {
           setIsIdleTimedOut(false);
           lastUserActivityTimeRef.current = Date.now();
