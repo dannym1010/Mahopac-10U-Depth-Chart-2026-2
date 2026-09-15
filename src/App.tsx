@@ -252,6 +252,11 @@ export default function App() {
     }
     return sanitized;
   });
+  const [deletedPracticePlanIds, setDeletedPracticePlanIds] = useState<string[]>(() => {
+    const saved = safeJSONParse('footballDeletedPracticePlanIds', null);
+    if (saved && Array.isArray(saved)) return saved;
+    return [];
+  });
   const [playDatabase, setPlayDatabase] = useState<PlayDatabaseEntry[]>(() => {
     const saved = safeJSONParse('footballPlayDatabase', null);
     const savedDeleted = safeJSONParse('footballDeletedPlayIds', []);
@@ -824,6 +829,7 @@ export default function App() {
     wristbandData,
     deletedPlayIds,
     deletedFormationIds,
+    deletedPracticePlanIds,
     collapsedFolders,
     scheduleEvents,
     roster,
@@ -851,6 +857,7 @@ export default function App() {
       wristbandData,
       deletedPlayIds,
       deletedFormationIds,
+      deletedPracticePlanIds,
       collapsedFolders,
       scheduleEvents,
       roster,
@@ -861,6 +868,9 @@ export default function App() {
   });
 
   // Determine current active depth chart unit
+  const depthSubUnitRef = useRef<string>(depthSubUnit);
+  depthSubUnitRef.current = depthSubUnit;
+
   const currentDepthUnit =
     activeUnit === 'depth_chart'
       ? (depthSubUnit === 'scrimmage' ? 'offense' : (depthSubUnit || 'offense'))
@@ -1253,9 +1263,19 @@ function mergeRemoteWeeklyData(
   const merged: Record<string, WeekState> = { ...remoteWeekly };
   const scopedKey = `${activeTeamId}__week_${currentWeek}`;
   const timeSinceEdit = Date.now() - lastLocalEditTime;
-  // Local edit guard window: only shield local state if a local edit occurred within the last 4 seconds
-  const isActivelyEditingLocally = timeSinceEdit < 4000;
+  // Local edit guard window: shield local state if a local edit occurred within the last 25 seconds
+  const isActivelyEditingLocally = timeSinceEdit < 25000;
   const deletedSet = new Set<string>(deletedFormationIds || []);
+  const CORE_DEFAULT_FORMATION_IDS = new Set([
+    'form_21', 'form_1787860064353', 'form_1787860077403', 'form_1788270435286', // Offense
+    'form_53', 'form_44', // Defense
+    'form_ko', 'form_kr', 'form_punt', 'form_fg', // Special Teams
+    'form_grp_def', 'form_grp_off', // Groups
+  ]);
+  for (const cid of CORE_DEFAULT_FORMATION_IDS) {
+    deletedSet.delete(cid);
+  }
+  deletedSet.add('form_10_spread');
 
   const dedupeForms = (forms: FormationBoard[]): FormationBoard[] => {
     const seenIds = new Set<string>();
@@ -1271,6 +1291,34 @@ function mergeRemoteWeeklyData(
       res.push(f);
     }
     return res;
+  };
+
+  const isUnitPosition = (posId: string, unit: string, forms: FormationBoard[]): boolean => {
+    if (!posId || !unit) return false;
+    for (const f of forms) {
+      if (f && f.unit === unit && Array.isArray(f.rows)) {
+        for (const r of f.rows) {
+          if (r && Array.isArray(r.positions)) {
+            for (const p of r.positions) {
+              if (p && p.id === posId) return true;
+            }
+          }
+        }
+      }
+    }
+    if (unit === 'defense') {
+      return posId.startsWith('53-') || posId.startsWith('44-') || posId.includes('form_53') || posId.includes('form_44') || posId.startsWith('def-');
+    }
+    if (unit === 'st') {
+      return posId.startsWith('form_ko') || posId.startsWith('form_kr') || posId.startsWith('form_punt') || posId.startsWith('form_fg') || posId.startsWith('ko-') || posId.startsWith('kr-') || posId.startsWith('punt-') || posId.startsWith('fg-');
+    }
+    if (unit === 'groups') {
+      return posId.startsWith('form_grp') || posId.startsWith('grp_');
+    }
+    if (unit === 'offense') {
+      return posId.startsWith('21-') || posId.startsWith('form_21') || posId.startsWith('form_1787') || posId.startsWith('form_1788');
+    }
+    return false;
   };
 
   for (const weekKey of Object.keys(localWeekly)) {
@@ -1295,201 +1343,130 @@ function mergeRemoteWeeklyData(
       (f) => f && f.id && !deletedSet.has(f.id)
     );
 
-    if (isActivelyEditingLocally && isCurrentActiveWeek) {
-      // Local coach actively edited this specific week in the last 4 seconds:
-      // Preserve local depth chart modifications while accepting remote items in real time
-      const mergedFormations: FormationBoard[] = [...localFormations];
-      const localFormIds = new Set(localFormations.map((lf) => lf && lf.id));
-      remoteFormations.forEach((rf) => {
-        if (rf && rf.id && !localFormIds.has(rf.id) && !deletedSet.has(rf.id)) {
-          mergedFormations.push(rf);
-          localFormIds.add(rf.id);
-        }
-      });
+    const mergedFormations: FormationBoard[] = (
+      remoteFormations.length > 0 ? [...remoteFormations] : [...localFormations]
+    ).filter((f) => f && f.id && !deletedSet.has(f.id));
+    const seenIds = new Set(mergedFormations.map((f) => f && f.id));
 
-      // Ensure core units are present if available (unless explicitly deleted)
-      for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
-        if (!mergedFormations.some((f) => f && f.unit === u)) {
-          const defForm = INITIAL_DEFAULT_FORMATIONS.find((f) => f && f.unit === u && !deletedSet.has(f.id));
-          if (defForm && !localFormIds.has(defForm.id) && !deletedSet.has(defForm.id)) {
-            mergedFormations.push(deepClone(defForm));
-            localFormIds.add(defForm.id);
+    localFormations.forEach((lf) => {
+      if (lf && lf.id && !seenIds.has(lf.id) && !deletedSet.has(lf.id)) {
+        mergedFormations.push(lf);
+        seenIds.add(lf.id);
+      }
+    });
+
+    // Guarantee core formations for EVERY unit (offense, defense, st, groups)
+    for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
+      if (!mergedFormations.some((f) => f && f.unit === u)) {
+        const defForms = INITIAL_DEFAULT_FORMATIONS.filter(
+          (f) => f && f.unit === u && !deletedSet.has(f.id) && f.id !== 'form_10_spread' && f.name !== '10 Spread Offense'
+        );
+        for (const df of defForms) {
+          if (!seenIds.has(df.id)) {
+            mergedFormations.push(deepClone(df));
+            seenIds.add(df.id);
           }
         }
       }
+    }
 
-      const localDC = localState.depthChart || {};
-      const remoteDC = remoteState.depthChart || {};
-      const mergedDC: Record<string, PlacedPlayer[]> = { ...remoteDC };
+    const localDC = localState.depthChart || {};
+    const remoteDC = remoteState.depthChart || {};
+    const mergedDC: Record<string, PlacedPlayer[]> = { ...remoteDC };
+
+    const localSC = localState.scrimmageChart || {};
+    const remoteSC = remoteState.scrimmageChart || {};
+    const mergedSC: Record<string, PlacedPlayer[]> = { ...remoteSC };
+
+    const now = Date.now();
+
+    if (isActivelyEditingLocally && isCurrentActiveWeek) {
+      // Local coach is actively editing this week
+      // 1. Any position edited locally within 25 seconds takes precedence
       if (recentlyModifiedPositions && recentlyModifiedPositions.size > 0) {
-        const now = Date.now();
         for (const [posId, editTime] of recentlyModifiedPositions.entries()) {
-          if (now - editTime < 3500 && localDC[posId] !== undefined) {
+          if (now - editTime < 25000 && localDC[posId] !== undefined) {
             mergedDC[posId] = localDC[posId];
           }
-        }
-      } else {
-        for (const [posId, localPlayers] of Object.entries(localDC)) {
-          if (remoteDC[posId] === undefined && Array.isArray(localPlayers) && localPlayers.length > 0) {
-            mergedDC[posId] = localPlayers;
-          }
-        }
-      }
-
-      const localSC = localState.scrimmageChart || {};
-      const remoteSC = remoteState.scrimmageChart || {};
-      const mergedSC: Record<string, PlacedPlayer[]> = { ...remoteSC };
-      if (recentlyModifiedPositions && recentlyModifiedPositions.size > 0) {
-        const now = Date.now();
-        for (const [posId, editTime] of recentlyModifiedPositions.entries()) {
-          if (now - editTime < 3500 && localSC[posId] !== undefined) {
+          if (now - editTime < 25000 && localSC[posId] !== undefined) {
             mergedSC[posId] = localSC[posId];
           }
         }
-      } else {
-        for (const [posId, localPlayers] of Object.entries(localSC)) {
-          if (remoteSC[posId] === undefined && Array.isArray(localPlayers) && localPlayers.length > 0) {
-            mergedSC[posId] = localPlayers;
+      }
+      // 2. Positions in the active unit where local has state take precedence
+      if (activeUnit === 'scrimmage') {
+        for (const [posId, players] of Object.entries(localSC)) {
+          if (players !== undefined) {
+            mergedSC[posId] = players;
+          }
+        }
+      } else if (['offense', 'defense', 'st', 'groups'].includes(activeUnit)) {
+        for (const [posId, players] of Object.entries(localDC)) {
+          if (isUnitPosition(posId, activeUnit, mergedFormations) && players !== undefined) {
+            mergedDC[posId] = players;
           }
         }
       }
-
-      const localHasWristbandPlays = localState.wristbandData?.wristbands?.some((wb: any) =>
-        wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
-      );
-      const remoteHasWristbandPlays = remoteState.wristbandData?.wristbands?.some((wb: any) =>
-        wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
-      );
-      let safeWristbandData = remoteState.wristbandData;
-      if (localHasWristbandPlays && !remoteHasWristbandPlays) {
-        safeWristbandData = localState.wristbandData;
-      } else {
-        safeWristbandData = remoteState.wristbandData || localState.wristbandData;
+      // 3. Any position in local with players that remote does not have is preserved
+      for (const [posId, players] of Object.entries(localDC)) {
+        if (remoteDC[posId] === undefined && Array.isArray(players) && players.length > 0) {
+          mergedDC[posId] = players;
+        }
       }
-
-      merged[weekKey] = {
-        ...remoteState,
-        formations: dedupeForms(mergedFormations),
-        depthChart: mergedDC,
-        scrimmageChart: mergedSC,
-        opponent: remoteState.opponent || localState.opponent || '',
-        wristbandData: safeWristbandData,
-        scouting: remoteState.scouting || localState.scouting,
-      };
+      for (const [posId, players] of Object.entries(localSC)) {
+        if (remoteSC[posId] === undefined && Array.isArray(players) && players.length > 0) {
+          mergedSC[posId] = players;
+        }
+      }
     } else {
-      // Not actively editing locally in this specific window:
-      // Merge remote and local formations intelligently - never resurrect deleted formations
-      const mergedFormations: FormationBoard[] = (
-        remoteFormations.length > 0 ? [...remoteFormations] : [...localFormations]
-      ).filter((f) => f && f.id && !deletedSet.has(f.id));
-      const seenIds = new Set(mergedFormations.map((f) => f && f.id));
-
-      // Retain any local formations that are missing from remote (e.g. custom formations)
-      localFormations.forEach((lf) => {
-        if (lf && lf.id && !seenIds.has(lf.id) && !deletedSet.has(lf.id)) {
-          mergedFormations.push(lf);
-          seenIds.add(lf.id);
-        }
-      });
-
-      // Safety guarantee: never allow a week to lose its core offensive formations
-      if (!mergedFormations.some((f) => f && f.unit === 'offense')) {
-        let fallbackOff = (defaultFormations || [])
-          .concat(INITIAL_DEFAULT_FORMATIONS)
-          .filter(
-            (f) =>
-              f &&
-              f.unit === 'offense' &&
-              !deletedSet.has(f.id) &&
-              f.id !== 'form_10_spread' &&
-              f.name !== '10 Spread Offense'
-          );
-        if (fallbackOff.length === 0) {
-          fallbackOff = INITIAL_DEFAULT_FORMATIONS.filter(
-            (f) =>
-              f &&
-              f.unit === 'offense' &&
-              f.id !== 'form_10_spread' &&
-              f.name !== '10 Spread Offense'
-          );
-        }
-        for (const fo of fallbackOff) {
-          if (!seenIds.has(fo.id) && fo.id !== 'form_10_spread') {
-            mergedFormations.push(deepClone(fo));
-            seenIds.add(fo.id);
+      // Not actively editing locally in this specific week:
+      // Remote takes precedence for real-time multi-coach updates,
+      // but protect recently modified positions (< 25s) and retain local-only positions
+      if (recentlyModifiedPositions && recentlyModifiedPositions.size > 0) {
+        for (const [posId, editTime] of recentlyModifiedPositions.entries()) {
+          if (now - editTime < 25000 && localDC[posId] !== undefined) {
+            mergedDC[posId] = localDC[posId];
+          }
+          if (now - editTime < 25000 && localSC[posId] !== undefined) {
+            mergedSC[posId] = localSC[posId];
           }
         }
       }
-
-      // Merge depth chart safely: remote takes precedence so other coaches' edits show in real time
-      const countPlayers = (dc?: Record<string, any[]>) =>
-        dc ? Object.values(dc).reduce((sum, p) => sum + (Array.isArray(p) ? p.length : 0), 0) : 0;
-      const localDCCount = countPlayers(localState.depthChart);
-      const remoteDCCount = countPlayers(remoteState.depthChart);
-
-      let mergedDC: Record<string, PlacedPlayer[]> = {};
-      if (remoteDCCount === 0 && localDCCount > 0) {
-        mergedDC = localState.depthChart || {};
-      } else if (remoteDCCount > 0 && localDCCount === 0) {
-        mergedDC = remoteState.depthChart || {};
-      } else if (remoteDCCount > 0 && localDCCount > 0) {
-        // Both have players: remote takes precedence for real-time sync, but preserve recent local edits
-        mergedDC = { ...(localState.depthChart || {}), ...(remoteState.depthChart || {}) };
-        if (recentlyModifiedPositions && recentlyModifiedPositions.size > 0) {
-          const now = Date.now();
-          for (const [posId, editTime] of recentlyModifiedPositions.entries()) {
-            if (now - editTime < 3500 && localState.depthChart?.[posId] !== undefined) {
-              mergedDC[posId] = localState.depthChart[posId];
-            }
-          }
-        }
-      } else {
-        mergedDC = remoteState.depthChart !== undefined ? remoteState.depthChart : (localState.depthChart || {});
-      }
-
-      const localSCCount = countPlayers(localState.scrimmageChart);
-      const remoteSCCount = countPlayers(remoteState.scrimmageChart);
-      let mergedSC: Record<string, PlacedPlayer[]> = {};
-      if (remoteSCCount === 0 && localSCCount > 0) {
-        mergedSC = localState.scrimmageChart || {};
-      } else if (remoteSCCount > 0 && localSCCount === 0) {
-        mergedSC = remoteState.scrimmageChart || {};
-      } else {
-        mergedSC = { ...(localState.scrimmageChart || {}), ...(remoteState.scrimmageChart || {}) };
-        if (recentlyModifiedPositions && recentlyModifiedPositions.size > 0) {
-          const now = Date.now();
-          for (const [posId, editTime] of recentlyModifiedPositions.entries()) {
-            if (now - editTime < 3500 && localState.scrimmageChart?.[posId] !== undefined) {
-              mergedSC[posId] = localState.scrimmageChart[posId];
-            }
-          }
+      for (const [posId, players] of Object.entries(localDC)) {
+        if (remoteDC[posId] === undefined && Array.isArray(players) && players.length > 0) {
+          mergedDC[posId] = players;
         }
       }
-
-      const localHasWristbandPlays = localState.wristbandData?.wristbands?.some((wb: any) =>
-        wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
-      );
-      const remoteHasWristbandPlays = remoteState.wristbandData?.wristbands?.some((wb: any) =>
-        wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
-      );
-      let safeWristbandData = remoteState.wristbandData;
-      if (localHasWristbandPlays && !remoteHasWristbandPlays) {
-        safeWristbandData = localState.wristbandData;
-      } else {
-        safeWristbandData = remoteState.wristbandData || localState.wristbandData;
+      for (const [posId, players] of Object.entries(localSC)) {
+        if (remoteSC[posId] === undefined && Array.isArray(players) && players.length > 0) {
+          mergedSC[posId] = players;
+        }
       }
-
-      merged[weekKey] = {
-        ...localState,
-        ...remoteState,
-        formations: dedupeForms(mergedFormations),
-        depthChart: mergedDC,
-        scrimmageChart: mergedSC,
-        opponent: remoteState.opponent || localState.opponent || '',
-        wristbandData: safeWristbandData,
-        scouting: remoteState.scouting || localState.scouting,
-      };
     }
+
+    const localHasWristbandPlays = localState.wristbandData?.wristbands?.some((wb: any) =>
+      wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
+    );
+    const remoteHasWristbandPlays = remoteState.wristbandData?.wristbands?.some((wb: any) =>
+      wb.columns?.some((c: any) => c.plays?.some((p: any) => p && p.text && p.text.trim()))
+    );
+    let safeWristbandData = remoteState.wristbandData;
+    if (localHasWristbandPlays && !remoteHasWristbandPlays) {
+      safeWristbandData = localState.wristbandData;
+    } else {
+      safeWristbandData = remoteState.wristbandData || localState.wristbandData;
+    }
+
+    merged[weekKey] = {
+      ...localState,
+      ...remoteState,
+      formations: dedupeForms(mergedFormations),
+      depthChart: mergedDC,
+      scrimmageChart: mergedSC,
+      opponent: remoteState.opponent || localState.opponent || '',
+      wristbandData: safeWristbandData,
+      scouting: remoteState.scouting || localState.scouting,
+    };
   }
 
   return merged;
@@ -1540,6 +1517,11 @@ function mergeRemoteWeeklyData(
     }
 
     if (data.weeklyData && Object.keys(data.weeklyData).length > 0) {
+      const effectiveUnit =
+        activeUnitRef.current === 'depth_chart'
+          ? (depthSubUnitRef.current === 'scrimmage' ? 'scrimmage' : (currentDepthUnitRef.current || 'offense'))
+          : (activeUnitRef.current === 'scrimmage' ? 'scrimmage' : activeUnitRef.current);
+
       const normalizedWeekly = normalizeWeeklyData(
         data.weeklyData,
         data.defaultFormations || latestStateRef.current.defaultFormations
@@ -1549,7 +1531,7 @@ function mergeRemoteWeeklyData(
         normalizedWeekly,
         activeTeamIdRef.current,
         currentWeekRef.current,
-        activeUnitRef.current,
+        effectiveUnit,
         lastLocalEditTimeRef.current,
         recentlyModifiedPositionsRef.current,
         Array.from(effectiveDeletedFormIds)
@@ -1563,12 +1545,17 @@ function mergeRemoteWeeklyData(
       Array.isArray(data.defaultFormations) &&
       data.defaultFormations.length > 0
     ) {
-      if (Date.now() - lastLocalEditTimeRef.current < 15000) {
+      const effectiveUnit =
+        activeUnitRef.current === 'depth_chart'
+          ? (depthSubUnitRef.current === 'scrimmage' ? 'scrimmage' : (currentDepthUnitRef.current || 'offense'))
+          : (activeUnitRef.current === 'scrimmage' ? 'scrimmage' : activeUnitRef.current);
+
+      if (Date.now() - lastLocalEditTimeRef.current < 25000) {
         const localDefs = latestStateRef.current.defaultFormations || [];
         const mergedDefs: FormationBoard[] = [];
         const usedIds = new Set<string>();
         localDefs.forEach((lf) => {
-          if (lf && lf.id && lf.unit === activeUnitRef.current && !effectiveDeletedFormIds.has(lf.id)) {
+          if (lf && lf.id && lf.unit === effectiveUnit && !effectiveDeletedFormIds.has(lf.id)) {
             mergedDefs.push(lf);
             usedIds.add(lf.id);
           }
@@ -1591,14 +1578,31 @@ function mergeRemoteWeeklyData(
         safeJSONSet('footballDefaultFormations', filteredDefs);
       }
     }
+
+    const effectiveDeletedPlanIds = new Set<string>([
+      ...(latestStateRef.current.deletedPracticePlanIds || []),
+      ...(Array.isArray(data.deletedPracticePlanIds) ? data.deletedPracticePlanIds : []),
+    ]);
+    if (Array.isArray(data.deletedPracticePlanIds) && data.deletedPracticePlanIds.length > 0) {
+      setDeletedPracticePlanIds((prev) => {
+        const merged = Array.from(new Set([...prev, ...data.deletedPracticePlanIds]));
+        latestStateRef.current.deletedPracticePlanIds = merged;
+        safeJSONSet('footballDeletedPracticePlanIds', merged);
+        return merged;
+      });
+    }
+
     if (data.practiceData && Array.isArray(data.practiceData)) {
       const sanitized = sanitizePracticePlans(
         data.practiceData,
         data.scheduleEvents || latestStateRef.current.scheduleEvents || DEFAULT_SCHEDULE_EVENTS
-      );
-      if (Date.now() - lastLocalEditTimeRef.current < 15000 && activeUnitRef.current === 'practice') {
+      ).filter((p) => p && p.id && !effectiveDeletedPlanIds.has(p.id));
+
+      if (Date.now() - lastLocalEditTimeRef.current < 25000 && activeUnitRef.current === 'practice') {
         // Local coach is actively editing practice plans, merge remote updates preserving recent local edits
-        const localPlans = latestStateRef.current.practiceData || [];
+        const localPlans = (latestStateRef.current.practiceData || []).filter(
+          (lp) => lp && lp.id && !effectiveDeletedPlanIds.has(lp.id)
+        );
         const localMap = new Map<string, PracticePlan>();
         localPlans.forEach((lp) => {
           if (lp && lp.id) localMap.set(lp.id, lp);
@@ -2158,37 +2162,39 @@ function mergeRemoteWeeklyData(
         }
       }, 4000);
 
-      // 5. Check server & Firestore on window focus / tab visibility change
+      // 5. Lightweight server check on window focus / tab visibility change (OOM-safe)
+      let isFocusChecking = false;
+      let lastFocusCheckTime = 0;
+
       const handleWindowFocus = async () => {
         if (!isMounted) return;
-        // Never pull remote data right after a local edit or week copy
-        if (Date.now() - lastLocalEditTimeRef.current < 25000) {
-          return;
-        }
+        if (document.hidden) return; // Do not run when switching away from the tab
+        const now = Date.now();
+        if (now - lastFocusCheckTime < 10000 || isFocusChecking) return;
+        if (now - lastLocalEditTimeRef.current < 25000) return;
+
+        isFocusChecking = true;
+        lastFocusCheckTime = now;
+
         try {
-          const { db } = getFirebaseServices();
-          if (db) {
-            const doc = await db.collection('teamData').doc('depthChartData').get();
-            if (doc && doc.exists) {
-              const data = doc.data();
-              if (data) {
-                const dataJson = safeJSONStringify(data);
-                if (dataJson !== lastSavedPayloadRef.current) {
-                  applyRemoteState(data, 'focus_firestore_sync');
-                }
+          // Lightweight health check: only fetch server state if server version/updatedAt actually changed
+          const health = await checkServerHealth();
+          if (health && typeof health.stateVersion === 'number') {
+            if (
+              health.stateVersion > localServerVersionRef.current ||
+              health.stateUpdatedAt > localServerUpdatedAtRef.current
+            ) {
+              const serverRes = await fetchServerState();
+              if (serverRes && serverRes.hasData && serverRes.state) {
+                applyRemoteState(serverRes.state, 'focus_sync', serverRes.version, serverRes.updatedAt);
               }
             }
           }
-          const serverRes = await fetchServerState();
-          if (serverRes && serverRes.hasData && serverRes.state) {
-            if (
-              (typeof serverRes.version === 'number' && serverRes.version > localServerVersionRef.current) ||
-              (typeof serverRes.updatedAt === 'number' && serverRes.updatedAt > localServerUpdatedAtRef.current)
-            ) {
-              applyRemoteState(serverRes.state, 'focus_sync', serverRes.version, serverRes.updatedAt);
-            }
-          }
-        } catch {}
+        } catch {
+          // silent catch on focus check
+        } finally {
+          isFocusChecking = false;
+        }
       };
 
       window.addEventListener('focus', handleWindowFocus);
@@ -4452,16 +4458,24 @@ function mergeRemoteWeeklyData(
      PRACTICE PLAN ACTIONS
      ========================================================================= */
   const updatePracticeDataAndSave = (
-    updater: (prev: PracticePlan[]) => PracticePlan[]
+    updater: (prev: PracticePlan[]) => PracticePlan[],
+    immediate: boolean = false
   ) => {
     setPracticeData((prev) => {
-      const updated = updater(prev);
+      const updated = updater(prev).map((p) => ({
+        ...p,
+        lastEdited: p.lastEdited || Date.now(),
+      }));
       latestStateRef.current.practiceData = updated;
       safeJSONSet('footballPracticeData', updated);
       lastLocalEditTimeRef.current = Date.now();
       return updated;
     });
-    debouncedSave('practice');
+    if (immediate) {
+      flushAndSaveStateToStorage('practice_immediate');
+    } else {
+      debouncedSave('practice');
+    }
   };
 
   const handleOpenNewPracticeModal = () => {
@@ -4774,8 +4788,16 @@ function mergeRemoteWeeklyData(
     }
 
     if (confirm(confirmPrompt)) {
-      const remaining = practiceData.filter((p) => p.id !== currentPracticeId);
-      updatePracticeDataAndSave(() => remaining);
+      const deletedPlanId = planToDelete.id;
+      setDeletedPracticePlanIds((prev) => {
+        const next = Array.from(new Set([...prev, deletedPlanId]));
+        latestStateRef.current.deletedPracticePlanIds = next;
+        safeJSONSet('footballDeletedPracticePlanIds', next);
+        return next;
+      });
+
+      const remaining = practiceData.filter((p) => p.id !== deletedPlanId);
+      updatePracticeDataAndSave(() => remaining, true);
       setCurrentPracticeId(remaining[0]?.id || null);
 
       if (matchingEvent) {
@@ -4790,6 +4812,7 @@ function mergeRemoteWeeklyData(
           safeJSONSet('footballAttendanceLogs', updatedLogs);
         }
       }
+      flushAndSaveStateToStorage('delete_practice_plan', { deletedPracticePlanId: deletedPlanId });
     }
   };
 

@@ -158,8 +158,13 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
       ...(Array.isArray(incoming.deletedFormationIds) ? incoming.deletedFormationIds : []),
       ...(metadata?.deletedFormationId ? [metadata.deletedFormationId] : []),
     ]);
-    const CORE_OFFENSIVE_IDS = new Set(['form_21', 'form_1787860064353', 'form_1787860077403', 'form_1788270435286']);
-    for (const coreId of CORE_OFFENSIVE_IDS) {
+    const CORE_DEFAULT_FORMATION_IDS = new Set([
+      'form_21', 'form_1787860064353', 'form_1787860077403', 'form_1788270435286', // Offense
+      'form_53', 'form_44', // Defense
+      'form_ko', 'form_kr', 'form_punt', 'form_fg', // Special Teams
+      'form_grp_def', 'form_grp_off', // Groups
+    ]);
+    for (const coreId of CORE_DEFAULT_FORMATION_IDS) {
       deletedSet.delete(coreId);
     }
     deletedSet.add('form_10_spread');
@@ -255,30 +260,27 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
       // Filter out any explicitly deleted or duplicate formations
       mergedFormations = dedupeAndFilterFormations(mergedFormations);
 
-      // Safety guarantee: never allow a week to completely lose its offensive formations
-      if (!mergedFormations.some((f: any) => f && f.unit === 'offense')) {
-        let fallbackOff = (Array.isArray(incoming.defaultFormations) ? incoming.defaultFormations : [])
-          .concat(Array.isArray(current.defaultFormations) ? current.defaultFormations : [])
-          .concat(Array.isArray(curWeekState.formations) ? curWeekState.formations : [])
-          .concat(Array.isArray(cachedState?.defaultFormations) ? cachedState.defaultFormations : [])
-          .filter(
-            (f: any) =>
-              f &&
-              f.unit === 'offense' &&
-              !deletedSet.has(f.id) &&
-              f.id !== 'form_10_spread' &&
-              f.name !== '10 Spread Offense'
-          );
-        if (fallbackOff.length === 0) {
-          fallbackOff = (Array.isArray(cachedState?.defaultFormations) ? cachedState.defaultFormations : []).filter(
-            (f: any) => f && f.unit === 'offense' && f.id !== 'form_10_spread' && f.name !== '10 Spread Offense'
-          );
-        }
-        const seenFIds = new Set<string>(mergedFormations.map((f: any) => f?.id));
-        for (const fo of fallbackOff) {
-          if (fo && fo.id && !seenFIds.has(fo.id) && fo.id !== 'form_10_spread') {
-            mergedFormations.push(fo);
-            seenFIds.add(fo.id);
+      // Safety guarantee: never allow a week to completely lose formations for any unit
+      for (const u of ['offense', 'defense', 'st', 'groups'] as const) {
+        if (!mergedFormations.some((f: any) => f && f.unit === u)) {
+          let fallbackForms = (Array.isArray(incoming.defaultFormations) ? incoming.defaultFormations : [])
+            .concat(Array.isArray(current.defaultFormations) ? current.defaultFormations : [])
+            .concat(Array.isArray(curWeekState.formations) ? curWeekState.formations : [])
+            .concat(Array.isArray(cachedState?.defaultFormations) ? cachedState.defaultFormations : [])
+            .filter(
+              (f: any) =>
+                f &&
+                f.unit === u &&
+                !deletedSet.has(f.id) &&
+                f.id !== 'form_10_spread' &&
+                f.name !== '10 Spread Offense'
+            );
+          const seenFIds = new Set<string>(mergedFormations.map((f: any) => f?.id));
+          for (const fo of fallbackForms) {
+            if (fo && fo.id && !seenFIds.has(fo.id) && fo.id !== 'form_10_spread') {
+              mergedFormations.push(fo);
+              seenFIds.add(fo.id);
+            }
           }
         }
       }
@@ -318,18 +320,45 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
           metadata.activeUnit !== 'practice';
 
         if (isSingleUnitSave) {
-          const activeUnitPosIds = getFormationUnitPosIds(mergedFormations, metadata.activeUnit);
+          // Collect position IDs for this unit across all sources
+          const activeUnitPosIds = new Set<string>([
+            ...getFormationUnitPosIds(mergedFormations, metadata.activeUnit),
+            ...getFormationUnitPosIds(incWeekState.formations, metadata.activeUnit),
+            ...getFormationUnitPosIds(curWeekState.formations, metadata.activeUnit),
+            ...getFormationUnitPosIds(incoming.defaultFormations, metadata.activeUnit),
+            ...getFormationUnitPosIds(current.defaultFormations, metadata.activeUnit),
+            ...getFormationUnitPosIds(cachedState?.defaultFormations, metadata.activeUnit),
+          ]);
+
+          // Also match standard unit position prefixes to guarantee defensive/ST positions are recognized
+          const isUnitPos = (posId: string): boolean => {
+            if (activeUnitPosIds.has(posId)) return true;
+            const u = metadata.activeUnit;
+            if (u === 'defense') {
+              return posId.startsWith('53-') || posId.startsWith('44-') || posId.includes('form_53') || posId.includes('form_44') || posId.startsWith('def-');
+            }
+            if (u === 'st') {
+              return posId.startsWith('form_ko') || posId.startsWith('form_kr') || posId.startsWith('form_punt') || posId.startsWith('form_fg') || posId.startsWith('ko-') || posId.startsWith('kr-') || posId.startsWith('punt-') || posId.startsWith('fg-');
+            }
+            if (u === 'groups') {
+              return posId.startsWith('form_grp') || posId.startsWith('grp_');
+            }
+            if (u === 'offense') {
+              return posId.startsWith('21-') || posId.startsWith('form_21') || posId.startsWith('form_1787') || posId.startsWith('form_1788');
+            }
+            return false;
+          };
 
           // Retain positions from other units
           for (const [posId, players] of Object.entries(curDC)) {
-            if (!activeUnitPosIds.has(posId)) {
+            if (!isUnitPos(posId)) {
               mergedDC[posId] = players;
             }
           }
 
           // Take incoming positions for active unit (explicitly setting empty or updated arrays)
           for (const [posId, players] of Object.entries(incDC)) {
-            if (activeUnitPosIds.has(posId) || !mergedDC[posId]) {
+            if (isUnitPos(posId) || !mergedDC[posId]) {
               mergedDC[posId] = players;
             }
           }
@@ -397,12 +426,12 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
       const sState = merged.weeklyData[sKey];
       const lState = merged.weeklyData[lKey];
       if (sState && lState) {
-        const sCount = countPlayersInDC(sState.depthChart);
-        const lCount = countPlayersInDC(lState.depthChart);
-        if (sCount >= lCount) {
+        if (incoming.weeklyData[sKey] || metadata?.activeTeamId === 'team_10u') {
           merged.weeklyData[lKey] = JSON.parse(JSON.stringify(sState));
-        } else {
+        } else if (incoming.weeklyData[lKey]) {
           merged.weeklyData[sKey] = JSON.parse(JSON.stringify(lState));
+        } else {
+          merged.weeklyData[lKey] = JSON.parse(JSON.stringify(sState));
         }
       } else if (sState && !lState) {
         merged.weeklyData[lKey] = JSON.parse(JSON.stringify(sState));
@@ -519,19 +548,30 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
 
   // 5. Merge Practice Plans, Templates, Drills
   if (Array.isArray(incoming.practiceData)) {
+    const deletedPlanIds = new Set<string>([
+      ...(Array.isArray(current.deletedPracticePlanIds) ? current.deletedPracticePlanIds : []),
+      ...(Array.isArray(incoming.deletedPracticePlanIds) ? incoming.deletedPracticePlanIds : []),
+      ...(metadata?.deletedPracticePlanId ? [metadata.deletedPracticePlanId] : []),
+    ]);
+    merged.deletedPracticePlanIds = Array.from(deletedPlanIds);
+
     const practiceMap = new Map<string, any>();
     (current.practiceData || []).forEach((p: any) => {
-      if (p && p.id) practiceMap.set(p.id, p);
+      if (p && p.id && !deletedPlanIds.has(p.id)) practiceMap.set(p.id, p);
     });
     incoming.practiceData.forEach((p: any) => {
-      if (p && p.id) {
+      if (p && p.id && !deletedPlanIds.has(p.id)) {
         const existing = practiceMap.get(p.id);
         if (!existing || (p.lastEdited || 0) >= (existing.lastEdited || 0)) {
           practiceMap.set(p.id, p);
         }
       }
     });
-    merged.practiceData = Array.from(practiceMap.values());
+    if (metadata?.scope === 'practice_delete') {
+      merged.practiceData = incoming.practiceData.filter((p: any) => p && p.id && !deletedPlanIds.has(p.id));
+    } else {
+      merged.practiceData = Array.from(practiceMap.values());
+    }
   }
   if (incoming.practiceTemplates && typeof incoming.practiceTemplates === 'object') {
     merged.practiceTemplates = {
