@@ -1157,6 +1157,89 @@ export const DLINE_DRILLS: WhiteboardDrill[] = [
     ],
   },
   {
+    id: 'drill-lb-5',
+    category: 'LB',
+    categoryLabel: 'Linebackers (LB)',
+    title: 'TRIANGLE BLOCK POP & DIRECTIONAL PEEK',
+    subtitle: 'Separation Pop, Lead-Foot Peek & Cutback Redirect',
+    objective: 'Linebacker fires downhill with coach-designated lead foot, delivers an explosive two-hand pop strike to blocker without grabbing cloth, peeks through to diagnose the ball carrier, and rapidly resets hips to redirect and tackle when the runner cuts opposite.',
+    setup: 'Triangle alignment: Linebacker at top/apex 4.5 yards back; Blocker aligned 2 yards ahead with shield; Ball carrier 2-3 yards behind blocker. Coach stands behind LB or to side directing hand signals to ball carrier and calling lead foot to LB.',
+    instructions: [
+      'Pre-snap: Linebacker assumes a balanced, athletic linebacker stance with knees bent and chest over toes.',
+      'Coach announces the lead foot (\'Right\' or \'Left\') to the linebacker, which determines whether the LB is peeking right or peeking left.',
+      'Simultaneously, coach flashes a silent hand signal to the ball carrier directing whether to attack left or right.',
+      'On the go-call/snap, the linebacker fires downhill aggressively leading with the designated foot.',
+      'Deliver an explosive two-hand pop strike into the blocker’s breastplate to create immediate power and physical separation. Do NOT grab cloth on the pop-off so the blocker cannot latch on.',
+      'Peek over the blocker’s shoulder in the designated direction to diagnose the ball carrier’s path.',
+      'When the ball carrier cuts back to the opposite direction, disengage cleanly, sink hips, run back/reset feet, and redirect explosively to make the secure tackle.',
+    ],
+    equipment: 'Blocking shield/dummy, football, cones to mark triangle apex and running lanes.',
+    cues: [
+      '"Don\'t grab cloth on the pop-off — create instant separation!"',
+      '"Lead foot dictates your peek — Right lead peeks right, Left lead peeks left!"',
+      '"Pop, peek, reset hips, and explode on the cutback!"',
+    ],
+    faults: [
+      'Grabbing the blocker\'s jersey/cloth instead of popping with violent open palms.',
+      'Catching the block or letting the offensive player get into your chest.',
+      'Peeking the wrong direction or guessing instead of trusting your lead-foot key.',
+      'Failing to reset feet and get downhill when the ball carrier changes direction.',
+    ],
+    phases: [
+      {
+        name: 'PHASE 1: TRIANGLE SETUP & LEAD-FOOT PEEK',
+        description: 'Coach calls lead foot to LB (peeking right) and signals ball carrier to initiate attack. LB strikes blocker with explosive pop.',
+        tokens: [
+          { id: 'coach-1', type: 'O', label: 'COACH', x: 260, y: 340, color: '#e06c00', subLabel: 'Hand Signal' },
+          { id: 'lb-1', type: 'X', label: 'LB', x: 350, y: 340, color: '#058538', subLabel: 'Right Lead' },
+          { id: 'blocker-1', type: 'O', label: 'BLOCK', x: 350, y: 240, color: '#1a1a24', subLabel: 'Shield' },
+          { id: 'rb-1', type: 'O', label: 'RB', x: 350, y: 150, color: '#0052cc', subLabel: 'Ball Carrier' },
+        ],
+        arrows: [
+          { id: 'a-pop', type: 'blitz', startX: 350, startY: 340, endX: 350, endY: 260, color: '#058538', label: 'Violent Pop Strike' },
+          { id: 'a-peek', type: 'straight', startX: 350, startY: 260, endX: 390, endY: 210, color: '#058538', dashed: true, label: 'Peek Right' },
+          { id: 'a-rb-start', type: 'straight', startX: 350, startY: 150, endX: 390, endY: 180, color: '#0052cc', label: 'Attack Right' },
+        ],
+        zones: [
+          { id: 'z-strike', name: 'SEPARATION POP ZONE', cx: 350, cy: 250, rx: 55, ry: 25, color: '#058538', opacity: 0.2 },
+        ],
+      },
+      {
+        name: 'PHASE 2: POP-OFF (NO CLOTH) & RB CUTBACK',
+        description: 'LB punches off blocker without grabbing cloth to maintain complete freedom. Ball carrier suddenly cuts back to opposite lane.',
+        tokens: [
+          { id: 'coach-1', type: 'O', label: 'COACH', x: 260, y: 340, color: '#e06c00' },
+          { id: 'lb-1', type: 'X', label: 'LB', x: 370, y: 265, color: '#058538', subLabel: 'Pop-Off Shed' },
+          { id: 'blocker-1', type: 'O', label: 'BLOCK', x: 335, y: 235, color: '#64748b', subLabel: 'Separated' },
+          { id: 'rb-1', type: 'O', label: 'RB', x: 310, y: 175, color: '#0052cc', subLabel: 'Cutback Left' },
+        ],
+        arrows: [
+          { id: 'a-shed', type: 'straight', startX: 370, startY: 265, endX: 390, endY: 280, color: '#d91b24', label: 'Reset & Disengage' },
+          { id: 'a-rb-cut', type: 'curved', startX: 390, startY: 180, endX: 310, endY: 175, controlX: 360, controlY: 160, color: '#0052cc', label: 'Sharp Cutback' },
+        ],
+        zones: [
+          { id: 'z-cut', name: 'CUTBACK RECOGNITION', cx: 330, cy: 190, rx: 60, ry: 30, color: '#d91b24', opacity: 0.18 },
+        ],
+      },
+      {
+        name: 'PHASE 3: REDIRECT, CLOSE & FINISH TACKLE',
+        description: 'LB runs back, resets hips and feet, and fires downhill to opposite lane to make the secure chest-to-chest tackle.',
+        tokens: [
+          { id: 'coach-1', type: 'O', label: 'COACH', x: 260, y: 340, color: '#e06c00' },
+          { id: 'blocker-1', type: 'O', label: 'BLOCK', x: 370, y: 245, color: '#64748b', subLabel: 'Disengaged' },
+          { id: 'rb-1', type: 'O', label: 'RB', x: 290, y: 200, color: '#0052cc', subLabel: 'Tracked' },
+          { id: 'lb-1', type: 'X', label: 'LB', x: 290, y: 235, color: '#058538', subLabel: 'SOLO TACKLE!' },
+        ],
+        arrows: [
+          { id: 'a-redirect', type: 'blitz', startX: 370, startY: 280, endX: 290, endY: 235, color: '#058538', label: 'Downhill Redirect' },
+        ],
+        zones: [
+          { id: 'z-tackle', name: 'FINISH TACKLE ZONE', cx: 290, cy: 215, rx: 50, ry: 30, color: '#058538', opacity: 0.25 },
+        ],
+      },
+    ],
+  },
+  {
     id: 'drill-db-1',
     category: 'DB',
     categoryLabel: 'Defensive Backs (DB)',

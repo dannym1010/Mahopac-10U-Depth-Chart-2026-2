@@ -484,7 +484,7 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
         if (selectedCategory === 'OFFENSE') {
           if (!drill.category.startsWith('OFF')) return false;
         } else if (selectedCategory === 'DEFENSE') {
-          if (!['DL', 'DE', 'LB', 'DB', 'SCHEME', 'DEFENSE'].includes(drill.category)) return false;
+          if (!['DL', 'DE', 'LB', 'DB', 'SCHEME', 'DEFENSE', 'TEAM', 'TACKLE'].includes(drill.category)) return false;
         } else if (drill.category !== selectedCategory) {
           return false;
         }
@@ -515,6 +515,8 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
         ? drills
         : catId === 'OFFENSE'
         ? drills.filter((d) => d.category === 'OFFENSE' || d.category.startsWith('OFF_'))
+        : catId === 'DEFENSE'
+        ? drills.filter((d) => ['DL', 'DE', 'LB', 'DB', 'SCHEME', 'DEFENSE', 'TEAM', 'TACKLE'].includes(d.category))
         : drills.filter((d) => d.category === catId);
     if (matching.length > 0 && !matching.some((d) => d.id === activeDrillId)) {
       setActiveDrillId(matching[0].id);

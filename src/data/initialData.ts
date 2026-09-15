@@ -1983,6 +1983,11 @@ export const DEFAULT_CASCADING_DRILLS: DrillFolder[] = [
             "key": "Do not cross your feet when shuffling!. Keep a wide base to plant and drive instantly",
             "desc": "Playside LB pushes wide; Backside LB takes controlled shuffle steps, reads pulling guard, and mirrors inside hip leverage to execute vice tackle",
             "name": "Defense LB: Backside Scrape & Cutback Vice"
+          },
+          {
+            "name": "Defense LB: Triangle Block Pop & Directional Peek Drill",
+            "desc": "Triangle alignment with LB at apex, blocker 2 yards ahead, and ball carrier 2-3 yards behind blocker. Coach calls out 'Right' or 'Left' lead foot to the LB (determining peek direction) while flashing a hand signal to the ball carrier to attack right or left. On movement, LB fires downhill with designated lead foot, delivers explosive two-hand pop strike to blocker's breastplate to create instant separation, and peeks into designated gap. When ball carrier cuts to opposite lane, LB disengages cleanly without grabbing cloth, resets his hips/feet, and redirects downhill to track and make the tackle.",
+            "key": "Don't grab cloth on the pop-off!. Pop the blocker violently to create separation so he cannot latch on. Designated lead foot dictates your peek (Right lead = peek right; Left lead = peek left). Never guess or get tied up—strike, peek through the blocker, and reset hips instantly to redirect on cutbacks"
           }
         ]
       },
@@ -2030,6 +2035,11 @@ export const DEFAULT_CASCADING_DRILLS: DrillFolder[] = [
             "name": "Defense Group: 11-Man 'Liz' Pursuit Drill",
             "desc": "Full 11-man defense executes run fits and inside-out pursuit angles on perimeter sweep. Every player must touch runner",
             "key": "Rule number one: 'Never follow same color jersey'. Take your own lane to the ball carrier to prevent getting walled off"
+          },
+          {
+            "name": "Defense Group: Team Pursuit & Cutback Lane Contain Drill (Spencer Erickson)",
+            "desc": "Full defensive unit works on individual pursuit angles against outside runs and sudden cutbacks (Winona State DC Spencer Erickson / Glazier Clinics). Ball carrier mixes outside bounces/sweeps with sharp cutbacks against the grain. Key rule: 'Run to where the ball carrier IS, not where he is going' and adjust pursuit angles so no defender trails behind a teammate. When RB bounces outside, perimeter defenders force and spill while backside LB, DE, and Safety maintain strict cutback lane leverage. On cutback, backside pursuit fires downhill to choke the lane and execute a multi-angle vice tackle.",
+            "key": "Run to the ball carrier, NOT where you think he's going!. Never run behind a teammate—adjust your pursuit lane. When RB stretches outside, backside defenders MUST stay disciplined on cutback lanes. On cutback recognition, plant, redirect downhill, and collapse the vice with zero cutback seams"
           },
           {
             "key": "This completely cures the 'swarm' mentality typical in youth football by visually teaching them that holding their specific lane creates an inescapable defensive wall",
