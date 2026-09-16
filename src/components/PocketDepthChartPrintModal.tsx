@@ -1067,14 +1067,11 @@ export const PocketDepthChartPrintModal: React.FC<PocketDepthChartPrintModalProp
             </div>
 
             {/* Scrollable scaled preview page */}
-            <div className="flex-1 overflow-auto rounded-xl bg-slate-200/50 dark:bg-slate-900/50 p-2 flex justify-center items-start">
+            <div className="flex-1 overflow-auto rounded-xl bg-slate-200/80 dark:bg-slate-950 p-2 sm:p-4 flex justify-center items-start">
               <div
-                className="bg-white text-slate-950 p-4 rounded shadow-2xl transition-all select-none origin-top"
+                className="bg-white text-slate-950 p-4 sm:p-6 rounded-md shadow-2xl transition-all select-none w-full max-w-[850px] min-h-[560px] h-auto"
                 style={{
-                  width: orientation === 'landscape' ? '800px' : '620px',
-                  minHeight: orientation === 'landscape' ? '520px' : '750px',
-                  transform: 'scale(0.88)',
-                  transformOrigin: 'top center',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 }}
               >
                 {/* Header inside preview */}
@@ -1326,10 +1323,25 @@ const PreviewFormationCard: React.FC<{
         <thead>
           <tr className="bg-slate-200 border-b border-slate-950 text-[8px] font-black uppercase text-slate-800">
             <th className="py-0.5 px-1 border-r border-slate-950 w-[18%] text-center">POS</th>
-            {showStarter && <th className="py-0.5 px-1 border-r border-slate-400">Black</th>}
-            {show2nd && <th className="py-0.5 px-1 border-r border-slate-400">Gold</th>}
-            {show3rd && <th className="py-0.5 px-1 border-r border-slate-400">Blue</th>}
-            {showBackups && <th className="py-0.5 px-1">Backups</th>}
+            {showStarter && (
+              <th className="py-0.5 px-1 border-r border-slate-400 text-slate-950">
+                <span className="inline-block w-2 h-2 rounded-xs bg-black mr-1 align-middle"></span>
+                Black
+              </th>
+            )}
+            {show2nd && (
+              <th className="py-0.5 px-1 border-r border-slate-400 text-amber-950">
+                <span className="inline-block w-2 h-2 rounded-xs bg-amber-400 border border-amber-600 mr-1 align-middle"></span>
+                Gold
+              </th>
+            )}
+            {show3rd && (
+              <th className="py-0.5 px-1 border-r border-slate-400 text-blue-950">
+                <span className="inline-block w-2 h-2 rounded-xs bg-blue-600 mr-1 align-middle"></span>
+                Blue
+              </th>
+            )}
+            {showBackups && <th className="py-0.5 px-1 text-slate-700">Backups</th>}
           </tr>
         </thead>
         <tbody>
@@ -1408,7 +1420,7 @@ const PreviewFormationCard: React.FC<{
                 {show2nd && (
                   <td
                     onClick={() => onToggleCellHighlight?.(goldKey, 'gold')}
-                    title="Click to toggle highlight (Gold team - light gold)"
+                    title="Click to toggle highlight (Gold team - athletic gold)"
                     className={`py-0.5 px-1 border-r border-slate-200 text-[8.5px] cursor-pointer transition-all relative select-none ${
                       hlGold === 'gold' || (hlGold && hlGold !== 'black' && hlGold !== 'blue')
                         ? 'bg-amber-200 ring-2 ring-inset ring-amber-600 text-amber-950 font-black'
@@ -1418,24 +1430,24 @@ const PreviewFormationCard: React.FC<{
                         ? 'bg-blue-200 ring-2 ring-inset ring-blue-600 text-blue-950 font-black'
                         : inkFriendly
                         ? 'bg-white hover:bg-amber-50 hover:ring-1 hover:ring-amber-400'
-                        : 'bg-amber-50/50 hover:bg-amber-100/70 hover:ring-1 hover:ring-amber-400'
+                        : 'bg-amber-100/60 hover:bg-amber-100 hover:ring-1 hover:ring-amber-400'
                     }`}
                   >
                     {hlGold && (
                       <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-600 ring-1 ring-white pointer-events-none" />
                     )}
                     {p2 ? (
-                      <span className="font-bold text-slate-900 flex items-center">
+                      <span className="font-bold text-slate-950 flex items-center">
                         <span
                           className={`px-1 py-0.2 rounded font-mono mr-1 text-[8px] font-black shrink-0 ${
                             inkFriendly
                               ? 'border border-black text-black bg-white'
-                              : 'bg-amber-100 text-amber-900 border border-amber-400'
+                              : 'bg-amber-300 text-amber-950 border border-amber-500 font-black'
                           }`}
                         >
                           #{p2.num}
                         </span>
-                        <span className="truncate">{p2.name}</span>
+                        <span className="truncate font-semibold text-slate-950">{p2.name}</span>
                       </span>
                     ) : (
                       <span className={hlGold ? 'text-amber-900 font-bold' : 'text-slate-400'}>&mdash;</span>
@@ -1446,7 +1458,7 @@ const PreviewFormationCard: React.FC<{
                 {show3rd && (
                   <td
                     onClick={() => onToggleCellHighlight?.(blueKey, 'blue')}
-                    title="Click to toggle highlight (Blue team - light blue)"
+                    title="Click to toggle highlight (Blue team - royal blue)"
                     className={`py-0.5 px-1 border-r border-slate-200 text-[8.5px] cursor-pointer transition-all relative select-none ${
                       hlBlue === 'blue' || (hlBlue && hlBlue !== 'black' && hlBlue !== 'gold')
                         ? 'bg-blue-200 ring-2 ring-inset ring-blue-600 text-blue-950 font-black'
@@ -1456,24 +1468,24 @@ const PreviewFormationCard: React.FC<{
                         ? 'bg-amber-200 ring-2 ring-inset ring-amber-600 text-amber-950 font-black'
                         : inkFriendly
                         ? 'bg-white hover:bg-blue-50 hover:ring-1 hover:ring-blue-400'
-                        : 'bg-blue-50/50 hover:bg-blue-100/70 hover:ring-1 hover:ring-blue-400'
+                        : 'bg-blue-100/50 hover:bg-blue-100 hover:ring-1 hover:ring-blue-400'
                     }`}
                   >
                     {hlBlue && (
                       <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-blue-600 ring-1 ring-white pointer-events-none" />
                     )}
                     {p3 ? (
-                      <span className="font-medium text-slate-900 flex items-center">
+                      <span className="font-medium text-slate-950 flex items-center">
                         <span
                           className={`px-1 py-0.2 rounded font-mono mr-1 text-[8px] font-black shrink-0 ${
                             inkFriendly
                               ? 'border border-dashed border-slate-600 text-slate-800'
-                              : 'bg-blue-100 text-blue-900 border border-blue-400'
+                              : 'bg-blue-600 text-white border border-blue-700 font-black'
                           }`}
                         >
                           #{p3.num}
                         </span>
-                        <span className="truncate">{p3.name}</span>
+                        <span className="truncate font-semibold text-slate-950">{p3.name}</span>
                       </span>
                     ) : (
                       <span className={hlBlue ? 'text-blue-900 font-bold' : 'text-slate-400'}>&mdash;</span>

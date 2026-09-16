@@ -4085,6 +4085,7 @@ export interface FormationDepthChartPrintOptions {
   layout?: '1_per_page' | '2_per_page';
   depthLevels?: 'starters_only' | '2_deep' | '3_deep' | 'all';
   colorMode?: 'color' | 'sideline_contrast' | 'ink_friendly';
+  starterBadgeStyle?: 'white' | 'black';
   selectedFormationIds?: string[];
   unitFilter?: 'offense' | 'defense' | 'st' | 'both_off_def' | 'all' | 'current';
   teamName?: string;
@@ -4107,6 +4108,7 @@ export function generateFormationDepthChartPrintHTML(
   const depthLevels = options?.depthLevels || 'all';
   const colorMode = options?.colorMode || 'color';
   const inkFriendly = colorMode === 'ink_friendly';
+  const starterBadgeStyle = options?.starterBadgeStyle || 'white';
   const teamName = options?.teamName || 'VARSITY FOOTBALL';
   const seasonLabel = options?.seasonLabel || '2026 SEASON';
   const highlightedCells = options?.highlightedCells || {};
@@ -4214,12 +4216,19 @@ export function generateFormationDepthChartPrintHTML(
 
               // Color / High-visibility Mode
               if (pIdx === 0) {
-                // Starter / 1st String: Solid Obsidian Black
-                const bg = playerHl ? playerHl.bg : '#09090b';
-                const text = playerHl ? playerHl.text : '#ffffff';
-                const border = playerHl ? `2px solid ${playerHl.border}` : '1.5px solid #27272a';
-                const tagBg = playerHl ? '#000000' : '#ffffff';
-                const tagColor = playerHl ? '#ffffff' : '#000000';
+                // Starter / 1st String: White (clean print standard) or Obsidian Black
+                const isWhiteStarter = starterBadgeStyle === 'white';
+                const defaultBg = isWhiteStarter ? '#ffffff' : '#09090b';
+                const defaultText = isWhiteStarter ? '#000000' : '#ffffff';
+                const defaultBorder = isWhiteStarter ? '2px solid #000000' : '1.5px solid #27272a';
+                const defaultTagBg = isWhiteStarter ? '#000000' : '#ffffff';
+                const defaultTagColor = isWhiteStarter ? '#ffffff' : '#000000';
+
+                const bg = playerHl ? playerHl.bg : defaultBg;
+                const text = playerHl ? playerHl.text : defaultText;
+                const border = playerHl ? `2px solid ${playerHl.border}` : defaultBorder;
+                const tagBg = playerHl ? '#000000' : defaultTagBg;
+                const tagColor = playerHl ? '#ffffff' : defaultTagColor;
 
                 return `
                   <div style="display: flex; align-items: center; justify-content: space-between; padding: 2.5px 5px; margin-bottom: 2.5px; border-radius: 3px; background: ${bg}; color: ${text}; border: ${border}; min-height: 21px; box-sizing: border-box; ${playerHl?.shadow ? `box-shadow: ${playerHl.shadow};` : ''}">

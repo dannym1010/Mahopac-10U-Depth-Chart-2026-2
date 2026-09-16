@@ -65,6 +65,7 @@ export const FormationDepthChartPrintModal: React.FC<FormationDepthChartPrintMod
   const [layout, setLayout] = useState<'1_per_page' | '2_per_page'>('1_per_page');
   const [orientation, setOrientation] = useState<'landscape' | 'portrait'>('landscape');
   const [colorMode, setColorMode] = useState<'color' | 'sideline_contrast' | 'ink_friendly'>('color');
+  const [starterBadgeStyle, setStarterBadgeStyle] = useState<'white' | 'black'>('white');
 
   // Cell / Player Highlighting
   const [highlightedCells, setHighlightedCells] = useState<Record<string, 'black' | 'gold' | 'blue'>>({});
@@ -191,11 +192,12 @@ export const FormationDepthChartPrintModal: React.FC<FormationDepthChartPrintMod
     layout,
     depthLevels,
     colorMode,
+    starterBadgeStyle,
     selectedFormationIds,
     teamName: activeTeamName,
     seasonLabel,
     highlightedCells,
-  }), [orientation, layout, depthLevels, colorMode, selectedFormationIds, activeTeamName, seasonLabel, highlightedCells]);
+  }), [orientation, layout, depthLevels, colorMode, starterBadgeStyle, selectedFormationIds, activeTeamName, seasonLabel, highlightedCells]);
 
   const handlePrint = () => {
     printFormationDepthChart(selectedFormations, depthChart, currentOptions);
@@ -631,6 +633,39 @@ export const FormationDepthChartPrintModal: React.FC<FormationDepthChartPrintMod
                     </button>
                   </div>
                 </div>
+
+                {/* Starter Badge Style */}
+                {colorMode === 'color' && (
+                  <div className="pt-2 flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      Starter (1st String) Style:
+                    </span>
+                    <div className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-0.5 rounded-lg">
+                      <button
+                        type="button"
+                        onClick={() => setStarterBadgeStyle('white')}
+                        className={`px-2.5 py-0.5 rounded text-[10px] font-black transition-all cursor-pointer ${
+                          starterBadgeStyle === 'white'
+                            ? 'bg-slate-900 text-white dark:bg-amber-400 dark:text-slate-950 shadow-xs'
+                            : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        White (Standard)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStarterBadgeStyle('black')}
+                        className={`px-2.5 py-0.5 rounded text-[10px] font-black transition-all cursor-pointer ${
+                          starterBadgeStyle === 'black'
+                            ? 'bg-slate-900 text-white dark:bg-amber-400 dark:text-slate-950 shadow-xs'
+                            : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        Solid Black
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 6. Interactive Highlighting Brush */}
@@ -729,13 +764,10 @@ export const FormationDepthChartPrintModal: React.FC<FormationDepthChartPrintMod
             </div>
 
             {/* Preview Sheet Stage */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex justify-center items-start">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex justify-center items-start bg-slate-200/80 dark:bg-slate-950">
               <div
-                className={`bg-white text-black shadow-xl border border-slate-300 rounded-sm w-full max-w-[850px] p-6 transition-all ${
-                  orientation === 'landscape' ? 'aspect-[11/8.5]' : 'aspect-[8.5/11]'
-                }`}
+                className="bg-white text-black shadow-2xl border border-slate-300 rounded-md w-full max-w-[940px] min-h-[580px] h-auto p-6 sm:p-8 transition-all relative"
                 style={{
-                  minHeight: orientation === 'landscape' ? '480px' : '620px',
                   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 }}
               >
@@ -751,7 +783,7 @@ export const FormationDepthChartPrintModal: React.FC<FormationDepthChartPrintMod
                       const unitLabel = form.unit === 'offense' ? 'OFFENSE' : form.unit === 'defense' ? 'DEFENSE' : form.unit === 'st' ? 'SPECIAL TEAMS' : 'FORMATION';
 
                       return (
-                        <div key={form.id} className="border-b-2 border-slate-200 last:border-b-0 pb-4 last:pb-0">
+                        <div key={form.id} className="border-b-2 border-slate-300 last:border-b-0 pb-5 last:pb-0">
                           {/* Formation Sheet Header */}
                           <div className="flex items-center justify-between border-b-2 border-black pb-2 mb-3">
                             <div>
@@ -775,7 +807,13 @@ export const FormationDepthChartPrintModal: React.FC<FormationDepthChartPrintMod
                             {/* Color Legend */}
                             <div className="flex items-center gap-3 text-[9px] font-black uppercase">
                               <div className="flex items-center gap-1">
-                                <span className="w-3 h-3 rounded-xs bg-black border border-black inline-block"></span>
+                                <span
+                                  className={`w-3 h-3 rounded-xs inline-block border ${
+                                    colorMode === 'ink_friendly' || starterBadgeStyle === 'white'
+                                      ? 'bg-white border-black'
+                                      : 'bg-black border-black'
+                                  }`}
+                                ></span>
                                 <span>Starters</span>
                               </div>
                               <div className="flex items-center gap-1">
@@ -794,16 +832,17 @@ export const FormationDepthChartPrintModal: React.FC<FormationDepthChartPrintMod
                           </div>
 
                           {/* Tactical Field Rows */}
-                          <div className="space-y-2">
+                          <div className="space-y-2.5">
                             {form.rows.map((row) => {
                               const nonNullPositions = row.positions.filter(Boolean);
                               if (nonNullPositions.length === 0) return null;
 
                               return (
-                                <div key={row.id}>
+                                <div key={row.id} className="p-2 bg-slate-50 border border-slate-200 rounded-md">
                                   {row.label && (
-                                    <div className="bg-slate-100 border border-slate-300 border-l-4 border-l-slate-900 text-slate-900 text-[9px] font-black px-1.5 py-0.5 rounded-xs uppercase tracking-wider mb-1">
-                                      {row.label}
+                                    <div className="bg-slate-200 border border-slate-300 border-l-4 border-l-slate-900 text-slate-900 text-[9.5px] font-black px-2 py-0.5 rounded-xs uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                                      <span>{row.label}</span>
+                                      <span className="text-[8px] font-mono text-slate-500 font-bold">{nonNullPositions.length} POSITIONS</span>
                                     </div>
                                   )}
                                   <div
@@ -831,22 +870,32 @@ export const FormationDepthChartPrintModal: React.FC<FormationDepthChartPrintMod
                                       return (
                                         <div
                                           key={slot.id}
-                                          className={`border-2 rounded-sm overflow-hidden flex flex-col min-h-[52px] transition-all cursor-pointer ${
+                                          className={`border-2 rounded-sm overflow-hidden flex flex-col min-h-[54px] transition-all cursor-pointer ${
                                             slotHighlight === 'black'
-                                              ? 'border-black bg-slate-200 ring-2 ring-slate-900'
+                                              ? 'border-black bg-slate-100 ring-2 ring-slate-900'
                                               : slotHighlight === 'gold'
-                                              ? 'border-amber-600 bg-amber-100 ring-2 ring-amber-400'
+                                              ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-400'
                                               : slotHighlight === 'blue'
-                                              ? 'border-blue-700 bg-blue-100 ring-2 ring-blue-500'
-                                              : 'border-black bg-white hover:border-indigo-500'
+                                              ? 'border-blue-700 bg-blue-50 ring-2 ring-blue-500'
+                                              : 'border-black bg-white hover:border-indigo-500 shadow-xs'
                                           }`}
                                           onClick={() => handleCellClick(slotKey, 'black')}
                                           title="Click to toggle highlight"
                                         >
-                                          <div className="bg-white text-black text-[10px] font-black py-0.5 px-1 border-b-2 border-black text-center uppercase tracking-wider">
+                                          <div
+                                            className={`text-[10px] font-black py-0.5 px-1 border-b-2 text-center uppercase tracking-wider ${
+                                              slotHighlight === 'gold'
+                                                ? 'bg-amber-300 text-black border-amber-600'
+                                                : slotHighlight === 'blue'
+                                                ? 'bg-blue-200 text-blue-950 border-blue-600'
+                                                : slotHighlight === 'black'
+                                                ? 'bg-slate-300 text-black border-black'
+                                                : 'bg-slate-100 text-black border-black'
+                                            }`}
+                                          >
                                             {slot.name}
                                           </div>
-                                          <div className="p-1 flex-1 flex flex-col gap-1 justify-start">
+                                          <div className="p-1 flex-1 flex flex-col gap-1 justify-start bg-inherit">
                                             {visiblePlayers.length > 0 ? (
                                               visiblePlayers.map((player, pIdx) => {
                                                 const tierColor = pIdx === 0 ? 'black' : pIdx === 1 ? 'gold' : 'blue';
@@ -884,7 +933,9 @@ export const FormationDepthChartPrintModal: React.FC<FormationDepthChartPrintMod
 
                                                 // Full Color Mode
                                                 if (pIdx === 0) {
-                                                  // Starter: Solid Black
+                                                  // Starter: White (standard) or Solid Black
+                                                  const isWhiteStarter = starterBadgeStyle === 'white';
+
                                                   return (
                                                     <div
                                                       key={`${player.num}-${player.name}-${pIdx}`}
@@ -899,10 +950,16 @@ export const FormationDepthChartPrintModal: React.FC<FormationDepthChartPrintMod
                                                           ? 'bg-blue-200 text-blue-950 border-2 border-blue-600 ring-1 ring-blue-400'
                                                           : playerHighlight === 'black'
                                                           ? 'bg-slate-200 text-black border-2 border-black ring-1 ring-slate-900'
+                                                          : isWhiteStarter
+                                                          ? 'bg-white text-black border-2 border-black'
                                                           : 'bg-zinc-950 text-white border border-zinc-800'
                                                       }`}
                                                     >
-                                                      <span className="text-[7.5px] px-1 rounded-xs font-black bg-white text-black shrink-0">
+                                                      <span
+                                                        className={`text-[7.5px] px-1 rounded-xs font-black shrink-0 ${
+                                                          isWhiteStarter ? 'bg-black text-white' : 'bg-white text-black'
+                                                        }`}
+                                                      >
                                                         ST
                                                       </span>
                                                       <span className="font-mono text-[8.5px]">#{player.num}</span>
