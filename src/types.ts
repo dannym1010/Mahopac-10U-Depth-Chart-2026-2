@@ -8,6 +8,7 @@ export type UnitType =
   | 'st' 
   | 'groups' 
   | 'scrimmage' 
+  | 'practice_live'
   | 'wristband' 
   | 'call_sheet'
   | 'schedule'
@@ -381,10 +382,35 @@ export interface ScoutingData {
   tendenciesOrder?: PlaybookGuideOrder;
 }
 
+export type DepthSubUnit = 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage' | 'practice_live';
+
+export type LiveDrillFormat = '7v7' | '11v11' | '9v9' | '1v1' | 'custom';
+
+export interface LiveDrillPosition {
+  id: string;
+  name: string; // e.g. "QB", "RB", "WR (X)", "LT", "CB1", "MLB", etc.
+  unit: 'offense' | 'defense';
+}
+
+export interface LiveDrillGroup {
+  id: string;
+  name: string; // e.g., "Period 4: 7v7 Pass Skeleton"
+  format: LiveDrillFormat;
+  customFormatLabel?: string;
+  offenseLabel: string; // e.g., "1st Team Offense (Gold)"
+  defenseLabel: string; // e.g., "1st Team Defense (Blue)"
+  notes?: string;
+  offensePositions: LiveDrillPosition[];
+  defensePositions: LiveDrillPosition[];
+  lineup: Record<string, PlacedPlayer[]>; // position.id -> PlacedPlayer[]
+  createdAt?: number;
+}
+
 export interface WeekState {
   formations?: FormationBoard[];
   depthChart?: Record<string, PlacedPlayer[]>;
   scrimmageChart?: Record<string, PlacedPlayer[]>;
+  practiceDrillGroups?: LiveDrillGroup[];
   opponent?: string;
   wristbandData?: WristbandData;
   scouting?: ScoutingData;
@@ -454,7 +480,7 @@ export interface StaffCoach {
   assignedTeamIds?: string[]; // IDs of teams this coach has access to. If undefined or includes 'all', coach has access to all teams.
   favoriteTeamId?: string; // Startup / favorite team linked to this user login
   startScreen?: UnitType; // Startup screen linked to this user login
-  startDepthSubUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage';
+  startDepthSubUnit?: DepthSubUnit;
   idleTimeoutMinutes?: number; // Inactivity logout timeout in minutes (e.g. 10, 15, 30, 60, 120, 240, or 0 = disabled/never)
 }
 

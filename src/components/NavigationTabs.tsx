@@ -22,7 +22,7 @@ import {
   PenTool,
   Home as HomeIcon,
 } from 'lucide-react';
-import { CustomTabGroup, UnitType, UserRole } from '../types';
+import { CustomTabGroup, UnitType, DepthSubUnit, UserRole } from '../types';
 import { safeJSONParse, safeJSONSet } from '../services/storageService';
 import { TabGroupManagerModal } from './TabGroupManagerModal';
 
@@ -30,8 +30,8 @@ interface NavigationTabsProps {
   activeUnit: UnitType;
   onSelectUnit: (unit: UnitType) => void;
   userRole: UserRole;
-  depthSubUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage';
-  onSelectDepthSubUnit?: (subUnit: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage') => void;
+  depthSubUnit?: DepthSubUnit;
+  onSelectDepthSubUnit?: (subUnit: DepthSubUnit) => void;
   defaultScreen?: UnitType;
   onSetDefaultScreen?: (screen: UnitType) => void;
   onOpenPreferencesModal?: () => void;
@@ -166,7 +166,7 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
     if (g.tabIds.includes(activeUnit)) return true;
     // If activeUnit is a depth chart sub-unit, check if depth_chart is in group
     if (
-      ['offense', 'defense', 'st', 'groups', 'scrimmage'].includes(activeUnit) &&
+      ['offense', 'defense', 'st', 'groups', 'scrimmage', 'practice_live'].includes(activeUnit) &&
       g.tabIds.includes('depth_chart')
     ) {
       return true;
@@ -177,7 +177,7 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
   // Check if depth chart is active
   const isDepthChartActive =
     activeUnit === 'depth_chart' ||
-    ['offense', 'defense', 'st', 'groups', 'scrimmage'].includes(activeUnit);
+    ['offense', 'defense', 'st', 'groups', 'scrimmage', 'practice_live'].includes(activeUnit);
 
   const handleTopTabClick = (tabOrGroupId: string) => {
     // 1. Check if clicked item is a Custom Tab Group
@@ -198,7 +198,7 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
     // 2. Standalone Tab Click
     const tabId = tabOrGroupId as UnitType;
     if (tabId === 'depth_chart') {
-      if (['offense', 'defense', 'st', 'groups', 'scrimmage'].includes(activeUnit)) {
+      if (['offense', 'defense', 'st', 'groups', 'scrimmage', 'practice_live'].includes(activeUnit)) {
         // already in depth chart unit
       } else {
         onSelectUnit(depthSubUnit || 'offense');

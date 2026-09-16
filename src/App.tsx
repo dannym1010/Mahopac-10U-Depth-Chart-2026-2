@@ -15,10 +15,13 @@ import {
   Menu,
   Layers,
   PenTool,
+  Flame,
 } from 'lucide-react';
 import { MobileNavigationModal } from './components/MobileNavigationModal';
 import {
   UnitType,
+  DepthSubUnit,
+  LiveDrillGroup,
   UserRole,
   RosterPlayer,
   PlacedPlayer,
@@ -104,6 +107,7 @@ import { DefensivePositionCategory, loadEffectiveWhiteboardDrills } from './comp
 import { RosterSidebar } from './components/RosterSidebar';
 import { FormationsView } from './components/FormationsView';
 import { ScrimmageView } from './components/ScrimmageView';
+import { PracticeLiveDrillsView } from './components/PracticeLiveDrillsView';
 import { WristbandView, normalizeWristbandContinuousNumbering } from './components/WristbandView';
 import { CallSheetMainView } from './components/CallSheetMainView';
 import { GameDayHubView } from './components/GameDayHubView';
@@ -356,9 +360,9 @@ export default function App() {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     return isMobile ? 'mobile_hub' : 'schedule';
   });
-  const [defaultDepthSubUnit, setDefaultDepthSubUnit] = useState<
-    'offense' | 'defense' | 'st' | 'groups' | 'scrimmage'
-  >(() => safeJSONParse('footballDefaultDepthSubUnit', 'offense'));
+  const [defaultDepthSubUnit, setDefaultDepthSubUnit] = useState<DepthSubUnit>(
+    () => safeJSONParse('footballDefaultDepthSubUnit', 'offense')
+  );
 
   // Active Session States (initializes to User Defaults if set)
   const [activeTeamId, setActiveTeamId] = useState<string>(() => {
@@ -391,9 +395,7 @@ export default function App() {
   });
   const activeUnit = _activeUnit;
 
-  const [depthSubUnit, setDepthSubUnit] = useState<
-    'offense' | 'defense' | 'st' | 'groups' | 'scrimmage'
-  >(() => {
+  const [depthSubUnit, setDepthSubUnit] = useState<DepthSubUnit>(() => {
     if (typeof window !== 'undefined' && window.location.hash) {
       const parsed = parseRouteHash(window.location.hash);
       if (parsed.subUnit) return parsed.subUnit;
@@ -447,7 +449,7 @@ export default function App() {
     (
       unit: UnitType,
       options?: {
-        subUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage';
+        subUnit?: DepthSubUnit;
         drillId?: string;
         drillCategory?: DefensivePositionCategory | 'ALL';
         practiceId?: string;
@@ -457,8 +459,8 @@ export default function App() {
     ) => {
       const effectiveSubUnit =
         options?.subUnit ||
-        (['offense', 'defense', 'st', 'groups', 'scrimmage'].includes(unit)
-          ? (unit as 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage')
+        (['offense', 'defense', 'st', 'groups', 'scrimmage', 'practice_live'].includes(unit)
+          ? (unit as DepthSubUnit)
           : undefined);
 
       if (effectiveSubUnit) {
@@ -592,8 +594,8 @@ export default function App() {
         const targetSubUnit = e?.state?.subUnit || parsed.subUnit;
         if (targetSubUnit) {
           setDepthSubUnit(targetSubUnit);
-        } else if (['offense', 'defense', 'st', 'groups', 'scrimmage'].includes(targetUnit)) {
-          setDepthSubUnit(targetUnit as any);
+        } else if (['offense', 'defense', 'st', 'groups', 'scrimmage', 'practice_live'].includes(targetUnit)) {
+          setDepthSubUnit(targetUnit as DepthSubUnit);
         }
 
         const targetDrillId = e?.state?.drillId || parsed.drillId;
@@ -7741,7 +7743,7 @@ function mergeRemoteWeeklyData(
             )}
 
             {/* Depth Chart Sub-Navigation Bar */}
-            {['offense', 'defense', 'st', 'groups', 'scrimmage', 'depth_chart'].includes(
+            {['offense', 'defense', 'st', 'groups', 'scrimmage', 'practice_live', 'depth_chart'].includes(
               activeUnit
             ) && (
               <div className="mb-4 bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar shadow-xs dark:shadow-md">
@@ -7754,7 +7756,8 @@ function mergeRemoteWeeklyData(
                   { id: 'defense', label: 'Defense', icon: Shield, isSpecial: false },
                   { id: 'st', label: 'Special Teams', icon: Target, isSpecial: false },
                   { id: 'groups', label: 'Position Groups', icon: Users, isSpecial: false },
-                  { id: 'scrimmage', label: '11v11 Scrimmage & Rotation', icon: Swords, isSpecial: true },
+                  { id: 'scrimmage', label: '11v11 Scrimmage & Rotation', icon: Swords, isSpecial: true, tag: 'Live', badgeColor: 'violet' },
+                  { id: 'practice_live', label: 'Practice 7v7 & 11v11 Drills', icon: Flame, isSpecial: true, tag: 'Live Drills', badgeColor: 'orange' },
                 ].map((sub) => {
                   const Icon = sub.icon;
                   const isActive =
@@ -7762,29 +7765,40 @@ function mergeRemoteWeeklyData(
                     (activeUnit === 'depth_chart' && depthSubUnit === sub.id);
 
                   if (sub.isSpecial) {
+                    const isOrange = sub.badgeColor === 'orange';
                     return (
                       <button
                         key={sub.id}
                         onClick={() => {
-                          setDepthSubUnit(sub.id as any);
-                          setActiveUnit(sub.id as any);
+                          setDepthSubUnit(sub.id as DepthSubUnit);
+                          setActiveUnit(sub.id as UnitType);
                         }}
                         className={`px-3.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer border ${
                           isActive
-                            ? 'bg-violet-600 text-white border-violet-500 shadow-sm shadow-violet-600/25 ring-1 ring-violet-400/40'
+                            ? isOrange
+                              ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white border-orange-500 shadow-sm shadow-orange-600/25 ring-1 ring-orange-400/40'
+                              : 'bg-violet-600 text-white border-violet-500 shadow-sm shadow-violet-600/25 ring-1 ring-violet-400/40'
                             : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-750 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white border-slate-200 dark:border-slate-700 shadow-xs'
                         }`}
                       >
-                        <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-violet-600 dark:text-violet-400'}`} />
+                        <Icon className={`w-3.5 h-3.5 ${
+                          isActive 
+                            ? 'text-white' 
+                            : isOrange 
+                              ? 'text-orange-600 dark:text-orange-400' 
+                              : 'text-violet-600 dark:text-violet-400'
+                        }`} />
                         <span>{sub.label}</span>
                         <span
                           className={`text-[9px] px-1.5 py-0.2 rounded-md font-bold uppercase tracking-wider ${
                             isActive
                               ? 'bg-white/20 text-white'
-                              : 'bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-700/50'
+                              : isOrange
+                                ? 'bg-orange-50 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-700/50'
+                                : 'bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-700/50'
                           }`}
                         >
-                          Live
+                          {sub.tag}
                         </span>
                       </button>
                     );
@@ -7794,8 +7808,8 @@ function mergeRemoteWeeklyData(
                     <button
                       key={sub.id}
                       onClick={() => {
-                        setDepthSubUnit(sub.id as any);
-                        setActiveUnit(sub.id as any);
+                        setDepthSubUnit(sub.id as DepthSubUnit);
+                        setActiveUnit(sub.id as UnitType);
                       }}
                       className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
                         isActive
@@ -7812,7 +7826,8 @@ function mergeRemoteWeeklyData(
             )}
 
             {/* 1. Formations View (Offense, Defense, Special Teams, Depth Chart Groups) */}
-            {['offense', 'defense', 'st', 'groups', 'depth_chart'].includes(activeUnit) && (
+            {((['offense', 'defense', 'st', 'groups'].includes(activeUnit)) ||
+              (activeUnit === 'depth_chart' && ['offense', 'defense', 'st', 'groups'].includes(depthSubUnit))) && (
               <>
                 {depthChartCopyCandidate && (
                   <div className="mb-4 p-4 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border border-indigo-500/50 shadow-xl flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -7868,12 +7883,12 @@ function mergeRemoteWeeklyData(
                 <FormationsView
                 key={
                   activeUnit === 'depth_chart'
-                    ? (depthSubUnit === 'scrimmage' ? 'offense' : (depthSubUnit || 'offense'))
+                    ? (['offense', 'defense', 'st', 'groups'].includes(depthSubUnit) ? (depthSubUnit as 'offense' | 'defense' | 'st' | 'groups') : 'offense')
                     : (activeUnit as 'offense' | 'defense' | 'st' | 'groups')
                 }
                 unit={
                   activeUnit === 'depth_chart'
-                    ? (depthSubUnit === 'scrimmage' ? 'offense' : (depthSubUnit || 'offense'))
+                    ? (['offense', 'defense', 'st', 'groups'].includes(depthSubUnit) ? (depthSubUnit as 'offense' | 'defense' | 'st' | 'groups') : 'offense')
                     : (activeUnit as 'offense' | 'defense' | 'st' | 'groups')
                 }
                 formations={currentFormations}
@@ -7939,7 +7954,7 @@ function mergeRemoteWeeklyData(
             )}
 
             {/* 2. Practice / Scrimmage Rotation */}
-            {activeUnit === 'scrimmage' && (
+            {(activeUnit === 'scrimmage' || (activeUnit === 'depth_chart' && depthSubUnit === 'scrimmage')) && (
               <ScrimmageView
                 formations={currentFormations}
                 scrimmageChart={currentScrimmageChart}
@@ -7952,6 +7967,44 @@ function mergeRemoteWeeklyData(
                 onOpenScrimmagePrintModal={() => triggerPrint()}
                 onDropPlayerOnScrimmageCard={handleDropPlayerOnCard}
                 onRemovePlayerFromScrimmageCard={handleRemovePlayerFromCard}
+                onDragStartPlacedPlayer={handleDragStartPlacedPlayer}
+              />
+            )}
+
+            {/* 2b. Practice Live Drills & Matchups (7v7 / 11v11) */}
+            {(activeUnit === 'practice_live' || (activeUnit === 'depth_chart' && depthSubUnit === 'practice_live')) && (
+              <PracticeLiveDrillsView
+                currentWeek={currentWeek}
+                practiceDrillGroups={currentWeekState.practiceDrillGroups || []}
+                onUpdatePracticeDrillGroups={(updatedGroups) => {
+                  setWeeklyData((prev) => {
+                    const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
+                    const existingWeek = prev[scopedKey] || prev[currentWeek] || {
+                      formations: defaultFormations,
+                      depthChart: {},
+                      scrimmageChart: {},
+                    };
+                    const updatedWeek: WeekState = {
+                      ...existingWeek,
+                      practiceDrillGroups: updatedGroups,
+                    };
+                    safeJSONSet('footballWeeklyData', {
+                      ...prev,
+                      [scopedKey]: updatedWeek,
+                      [currentWeek]: updatedWeek,
+                    });
+                    return {
+                      ...prev,
+                      [scopedKey]: updatedWeek,
+                      [currentWeek]: updatedWeek,
+                    };
+                  });
+                }}
+                roster={activeTeamRoster}
+                userRole={userRole}
+                depthChart={currentDepthChart}
+                formations={currentFormations}
+                activeTeam={currentActiveTeam}
                 onDragStartPlacedPlayer={handleDragStartPlacedPlayer}
               />
             )}

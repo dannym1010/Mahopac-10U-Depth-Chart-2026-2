@@ -34,7 +34,7 @@ import {
   Camera,
   Home as HomeIcon,
 } from 'lucide-react';
-import { CustomTabGroup, UnitType, UserRole, Team } from '../types';
+import { CustomTabGroup, UnitType, DepthSubUnit, UserRole, Team } from '../types';
 import { safeJSONParse, safeJSONSet } from '../services/storageService';
 import { TabGroupManagerModal } from './TabGroupManagerModal';
 import { CustomLogoModal, TeamLogoConfig, DEFAULT_TEAM_LOGO } from './CustomLogoModal';
@@ -50,8 +50,8 @@ export interface SidebarNavigationProps {
   activeUnit: UnitType;
   onSelectUnit: (unit: UnitType) => void;
   userRole: UserRole;
-  depthSubUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage';
-  onSelectDepthSubUnit?: (subUnit: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage') => void;
+  depthSubUnit?: DepthSubUnit;
+  onSelectDepthSubUnit?: (subUnit: DepthSubUnit) => void;
   defaultScreen?: UnitType;
   onSetDefaultScreen?: (screen: UnitType) => void;
   onOpenPreferencesModal?: () => void;
@@ -588,7 +588,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         ...prev,
         drills_main: true,
       }));
-    } else if (['offense', 'defense', 'st', 'groups', 'scrimmage', 'depth_chart'].includes(activeUnit)) {
+    } else if (['offense', 'defense', 'st', 'groups', 'scrimmage', 'practice_live', 'depth_chart'].includes(activeUnit)) {
       setExpandedFolders((prev) => ({
         ...prev,
         depth_chart_main: true,
@@ -658,7 +658,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   // Check if an item is active
   const isItemActive = (id: UnitType) => {
     if (id === 'depth_chart') {
-      return ['depth_chart', 'offense', 'defense', 'st', 'groups', 'scrimmage'].includes(activeUnit);
+      return ['depth_chart', 'offense', 'defense', 'st', 'groups', 'scrimmage', 'practice_live'].includes(activeUnit);
     }
     if (id === 'offense') {
       return activeUnit === 'offense' || (activeUnit === 'depth_chart' && depthSubUnit === 'offense');
@@ -1232,6 +1232,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                         { id: 'st', label: '⚡ Special Teams (KOR, Punt)' },
                         { id: 'groups', label: '👥 Position Groups Matrix' },
                         { id: 'scrimmage', label: '⚔️ 11v11 Scrimmage & Rotation' },
+                        { id: 'practice_live', label: '🔥 7v7 / 11v11 Practice Drills' },
                       ].map((sub) => {
                         const isSubActive =
                           activeUnit === sub.id || (activeUnit === 'depth_chart' && depthSubUnit === sub.id);
@@ -1287,6 +1288,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                             { id: 'st', label: '⚡ Special Teams' },
                             { id: 'groups', label: '👥 Groups' },
                             { id: 'scrimmage', label: '⚔️ Scrimmage' },
+                            { id: 'practice_live', label: '🔥 7v7 / 11v11 Drills' },
                           ].map((s) => (
                             <button
                               key={s.id}

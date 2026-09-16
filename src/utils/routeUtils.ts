@@ -1,4 +1,4 @@
-import { UnitType } from '../types';
+import { UnitType, DepthSubUnit } from '../types';
 import { DefensivePositionCategory } from '../components/whiteboard/whiteboardDrillData';
 
 export const VALID_UNITS: Set<string> = new Set([
@@ -11,6 +11,7 @@ export const VALID_UNITS: Set<string> = new Set([
   'st',
   'groups',
   'scrimmage',
+  'practice_live',
   'wristband',
   'call_sheet',
   'schedule',
@@ -27,7 +28,7 @@ export const VALID_UNITS: Set<string> = new Set([
 
 export interface RouteState {
   unit: UnitType | null;
-  subUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage';
+  subUnit?: DepthSubUnit;
   drillId?: string;
   drillCategory?: DefensivePositionCategory | 'ALL';
   practiceId?: string;
@@ -56,8 +57,8 @@ export function parseRouteHash(hashStr: string): RouteState {
   if (queryPart) {
     const params = new URLSearchParams(queryPart);
     const sub = params.get('sub');
-    if (sub && ['offense', 'defense', 'st', 'groups', 'scrimmage'].includes(sub)) {
-      result.subUnit = sub as 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage';
+    if (sub && ['offense', 'defense', 'st', 'groups', 'scrimmage', 'practice_live'].includes(sub)) {
+      result.subUnit = sub as DepthSubUnit;
     }
     const drill = params.get('drill');
     if (drill) result.drillId = drill;
@@ -71,8 +72,8 @@ export function parseRouteHash(hashStr: string): RouteState {
     }
   }
 
-  if (['offense', 'defense', 'st', 'groups', 'scrimmage'].includes(unit)) {
-    result.subUnit = unit as 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage';
+  if (['offense', 'defense', 'st', 'groups', 'scrimmage', 'practice_live'].includes(unit)) {
+    result.subUnit = unit as DepthSubUnit;
   }
 
   return result;
@@ -84,7 +85,7 @@ export function parseRouteHash(hashStr: string): RouteState {
 export function buildRouteHash(
   unit: UnitType,
   options?: {
-    subUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage';
+    subUnit?: DepthSubUnit;
     drillId?: string;
     drillCategory?: DefensivePositionCategory | 'ALL';
     practiceId?: string;

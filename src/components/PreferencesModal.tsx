@@ -28,8 +28,9 @@ import {
   Sun,
   Moon,
   Clock,
+  Flame,
 } from 'lucide-react';
-import { UnitType, Team, UserRole } from '../types';
+import { UnitType, DepthSubUnit, Team, UserRole } from '../types';
 
 interface PreferencesModalProps {
   isOpen: boolean;
@@ -40,10 +41,10 @@ interface PreferencesModalProps {
   onSetDefaultTeam: (teamId: string) => void;
   activeUnit: UnitType;
   defaultScreen: UnitType;
-  defaultDepthSubUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage';
+  defaultDepthSubUnit?: DepthSubUnit;
   onSetDefaultScreen: (
     screen: UnitType,
-    subUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage'
+    subUnit?: DepthSubUnit
   ) => void;
   userRole: UserRole;
   currentUserEmail?: string;
@@ -64,7 +65,7 @@ interface PreferencesModalProps {
 
 interface ScreenOption {
   id: UnitType;
-  subUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage';
+  subUnit?: DepthSubUnit;
   name: string;
   category: string;
   description: string;
@@ -133,6 +134,14 @@ const SCREEN_OPTIONS: ScreenOption[] = [
     category: 'Depth Chart',
     description: 'Inter-squad scrimmage lineups, team color cards, and head-to-head depth',
     icon: Swords,
+  },
+  {
+    id: 'depth_chart',
+    subUnit: 'practice_live',
+    name: 'Practice 7v7 / 11v11 Drills',
+    category: 'Depth Chart',
+    description: 'Offense vs Defense live drill sets, 7v7 & 11v11 matchups with custom labels',
+    icon: Flame,
   },
   {
     id: 'wristband',
@@ -233,7 +242,7 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
 
   const handleSelectDefaultScreen = (
     screenId: UnitType,
-    subUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage'
+    subUnit?: DepthSubUnit
   ) => {
     onSetDefaultScreen(screenId, subUnit);
     const option = SCREEN_OPTIONS.find(

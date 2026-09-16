@@ -21,14 +21,14 @@ import {
   Sliders,
   Sparkles,
 } from 'lucide-react';
-import { UnitType, UserRole } from '../types';
+import { UnitType, DepthSubUnit, UserRole } from '../types';
 
 interface MobileNavigationModalProps {
   isOpen: boolean;
   onClose: () => void;
   activeUnit: UnitType;
-  depthSubUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage';
-  onSelectUnit: (unit: UnitType, subUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage') => void;
+  depthSubUnit?: DepthSubUnit;
+  onSelectUnit: (unit: UnitType, subUnit?: DepthSubUnit) => void;
   userRole: UserRole;
   activeTeamName?: string;
   onOpenPreferencesModal?: () => void;
@@ -36,7 +36,7 @@ interface MobileNavigationModalProps {
 
 interface NavSectionItem {
   id: UnitType;
-  subUnit?: 'offense' | 'defense' | 'st' | 'groups' | 'scrimmage';
+  subUnit?: DepthSubUnit;
   label: string;
   subtitle: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -153,6 +153,15 @@ export const MobileNavigationModal: React.FC<MobileNavigationModalProps> = ({
             subtitle: 'Live 11v11 scrimmage rotation board & snap tracking',
             icon: Swords,
             accentColor: 'border-indigo-500/40 hover:bg-indigo-950/40 text-indigo-300',
+          },
+          {
+            id: 'practice_live',
+            subUnit: 'practice_live',
+            label: '🔥 Practice 7v7 / 11v11 Drills',
+            subtitle: 'Custom offense vs defense drill sets, 7v7 & 11v11 matchups',
+            icon: Swords,
+            accentColor: 'border-orange-500/40 hover:bg-orange-950/40 text-orange-300',
+            badge: 'Live',
           },
         ],
       },
