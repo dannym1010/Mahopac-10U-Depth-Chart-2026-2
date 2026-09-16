@@ -4076,4 +4076,360 @@ export function printPocketDepthChart(
   printCleanHTML(html, title);
 }
 
+/* =========================================================================
+   FORMATION TACTICAL FIELD DEPTH CHART BULLETPROOF PRINT ENGINE
+   ========================================================================= */
+
+export interface FormationDepthChartPrintOptions {
+  orientation?: 'portrait' | 'landscape';
+  layout?: '1_per_page' | '2_per_page';
+  depthLevels?: 'starters_only' | '2_deep' | '3_deep' | 'all';
+  colorMode?: 'color' | 'sideline_contrast' | 'ink_friendly';
+  selectedFormationIds?: string[];
+  unitFilter?: 'offense' | 'defense' | 'st' | 'both_off_def' | 'all' | 'current';
+  teamName?: string;
+  seasonLabel?: string;
+  highlightedCells?: Record<string, 'black' | 'gold' | 'blue' | string>;
+}
+
+/**
+ * Generate isolated, crisp, print-ready HTML for the Tactical Field Diagram Depth Chart.
+ * Produces full-size tactical diagrams with exact position slots, starters, D2 gold, D3 royal blue,
+ * backups, and high-visibility player highlighting.
+ */
+export function generateFormationDepthChartPrintHTML(
+  formations: FormationBoard[],
+  depthChart: Record<string, PlacedPlayer[]>,
+  options?: FormationDepthChartPrintOptions
+): string {
+  const orientation = options?.orientation || 'landscape';
+  const layout = options?.layout || '1_per_page';
+  const depthLevels = options?.depthLevels || 'all';
+  const colorMode = options?.colorMode || 'color';
+  const inkFriendly = colorMode === 'ink_friendly';
+  const teamName = options?.teamName || 'VARSITY FOOTBALL';
+  const seasonLabel = options?.seasonLabel || '2026 SEASON';
+  const highlightedCells = options?.highlightedCells || {};
+
+  // Filter formations based on unit or selected list
+  let targetFormations = [...formations];
+  if (options?.selectedFormationIds && options.selectedFormationIds.length > 0) {
+    const selSet = new Set(options.selectedFormationIds);
+    targetFormations = targetFormations.filter((f) => selSet.has(f.id));
+  } else if (options?.unitFilter && options.unitFilter !== 'all') {
+    if (options.unitFilter === 'both_off_def') {
+      targetFormations = targetFormations.filter((f) => f.unit === 'offense' || f.unit === 'defense');
+    } else if (options.unitFilter !== 'current') {
+      targetFormations = targetFormations.filter((f) => f.unit === options.unitFilter);
+    }
+  }
+
+  if (targetFormations.length === 0) {
+    targetFormations = formations;
+  }
+
+  const getPlayerHighlightStyle = (cellKey: string, tierTeam: 'black' | 'gold' | 'blue'): { bg: string; border: string; text: string; shadow?: string } | null => {
+    const customHl = highlightedCells[cellKey];
+    if (!customHl) return null;
+
+    if (customHl === 'black') {
+      return {
+        bg: '#e2e8f0',
+        border: '#09090b',
+        text: '#000000',
+        shadow: '0 0 0 2px #0f172a',
+      };
+    }
+    if (customHl === 'gold') {
+      return {
+        bg: '#fef08a',
+        border: '#ca8a04',
+        text: '#000000',
+        shadow: '0 0 0 2px #facc15',
+      };
+    }
+    if (customHl === 'blue') {
+      return {
+        bg: '#bfdbfe',
+        border: '#1d4ed8',
+        text: '#0f172a',
+        shadow: '0 0 0 2px #3b82f6',
+      };
+    }
+    return null;
+  };
+
+  const formationsHtml = targetFormations.map((form, formIdx) => {
+    const unitBadgeBg = form.unit === 'offense' ? '#2563eb' : form.unit === 'defense' ? '#dc2626' : form.unit === 'st' ? '#7c3aed' : '#475569';
+    const unitLabel = form.unit === 'offense' ? 'OFFENSE' : form.unit === 'defense' ? 'DEFENSE' : form.unit === 'st' ? 'SPECIAL TEAMS' : 'FORMATION';
+
+    const rowsHtml = form.rows.map((row) => {
+      const nonNullSlots = row.positions.filter((p): p is NonNullable<typeof p> => p !== null);
+      if (nonNullSlots.length === 0) return '';
+
+      const slotCols = row.positions.map((slot) => {
+        if (!slot) {
+          return '<div style="visibility: hidden; min-height: 48px;"></div>';
+        }
+
+        const slotKey = `${form.id}__${slot.id}`;
+        const slotHighlight = getPlayerHighlightStyle(slotKey, 'black');
+        const allPlayers = depthChart[slot.id] || [];
+
+        let visiblePlayers: PlacedPlayer[] = [];
+        if (depthLevels === 'starters_only') {
+          visiblePlayers = allPlayers.slice(0, 1);
+        } else if (depthLevels === '2_deep') {
+          visiblePlayers = allPlayers.slice(0, 2);
+        } else if (depthLevels === '3_deep') {
+          visiblePlayers = allPlayers.slice(0, 3);
+        } else {
+          visiblePlayers = allPlayers;
+        }
+
+        const playersHtml = visiblePlayers.length > 0
+          ? visiblePlayers.map((p, pIdx) => {
+              const tierTeam = pIdx === 0 ? 'black' : pIdx === 1 ? 'gold' : 'blue';
+              const playerKey = `${form.id}__${slot.id}__${tierTeam}`;
+              const playerHl = getPlayerHighlightStyle(playerKey, tierTeam) || slotHighlight;
+
+              if (inkFriendly) {
+                const tag = pIdx === 0 ? 'ST' : pIdx === 1 ? 'D2' : pIdx === 2 ? 'D3' : `D${pIdx + 1}`;
+                const tagStyle = pIdx === 0
+                  ? 'background: #000; color: #fff;'
+                  : 'background: #f1f5f9; color: #000; border: 1px solid #000;';
+                const rowBg = playerHl ? playerHl.bg : (pIdx === 0 ? '#ffffff' : pIdx === 1 ? '#f8fafc' : '#ffffff');
+                const border = playerHl ? `1.5px solid ${playerHl.border}` : '1px solid #cbd5e1';
+
+                return `
+                  <div style="display: flex; align-items: center; justify-content: space-between; padding: 2.5px 5px; margin-bottom: 2px; border-radius: 3px; background: ${rowBg}; border: ${border}; min-height: 20px; box-sizing: border-box;">
+                    <div style="display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden;">
+                      <span style="display: inline-block; font-size: 8.5px; font-weight: 900; padding: 1px 3px; border-radius: 2px; ${tagStyle} shrink: 0;">${tag}</span>
+                      <span style="font-family: monospace; font-size: 10px; font-weight: 900; color: #000; shrink: 0;">#${p.num}</span>
+                      <span style="font-size: 10.5px; font-weight: 900; text-transform: uppercase; color: #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name}</span>
+                    </div>
+                  </div>
+                `;
+              }
+
+              // Color / High-visibility Mode
+              if (pIdx === 0) {
+                // Starter / 1st String: Solid Obsidian Black
+                const bg = playerHl ? playerHl.bg : '#09090b';
+                const text = playerHl ? playerHl.text : '#ffffff';
+                const border = playerHl ? `2px solid ${playerHl.border}` : '1.5px solid #27272a';
+                const tagBg = playerHl ? '#000000' : '#ffffff';
+                const tagColor = playerHl ? '#ffffff' : '#000000';
+
+                return `
+                  <div style="display: flex; align-items: center; justify-content: space-between; padding: 2.5px 5px; margin-bottom: 2.5px; border-radius: 3px; background: ${bg}; color: ${text}; border: ${border}; min-height: 21px; box-sizing: border-box; ${playerHl?.shadow ? `box-shadow: ${playerHl.shadow};` : ''}">
+                    <div style="display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden;">
+                      <span style="display: inline-block; font-size: 8.5px; font-weight: 900; padding: 1px 3.5px; border-radius: 2px; background: ${tagBg}; color: ${tagColor}; shrink: 0;">ST</span>
+                      <span style="font-family: monospace; font-size: 10px; font-weight: 900; color: ${text}; shrink: 0;">#${p.num}</span>
+                      <span style="font-size: 10.5px; font-weight: 900; text-transform: uppercase; color: ${text}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name}</span>
+                    </div>
+                  </div>
+                `;
+              } else if (pIdx === 1) {
+                // 2nd String: Athletic Gold
+                const bg = playerHl ? playerHl.bg : '#facc15';
+                const text = playerHl ? playerHl.text : '#000000';
+                const border = playerHl ? `2px solid ${playerHl.border}` : '1.5px solid #ca8a04';
+
+                return `
+                  <div style="display: flex; align-items: center; justify-content: space-between; padding: 2.5px 5px; margin-bottom: 2.5px; border-radius: 3px; background: ${bg}; color: ${text}; border: ${border}; min-height: 21px; box-sizing: border-box; ${playerHl?.shadow ? `box-shadow: ${playerHl.shadow};` : ''}">
+                    <div style="display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden;">
+                      <span style="display: inline-block; font-size: 8.5px; font-weight: 900; padding: 1px 3.5px; border-radius: 2px; background: #000000; color: #facc15; shrink: 0;">D2</span>
+                      <span style="font-family: monospace; font-size: 10px; font-weight: 900; color: ${text}; shrink: 0;">#${p.num}</span>
+                      <span style="font-size: 10.5px; font-weight: 900; text-transform: uppercase; color: ${text}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name}</span>
+                    </div>
+                  </div>
+                `;
+              } else if (pIdx === 2) {
+                // 3rd String: Royal Blue (Ultra Crisp, 100% Guaranteed High Contrast)
+                const bg = playerHl ? playerHl.bg : '#1d4ed8';
+                const text = playerHl ? playerHl.text : '#ffffff';
+                const border = playerHl ? `2px solid ${playerHl.border}` : '1.5px solid #1e40af';
+                const tagBg = playerHl ? '#1d4ed8' : '#ffffff';
+                const tagColor = playerHl ? '#ffffff' : '#1d4ed8';
+
+                return `
+                  <div style="display: flex; align-items: center; justify-content: space-between; padding: 2.5px 5px; margin-bottom: 2.5px; border-radius: 3px; background: ${bg}; color: ${text}; border: ${border}; min-height: 21px; box-sizing: border-box; ${playerHl?.shadow ? `box-shadow: ${playerHl.shadow};` : ''}">
+                    <div style="display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden;">
+                      <span style="display: inline-block; font-size: 8.5px; font-weight: 900; padding: 1px 3.5px; border-radius: 2px; background: ${tagBg}; color: ${tagColor}; shrink: 0; border: 1px solid #ffffff;">D3</span>
+                      <span style="font-family: monospace; font-size: 10px; font-weight: 900; color: ${text}; shrink: 0;">#${p.num}</span>
+                      <span style="font-size: 10.5px; font-weight: 900; text-transform: uppercase; color: ${text}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name}</span>
+                    </div>
+                  </div>
+                `;
+              } else {
+                // 4th String / Backups: Pure White with Dark Text
+                const bg = playerHl ? playerHl.bg : '#ffffff';
+                const text = playerHl ? playerHl.text : '#0f172a';
+                const border = playerHl ? `2px solid ${playerHl.border}` : '1.5px solid #94a3b8';
+
+                return `
+                  <div style="display: flex; align-items: center; justify-content: space-between; padding: 2px 4px; margin-bottom: 2px; border-radius: 3px; background: ${bg}; color: ${text}; border: ${border}; min-height: 20px; box-sizing: border-box;">
+                    <div style="display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden;">
+                      <span style="display: inline-block; font-size: 8px; font-weight: 800; padding: 1px 3px; border-radius: 2px; background: #e2e8f0; color: #0f172a; border: 1px solid #cbd5e1; shrink: 0;">D${pIdx + 1}</span>
+                      <span style="font-family: monospace; font-size: 9.5px; font-weight: 800; color: ${text}; shrink: 0;">#${p.num}</span>
+                      <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: ${text}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name}</span>
+                    </div>
+                  </div>
+                `;
+              }
+            }).join('')
+          : `
+            <div style="display: flex; align-items: center; justify-content: center; min-height: 38px; border: 1.5px dashed #cbd5e1; border-radius: 3px; background: #f8fafc; color: #94a3b8; font-size: 9.5px; font-weight: 800;">
+              OPEN
+            </div>
+          `;
+
+        const cardBorder = slotHighlight ? `2.5px solid ${slotHighlight.border}` : '2px solid #000000';
+        const cardBg = slotHighlight ? slotHighlight.bg : '#ffffff';
+
+        return `
+          <div style="border: ${cardBorder}; background: ${cardBg}; border-radius: 4px; overflow: hidden; display: flex; flex-direction: column; min-height: 60px; box-sizing: border-box; ${slotHighlight?.shadow ? `box-shadow: ${slotHighlight.shadow};` : ''}">
+            <div style="background: #ffffff; color: #000000; font-size: 11px; font-weight: 900; padding: 2.5px 4px; border-bottom: 2px solid #000000; text-align: center; text-transform: uppercase; letter-spacing: 0.04em;">
+              ${slot.name}
+            </div>
+            <div style="padding: 3.5px; flex: 1; display: flex; flex-direction: column;">
+              ${playersHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div style="margin-bottom: 8px;">
+          ${row.label ? `
+            <div style="background: #f1f5f9; border: 1.5px solid #94a3b8; border-left: 6px solid #0f172a; color: #0f172a; font-size: 10px; font-weight: 900; padding: 2px 6px; margin-bottom: 4px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.03em;">
+              ${row.label}
+            </div>
+          ` : ''}
+          <div style="display: grid; grid-template-columns: repeat(${row.positions.length}, minmax(0, 1fr)); gap: 6px; align-items: stretch;">
+            ${slotCols}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const pageBreakStyle = layout === '1_per_page'
+      ? 'page-break-after: always; break-after: page;'
+      : 'break-inside: avoid; page-break-inside: avoid; margin-bottom: 22px;';
+
+    return `
+      <div class="formation-print-page" style="${pageBreakStyle} box-sizing: border-box;">
+        <!-- Header Banner -->
+        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #000000; padding-bottom: 6px; margin-bottom: 10px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h1 style="margin: 0; font-size: 19pt; font-weight: 900; text-transform: uppercase; letter-spacing: 0.02em; color: #000000; line-height: 1.1;">
+                ${form.name}
+              </h1>
+              <span style="display: inline-block; font-size: 10.5px; font-weight: 900; padding: 2px 8px; border-radius: 3px; background: ${inkFriendly ? '#000000' : unitBadgeBg}; color: #ffffff; text-transform: uppercase; letter-spacing: 0.05em;">
+                ${unitLabel}
+              </span>
+            </div>
+            <div style="font-size: 10pt; font-weight: 700; color: #475569; margin-top: 2px;">
+              ${teamName.toUpperCase()} &bull; ${seasonLabel.toUpperCase()}${form.subtitle ? ` &bull; ${form.subtitle}` : ''}
+            </div>
+          </div>
+
+          <!-- Color Legend -->
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 9.5px; font-weight: 900; text-transform: uppercase;">
+            <div style="display: flex; align-items: center; gap: 3.5px;">
+              <span style="display: inline-block; width: 14px; height: 14px; background: #09090b; border: 1px solid #000; border-radius: 2px;"></span>
+              <span>1st (Starters)</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 3.5px;">
+              <span style="display: inline-block; width: 14px; height: 14px; background: #facc15; border: 1px solid #ca8a04; border-radius: 2px;"></span>
+              <span>2nd (Gold)</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 3.5px;">
+              <span style="display: inline-block; width: 14px; height: 14px; background: #1d4ed8; border: 1px solid #1e40af; border-radius: 2px;"></span>
+              <span>3rd (Blue)</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 3.5px;">
+              <span style="display: inline-block; width: 14px; height: 14px; background: #ffffff; border: 1px solid #94a3b8; border-radius: 2px;"></span>
+              <span>4th+ (Backups)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Field Rows -->
+        <div style="min-height: 250px;">
+          ${rowsHtml}
+        </div>
+
+        <!-- Formation Sheet Footer -->
+        <div style="margin-top: 12px; padding-top: 5px; border-top: 1.5px solid #cbd5e1; display: flex; justify-content: space-between; font-size: 8.5pt; font-weight: 800; color: #64748b;">
+          <span>${form.name} Tactical Depth Chart &bull; Formation ${formIdx + 1} of ${targetFormations.length}</span>
+          <span>Printed on ${new Date().toLocaleDateString()} &bull; Football Tactical Manager</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${teamName}_FORMATION_DEPTH_CHARTS</title>
+  <style>
+    @page {
+      size: letter ${orientation};
+      margin: 0.25in;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff !important;
+      color: #000000 !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    .formation-print-page:last-child {
+      page-break-after: auto !important;
+      break-after: auto !important;
+    }
+
+    @media print {
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  ${formationsHtml}
+</body>
+</html>`;
+}
+
+/**
+ * Direct print trigger for Tactical Field Formation Depth Chart using clean HTML engine.
+ */
+export function printFormationDepthChart(
+  formations: FormationBoard[],
+  depthChart: Record<string, PlacedPlayer[]>,
+  options?: FormationDepthChartPrintOptions
+) {
+  const html = generateFormationDepthChartPrintHTML(formations, depthChart, options);
+  const title = `${options?.teamName || 'Football'}_Formation_Depth_Charts`;
+  printCleanHTML(html, title);
+}
+
 

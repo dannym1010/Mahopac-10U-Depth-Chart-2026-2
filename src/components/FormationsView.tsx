@@ -56,6 +56,7 @@ import {
 } from '../types';
 import { triggerPrint } from '../utils/printUtils';
 import { PocketDepthChartPrintModal } from './PocketDepthChartPrintModal';
+import { FormationDepthChartPrintModal } from './FormationDepthChartPrintModal';
 
 interface FormationsViewProps {
   unit: 'offense' | 'defense' | 'st' | 'groups';
@@ -289,6 +290,8 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
   const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null);
   const [isPocketPrintModalOpen, setIsPocketPrintModalOpen] = useState(false);
   const [selectedPocketPrintFormId, setSelectedPocketPrintFormId] = useState<string | null>(null);
+  const [isFormationPrintModalOpen, setIsFormationPrintModalOpen] = useState(false);
+  const [selectedFormationPrintId, setSelectedFormationPrintId] = useState<string | null>(null);
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [copySourceTeamId, setCopySourceTeamId] = useState(
     teams.find((t) => t.id !== activeTeam?.id)?.id || teams[0]?.id || ''
@@ -947,14 +950,11 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
 
           <button
             onClick={() => {
-              triggerPrint({
-                orientation: 'landscape',
-                bodyClasses: ['is-printing-formations'],
-                documentTitle: `${teamDisplayName ? `${teamDisplayName.toUpperCase()}_` : ''}${unit.toUpperCase()}_FORMATION_DEPTH_CHARTS`,
-              });
+              setSelectedFormationPrintId(null);
+              setIsFormationPrintModalOpen(true);
             }}
             className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-950 dark:text-slate-200 dark:hover:text-white font-bold text-xs rounded-xl border border-slate-200 dark:border-slate-750 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
-            title="Print Depth Chart Formations"
+            title="Print Depth Chart Formations with Options (Depth, Highlighting, Page Breaks)"
           >
             <Printer className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
             <span>Print</span>
@@ -1912,6 +1912,18 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedFormationPrintId(form.id);
+                        setIsFormationPrintModalOpen(true);
+                      }}
+                      title={`Print ${form.name} Depth Chart`}
+                      className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-750 border border-slate-750 rounded-xl transition-all cursor-pointer"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                    </button>
+
                     <button
                       onClick={() => {
                         setDeleteFormationTarget({
@@ -3736,6 +3748,22 @@ export const FormationsView: React.FC<FormationsViewProps> = ({
           activeUnit={unit}
           activeTeamName={activeTeam?.name || 'Football Manager'}
           initialSelectedFormationId={selectedPocketPrintFormId}
+        />
+      )}
+
+      {/* Dedicated Tactical Field Formation Depth Chart Print Modal */}
+      {isFormationPrintModalOpen && (
+        <FormationDepthChartPrintModal
+          isOpen={isFormationPrintModalOpen}
+          onClose={() => {
+            setIsFormationPrintModalOpen(false);
+            setSelectedFormationPrintId(null);
+          }}
+          formations={formations}
+          depthChart={depthChart}
+          activeUnit={unit}
+          activeTeamName={activeTeam?.name || 'Football Manager'}
+          initialSelectedFormationId={selectedFormationPrintId}
         />
       )}
     </div>

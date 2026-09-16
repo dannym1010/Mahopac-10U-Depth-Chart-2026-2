@@ -520,9 +520,7 @@ body.theme-light {
 
   #root,
   #root > div,
-  #root div,
   main,
-  main div,
   .min-h-screen,
   [class*="min-h-screen"],
   .h-screen,
@@ -531,17 +529,19 @@ body.theme-light {
   [class*="overflow-x-hidden"],
   [class*="overflow-x-auto"],
   [class*="overflow-hidden"],
-  [class*="overflow-auto"],
-  body.is-printing div,
-  body.is-printing-formations div {
-    background-color: #ffffff !important;
-    background: #ffffff !important;
-    color: #000000 !important;
+  [class*="overflow-auto"] {
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
     overflow: visible !important;
     position: static !important;
+  }
+
+  body.is-printing,
+  body.is-printing-formations {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
   }
 
   #root,
@@ -1128,7 +1128,7 @@ body.theme-light {
   /* 4th line: D3 should be Blue with white text */
   .print-player-badge-d3 {
     background-color: #1d4ed8 !important; /* 3rd String: Royal Blue */
-    color: #ffffff !important; /* White Text */
+    color: #ffffff !important; /* Pure White Text */
     border: 1.5px solid #1e40af !important; /* Deep Blue Border */
     font-size: 10px !important;
     font-weight: 900 !important;
@@ -1144,7 +1144,8 @@ body.theme-light {
   }
 
   .print-player-badge-d3 span:not(.print-tag-d3),
-  .print-player-badge-d3 div {
+  .print-player-badge-d3 div:not(.print-tag-d3),
+  .print-player-badge-d3 strong {
     color: #ffffff !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
@@ -1164,6 +1165,61 @@ body.theme-light {
     display: inline-block !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  /* High-Impact Cell / Badge Highlighting for Printouts */
+  .print-highlight-gold,
+  [data-print-highlight="gold"] {
+    background-color: #fef08a !important; /* Soft bright gold */
+    border: 2px solid #ca8a04 !important; /* Rich amber border */
+    box-shadow: 0 0 0 2px #facc15 !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-highlight-gold span,
+  .print-highlight-gold div,
+  [data-print-highlight="gold"] span,
+  [data-print-highlight="gold"] div {
+    color: #000000 !important;
+    font-weight: 900 !important;
+  }
+
+  .print-highlight-blue,
+  [data-print-highlight="blue"] {
+    background-color: #bfdbfe !important; /* Soft sky blue */
+    border: 2px solid #1d4ed8 !important; /* Royal blue border */
+    box-shadow: 0 0 0 2px #3b82f6 !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-highlight-blue span,
+  .print-highlight-blue div,
+  [data-print-highlight="blue"] span,
+  [data-print-highlight="blue"] div {
+    color: #0f172a !important;
+    font-weight: 900 !important;
+  }
+
+  .print-highlight-black,
+  [data-print-highlight="black"] {
+    background-color: #e2e8f0 !important; /* High contrast slate */
+    border: 2px solid #09090b !important; /* Deep black border */
+    box-shadow: 0 0 0 2px #0f172a !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-highlight-black span,
+  .print-highlight-black div,
+  [data-print-highlight="black"] span,
+  [data-print-highlight="black"] div {
+    color: #000000 !important;
+    font-weight: 900 !important;
   }
 
   /* 5th line+: D4 is good (White with black text and slate border) */
