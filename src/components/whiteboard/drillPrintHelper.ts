@@ -3,10 +3,205 @@ import { printCleanHTML } from '../../utils/printUtils';
 import { spreadDiagramElements } from './whiteboardSpreadHelper';
 
 /**
+ * Dedicated high-contrast vector diagram for the Triangle Block Pop & Directional Peek drill,
+ * matching the default/initial setup view of the new interactive whiteboard.
+ */
+function generateTriangleDrillPrintSvg(): string {
+  return `
+    <svg viewBox="0 0 700 500" class="diagram-svg" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <marker id="arrow-blue" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563eb" />
+        </marker>
+        <marker id="arrow-purple" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 1 L 10 5 L 0 9 z" fill="#7c3aed" />
+        </marker>
+        <marker id="arrow-red" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 1 L 10 5 L 0 9 z" fill="#dc2626" />
+        </marker>
+        <marker id="arrow-green" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 1 L 10 5 L 0 9 z" fill="#16a34a" />
+        </marker>
+        <marker id="arrow-orange" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 1 L 10 5 L 0 9 z" fill="#d97706" />
+        </marker>
+        <marker id="t-bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <line x1="5" y1="0" x2="5" y2="10" stroke="#1a1a24" stroke-width="2.5" />
+        </marker>
+      </defs>
+
+      <!-- Pure White Field Surface -->
+      <rect x="0" y="0" width="700" height="500" fill="#ffffff" />
+
+      <!-- Field Grid & Yard Lines -->
+      <g opacity="0.65">
+        <line x1="30" y1="75" x2="670" y2="75" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="6,4" />
+        <line x1="30" y1="150" x2="670" y2="150" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="6,4" />
+        <!-- Blue Line of Scrimmage -->
+        <line x1="30" y1="225" x2="670" y2="225" stroke="#2563eb" stroke-width="2.5" />
+        <line x1="30" y1="300" x2="670" y2="300" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="6,4" />
+        <line x1="30" y1="375" x2="670" y2="375" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="6,4" />
+        <line x1="30" y1="450" x2="670" y2="450" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="6,4" />
+
+        <!-- Hash Marks -->
+        <line x1="260" y1="50" x2="260" y2="460" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3,6" />
+        <line x1="440" y1="50" x2="440" y2="460" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3,6" />
+
+        <!-- Yard numbers -->
+        <text x="590" y="158" font-family="sans-serif" font-size="26" font-weight="900" fill="#cbd5e1" opacity="0.65">10</text>
+        <text x="590" y="308" font-family="sans-serif" font-size="26" font-weight="900" fill="#cbd5e1" opacity="0.65">20</text>
+        <text x="110" y="383" font-family="sans-serif" font-size="26" font-weight="900" fill="#cbd5e1" opacity="0.65">30</text>
+      </g>
+
+      <!-- FIT TRIANGLE ZONE (Light Shaded Polygon) -->
+      <polygon points="350,75 130,365 570,365" fill="#eff6ff" fill-opacity="0.85" stroke="#93c5fd" stroke-width="2" stroke-dasharray="6,5" />
+      <text x="350" y="315" text-anchor="middle" font-family="sans-serif" font-size="26" font-weight="900" letter-spacing="4" fill="#93c5fd" opacity="0.5">FIT TRIANGLE</text>
+
+      <!-- 3 Boundary Apex Cones -->
+      <!-- Top Cone -->
+      <g transform="translate(350, 75)">
+        <polygon points="0,-11 -9,7 9,7" fill="#ea580c" stroke="#c2410c" stroke-width="1.4" />
+        <ellipse cx="0" cy="7" rx="8" ry="2.5" fill="#c2410c" />
+      </g>
+      <!-- Left Cone -->
+      <g transform="translate(130, 365)">
+        <polygon points="0,-11 -9,7 9,7" fill="#ea580c" stroke="#c2410c" stroke-width="1.4" />
+        <ellipse cx="0" cy="7" rx="8" ry="2.5" fill="#c2410c" />
+      </g>
+      <!-- Right Cone -->
+      <g transform="translate(570, 365)">
+        <polygon points="0,-11 -9,7 9,7" fill="#ea580c" stroke="#c2410c" stroke-width="1.4" />
+        <ellipse cx="0" cy="7" rx="8" ry="2.5" fill="#c2410c" />
+      </g>
+
+      <!-- Directional Flow Tracks (Left Flow, Middle ISO, Right Flow) -->
+      <!-- Left Flow Track -->
+      <path d="M 335 90 Q 185 170 145 345" fill="none" stroke="#dc2626" stroke-width="2.4" stroke-dasharray="5,4" marker-end="url(#arrow-red)" />
+      <g transform="translate(180, 215)">
+        <rect x="-46" y="-8" width="92" height="16" rx="4" fill="#ffffff" stroke="#dc2626" stroke-width="1.2" />
+        <text x="0" y="3.5" font-family="sans-serif" font-size="8.5" font-weight="bold" fill="#dc2626" text-anchor="middle">LEFT FLOW LANE</text>
+      </g>
+
+      <!-- Middle ISO Track -->
+      <line x1="350" y1="95" x2="350" y2="330" stroke="#d97706" stroke-width="2.4" stroke-dasharray="5,4" marker-end="url(#arrow-orange)" />
+      <g transform="translate(350, 260)">
+        <rect x="-48" y="-8" width="96" height="16" rx="4" fill="#ffffff" stroke="#d97706" stroke-width="1.2" />
+        <text x="0" y="3.5" font-family="sans-serif" font-size="8.5" font-weight="bold" fill="#d97706" text-anchor="middle">MIDDLE ISO LANE</text>
+      </g>
+
+      <!-- Right Flow Track -->
+      <path d="M 365 90 Q 515 170 555 345" fill="none" stroke="#dc2626" stroke-width="2.4" stroke-dasharray="5,4" marker-end="url(#arrow-red)" />
+      <g transform="translate(520, 215)">
+        <rect x="-48" y="-8" width="96" height="16" rx="4" fill="#ffffff" stroke="#dc2626" stroke-width="1.2" />
+        <text x="0" y="3.5" font-family="sans-serif" font-size="8.5" font-weight="bold" fill="#dc2626" text-anchor="middle">RIGHT FLOW LANE</text>
+      </g>
+
+      <!-- Offensive Triangle: 3 Blockers With Shields -->
+      <!-- B1 Left Blocker -->
+      <g transform="translate(235, 185)">
+        <rect x="-18" y="-18" width="36" height="36" rx="4" fill="#f1f5f9" stroke="#0f172a" stroke-width="2.5" />
+        <text x="0" y="5" font-family="sans-serif" font-size="13" font-weight="900" fill="#0f172a" text-anchor="middle">B1</text>
+        <g transform="translate(0, 28)">
+          <rect x="-44" y="-7" width="88" height="14" rx="4" fill="#ffffff" stroke="#64748b" stroke-width="1" />
+          <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="#334155" text-anchor="middle">Left Blocker (Shield)</text>
+        </g>
+      </g>
+
+      <!-- B2 Middle Blocker -->
+      <g transform="translate(350, 170)">
+        <rect x="-18" y="-18" width="36" height="36" rx="4" fill="#f1f5f9" stroke="#0f172a" stroke-width="2.5" />
+        <text x="0" y="5" font-family="sans-serif" font-size="13" font-weight="900" fill="#0f172a" text-anchor="middle">B2</text>
+        <g transform="translate(0, -26)">
+          <rect x="-48" y="-7" width="96" height="14" rx="4" fill="#ffffff" stroke="#64748b" stroke-width="1" />
+          <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="#334155" text-anchor="middle">Middle Blocker (Shield)</text>
+        </g>
+      </g>
+
+      <!-- B3 Right Blocker -->
+      <g transform="translate(465, 185)">
+        <rect x="-18" y="-18" width="36" height="36" rx="4" fill="#f1f5f9" stroke="#0f172a" stroke-width="2.5" />
+        <text x="0" y="5" font-family="sans-serif" font-size="13" font-weight="900" fill="#0f172a" text-anchor="middle">B3</text>
+        <g transform="translate(0, 28)">
+          <rect x="-46" y="-7" width="92" height="14" rx="4" fill="#ffffff" stroke="#64748b" stroke-width="1" />
+          <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="#334155" text-anchor="middle">Right Blocker (Shield)</text>
+        </g>
+      </g>
+
+      <!-- Running Back (RB - Ball Carrier) -->
+      <g transform="translate(350, 75)">
+        <circle cx="0" cy="0" r="17" fill="#fee2e2" stroke="#dc2626" stroke-width="2.6" />
+        <text x="0" y="4.5" font-family="sans-serif" font-size="12" font-weight="900" fill="#dc2626" text-anchor="middle">RB</text>
+        <!-- Football -->
+        <ellipse cx="14" cy="4" rx="6.5" ry="4" fill="#8B4513" stroke="#ffffff" stroke-width="0.7" transform="rotate(25 14 4)" />
+        <g transform="translate(0, 27)">
+          <rect x="-42" y="-7" width="84" height="14" rx="4" fill="#ffffff" stroke="#dc2626" stroke-width="1" />
+          <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="#dc2626" text-anchor="middle">RB (Ball Carrier)</text>
+        </g>
+      </g>
+
+      <!-- LB Downhill Strike Vector -->
+      <line x1="350" y1="340" x2="350" y2="215" stroke="#16a34a" stroke-width="2.8" marker-end="url(#arrow-green)" />
+      <g transform="translate(350, 235)">
+        <rect x="-60" y="-8" width="120" height="16" rx="4" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.2" />
+        <text x="0" y="3.5" font-family="sans-serif" font-size="8.5" font-weight="900" fill="#15803d" text-anchor="middle">POP STRIKE (NO CLOTH)</text>
+      </g>
+
+      <!-- Linebacker (LB - Primary Defender) with Athletic Stance Feet -->
+      <g transform="translate(350, 365)">
+        <!-- Feet indicators -->
+        <rect x="-17" y="-5" width="9" height="18" rx="3" fill="#93c5fd" stroke="#1d4ed8" stroke-width="1.4" />
+        <rect x="8" y="-3" width="9" height="18" rx="3" fill="#1d4ed8" stroke="#1d4ed8" stroke-width="1.4" />
+        <circle cx="0" cy="0" r="20" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2.8" />
+        <text x="0" y="5" font-family="sans-serif" font-size="13" font-weight="900" fill="#1d4ed8" text-anchor="middle">LB</text>
+        <g transform="translate(0, 31)">
+          <rect x="-66" y="-7" width="132" height="14" rx="4" fill="#ffffff" stroke="#1d4ed8" stroke-width="1.2" />
+          <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="#1e3a8a" text-anchor="middle">LB (Lead Foot Dictates Peek)</text>
+        </g>
+      </g>
+
+      <!-- Coach (Positioned Directly BEHIND LB) -->
+      <g transform="translate(350, 455)">
+        <circle cx="0" cy="0" r="18" fill="#faf5ff" stroke="#7e22ce" stroke-width="2.5" />
+        <text x="0" y="4.5" font-family="sans-serif" font-size="10" font-weight="900" fill="#7e22ce" text-anchor="middle">COACH</text>
+        <g transform="translate(0, 26)">
+          <rect x="-46" y="-7" width="92" height="14" rx="4" fill="#ffffff" stroke="#7e22ce" stroke-width="1.2" />
+          <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="#7e22ce" text-anchor="middle">COACH (BEHIND LB)</text>
+        </g>
+      </g>
+
+      <!-- Coach Verbal Callout to LB -->
+      <g transform="translate(290, 455)">
+        <rect x="-115" y="-8" width="112" height="16" rx="4" fill="#ffffff" stroke="#1d4ed8" stroke-width="1.2" />
+        <text x="-56" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="#1d4ed8" text-anchor="middle">Calls: "RIGHT" or "LEFT" Lead</text>
+      </g>
+
+      <!-- Coach Silent Hand Signal to Offense -->
+      <path d="M 370 445 Q 440 370 460 250" fill="none" stroke="#7e22ce" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrow-purple)" />
+      <g transform="translate(445, 335)">
+        <rect x="-65" y="-8" width="130" height="16" rx="4" fill="#ffffff" stroke="#7e22ce" stroke-width="1.2" />
+        <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="#7e22ce" text-anchor="middle">Hand Signal to Ball Carrier</text>
+      </g>
+
+      <!-- Coaching Keys Inset Card (Bottom Left) -->
+      <g transform="translate(24, 385)">
+        <rect x="0" y="0" width="180" height="88" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" />
+        <text x="10" y="16" font-family="sans-serif" font-size="8.5" font-weight="900" fill="#0f172a">DRILL REEL COACHING KEYS:</text>
+        <text x="10" y="33" font-family="sans-serif" font-size="8" font-weight="600" fill="#334155">• Coach stands BEHIND LB</text>
+        <text x="10" y="48" font-family="sans-serif" font-size="8" font-weight="600" fill="#334155">• Calls lead foot & signals RB</text>
+        <text x="10" y="63" font-family="sans-serif" font-size="8" font-weight="600" fill="#15803d">• Violent pop strike (NO CLOTH)</text>
+        <text x="10" y="78" font-family="sans-serif" font-size="8" font-weight="600" fill="#b91c1c">• Peek hole, reset hips & tackle</text>
+      </g>
+    </svg>
+  `;
+}
+
+/**
  * Generates an isolated, professional, high-contrast 1-page printable coaching sheet
  * containing ONLY the selected drill or scheme.
  */
 export function generateDrillPrintHTML(drill: WhiteboardDrill, activePhaseIndex: number = 0): string {
+  const isTriangleDrill = drill.id === 'drill-lb-5' || drill.title === 'TRIANGLE BLOCK POP & DIRECTIONAL PEEK';
+
   const rawPhase = drill.phases[activePhaseIndex] || drill.phases[0] || {
     name: 'BASE ALIGNMENT',
     description: drill.objective,
@@ -544,9 +739,13 @@ export function generateDrillPrintHTML(drill: WhiteboardDrill, activePhaseIndex:
     <!-- Diagram -->
     <div class="diagram-container">
       <div class="diagram-caption">
-        <span>Active Diagram: <strong>${currentPhase.name}</strong></span>
-        <span>${currentPhase.tokens.length} Players / Markers</span>
+        <span>Active Diagram: <strong>${isTriangleDrill ? 'DEFAULT SETUP: FIT TRIANGLE ALIGNMENT (3 BLOCKERS + RB + LB + COACH BEHIND)' : currentPhase.name}</strong></span>
+        <span>${isTriangleDrill ? '6 Personnel / 3 Cones' : `${currentPhase.tokens.length} Players / Markers`}</span>
       </div>
+      ${
+        isTriangleDrill
+          ? generateTriangleDrillPrintSvg()
+          : `
       <svg viewBox="0 0 700 500" class="diagram-svg" preserveAspectRatio="xMidYMid meet">
         <defs>
           <marker id="arrow-blue" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
@@ -600,6 +799,8 @@ export function generateDrillPrintHTML(drill: WhiteboardDrill, activePhaseIndex:
         <!-- Tokens Layer -->
         <g id="tokensLayer">${tokenSvg}</g>
       </svg>
+      `
+      }
     </div>
 
     <!-- Phase Progression -->

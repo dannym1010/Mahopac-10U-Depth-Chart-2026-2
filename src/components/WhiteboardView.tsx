@@ -1454,7 +1454,10 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
           SECTION 2: FULL-WIDTH WHITEBOARD CANVAS & TOOLBAR
           ========================================================================= */}
           {!isCustomMode && (currentDrill.id === 'drill-lb-5' || currentDrill.title === 'TRIANGLE BLOCK POP & DIRECTIONAL PEEK') ? (
-            <TriangleDrillWhiteboard onOpenCustomChalkboard={() => setIsCustomMode(true)} />
+            <TriangleDrillWhiteboard
+              onOpenCustomChalkboard={() => setIsCustomMode(true)}
+              onPrint={handlePrintWhiteboard}
+            />
           ) : (
             <div className="w-full max-w-7xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-md dark:shadow-2xl p-2.5 sm:p-5 flex flex-col relative">
         {/* Canvas Quick Controls Bar (Declutter, Labels, Coaching Inset, Print) */}

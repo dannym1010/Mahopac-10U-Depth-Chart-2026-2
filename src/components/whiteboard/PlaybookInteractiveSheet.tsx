@@ -18,6 +18,7 @@ import {
 import { WhiteboardDrill } from './whiteboardDrillData';
 import { WhiteboardCanvas } from './WhiteboardCanvas';
 import { TriangleDrillWhiteboard } from './TriangleDrillWhiteboard';
+import { printDrillSheet } from './drillPrintHelper';
 import { WhiteboardToken, WhiteboardArrow, WhiteboardZoneBubble, WhiteboardTextElement, PlayResponsibility } from '../../types';
 
 interface PlaybookInteractiveSheetProps {
@@ -364,7 +365,10 @@ export const PlaybookInteractiveSheet: React.FC<PlaybookInteractiveSheetProps> =
       {/* 3. WHITEBOARD DIAGRAM AREA */}
       {!isEditMode && (drill.id === 'drill-lb-5' || drill.title === 'TRIANGLE BLOCK POP & DIRECTIONAL PEEK') ? (
         <div className="w-full bg-slate-100/60 relative p-2 sm:p-4 lg:p-6 border-b border-slate-300 flex justify-center">
-          <TriangleDrillWhiteboard onOpenCustomChalkboard={() => setIsEditMode(true)} />
+          <TriangleDrillWhiteboard
+            onOpenCustomChalkboard={() => setIsEditMode(true)}
+            onPrint={() => printDrillSheet(drill, 0)}
+          />
         </div>
       ) : (
         <div className="w-full bg-slate-100/60 relative p-2 sm:p-4 lg:p-6 border-b border-slate-300 flex justify-center">
@@ -432,7 +436,7 @@ export const PlaybookInteractiveSheet: React.FC<PlaybookInteractiveSheetProps> =
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={() => printDrillSheet(drill, 0)}
             className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5 text-slate-500" />

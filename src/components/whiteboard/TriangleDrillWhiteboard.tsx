@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCw, ExternalLink, Video } from 'lucide-react';
+import { Play, Pause, RotateCw, ExternalLink, Video, Printer } from 'lucide-react';
 
 interface TriangleDrillWhiteboardProps {
   onOpenCustomChalkboard?: () => void;
+  onPrint?: () => void;
 }
 
 type Direction = 'left' | 'middle' | 'right';
@@ -157,6 +158,7 @@ const getCoordinates = (direction: Direction, step: number): StepPositions => {
 
 export const TriangleDrillWhiteboard: React.FC<TriangleDrillWhiteboardProps> = ({
   onOpenCustomChalkboard,
+  onPrint,
 }) => {
   const [currentDirection, setCurrentDirection] = useState<Direction>('left');
   const [isRunning, setIsRunning] = useState<boolean>(true);
@@ -411,6 +413,18 @@ export const TriangleDrillWhiteboard: React.FC<TriangleDrillWhiteboardProps> = (
                 <RotateCw className="w-3 h-3" />
                 <span>Auto-Cycle: {autoCycle ? 'ON' : 'OFF'}</span>
               </button>
+
+              {onPrint && (
+                <button
+                  type="button"
+                  onClick={onPrint}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
+                  title="Print this isolated drill sheet"
+                >
+                  <Printer className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Print Drill</span>
+                </button>
+              )}
 
               {onOpenCustomChalkboard && (
                 <button
