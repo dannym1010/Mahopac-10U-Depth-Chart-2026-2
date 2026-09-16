@@ -1162,6 +1162,7 @@ export const DLINE_DRILLS: WhiteboardDrill[] = [
     categoryLabel: 'Linebackers (LB)',
     title: 'TRIANGLE BLOCK POP & DIRECTIONAL PEEK',
     subtitle: 'Separation Pop, Lead-Foot Peek & Cutback Redirect',
+    videoUrl: 'https://www.facebook.com/reel/1072116722201615',
     objective: 'Linebacker fires downhill with coach-designated lead foot, delivers an explosive two-hand pop strike to blocker without grabbing cloth, peeks through to diagnose the ball carrier, and rapidly resets hips to redirect and tackle when the runner cuts opposite.',
     setup: 'Triangle alignment: Linebacker at top/apex 4.5 yards back; Blocker aligned 2 yards ahead with shield; Ball carrier 2-3 yards behind blocker. Coach stands behind LB or to side directing hand signals to ball carrier and calling lead foot to LB.',
     instructions: [

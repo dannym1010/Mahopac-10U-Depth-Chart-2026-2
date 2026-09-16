@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { WhiteboardDrill } from './whiteboardDrillData';
 import { WhiteboardCanvas } from './WhiteboardCanvas';
+import { TriangleDrillWhiteboard } from './TriangleDrillWhiteboard';
 import { WhiteboardToken, WhiteboardArrow, WhiteboardZoneBubble, WhiteboardTextElement, PlayResponsibility } from '../../types';
 
 interface PlaybookInteractiveSheetProps {
@@ -361,37 +362,43 @@ export const PlaybookInteractiveSheet: React.FC<PlaybookInteractiveSheetProps> =
       )}
 
       {/* 3. WHITEBOARD DIAGRAM AREA */}
-      <div className="w-full bg-slate-100/60 relative p-2 sm:p-4 lg:p-6 border-b border-slate-300 flex justify-center">
-        <div className="w-full max-w-5xl xl:max-w-6xl min-h-[540px] sm:min-h-[620px] xl:min-h-[680px] relative rounded-xl overflow-hidden shadow-md border border-slate-300/80">
-          <WhiteboardCanvas
-            tokens={tokens}
-            arrows={arrows}
-            zones={zones}
-            textElements={textElements}
-            isDrawingMode={false}
-            penColor="#0052cc"
-            penWidth={3}
-            stampMode={stampMode}
-            stampLabel={stampLabel}
-            onUpdateTokens={handleTokensChange}
-            onUpdateArrows={handleArrowsChange}
-            onUpdateZones={handleZonesChange}
-            onUpdateTextElements={handleTextElementsChange}
-            onSelectElement={(type, id) => {
-              setSelectedType(type);
-              setSelectedId(id);
-            }}
-            selectedId={selectedId}
-            selectedType={selectedType}
-            sketchPadRef={{ current: null }}
-            diagramKeys={drill.diagramKeys}
-            showCoachingInset={true}
-            showLabels={true}
-            zoneShadeMode="dim"
-            readOnly={!isEditMode}
-          />
+      {!isEditMode && (drill.id === 'drill-lb-5' || drill.title === 'TRIANGLE BLOCK POP & DIRECTIONAL PEEK') ? (
+        <div className="w-full bg-slate-100/60 relative p-2 sm:p-4 lg:p-6 border-b border-slate-300 flex justify-center">
+          <TriangleDrillWhiteboard onOpenCustomChalkboard={() => setIsEditMode(true)} />
         </div>
-      </div>
+      ) : (
+        <div className="w-full bg-slate-100/60 relative p-2 sm:p-4 lg:p-6 border-b border-slate-300 flex justify-center">
+          <div className="w-full max-w-5xl xl:max-w-6xl min-h-[540px] sm:min-h-[620px] xl:min-h-[680px] relative rounded-xl overflow-hidden shadow-md border border-slate-300/80">
+            <WhiteboardCanvas
+              tokens={tokens}
+              arrows={arrows}
+              zones={zones}
+              textElements={textElements}
+              isDrawingMode={false}
+              penColor="#0052cc"
+              penWidth={3}
+              stampMode={stampMode}
+              stampLabel={stampLabel}
+              onUpdateTokens={handleTokensChange}
+              onUpdateArrows={handleArrowsChange}
+              onUpdateZones={handleZonesChange}
+              onUpdateTextElements={handleTextElementsChange}
+              onSelectElement={(type, id) => {
+                setSelectedType(type);
+                setSelectedId(id);
+              }}
+              selectedId={selectedId}
+              selectedType={selectedType}
+              sketchPadRef={{ current: null }}
+              diagramKeys={drill.diagramKeys}
+              showCoachingInset={true}
+              showLabels={true}
+              zoneShadeMode="dim"
+              readOnly={!isEditMode}
+            />
+          </div>
+        </div>
+      )}
 
       {/* 4. ACTIONS BAR - Video Attachment, Print, Notes */}
       <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
