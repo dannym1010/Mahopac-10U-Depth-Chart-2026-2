@@ -522,6 +522,93 @@ export function generateDrillPrintHTML(drill: WhiteboardDrill, activePhaseIndex:
   `
     : '';
 
+  // Watermark label matching Linebacker Triangle drill
+  let watermarkLabel = drill.formationName || '';
+  if (!watermarkLabel) {
+    const upperT = drill.title.toUpperCase();
+    if (upperT.includes('TRIANGLE')) watermarkLabel = 'FIT TRIANGLE';
+    else if (upperT.includes('GET-OFF') || upperT.includes('STICK')) watermarkLabel = 'GET-OFF & EXPLOSION CHUTE';
+    else if (upperT.includes('STRIKE') || upperT.includes('LOCK') || upperT.includes('SHED')) watermarkLabel = 'STRIKE & SEPARATION ZONE';
+    else if (upperT.includes('SPILL') || upperT.includes('CONTAIN')) watermarkLabel = 'SPILL & CONTAIN CORRIDOR';
+    else if (upperT.includes('SHUFFLE') || upperT.includes('SCRAPE')) watermarkLabel = 'READ & SCRAPE ALLEY';
+    else if (upperT.includes('PEDAL') || upperT.includes('PLANT')) watermarkLabel = 'SECONDARY WEAVE & BREAK SECTOR';
+    else if (upperT.includes('TRAIL') || upperT.includes('COVER')) watermarkLabel = 'PASS DISRUPTION POCKET';
+    else if (upperT.includes('TACKLE') || upperT.includes('PROFILE')) watermarkLabel = 'PROFILE TACKLE CORRIDOR';
+    else if (upperT.includes('GATOR') || upperT.includes('ROLL')) watermarkLabel = 'TURNOVER STRIP SECTOR';
+    else if (upperT.includes('BLOCK') || upperT.includes('DRIVE')) watermarkLabel = 'DRIVE BLOCK CHUTE';
+    else if (upperT.includes('REACH') || upperT.includes('CLIMB')) watermarkLabel = 'ZONE REACH TRACK';
+    else if (upperT.includes('SLED')) watermarkLabel = 'SLED EXPLOSION CORRIDOR';
+    else if (upperT.includes('SCHEME') || upperT.includes('COVER 4') || upperT.includes('3-4')) watermarkLabel = 'FORMATION ALIGNMENT SHELL';
+    else {
+      switch (drill.category) {
+        case 'DL':
+        case 'DE':
+          watermarkLabel = 'LINE OF SCRIMMAGE / GET-OFF ALLEY';
+          break;
+        case 'LB':
+          watermarkLabel = 'TACKLE BOX / FIT TRIANGLE';
+          break;
+        case 'DB':
+          watermarkLabel = 'SECONDARY COVERAGE CORRIDOR';
+          break;
+        case 'TACKLE':
+        case 'TEAM':
+          watermarkLabel = 'FORM FIT TACKLE ALLEY';
+          break;
+        case 'BLOCKING':
+          watermarkLabel = 'OFFENSIVE LINE RUN CHUTE';
+          break;
+        default:
+          watermarkLabel = 'TACTICAL REACTION ZONE';
+          break;
+      }
+    }
+  }
+
+  // Calculate bounding box for tactical zone polygon
+  let pMinX = 200, pMaxX = 500, pMinY = 100, pMaxY = 380;
+  if (currentPhase.tokens.length > 0) {
+    pMinX = Math.min(...currentPhase.tokens.map((t) => t.x));
+    pMaxX = Math.max(...currentPhase.tokens.map((t) => t.x));
+    pMinY = Math.min(...currentPhase.tokens.map((t) => t.y));
+    pMaxY = Math.max(...currentPhase.tokens.map((t) => t.y));
+  }
+  const zLeft = Math.max(90, pMinX - 45);
+  const zRight = Math.min(610, pMaxX + 45);
+  const zTop = Math.max(70, pMinY - 35);
+  const zBottom = Math.min(425, pMaxY + 35);
+  const zMidX = (zLeft + zRight) / 2;
+
+  // Check if currentPhase tokens has coach
+  const hasCoachToken = currentPhase.tokens.some(
+    (t) =>
+      (t.label || '').toUpperCase().includes('COACH') || (t.subLabel || '').toUpperCase().includes('COACH')
+  );
+
+  const coachBehindPrintSvg = !hasCoachToken
+    ? `
+    <!-- Coach Behind Defensive Setup (Linebacker Triangle format) -->
+    <g transform="translate(350, ${Math.min(460, zBottom + 25)})">
+      <circle cx="0" cy="0" r="18" fill="#faf5ff" stroke="#7e22ce" stroke-width="2.5" />
+      <text x="0" y="4.5" font-family="sans-serif" font-size="10" font-weight="900" fill="#7e22ce" text-anchor="middle">COACH</text>
+      <g transform="translate(0, 26)">
+        <rect x="-56" y="-7" width="112" height="14" rx="4" fill="#ffffff" stroke="#7e22ce" stroke-width="1.2" />
+        <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="#7e22ce" text-anchor="middle">COACH (SIGNALS & CUES)</text>
+      </g>
+    </g>
+    <g transform="translate(260, ${Math.min(460, zBottom + 25)})">
+      <rect x="-95" y="-8" width="95" height="16" rx="4" fill="#ffffff" stroke="#1d4ed8" stroke-width="1.2" />
+      <text x="-48" y="3.5" font-family="sans-serif" font-size="7.5" font-weight="bold" fill="#1d4ed8" text-anchor="middle">🗣️ ${
+        drill.cues && drill.cues[0] ? drill.cues[0].replace(/"/g, '').slice(0, 22) : 'Fire on movement!'
+      }</text>
+    </g>
+    <path d="M 350 ${Math.min(435, zBottom)} L ${zMidX} ${Math.max(
+        160,
+        (zTop + zBottom) / 2
+      )}" fill="none" stroke="#7e22ce" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrow-purple)" />
+  `
+    : '';
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -852,8 +939,26 @@ export function generateDrillPrintHTML(drill: WhiteboardDrill, activePhaseIndex:
         <!-- Pure White Field Surface -->
         <rect x="0" y="0" width="700" height="500" fill="#ffffff" />
 
+        <!-- Tactical Formation Zone Footprint (Linebacker Triangle visual standard) -->
+        <polygon points="${zMidX},${zTop} ${zLeft},${zBottom} ${zRight},${zBottom}" fill="#eff6ff" stroke="#93c5fd" stroke-width="2" stroke-dasharray="6,6" />
+        <text x="350" y="${(zTop + zBottom) / 2 + 8}" font-family="sans-serif" font-size="26" font-weight="900" fill="#93c5fd" letter-spacing="4" text-anchor="middle" opacity="0.38">${watermarkLabel}</text>
+
+        <!-- 3D Perimeter Athletic Cones -->
+        <g transform="translate(${zMidX}, ${zTop})">
+          <polygon points="0,-11 -9,7 9,7" fill="#ea580c" stroke="#c2410c" stroke-width="1.4" />
+          <ellipse cx="0" cy="7" rx="8" ry="2.5" fill="#c2410c" />
+        </g>
+        <g transform="translate(${zLeft}, ${zBottom})">
+          <polygon points="0,-11 -9,7 9,7" fill="#ea580c" stroke="#c2410c" stroke-width="1.4" />
+          <ellipse cx="0" cy="7" rx="8" ry="2.5" fill="#c2410c" />
+        </g>
+        <g transform="translate(${zRight}, ${zBottom})">
+          <polygon points="0,-11 -9,7 9,7" fill="#ea580c" stroke="#c2410c" stroke-width="1.4" />
+          <ellipse cx="0" cy="7" rx="8" ry="2.5" fill="#c2410c" />
+        </g>
+
         <!-- Yard Lines & Numbers matching playbook style -->
-        <g opacity="0.6">
+        <g opacity="0.45">
           <line x1="30" y1="80" x2="670" y2="80" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="6,4" />
           <line x1="30" y1="160" x2="670" y2="160" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="6,4" />
           <!-- LOS Solid Blue Line -->
@@ -873,6 +978,9 @@ export function generateDrillPrintHTML(drill: WhiteboardDrill, activePhaseIndex:
 
         <!-- Diagram Inset Card -->
         ${insetSvg}
+
+        <!-- Coach Behind Setup -->
+        ${coachBehindPrintSvg}
 
         <!-- Zones Layer -->
         <g id="zonesLayer">${zoneSvg}</g>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Play, Pause, RotateCw, Video, Printer, PenTool } from 'lucide-react';
+import { Play, Pause, RotateCw, Video, Printer, PenTool, ExternalLink } from 'lucide-react';
 import { WhiteboardDrill } from './whiteboardDrillData';
 import { WhiteboardToken, WhiteboardArrow, WhiteboardZoneBubble } from '../../types';
 
@@ -55,63 +55,78 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
       return;
     }
 
-    // Trigger impact shockwave pulse on action/middle phases
-    const isActionPhase = activeIdx === 1 || (phases.length === 2 && activeIdx === 1) || activeIdx === Math.floor(phases.length / 2);
+    const isActionPhase =
+      activeIdx === 1 ||
+      (phases.length === 2 && activeIdx === 1) ||
+      activeIdx === Math.floor(phases.length / 2);
+
     if (isActionPhase) {
       setIsImpactActive(true);
-      const impactTimer = setTimeout(() => setIsImpactActive(false), 700);
+      const impactTimer = setTimeout(() => {
+        setIsImpactActive(false);
+      }, 700);
       return () => clearTimeout(impactTimer);
     } else {
       setIsImpactActive(false);
     }
 
-    // Timing delay: give coach ample time to observe alignment and movements
-    const delay = activeIdx === 0 ? 2200 : activeIdx === phases.length - 1 ? 2600 : 2000;
+    if (!autoCycle) return;
+
+    // Step duration: 2.6s for standard phases, 3.2s for action/climax
+    const stepDuration = isActionPhase ? 3200 : 2600;
 
     timerRef.current = setTimeout(() => {
-      if (activeIdx >= phases.length - 1) {
-        if (autoCycle) {
-          const nextIdx = 0;
-          setInternalPhaseIdx(nextIdx);
-          onPhaseChange?.(nextIdx);
-        } else {
-          setIsRunning(false);
-        }
+      const nextIdx = (activeIdx + 1) % phases.length;
+      if (onPhaseChange) {
+        onPhaseChange(nextIdx);
       } else {
-        const nextIdx = activeIdx + 1;
         setInternalPhaseIdx(nextIdx);
-        onPhaseChange?.(nextIdx);
       }
-    }, delay);
+    }, stepDuration);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [isRunning, activeIdx, phases.length, autoCycle, onPhaseChange]);
-
-  const handleSelectPhase = (idx: number) => {
-    setInternalPhaseIdx(idx);
-    onPhaseChange?.(idx);
-    setIsImpactActive(false);
-    if (timerRef.current) clearTimeout(timerRef.current);
-  };
+  }, [isRunning, autoCycle, activeIdx, phases.length, onPhaseChange]);
 
   const handleToggleRunning = () => {
     setIsRunning((prev) => !prev);
   };
 
-  // Compute bounding box and auto-center offset so drill is centered on the 880x670 SVG canvas
-  const { shiftX, shiftY, primaryFocalPoint } = useMemo(() => {
-    const allTokens = phases.flatMap((p) => p.tokens || []);
-    if (allTokens.length === 0) {
-      return { shiftX: 0, shiftY: 0, primaryFocalPoint: { x: 440, y: 280 } };
+  const handleSelectPhase = (idx: number) => {
+    if (onPhaseChange) {
+      onPhaseChange(idx);
+    } else {
+      setInternalPhaseIdx(idx);
     }
+  };
 
+  // Collect all tokens across all phases to compute high-fidelity scaled bounding box
+  const allTokens = useMemo(() => {
+    const list: WhiteboardToken[] = [];
+    phases.forEach((p) => {
+      if (p.tokens) list.push(...p.tokens);
+    });
+    return list;
+  }, [phases]);
+
+  // Calculate coordinates bounds & scale so all drills fill the whiteboard canvas cleanly
+  const bounds = useMemo(() => {
+    if (allTokens.length === 0) {
+      return {
+        minX: 180,
+        maxX: 700,
+        minY: 120,
+        maxY: 460,
+        centerX: 440,
+        centerY: 290,
+        scale: 1,
+      };
+    }
     let minX = Infinity;
     let maxX = -Infinity;
     let minY = Infinity;
     let maxY = -Infinity;
-
     allTokens.forEach((t) => {
       if (t.x < minX) minX = t.x;
       if (t.x > maxX) maxX = t.x;
@@ -119,175 +134,311 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
       if (t.y > maxY) maxY = t.y;
     });
 
-    const drillCenterX = (minX + maxX) / 2;
-    const drillCenterY = (minY + maxY) / 2;
+    const w = Math.max(maxX - minX, 150);
+    const h = Math.max(maxY - minY, 130);
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
 
-    // Field canvas center target: x = 440, y = 280
-    const rawShiftX = 440 - drillCenterX;
-    const rawShiftY = 280 - drillCenterY;
+    // Target width ~520, target height ~350 centered at (440, 290)
+    const scaleX = 520 / w;
+    const scaleY = 350 / h;
+    const scale = Math.min(Math.max(Math.min(scaleX, scaleY), 0.95), 1.6);
 
-    // Clamp shifts to keep items safely within the visible board boundary
-    const clampedShiftX = Math.max(-200, Math.min(200, Math.round(rawShiftX)));
-    const clampedShiftY = Math.max(-100, Math.min(100, Math.round(rawShiftY)));
+    return { minX, maxX, minY, maxY, centerX, centerY, scale };
+  }, [allTokens]);
 
-    // Find primary collision/focal point for shockwave ring
-    let focalX = 440;
-    let focalY = 280;
+  // Transform coordinates into the 880x670 Linebacker Triangle layout canvas
+  const transformCoord = (rawX: number, rawY: number) => {
+    const cx = 440;
+    const cy = 290;
+    const nx = cx + (rawX - bounds.centerX) * bounds.scale;
+    const ny = cy + (rawY - bounds.centerY) * bounds.scale;
+    return {
+      x: Math.round(Math.max(90, Math.min(790, nx))),
+      y: Math.round(Math.max(80, Math.min(520, ny))),
+    };
+  };
 
-    // Check arrows for contact/block target
-    const currentArrows = currentPhase.arrows || [];
-    if (currentArrows.length > 0) {
-      const primaryArrow = currentArrows.find((a) => a.type === 'block' || a.type === 'blitz') || currentArrows[0];
-      focalX = primaryArrow.endX + clampedShiftX;
-      focalY = primaryArrow.endY + clampedShiftY;
-    } else {
-      // Find middle defender or bag
-      const focalToken = currentPhase.tokens.find((t) => t.type === 'bag' || t.type === 'square' || t.type === 'X') || currentPhase.tokens[0];
-      if (focalToken) {
-        focalX = focalToken.x + clampedShiftX;
-        focalY = focalToken.y + clampedShiftY;
+  // Derive the tactical formation zone & watermark name (e.g. FIT TRIANGLE, TACKLE BOX, etc.)
+  const tacticalZone = useMemo(() => {
+    if (allTokens.length === 0) {
+      return {
+        points: '440,110 180,430 700,430',
+        label: 'FIT TRIANGLE',
+        midX: 440,
+        midY: 310,
+        left: 180,
+        right: 700,
+        top: 110,
+        bottom: 430,
+      };
+    }
+
+    let left = Infinity;
+    let right = -Infinity;
+    let top = Infinity;
+    let bottom = -Infinity;
+
+    allTokens.forEach((t) => {
+      const tc = transformCoord(t.x, t.y);
+      if (tc.x < left) left = tc.x;
+      if (tc.x > right) right = tc.x;
+      if (tc.y < top) top = tc.y;
+      if (tc.y > bottom) bottom = tc.y;
+    });
+
+    const padX = 55;
+    const padY = 45;
+    left = Math.max(110, left - padX);
+    right = Math.min(770, right + padX);
+    top = Math.max(85, top - padY);
+    bottom = Math.min(515, bottom + padY);
+
+    const midX = (left + right) / 2;
+    const midY = (top + bottom) / 2;
+
+    // Derive authentic tactical watermark label matching the Linebacker Triangle style
+    let label = drill.formationName || '';
+    if (!label) {
+      const upperT = drill.title.toUpperCase();
+      if (upperT.includes('TRIANGLE')) label = 'FIT TRIANGLE';
+      else if (upperT.includes('GET-OFF') || upperT.includes('STICK')) label = 'GET-OFF & EXPLOSION CHUTE';
+      else if (upperT.includes('STRIKE') || upperT.includes('LOCK') || upperT.includes('SHED')) label = 'STRIKE & SEPARATION ZONE';
+      else if (upperT.includes('SPILL') || upperT.includes('CONTAIN')) label = 'SPILL & CONTAIN CORRIDOR';
+      else if (upperT.includes('SHUFFLE') || upperT.includes('SCRAPE')) label = 'READ & SCRAPE ALLEY';
+      else if (upperT.includes('PEDAL') || upperT.includes('PLANT')) label = 'SECONDARY WEAVE & BREAK SECTOR';
+      else if (upperT.includes('TRAIL') || upperT.includes('COVER')) label = 'PASS DISRUPTION POCKET';
+      else if (upperT.includes('TACKLE') || upperT.includes('PROFILE')) label = 'PROFILE TACKLE CORRIDOR';
+      else if (upperT.includes('GATOR') || upperT.includes('ROLL')) label = 'TURNOVER STRIP SECTOR';
+      else if (upperT.includes('BLOCK') || upperT.includes('DRIVE')) label = 'DRIVE BLOCK CHUTE';
+      else if (upperT.includes('REACH') || upperT.includes('CLIMB')) label = 'ZONE REACH TRACK';
+      else if (upperT.includes('SLED')) label = 'SLED EXPLOSION CORRIDOR';
+      else if (upperT.includes('SCHEME') || upperT.includes('COVER 4') || upperT.includes('3-4')) label = 'FORMATION ALIGNMENT SHELL';
+      else {
+        switch (drill.category) {
+          case 'DL':
+          case 'DE':
+            label = 'LINE OF SCRIMMAGE / GET-OFF ALLEY';
+            break;
+          case 'LB':
+            label = 'TACKLE BOX / FIT TRIANGLE';
+            break;
+          case 'DB':
+            label = 'SECONDARY COVERAGE CORRIDOR';
+            break;
+          case 'TACKLE':
+          case 'TEAM':
+            label = 'FORM FIT TACKLE ALLEY';
+            break;
+          case 'BLOCKING':
+            label = 'OFFENSIVE LINE RUN CHUTE';
+            break;
+          default:
+            label = 'TACTICAL REACTION ZONE';
+            break;
+        }
       }
     }
 
     return {
-      shiftX: clampedShiftX,
-      shiftY: clampedShiftY,
-      primaryFocalPoint: { x: focalX, y: focalY },
+      left,
+      right,
+      top,
+      bottom,
+      midX,
+      midY,
+      label: label.toUpperCase(),
+      points: `${midX},${top} ${left},${bottom} ${right},${bottom}`,
     };
-  }, [phases, currentPhase]);
+  }, [allTokens, bounds, drill]);
 
-  // Color schemes for phase badges
-  const phaseColors = [
-    { border: '#0958d9', bg: '#e6f4ff', text: '#0958d9', title: 'Base Alignment & Read' },
-    { border: '#cf1322', bg: '#fff1f0', text: '#cf1322', title: 'Explode & Strike' },
-    { border: '#389e0d', bg: '#f6ffed', text: '#389e0d', title: 'Shed & Finish' },
-    { border: '#722ed1', bg: '#f9f0ff', text: '#722ed1', title: 'Reset & Rep' },
-  ];
-  const activeColor = phaseColors[activeIdx % phaseColors.length];
+  // Find primary focal point of action (where collision shockwave and strike callout appear)
+  const focalPoint = useMemo(() => {
+    if (!currentPhase.tokens || currentPhase.tokens.length === 0) {
+      return { x: 440, y: 240 };
+    }
+    // Check if there is an engagement between an offensive player/bag and defender
+    const def = currentPhase.tokens.find(
+      (t) =>
+        t.type === 'X' ||
+        ['LB', 'DL', 'DE', 'DB', 'CB', 'FS', 'SS', 'MIKE', 'WILL', 'SAM'].includes(
+          (t.label || '').toUpperCase()
+        )
+    );
+    const target = currentPhase.tokens.find(
+      (t) =>
+        t.type === 'bag' ||
+        t.type === 'O' ||
+        ['RB', 'BC', 'OL', 'C', 'G', 'T', 'B1', 'B2', 'B3'].includes((t.label || '').toUpperCase())
+    );
 
-  // Derive callout badge text for active phase
-  const actionBadgeText = useMemo(() => {
-    if (activeIdx === 0) {
-      return '🎯 PRE-SNAP ALIGNMENT & EYE DISCIPLINE';
+    if (def && target) {
+      const dt = transformCoord(def.x, def.y);
+      const tt = transformCoord(target.x, target.y);
+      return { x: Math.round((dt.x + tt.x) / 2), y: Math.round((dt.y + tt.y) / 2) };
     }
-    // Check if an arrow has a label in current phase
-    const labeledArrow = currentPhase.arrows.find((a) => a.label);
-    if (labeledArrow?.label) {
-      return `💥 ${labeledArrow.label.toUpperCase()}`;
+    if (def) {
+      return transformCoord(def.x, def.y);
     }
-    if (activeIdx === 1) {
-      return '💥 EXPLOSIVE PUNCH & LOCKOUT';
-    }
-    return '🏁 VIOLENT SHED & SPRINT FINISH';
-  }, [activeIdx, currentPhase.arrows]);
+    return transformCoord(currentPhase.tokens[0].x, currentPhase.tokens[0].y);
+  }, [currentPhase, bounds]);
+
+  // Check if drill already has an explicit Coach token
+  const hasExplicitCoach = useMemo(() => {
+    return allTokens.some(
+      (t) =>
+        (t.label || '').toUpperCase().includes('COACH') ||
+        (t.subLabel || '').toUpperCase().includes('COACH')
+    );
+  }, [allTokens]);
+
+  // Dynamic coaching action callout badge text
+  const strikeBadgeText = useMemo(() => {
+    const titleUpper = drill.title.toUpperCase();
+    if (titleUpper.includes('TRIANGLE')) return '💥 POP-OFF! LOCK OUT (NO CLOTH)';
+    if (titleUpper.includes('GET-OFF')) return '💥 EXPLOSIVE GET-OFF & VIOLENT PUNCH!';
+    if (titleUpper.includes('STRIKE') || titleUpper.includes('LOCK')) return '💥 BREASTPLATE STRIKE & LOCKOUT!';
+    if (titleUpper.includes('SPILL')) return '💥 WRONG-ARM SPILL (INSIDE HIP)!';
+    if (titleUpper.includes('SHUFFLE')) return '💥 SHUFFLE, READ & DOWNHILL STRIKE!';
+    if (titleUpper.includes('PEDAL') || titleUpper.includes('PLANT')) return '⚡ T-STEP PLANT & DRIVE DOWNHILL!';
+    if (titleUpper.includes('TRAIL')) return '🦅 UNDER-CONTROL TRAIL & BALL STRIP!';
+    if (titleUpper.includes('PROFILE') || titleUpper.includes('TACKLE')) return '🎯 NEAR-FOOT, NEAR-SHOULDER PROFILE FIT!';
+    if (titleUpper.includes('GATOR')) return '🥋 CLAMP, WRAP & VIOLENT GATOR ROLL!';
+    if (titleUpper.includes('BLOCK')) return '🧱 6" POWER STEP & COILED HIP DRIVE!';
+    return '💥 VIOLENT POP STRIKE & LOCKOUT!';
+  }, [drill.title]);
+
+  const tackleBadgeText = useMemo(() => {
+    const titleUpper = drill.title.toUpperCase();
+    if (titleUpper.includes('TRIANGLE')) return '🎯 TACKLE FIT (NEAR SHOULDER)';
+    if (titleUpper.includes('GET-OFF')) return '🎯 SHED BAG & BURST THROUGH FINISH';
+    if (titleUpper.includes('STRIKE') || titleUpper.includes('SHED')) return '🎯 RIP ARM, SHED & WRAP BALLCARRIER';
+    if (titleUpper.includes('SPILL')) return '🎯 FUNNEL RUNNER TO SCRAPING LB';
+    if (titleUpper.includes('PEDAL')) return '🎯 CATCH AT HIGHEST POINT';
+    if (titleUpper.includes('TACKLE')) return '🎯 CLAMP THIGHS & DRIVE 3 YARDS';
+    return '🎯 ACCELERATE, WRAP & DRIVE';
+  }, [drill.title]);
+
+  // Status banner text and color
+  const bannerText = useMemo(() => {
+    const phaseName = currentPhase.name || `PHASE ${activeIdx + 1}`;
+    const desc = currentPhase.description || drill.objective;
+    return `${phaseName}: ${desc}`;
+  }, [currentPhase, activeIdx, drill.objective]);
+
+  const bannerColor = useMemo(() => {
+    if (activeIdx === 0) return '#722ed1';
+    if (activeIdx === 1 || activeIdx === Math.floor(phases.length / 2)) return '#cf1322';
+    return '#0958d9';
+  }, [activeIdx, phases.length]);
 
   return (
-    <div className="w-full flex flex-col items-center select-none">
-      {/* =========================================================================
-          ALUMINUM WHITEBOARD FRAME WITH CORNER BOLTS
-          ========================================================================= */}
-      <div className="w-full max-w-5xl xl:max-w-6xl bg-gradient-to-br from-[#d8dce1] via-[#adb2ba] to-[#8c919a] dark:from-[#334155] dark:via-[#1e293b] dark:to-[#0f172a] p-3 sm:p-4 rounded-2xl sm:rounded-3xl shadow-2xl relative border border-[#c0c5cc]/80">
-        {/* Corner Rivet Screws */}
-        <div className="absolute top-2 left-2 w-2.5 h-2.5 rounded-full bg-radial from-[#444] to-[#777] shadow-xs" />
-        <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-radial from-[#444] to-[#777] shadow-xs" />
-        <div className="absolute bottom-2 left-2 w-2.5 h-2.5 rounded-full bg-radial from-[#444] to-[#777] shadow-xs" />
-        <div className="absolute bottom-2 right-2 w-2.5 h-2.5 rounded-full bg-radial from-[#444] to-[#777] shadow-xs" />
+    <div className="w-full flex flex-col items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
+      {/* WHITEBOARD ALUMINUM FRAME */}
+      <div className="w-full max-w-[960px] bg-gradient-to-br from-[#d8dce1] via-[#adb2ba] to-[#8c919a] dark:from-[#334155] dark:via-[#1e293b] dark:to-[#0f172a] p-3 sm:p-4 pb-5 rounded-2xl shadow-2xl relative border border-slate-300 dark:border-slate-700/80">
+        {/* Corner Bolts */}
+        <div className="absolute top-2 left-2 w-2.5 h-2.5 rounded-full bg-radial from-[#444] to-[#777] shadow-xs"></div>
+        <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-radial from-[#444] to-[#777] shadow-xs"></div>
+        <div className="absolute bottom-2 left-2 w-2.5 h-2.5 rounded-full bg-radial from-[#444] to-[#777] shadow-xs"></div>
+        <div className="absolute bottom-2 right-2 w-2.5 h-2.5 rounded-full bg-radial from-[#444] to-[#777] shadow-xs"></div>
 
-        {/* =========================================================================
-            WHITEBOARD SURFACE
-            ========================================================================= */}
+        {/* WHITEBOARD SURFACE */}
         <div
-          className="bg-[#fbfcfd] dark:bg-slate-950 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-inner border border-[#d2d6dc] relative flex flex-col items-center overflow-hidden"
+          className="w-full bg-[#fcfdfe] rounded-xl shadow-inner p-3 sm:p-5 overflow-hidden border border-slate-200/90"
           style={{
             backgroundImage: 'radial-gradient(#e2e8f0 1.5px, transparent 1.5px)',
             backgroundSize: '24px 24px',
           }}
         >
-          {/* TOP HUD BAR: DRILL METRICS, VIDEO & CONTROLS */}
-          <div className="w-full flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#e5e7eb] dark:border-slate-800">
-            {/* Left: Drill Title & Category Tag */}
-            <div className="flex flex-col">
+          {/* TOP HUD BAR */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-2 border-b-2 border-dashed border-[#cfd6df]">
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 text-[10px] font-black tracking-wider uppercase bg-[#e6f4ff] text-[#0958d9] rounded-md border border-[#91caff]">
-                  {drill.categoryLabel || drill.category} PROGRESSION
+                <span className="px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-600/30 text-amber-900 font-black text-[10px] uppercase tracking-wider">
+                  {drill.categoryLabel || `${drill.category} Drill Progression`}
                 </span>
                 {drill.videoUrl && (
                   <a
                     href={drill.videoUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-md border border-rose-200 transition-colors"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 hover:text-indigo-900 hover:underline bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200 shadow-2xs"
                   >
-                    <Video className="w-3 h-3" />
-                    <span>Watch Video</span>
+                    <Video className="w-3 h-3 text-indigo-600" />
+                    <span>Watch Coaching Film</span>
+                    <ExternalLink className="w-2.5 h-2.5" />
                   </a>
                 )}
-                {drill.hudlPlaybookName && (
-                  <span className="px-2 py-0.5 text-[10px] font-bold text-indigo-700 bg-indigo-50 rounded-md border border-indigo-200">
-                    Hudl: {drill.hudlPlaybookName}
-                  </span>
-                )}
               </div>
-              <h2
-                className="text-xl sm:text-2xl font-black text-[#1f2937] dark:text-white tracking-tight uppercase mt-0.5"
-                style={{ fontFamily: "'Permanent Marker', cursive, sans-serif" }}
-              >
+              <h1 className="text-base sm:text-lg font-black text-[#1f2328] uppercase tracking-tight mt-0.5">
                 {drill.title}
-              </h2>
-              <p className="text-xs text-[#4b5563] dark:text-slate-400 font-medium italic">
-                {drill.subtitle} — {currentPhase.name}
+              </h1>
+              <p className="text-xs text-[#57606a] italic font-medium">
+                {drill.subtitle || drill.objective}
               </p>
             </div>
 
-            {/* Right: Interactive Animated Controls */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Play / Pause Toggle */}
+            {/* CONTROLS GROUP */}
+            <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 type="button"
                 onClick={handleToggleRunning}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-black border-2 cursor-pointer transition-all shadow-xs flex items-center gap-1.5 ${
                   isRunning
-                    ? 'bg-[#cf1322] hover:bg-[#a8071a] text-white animate-pulse'
-                    : 'bg-[#0958d9] hover:bg-[#003eb3] text-white'
+                    ? 'bg-white border-[#2b3036] text-[#2b3036] hover:bg-slate-50'
+                    : 'bg-emerald-600 border-emerald-700 text-white hover:bg-emerald-500'
                 }`}
-                title={isRunning ? 'Pause animated execution' : 'Play animated loop'}
+                title={isRunning ? 'Pause Animation' : 'Start Animation'}
               >
-                {isRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                <span>{isRunning ? 'Pause' : 'Play Drill'}</span>
+                {isRunning ? (
+                  <>
+                    <Pause className="w-3.5 h-3.5" />
+                    <span>PAUSE</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-3.5 h-3.5" />
+                    <span>PLAY REEL</span>
+                  </>
+                )}
               </button>
 
-              {/* Phase Progression Stepper Buttons */}
-              <div className="flex items-center bg-[#f0f2f5] dark:bg-slate-900 p-1 rounded-xl border border-[#d9d9d9] dark:border-slate-800 gap-1 flex-wrap">
-                {phases.map((phase, idx) => (
-                  <button
-                    key={phase.name || idx}
-                    type="button"
-                    onClick={() => handleSelectPhase(idx)}
-                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                      activeIdx === idx
-                        ? 'bg-white dark:bg-slate-800 text-[#0958d9] dark:text-sky-300 shadow-sm border border-[#91caff]'
-                        : 'text-[#595959] dark:text-slate-400 hover:text-[#262626] dark:hover:text-white'
-                    }`}
-                    title={phase.description || phase.name}
-                  >
-                    Phase {idx + 1}
-                  </button>
-                ))}
+              {/* Phase Action Buttons (Linebacker Triangle button format) */}
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-300">
+                {phases.map((p, idx) => {
+                  const isActive = activeIdx === idx;
+                  const shortName = p.name.replace(/^PHASE \d+:\s*/i, '');
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleSelectPhase(idx)}
+                      className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                        isActive
+                          ? 'bg-[#e6f4ff] border border-[#0958d9] text-[#0958d9] shadow-xs'
+                          : 'bg-white border border-transparent text-slate-700 hover:text-slate-950'
+                      }`}
+                      title={p.description}
+                    >
+                      {shortName.length > 18 ? `Step ${idx + 1}` : shortName}
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Auto-Cycle Toggle */}
+              {/* Auto Cycle Toggle */}
               <button
                 type="button"
-                onClick={() => setAutoCycle(!autoCycle)}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer flex items-center gap-1 ${
+                onClick={() => setAutoCycle((prev) => !prev)}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border cursor-pointer transition-all shadow-2xs flex items-center gap-1 ${
                   autoCycle
-                    ? 'bg-[#e6f4ff] text-[#0958d9] border-[#91caff]'
-                    : 'bg-[#f5f5f5] dark:bg-slate-800 text-[#8c8c8c] border-[#d9d9d9] dark:border-slate-700'
+                    ? 'bg-[#e6f4ff] border-[#0958d9] text-[#0958d9]'
+                    : 'bg-white border-slate-300 text-slate-500 hover:text-slate-800'
                 }`}
-                title="Continuous loop through all phases"
+                title="Toggle continuous progression cycle"
               >
-                <RotateCw className="w-3 h-3" />
-                <span className="hidden sm:inline">Auto-Cycle: {autoCycle ? 'ON' : 'OFF'}</span>
+                <RotateCw className={`w-3.5 h-3.5 ${autoCycle && isRunning ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Auto-Cycle</span>
               </button>
 
               {/* Print Drill Sheet */}
@@ -295,64 +446,37 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                 <button
                   type="button"
                   onClick={onPrint}
-                  className="px-2.5 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
-                  title="Print this isolated drill sheet"
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
+                  title="Print official coaching drill sheet"
                 >
-                  <Printer className="w-3.5 h-3.5 text-blue-600 dark:text-sky-400" />
-                  <span>Print</span>
+                  <Printer className="w-3.5 h-3.5 text-slate-600" />
+                  <span className="hidden md:inline">Print Drill</span>
                 </button>
               )}
 
-              {/* Chalkboard Draw / Edit Toggle */}
+              {/* Chalkboard Mode Toggle */}
               {onOpenCustomChalkboard && (
                 <button
                   type="button"
                   onClick={onOpenCustomChalkboard}
-                  className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-300 shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
-                  title="Open custom chalkboard to draw freehand or customize tokens"
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
+                  title="Switch to chalkboard sketch & custom drawing canvas"
                 >
-                  <PenTool className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Chalkboard Draw</span>
+                  <PenTool className="w-3.5 h-3.5 text-blue-600" />
+                  <span className="hidden md:inline">Draw Mode</span>
                 </button>
               )}
             </div>
           </div>
 
-          {/* =========================================================================
-              SVG GRAPHIC ANIMATION CANVAS
-              ========================================================================= */}
-          <div className="w-full flex justify-center py-2 overflow-x-auto">
+          {/* SVG WHITEBOARD CANVAS (Linebacker Triangle layout style & dimensions) */}
+          <div className="w-full relative flex justify-center items-center select-none overflow-x-auto">
             <svg
               viewBox="0 0 880 670"
-              className="w-full max-w-[880px] h-auto rounded-lg"
-              style={{ minHeight: '520px' }}
+              className="w-full h-auto max-h-[640px] drop-shadow-xs"
+              style={{ minWidth: '600px' }}
             >
               <defs>
-                {/* Flow dashed animation */}
-                <style>
-                  {`
-                    @keyframes flowDashAnim {
-                      to { stroke-dashoffset: -12; }
-                    }
-                    .flow-path-anim {
-                      stroke-dasharray: 6, 6;
-                      animation: flowDashAnim 0.8s linear infinite;
-                    }
-                    .field-element-transition {
-                      transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
-                    }
-                    @keyframes pulseRingAnim {
-                      0% { transform: scale(0.3); opacity: 0.95; stroke-width: 8; }
-                      100% { transform: scale(1.85); opacity: 0; stroke-width: 1; }
-                    }
-                    .impact-active-pulse {
-                      transform-origin: center;
-                      animation: pulseRingAnim 0.65s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
-                    }
-                  `}
-                </style>
-
-                {/* Arrow markers */}
                 <marker
                   id="arrow-red"
                   viewBox="0 0 10 10"
@@ -376,7 +500,7 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                   <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#0958d9" />
                 </marker>
                 <marker
-                  id="arrow-green"
+                  id="arrow-blk"
                   viewBox="0 0 10 10"
                   refX="7"
                   refY="5"
@@ -384,7 +508,7 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                   markerHeight="6"
                   orient="auto-start-reverse"
                 >
-                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#389e0d" />
+                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#262626" />
                 </marker>
                 <marker
                   id="arrow-purple"
@@ -398,6 +522,17 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                   <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#722ed1" />
                 </marker>
                 <marker
+                  id="arrow-green"
+                  viewBox="0 0 10 10"
+                  refX="7"
+                  refY="5"
+                  markerWidth="6"
+                  markerHeight="6"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#16a34a" />
+                </marker>
+                <marker
                   id="arrow-orange"
                   viewBox="0 0 10 10"
                   refX="7"
@@ -409,227 +544,318 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                   <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#d46b08" />
                 </marker>
                 <marker
-                  id="arrow-blk"
-                  viewBox="0 0 10 10"
-                  refX="7"
-                  refY="5"
-                  markerWidth="6"
-                  markerHeight="6"
-                  orient="auto-start-reverse"
-                >
-                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#262626" />
-                </marker>
-                <marker
                   id="t-bar"
                   viewBox="0 0 10 10"
                   refX="5"
                   refY="5"
-                  markerWidth="8"
-                  markerHeight="8"
+                  markerWidth="6"
+                  markerHeight="6"
                   orient="auto"
                 >
-                  <line x1="5" y1="0" x2="5" y2="10" stroke="#262626" strokeWidth="3" />
+                  <line x1="5" y1="0" x2="5" y2="10" stroke="#262626" strokeWidth="2.5" />
                 </marker>
+                <style>
+                  {`
+                    @keyframes flowDashAnim {
+                      to {
+                        stroke-dashoffset: -24;
+                      }
+                    }
+                    .flow-path-anim {
+                      stroke-dasharray: 6, 6;
+                      animation: flowDashAnim 0.8s linear infinite;
+                    }
+                    .field-element-transition {
+                      transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease;
+                    }
+                    @keyframes pulseRingAnim {
+                      0% { r: 18px; opacity: 0.9; stroke-width: 4px; }
+                      100% { r: 46px; opacity: 0; stroke-width: 1px; }
+                    }
+                    .impact-active-pulse {
+                      transform-origin: center;
+                      animation: pulseRingAnim 0.65s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+                    }
+                  `}
+                </style>
               </defs>
 
-              {/* Field Perimeter & Background Yard Lines */}
-              <rect
-                x="20"
-                y="15"
-                width="840"
-                height="565"
-                rx="16"
-                fill="#ffffff"
-                stroke="#e5e7eb"
-                strokeWidth="2"
-              />
-
-              {/* Tactical Yard Lines / Field Stripes */}
-              <line x1="30" y1="130" x2="850" y2="130" stroke="#f0f2f5" strokeWidth="1.5" />
-              <line x1="30" y1="240" x2="850" y2="240" stroke="#e6f4ff" strokeWidth="2" strokeDasharray="6,6" />
-              <line x1="30" y1="350" x2="850" y2="350" stroke="#f0f2f5" strokeWidth="1.5" />
-              <line x1="30" y1="460" x2="850" y2="460" stroke="#f0f2f5" strokeWidth="1.5" />
-
-              {/* Hash Marks across middle */}
-              <g stroke="#d9d9d9" strokeWidth="1.5">
-                <line x1="360" y1="125" x2="360" y2="135" />
-                <line x1="520" y1="125" x2="520" y2="135" />
-                <line x1="360" y1="235" x2="360" y2="245" />
-                <line x1="520" y1="235" x2="520" y2="245" />
-                <line x1="360" y1="345" x2="360" y2="355" />
-                <line x1="520" y1="345" x2="520" y2="355" />
-                <line x1="360" y1="455" x2="360" y2="465" />
-                <line x1="520" y1="455" x2="520" y2="465" />
+              {/* 1. TACTICAL FORMATION ZONE FOOTPRINT (matching Triangle Drill's Fit Triangle) */}
+              <g id="tactical-field-backdrop">
+                <polygon
+                  points={tacticalZone.points}
+                  fill="#f4f8ff"
+                  stroke="#adc6ff"
+                  strokeWidth="2"
+                  strokeDasharray="6,6"
+                />
+                {/* Big watermark title */}
+                <text
+                  x="440"
+                  y={tacticalZone.midY + 12}
+                  textAnchor="middle"
+                  fill="#adc6ff"
+                  fontSize="32"
+                  fontWeight="900"
+                  letterSpacing="5"
+                  opacity="0.32"
+                >
+                  {tacticalZone.label}
+                </text>
               </g>
 
-              {/* ================= ZONES ================= */}
-              {(currentPhase.zones || []).map((z) => {
-                const zx = z.cx + shiftX;
-                const zy = z.cy + shiftY;
-                const color = z.color || '#0958d9';
-                return (
-                  <g key={z.id}>
-                    <ellipse
-                      cx={zx}
-                      cy={zy}
-                      rx={z.rx}
-                      ry={z.ry}
-                      fill={color}
-                      fillOpacity={0.08}
-                      stroke={color}
-                      strokeWidth="2"
-                      strokeDasharray="6,4"
-                    />
-                    {z.name && (
-                      <g transform={`translate(${zx}, ${zy - z.ry - 10})`}>
-                        <rect
-                          x={-Math.max(z.name.length * 4.5 + 10, 32)}
-                          y="-9"
-                          width={Math.max(z.name.length * 9 + 20, 64)}
-                          height="18"
-                          rx="4"
-                          fill="#ffffff"
-                          stroke={color}
-                          strokeWidth="1.2"
-                        />
-                        <text
-                          x="0"
-                          y="3.5"
-                          fontSize="9.5"
-                          fontWeight="bold"
-                          fill={color}
-                          textAnchor="middle"
-                        >
-                          {z.name}
-                        </text>
-                      </g>
-                    )}
-                  </g>
-                );
-              })}
+              {/* 2. THREE-DIMENSIONAL BOUNDARY CONES (matching Triangle Drill orange cones) */}
+              <g id="perimeter-cones">
+                {/* Top Center Cone */}
+                <g transform={`translate(${tacticalZone.midX}, ${tacticalZone.top})`}>
+                  <polygon
+                    points="0,-8 -8,9 8,9"
+                    fill="#fa8c16"
+                    stroke="#d46b08"
+                    strokeWidth="1.5"
+                  />
+                  <ellipse cx="0" cy="9" rx="8" ry="3" fill="#d46b08" />
+                </g>
+                {/* Bottom Left Cone */}
+                <g transform={`translate(${tacticalZone.left}, ${tacticalZone.bottom})`}>
+                  <polygon
+                    points="0,-8 -8,9 8,9"
+                    fill="#fa8c16"
+                    stroke="#d46b08"
+                    strokeWidth="1.5"
+                  />
+                  <ellipse cx="0" cy="9" rx="8" ry="3" fill="#d46b08" />
+                </g>
+                {/* Bottom Right Cone */}
+                <g transform={`translate(${tacticalZone.right}, ${tacticalZone.bottom})`}>
+                  <polygon
+                    points="0,-8 -8,9 8,9"
+                    fill="#fa8c16"
+                    stroke="#d46b08"
+                    strokeWidth="1.5"
+                  />
+                  <ellipse cx="0" cy="9" rx="8" ry="3" fill="#d46b08" />
+                </g>
+              </g>
 
-              {/* ================= ARROWS (ANIMATED FLOW PATHS) ================= */}
-              {(currentPhase.arrows || []).map((a) => {
-                const sx = a.startX + shiftX;
-                const sy = a.startY + shiftY;
-                const ex = a.endX + shiftX;
-                const ey = a.endY + shiftY;
+              {/* 3. STATIC GUIDE TRACKS (all drill pathways shown with pale dashed guide lines) */}
+              <g id="static-guide-tracks" opacity="0.65">
+                {phases.flatMap((p, pIdx) =>
+                  (p.arrows || []).map((arrow, aIdx) => {
+                    const start = transformCoord(arrow.startX, arrow.startY);
+                    const end = transformCoord(arrow.endX, arrow.endY);
+                    let d = `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+                    if (arrow.type === 'curved' && arrow.controlX && arrow.controlY) {
+                      const ctrl = transformCoord(arrow.controlX, arrow.controlY);
+                      d = `M ${start.x} ${start.y} Q ${ctrl.x} ${ctrl.y} ${end.x} ${end.y}`;
+                    }
+                    return (
+                      <path
+                        key={`guide-${pIdx}-${aIdx}`}
+                        d={d}
+                        fill="none"
+                        stroke="#ffd591"
+                        strokeWidth="2"
+                        strokeDasharray="4,4"
+                      />
+                    );
+                  })
+                )}
+              </g>
 
-                let d = '';
-                if (a.type === 'curved' && a.controlX !== undefined && a.controlY !== undefined) {
-                  const cx = a.controlX + shiftX;
-                  const cy = a.controlY + shiftY;
-                  d = `M ${sx} ${sy} Q ${cx} ${cy} ${ex} ${ey}`;
-                } else if (a.type === 'blitz') {
-                  const midX = (sx + ex) / 2 + 15;
-                  const midY = (sy + ey) / 2 - 10;
-                  d = `M ${sx} ${sy} Q ${midX} ${midY} ${ex} ${ey}`;
-                } else {
-                  d = `M ${sx} ${sy} L ${ex} ${ey}`;
-                }
+              {/* 4. ACTIVE FLOW PATHS & ARROWS FOR THE CURRENT PHASE */}
+              <g id="active-flow-paths">
+                {(currentPhase.arrows || []).map((arrow, idx) => {
+                  const start = transformCoord(arrow.startX, arrow.startY);
+                  const end = transformCoord(arrow.endX, arrow.endY);
+                  let d = `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+                  if (arrow.type === 'curved' && arrow.controlX && arrow.controlY) {
+                    const ctrl = transformCoord(arrow.controlX, arrow.controlY);
+                    d = `M ${start.x} ${start.y} Q ${ctrl.x} ${ctrl.y} ${end.x} ${end.y}`;
+                  }
 
-                // Marker id selection
-                const color = a.color || '#0958d9';
-                let markerUrl = 'url(#arrow-blue)';
-                if (a.type === 'block') markerUrl = 'url(#t-bar)';
-                else if (color === '#cf1322' || color === '#dc2626' || color === '#d91b24') markerUrl = 'url(#arrow-red)';
-                else if (color === '#389e0d' || color === '#16a34a' || color === '#058538') markerUrl = 'url(#arrow-green)';
-                else if (color === '#722ed1' || color === '#7c3aed') markerUrl = 'url(#arrow-purple)';
-                else if (color === '#d46b08' || color === '#ea580c') markerUrl = 'url(#arrow-orange)';
-                else if (color === '#262626' || color === '#1a1a24') markerUrl = 'url(#arrow-blk)';
+                  const strokeColor =
+                    arrow.color === '#d91b24' || arrow.color === '#cf1322'
+                      ? '#cf1322'
+                      : arrow.color === '#058538' || arrow.color === '#16a34a'
+                      ? '#16a34a'
+                      : arrow.color === '#7c3aed' || arrow.color === '#722ed1'
+                      ? '#722ed1'
+                      : arrow.color === '#e06c00' || arrow.color === '#fa8c16'
+                      ? '#d46b08'
+                      : '#0958d9';
 
-                const isDashed = a.dashed || a.type === 'drop';
-                const midX = (sx + ex) / 2;
-                const midY = (sy + ey) / 2;
+                  const markerId =
+                    arrow.type === 'block'
+                      ? 'url(#t-bar)'
+                      : strokeColor === '#cf1322'
+                      ? 'url(#arrow-red)'
+                      : strokeColor === '#16a34a'
+                      ? 'url(#arrow-green)'
+                      : strokeColor === '#722ed1'
+                      ? 'url(#arrow-purple)'
+                      : strokeColor === '#d46b08'
+                      ? 'url(#arrow-orange)'
+                      : 'url(#arrow-blue)';
 
-                return (
-                  <g key={a.id}>
-                    {/* Animated moving dashed path */}
-                    <path
-                      className={isDashed || isRunning ? 'flow-path-anim' : undefined}
-                      d={d}
-                      fill="none"
-                      stroke={color}
-                      strokeWidth="3.2"
-                      strokeDasharray={isDashed ? '5,4' : '6,6'}
-                      markerEnd={markerUrl}
-                    />
+                  const midX = (start.x + end.x) / 2;
+                  const midY = (start.y + end.y) / 2;
 
-                    {/* Arrow Label Badge */}
-                    {a.label && (
-                      <g transform={`translate(${midX}, ${midY - 10})`}>
-                        <rect
-                          x={-Math.max(a.label.length * 4.5 + 10, 30)}
-                          y="-9"
-                          width={Math.max(a.label.length * 9 + 20, 60)}
-                          height="18"
-                          rx="4"
-                          fill="#ffffff"
-                          stroke={color}
-                          strokeWidth="1.2"
-                          filter="drop-shadow(0 1px 2px rgba(0,0,0,0.1))"
-                        />
-                        <text
-                          x="0"
-                          y="3.5"
-                          fontSize="9.5"
-                          fontWeight="bold"
-                          fill={color}
-                          textAnchor="middle"
-                        >
-                          {a.label}
-                        </text>
-                      </g>
-                    )}
-                  </g>
-                );
-              })}
+                  return (
+                    <g key={arrow.id || idx}>
+                      <path
+                        d={d}
+                        fill="none"
+                        stroke={strokeColor}
+                        strokeWidth="3.5"
+                        markerEnd={markerId}
+                        className="flow-path-anim"
+                      />
+                      {arrow.label && (
+                        <g transform={`translate(${midX}, ${midY - 14})`}>
+                          <rect
+                            x="-65"
+                            y="-9"
+                            width="130"
+                            height="18"
+                            rx="4"
+                            fill="#ffffff"
+                            stroke={strokeColor}
+                            strokeWidth="1.2"
+                            filter="drop-shadow(0 1px 2px rgba(0,0,0,0.15))"
+                          />
+                          <text
+                            x="0"
+                            y="4"
+                            fontSize="9"
+                            fontWeight="bold"
+                            fill={strokeColor}
+                            textAnchor="middle"
+                          >
+                            {arrow.label}
+                          </text>
+                        </g>
+                      )}
+                    </g>
+                  );
+                })}
+              </g>
 
-              {/* ================= TOKENS ================= */}
-              {(currentPhase.tokens || []).map((t) => {
-                const posX = t.x + shiftX;
-                const posY = t.y + shiftY;
-                const isBag = t.type === 'bag';
-                const isCone = t.type === 'cone';
-                const isBall = t.type === 'ball';
-                const isBlocker = t.type === 'square' || t.isSquare || (t.type === 'O' && ['C', 'G', 'T', 'OL', 'B1', 'B2', 'B3'].includes(t.label.toUpperCase()));
-                const isBallCarrier = t.id.includes('bc') || t.id.includes('rb') || t.label.toUpperCase() === 'RB' || (t.subLabel && t.subLabel.toLowerCase().includes('ball'));
-                const isCoach = t.label.toUpperCase() === 'COACH' || t.id.includes('c-') || t.color === '#722ed1' || t.color === '#1a1a24';
-                const isDefender = !isCoach && !isBallCarrier && !isBlocker && !isBag && !isCone && !isBall;
+              {/* 5. DEFENSIVE & OFFENSIVE TOKENS (Rendered with the exact Linebacker Triangle visual engine) */}
+              <g id="field-players">
+                {(currentPhase.tokens || []).map((t, idx) => {
+                  const pos = transformCoord(t.x, t.y);
+                  const upperLabel = (t.label || '').toUpperCase().trim();
+                  const upperSub = (t.subLabel || '').toUpperCase().trim();
 
-                return (
-                  <g
-                    key={t.id}
-                    className="field-element-transition"
-                    style={{ transform: `translate(${posX}px, ${posY}px)` }}
-                  >
-                    {/* 1. BALL CARRIER */}
-                    {isBallCarrier && (
-                      <g>
+                  const isBallCarrier =
+                    upperLabel === 'RB' ||
+                    upperLabel === 'TB' ||
+                    upperLabel === 'FB' ||
+                    upperLabel === 'HB' ||
+                    upperLabel === 'WR' ||
+                    upperLabel === 'BC' ||
+                    upperLabel.includes('BALL') ||
+                    upperLabel.includes('CARRIER') ||
+                    upperSub.includes('BALL') ||
+                    upperSub.includes('CARRIER') ||
+                    upperSub.includes('RUNNER');
+
+                  const isBlocker =
+                    t.isSquare ||
+                    t.type === 'square' ||
+                    (t.type === 'O' && !isBallCarrier) ||
+                    upperLabel.startsWith('B') ||
+                    ['OL', 'C', 'G', 'T', 'TE', 'LT', 'RT', 'LG', 'RG', 'SHIELD'].includes(
+                      upperLabel
+                    );
+
+                  const isCoach =
+                    upperLabel.includes('COACH') ||
+                    upperSub.includes('COACH') ||
+                    (t.type === 'ball' && upperLabel.includes('COACH'));
+
+                  const isBag = t.type === 'bag' || upperLabel.includes('BAG') || upperLabel.includes('DUMMY');
+                  const isCone = t.type === 'cone' || upperLabel.includes('CONE') || upperSub.includes('CONE');
+
+                  const isDefender =
+                    t.type === 'X' ||
+                    (!isBlocker &&
+                      !isBallCarrier &&
+                      !isCoach &&
+                      !isBag &&
+                      !isCone &&
+                      [
+                        'LB',
+                        'DL',
+                        'DE',
+                        'DT',
+                        'NT',
+                        'DB',
+                        'CB',
+                        'FS',
+                        'SS',
+                        'MIKE',
+                        'WILL',
+                        'SAM',
+                        'DEF',
+                        'ROV',
+                        'ROVER',
+                        'TACKLE',
+                      ].includes(upperLabel));
+
+                  // A. Ball Carrier (with angled 3D football at hip)
+                  if (isBallCarrier) {
+                    return (
+                      <g
+                        key={t.id || idx}
+                        className="field-element-transition"
+                        transform={`translate(${pos.x}, ${pos.y})`}
+                      >
                         <circle cx="0" cy="0" r="18" fill="#ffccc7" stroke="#cf1322" strokeWidth="3" />
-                        <text x="0" y="5" fontSize="12" fontWeight="900" fill="#cf1322" textAnchor="middle">
+                        <text
+                          x="0"
+                          y="5"
+                          fontSize="13"
+                          fontWeight="900"
+                          fill="#cf1322"
+                          textAnchor="middle"
+                        >
                           {t.label || 'RB'}
                         </text>
-                        {/* Football at hip */}
+                        {/* 3D Brown Football with white laces at hip */}
                         <ellipse
                           cx="14"
                           cy="4"
                           rx="7"
                           ry="4.5"
                           fill="#8B4513"
-                          stroke="#fff"
+                          stroke="#ffffff"
                           strokeWidth="0.8"
                           transform="rotate(25 14 4)"
                         />
-                        <text x="0" y="32" fontSize="10" fontWeight="bold" fill="#cf1322" textAnchor="middle">
+                        <text
+                          x="28"
+                          y="5"
+                          fontSize="11"
+                          fontWeight="bold"
+                          fill="#cf1322"
+                          filter="drop-shadow(0 1px 1px #fff)"
+                        >
                           {t.subLabel || 'Ball Carrier'}
                         </text>
                       </g>
-                    )}
+                    );
+                  }
 
-                    {/* 2. BLOCKER / OFFENSIVE LINEMAN */}
-                    {isBlocker && (
-                      <g>
+                  // B. Offensive Blocker (Metallic Square Shield)
+                  if (isBlocker) {
+                    return (
+                      <g
+                        key={t.id || idx}
+                        className="field-element-transition"
+                        transform={`translate(${pos.x}, ${pos.y})`}
+                      >
                         <rect
                           x="-17"
                           y="-17"
@@ -640,71 +866,126 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                           stroke="#262626"
                           strokeWidth="3"
                         />
-                        <text x="0" y="5" fontSize="12" fontWeight="900" fill="#262626" textAnchor="middle">
+                        <text
+                          x="0"
+                          y="5"
+                          fontSize="13"
+                          fontWeight="900"
+                          fill="#262626"
+                          textAnchor="middle"
+                        >
                           {t.label || 'OL'}
                         </text>
-                        {t.subLabel && (
-                          <text x="0" y="28" fontSize="9.5" fontWeight="bold" fill="#555" textAnchor="middle">
-                            {t.subLabel}
-                          </text>
-                        )}
+                        <text
+                          x="-24"
+                          y="5"
+                          fontSize="10"
+                          fontWeight="bold"
+                          fill="#555"
+                          textAnchor="end"
+                        >
+                          {t.subLabel || 'Blocker'}
+                        </text>
                       </g>
-                    )}
+                    );
+                  }
 
-                    {/* 3. DEFENDER (WITH ATHLETIC FEET) */}
-                    {isDefender && (
-                      <g>
-                        {/* Stance Cleats / Feet */}
+                  // C. Primary Defender with Athletic Cleats / Dual Feet
+                  if (isDefender) {
+                    // Calculate lead foot based on phase direction
+                    const movingRight = (currentPhase.arrows || []).some(
+                      (a) => a.startX < a.endX && Math.abs(a.endX - a.startX) > 20
+                    );
+                    const movingLeft = (currentPhase.arrows || []).some(
+                      (a) => a.startX > a.endX && Math.abs(a.startX - a.endX) > 20
+                    );
+
+                    let footLY = 2;
+                    let footRY = 2;
+                    let leadLeft = false;
+                    let leadRight = false;
+                    let footLabel = 'SQUARE BASE (NO BENT NAILS)';
+
+                    if (movingLeft) {
+                      footRY = -6;
+                      footLY = 8;
+                      leadRight = true;
+                      footLabel = 'RIGHT LEAD (ATTACK LEFT)';
+                    } else if (movingRight) {
+                      footLY = -6;
+                      footRY = 8;
+                      leadLeft = true;
+                      footLabel = 'LEFT LEAD (ATTACK RIGHT)';
+                    } else if (activeIdx >= 1) {
+                      footLabel = 'POP-OFF STRIKE & LOCKOUT';
+                    }
+
+                    if (activeIdx === phases.length - 1 && phases.length > 2) {
+                      footLabel = 'SHED & ACCELERATE TO BALL';
+                    }
+
+                    return (
+                      <g
+                        key={t.id || idx}
+                        className="field-element-transition"
+                        transform={`translate(${pos.x}, ${pos.y})`}
+                      >
+                        {/* Dual athletic cleats / stance indicators */}
                         <rect
                           x="-18"
-                          y="13"
+                          y={footLY}
                           width="11"
-                          height="20"
+                          height="22"
                           rx="4"
-                          fill={t.color === '#0958d9' ? '#0958d9' : '#91caff'}
+                          fill={leadLeft ? '#0958d9' : '#69b1ff'}
                           stroke="#0958d9"
                           strokeWidth="1.5"
                         />
                         <rect
                           x="7"
-                          y="13"
+                          y={footRY}
                           width="11"
-                          height="20"
+                          height="22"
                           rx="4"
-                          fill="#0958d9"
+                          fill={leadRight ? '#0958d9' : '#69b1ff'}
                           stroke="#0958d9"
                           strokeWidth="1.5"
                         />
-                        <circle cx="0" cy="0" r="20" fill="#bae0ff" stroke="#0958d9" strokeWidth="3.2" />
-                        <text x="0" y="5" fontSize="12" fontWeight="900" fill="#0958d9" textAnchor="middle">
-                          {t.label || 'DEF'}
+                        {/* Main circular token */}
+                        <circle cx="0" cy="0" r="22" fill="#bae0ff" stroke="#0958d9" strokeWidth="3.5" />
+                        <text
+                          x="0"
+                          y="5"
+                          fontSize="14"
+                          fontWeight="bold"
+                          fill="#0958d9"
+                          textAnchor="middle"
+                        >
+                          {t.label || 'LB'}
                         </text>
-                        {t.subLabel && (
-                          <text x="0" y="44" fontSize="10" fontWeight="bold" fill="#0958d9" textAnchor="middle">
-                            {t.subLabel}
-                          </text>
-                        )}
-                      </g>
-                    )}
-
-                    {/* 4. COACH */}
-                    {isCoach && (
-                      <g>
-                        <circle cx="0" cy="0" r="19" fill="#ffffff" stroke="#722ed1" strokeWidth="3" />
-                        <text x="0" y="4.5" fontSize="10.5" fontWeight="900" fill="#722ed1" textAnchor="middle">
-                          {t.label || 'COACH'}
+                        {/* Stance / Foot Lead Technique Badge */}
+                        <text
+                          x="0"
+                          y="44"
+                          fontSize="10.5"
+                          fontWeight="bold"
+                          fill="#0958d9"
+                          textAnchor="middle"
+                        >
+                          {footLabel}
                         </text>
-                        {t.subLabel && (
-                          <text x="0" y="30" fontSize="9" fontWeight="bold" fill="#722ed1" textAnchor="middle">
-                            {t.subLabel}
-                          </text>
-                        )}
                       </g>
-                    )}
+                    );
+                  }
 
-                    {/* 5. TACKLE BAG / STAND-UP DUMMY */}
-                    {isBag && (
-                      <g>
+                  // D. Tackle Bag / Stand-Up Dummy
+                  if (isBag) {
+                    return (
+                      <g
+                        key={t.id || idx}
+                        className="field-element-transition"
+                        transform={`translate(${pos.x}, ${pos.y})`}
+                      >
                         <rect
                           x="-16"
                           y="-24"
@@ -716,152 +997,298 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                           strokeWidth="2.5"
                         />
                         <circle cx="0" cy="-14" r="5" fill="#ffffff" opacity="0.8" />
-                        <text x="0" y="5" fontSize="10" fontWeight="900" fill="#cf1322" textAnchor="middle">
+                        <text
+                          x="0"
+                          y="5"
+                          fontSize="10"
+                          fontWeight="900"
+                          fill="#cf1322"
+                          textAnchor="middle"
+                        >
                           {t.label || 'BAG'}
                         </text>
                         {t.subLabel && (
-                          <text x="0" y="34" fontSize="9" fontWeight="bold" fill="#cf1322" textAnchor="middle">
+                          <text
+                            x="0"
+                            y="34"
+                            fontSize="9"
+                            fontWeight="bold"
+                            fill="#cf1322"
+                            textAnchor="middle"
+                          >
                             {t.subLabel}
                           </text>
                         )}
                       </g>
-                    )}
+                    );
+                  }
 
-                    {/* 6. CONES */}
-                    {isCone && (
-                      <g>
-                        <polygon points="0,-12 -11,8 11,8" fill="#d46b08" stroke="#ad4e00" strokeWidth="1.5" />
-                        <ellipse cx="0" cy="8" rx="10" ry="3" fill="#ad4e00" />
-                        {t.label && t.label !== 'Cone' && (
-                          <text x="16" y="5" fontSize="10" fontWeight="bold" fill="#d46b08">
-                            {t.label}
-                          </text>
-                        )}
-                      </g>
-                    )}
-
-                    {/* 7. FOOTBALL */}
-                    {isBall && (
-                      <g>
-                        <ellipse
-                          cx="0"
-                          cy="0"
-                          rx="13"
-                          ry="8"
-                          fill="#8B4513"
-                          stroke="#ffffff"
-                          strokeWidth="1"
-                          transform="rotate(-20)"
+                  // E. Field Cone
+                  if (isCone) {
+                    return (
+                      <g
+                        key={t.id || idx}
+                        className="field-element-transition"
+                        transform={`translate(${pos.x}, ${pos.y})`}
+                      >
+                        <polygon
+                          points="0,-8 -8,9 8,9"
+                          fill="#fa8c16"
+                          stroke="#d46b08"
+                          strokeWidth="1.5"
                         />
-                        <line x1="-5" y1="0" x2="5" y2="0" stroke="#ffffff" strokeWidth="1.2" />
+                        <ellipse cx="0" cy="9" rx="8" ry="3" fill="#d46b08" />
                         {t.label && (
-                          <text x="18" y="4" fontSize="10" fontWeight="bold" fill="#8B4513">
+                          <text
+                            x="12"
+                            y="5"
+                            fontSize="9"
+                            fontWeight="bold"
+                            fill="#d46b08"
+                          >
                             {t.label}
                           </text>
                         )}
                       </g>
-                    )}
-                  </g>
-                );
-              })}
+                    );
+                  }
 
-              {/* Shockwave Ring on Contact / Climax */}
+                  // F. Coach Token
+                  if (isCoach) {
+                    return (
+                      <g
+                        key={t.id || idx}
+                        className="field-element-transition"
+                        transform={`translate(${pos.x}, ${pos.y})`}
+                      >
+                        <circle cx="0" cy="0" r="21" fill="#ffffff" stroke="#722ed1" strokeWidth="3" />
+                        <text
+                          x="0"
+                          y="5"
+                          fontSize="11"
+                          fontWeight="900"
+                          fill="#722ed1"
+                          textAnchor="middle"
+                        >
+                          COACH
+                        </text>
+                        <text
+                          x="0"
+                          y="32"
+                          fontSize="10"
+                          fontWeight="bold"
+                          fill="#722ed1"
+                          textAnchor="middle"
+                        >
+                          (CUE &amp; SIGNAL)
+                        </text>
+                        <text
+                          x="-28"
+                          y="2"
+                          fontSize="11"
+                          fontWeight="bold"
+                          fill="#0958d9"
+                          textAnchor="end"
+                        >
+                          🗣️ {drill.cues[0] || '“Fire with low hips!”'}
+                        </text>
+                      </g>
+                    );
+                  }
+
+                  // G. Default Clean Athlete Token
+                  return (
+                    <g
+                      key={t.id || idx}
+                      className="field-element-transition"
+                      transform={`translate(${pos.x}, ${pos.y})`}
+                    >
+                      <circle cx="0" cy="0" r="18" fill="#f8fafc" stroke="#0f172a" strokeWidth="2.5" />
+                      <text
+                        x="0"
+                        y="5"
+                        fontSize="12"
+                        fontWeight="900"
+                        fill="#0f172a"
+                        textAnchor="middle"
+                      >
+                        {t.label}
+                      </text>
+                      {t.subLabel && (
+                        <text
+                          x="0"
+                          y="28"
+                          fontSize="9.5"
+                          fontWeight="bold"
+                          fill="#475569"
+                          textAnchor="middle"
+                        >
+                          {t.subLabel}
+                        </text>
+                      )}
+                    </g>
+                  );
+                })}
+              </g>
+
+              {/* 6. COACH BEHIND SETUP (Rendered if drill does not have an explicit coach token) */}
+              {!hasExplicitCoach && (
+                <g id="coach-behind-setup">
+                  <g
+                    className="field-element-transition"
+                    transform="translate(440, 520)"
+                  >
+                    <circle cx="0" cy="0" r="21" fill="#ffffff" stroke="#722ed1" strokeWidth="3" />
+                    <text
+                      x="0"
+                      y="5"
+                      fontSize="11"
+                      fontWeight="900"
+                      fill="#722ed1"
+                      textAnchor="middle"
+                    >
+                      COACH
+                    </text>
+                    <text
+                      x="0"
+                      y="32"
+                      fontSize="10.5"
+                      fontWeight="bold"
+                      fill="#722ed1"
+                      textAnchor="middle"
+                    >
+                      (BEHIND / SIGNALS)
+                    </text>
+                    {/* Coach verbal callout bubble */}
+                    <text
+                      x="-30"
+                      y="2"
+                      fontSize="11"
+                      fontWeight="bold"
+                      fill="#0958d9"
+                      textAnchor="end"
+                    >
+                      🗣️ {drill.cues[0] || '“Thumbs Up, Elbows Glued!”'}
+                    </text>
+                  </g>
+                  {/* Coach purple hand-signal trajectory path */}
+                  <path
+                    d={`M 440 495 L ${focalPoint.x} ${Math.max(220, focalPoint.y + 40)}`}
+                    fill="none"
+                    stroke="#722ed1"
+                    strokeWidth="2.5"
+                    strokeDasharray="4,4"
+                    markerEnd="url(#arrow-purple)"
+                  />
+                  <text
+                    x="450"
+                    y="480"
+                    fontSize="10.5"
+                    fontWeight="bold"
+                    fill="#722ed1"
+                  >
+                    COACH HAND SIGNAL / CUE
+                  </text>
+                </g>
+              )}
+
+              {/* 7. CONTACT IMPACT SHOCKWAVE (Ring pulsing on collision / climax) */}
               {isImpactActive && (
                 <circle
                   className="impact-active-pulse"
-                  cx={primaryFocalPoint.x}
-                  cy={primaryFocalPoint.y}
-                  r="36"
+                  cx={focalPoint.x}
+                  cy={focalPoint.y}
+                  r="34"
                   fill="none"
                   stroke="#cf1322"
                   strokeWidth="4"
                 />
               )}
 
-              {/* Action Callout Badge */}
-              <g
-                className="field-element-transition"
-                transform={`translate(${primaryFocalPoint.x}, ${Math.max(50, primaryFocalPoint.y - 50)})`}
-              >
-                <rect
-                  x={-Math.max(actionBadgeText.length * 4.5 + 16, 110)}
-                  y="-15"
-                  width={Math.max(actionBadgeText.length * 9 + 32, 220)}
-                  height="30"
-                  rx="6"
-                  fill={activeColor.bg}
-                  stroke={activeColor.border}
-                  strokeWidth="2"
-                  filter="drop-shadow(0 2px 4px rgba(0,0,0,0.15))"
-                />
-                <text
-                  x="0"
-                  y="5"
-                  fontSize="11"
-                  fontWeight="bold"
-                  fill={activeColor.text}
-                  textAnchor="middle"
+              {/* 8. ELEVATED ACTION CALLOUT BADGE (Matching Linebacker Triangle strike/tackle badges) */}
+              {activeIdx >= 1 && (
+                <g
+                  className="field-element-transition"
+                  transform={`translate(${focalPoint.x}, ${focalPoint.y - 48})`}
                 >
-                  {actionBadgeText}
-                </text>
-              </g>
+                  <rect
+                    x="-135"
+                    y="-16"
+                    width="270"
+                    height="32"
+                    rx="6"
+                    fill={activeIdx === phases.length - 1 ? '#e6f4ff' : '#fff1f0'}
+                    stroke={activeIdx === phases.length - 1 ? '#0958d9' : '#cf1322'}
+                    strokeWidth="2"
+                    filter="drop-shadow(0 2px 4px rgba(0,0,0,0.18))"
+                  />
+                  <text
+                    x="0"
+                    y="5"
+                    fontSize="11"
+                    fontWeight="bold"
+                    fill={activeIdx === phases.length - 1 ? '#0958d9' : '#cf1322'}
+                    textAnchor="middle"
+                  >
+                    {activeIdx === phases.length - 1 ? tackleBadgeText : strikeBadgeText}
+                  </text>
+                </g>
+              )}
 
-              {/* Live Coaching Banner */}
+              {/* 9. LIVE COACHING BANNER */}
               <text
                 x="440"
-                y="568"
-                fontSize="13"
+                y="575"
+                fontSize="13.5"
                 fontWeight="bold"
-                fill={activeColor.border}
+                fill={bannerColor}
                 textAnchor="middle"
               >
-                PHASE {activeIdx + 1}: {currentPhase.name} — {currentPhase.description || drill.objective}
+                {bannerText}
               </text>
 
-              {/* Whiteboard Footer Notes */}
+              {/* 10. WHITEBOARD FOOTER NOTES (Archie McDaniel / Coaching keys section) */}
               <line
                 x1="30"
-                y1="590"
+                y1="595"
                 x2="850"
-                y2="590"
+                y2="595"
                 stroke="#cfd6df"
                 strokeWidth="1.5"
                 strokeDasharray="4,4"
               />
-              <g transform="translate(35, 610)" fontSize="10.5" fill="#262626">
+              <g transform="translate(35, 616)" fontSize="11" fill="#262626">
                 <text x="0" y="0" fontWeight="bold" fill="#722ed1">
                   COACHING KEYS:
                 </text>
                 <text x="135" y="0">
-                  1. <tspan fontWeight="bold">Setup &amp; Alignment:</tspan> {drill.setup || drill.objective}
+                  1. <tspan fontWeight="bold">Setup &amp; Stance:</tspan>{' '}
+                  {drill.setup || 'Keep hips coiled low, center of gravity forward over cleats.'}
                 </text>
                 <text x="135" y="16">
-                  2. <tspan fontWeight="bold">Primary Cues:</tspan>{' '}
-                  {drill.cues && drill.cues.length > 0
-                    ? drill.cues.slice(0, 2).join(' • ')
-                    : 'Explode on movement, maintain pad level, strike with heels of palms.'}
+                  2. <tspan fontWeight="bold">Primary Cue:</tspan>{' '}
+                  {drill.cues && drill.cues[0] ? drill.cues[0] : 'Explode on movement; maintain inside hand leverage.'}
                 </text>
                 <text x="135" y="32">
-                  3. <tspan fontWeight="bold">Equipment &amp; Faults:</tspan>{' '}
-                  {drill.equipment || 'Standard football gear'}
-                  {drill.faults && drill.faults.length > 0 ? ` (Avoid: ${drill.faults[0]})` : ''}
+                  3. <tspan fontWeight="bold">Eliminate Fault:</tspan>{' '}
+                  {drill.faults && drill.faults[0] ? drill.faults[0] : 'Never pop helmet up before hips fire forward.'}
                 </text>
               </g>
             </svg>
           </div>
         </div>
 
-        {/* MARKER TRAY WITH 4 DRY-ERASE PENS AND FELT ERASER */}
+        {/* MARKER TRAY (4 dry-erase markers & felt eraser) */}
         <div className="mt-3.5 h-3 bg-gradient-to-b from-[#8a8f96] to-[#63676e] rounded-xs relative flex justify-center items-center shadow-inner">
           <div className="absolute -top-2 flex gap-4 items-center">
-            <div className="w-11 h-2 rounded-xs bg-[#222] shadow-xs" title="Black Dry-Erase Marker" />
-            <div className="w-11 h-2 rounded-xs bg-[#0958d9] shadow-xs" title="Blue Dry-Erase Marker" />
-            <div className="w-11 h-2 rounded-xs bg-[#cf1322] shadow-xs" title="Red Dry-Erase Marker" />
-            <div className="w-11 h-2 rounded-xs bg-[#d46b08] shadow-xs" title="Orange Dry-Erase Marker" />
+            <div className="w-11 h-2 rounded-xs bg-[#222] shadow-xs" title="Black Dry-Erase Marker"></div>
+            <div className="w-11 h-2 rounded-xs bg-[#0958d9] shadow-xs" title="Blue Dry-Erase Marker"></div>
+            <div className="w-11 h-2 rounded-xs bg-[#cf1322] shadow-xs" title="Red Dry-Erase Marker"></div>
+            <div className="w-11 h-2 rounded-xs bg-[#d46b08] shadow-xs" title="Orange Dry-Erase Marker"></div>
             <div
               className="w-14 h-2.5 bg-[#363738] rounded-xs border-b-2 border-[#555] shadow-xs"
               title="Felt Eraser"
-            />
+            ></div>
           </div>
         </div>
       </div>
