@@ -176,6 +176,14 @@ export default function App() {
     } else {
       plansToUse = [...DEFAULT_INITIAL_PRACTICES];
     }
+    // Filter out deprecated sample plan p_w3_2 and any 9/17 Situational 2-Minute plan
+    plansToUse = plansToUse.filter((p) => {
+      if (!p || typeof p !== 'object') return false;
+      if (p.id === 'p_w3_2') return false;
+      if (p.title && p.title.toLowerCase().includes('situational 2-minute') && p.date && p.date.includes('09-17')) return false;
+      if (p.title === 'Week 3 - Situational 2-Minute & Scrimmage') return false;
+      return true;
+    });
     const sanitized = sanitizePracticePlans(
       plansToUse,
       safeJSONParse('footballScheduleEvents', DEFAULT_SCHEDULE_EVENTS)
@@ -260,8 +268,12 @@ export default function App() {
   });
   const [deletedPracticePlanIds, setDeletedPracticePlanIds] = useState<string[]>(() => {
     const saved = safeJSONParse('footballDeletedPracticePlanIds', null);
-    if (saved && Array.isArray(saved)) return saved;
-    return [];
+    const list = saved && Array.isArray(saved) ? [...saved] : [];
+    if (!list.includes('p_w3_2')) {
+      list.push('p_w3_2');
+      safeJSONSet('footballDeletedPracticePlanIds', list);
+    }
+    return list;
   });
   const [playDatabase, setPlayDatabase] = useState<PlayDatabaseEntry[]>(() => {
     const saved = safeJSONParse('footballPlayDatabase', null);
@@ -412,9 +424,14 @@ export default function App() {
   const [currentPracticeId, setCurrentPracticeId] = useState<string | null>(() => {
     if (typeof window !== 'undefined' && window.location.hash) {
       const parsed = parseRouteHash(window.location.hash);
-      if (parsed.practiceId) return parsed.practiceId;
+      if (parsed.practiceId && parsed.practiceId !== 'p_w3_2') return parsed.practiceId;
     }
-    return safeJSONParse('footballCurrentPracticeId', null);
+    const saved = safeJSONParse<string | null>('footballCurrentPracticeId', null);
+    if (saved === 'p_w3_2') {
+      safeJSONSet('footballCurrentPracticeId', null);
+      return null;
+    }
+    return saved;
   });
   const [activeGuideMain, setActiveGuideMain] = useState<string>('Offense');
   const [activeGuideSub, setActiveGuideSub] = useState<string>('Full Playbook');
@@ -476,6 +493,7 @@ export default function App() {
       }
       if (options?.practiceId) {
         setCurrentPracticeId(options.practiceId);
+        safeJSONSet('footballCurrentPracticeId', options.practiceId);
       }
       if (options?.openTakeAttendance) {
         setAutoOpenTakeAttendance(true);

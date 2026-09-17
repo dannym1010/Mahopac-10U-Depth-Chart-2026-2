@@ -245,7 +245,14 @@ export function sanitizePracticePlans(
 ): PracticePlan[] {
   if (!Array.isArray(plans)) return [];
   return plans
-    .filter((p): p is PracticePlan => Boolean(p && typeof p === 'object'))
+    .filter((p): p is PracticePlan => {
+      if (!p || typeof p !== 'object') return false;
+      // Filter out deprecated sample plan p_w3_2 hardcoded on 9/17
+      if (p.id === 'p_w3_2') return false;
+      if (p.title && p.title.toLowerCase().includes('situational 2-minute') && p.date && p.date.includes('09-17')) return false;
+      if (p.title === 'Week 3 - Situational 2-Minute & Scrimmage') return false;
+      return true;
+    })
     .map((p) => {
       const dateStr = p.date || '';
       const correctDay = p.day || (dateStr ? getDayOfWeekForDate(dateStr) : 'Wednesday');
@@ -308,17 +315,28 @@ export function findBestActivePracticeId(
 ): string | null {
   if (!Array.isArray(practices) || practices.length === 0) return null;
 
-  // 1. If preferredId is provided and exists in the practice list, use it
-  if (preferredId) {
-    const found = practices.find((p) => p && p.id === preferredId);
-    if (found) return found.id;
-  }
+  // Filter out invalid or deprecated sample plans
+  const validPractices = practices.filter(
+    (p) => p && p.id && p.id !== 'p_w3_2' && p.title !== 'Week 3 - Situational 2-Minute & Scrimmage'
+  );
+  if (validPractices.length === 0) return null;
 
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // 2. Check if there is an exact practice plan for Today's date
-  const todayPlan = practices.find((p) => p && p.date === todayStr && !p.isCancelled);
-  if (todayPlan) return todayPlan.id;
+  // 1. Check if there are practice plans for Today's date (prioritize most recently edited/created)
+  const todayPlans = validPractices
+    .filter((p) => p.date && p.date.split('T')[0] === todayStr && !p.isCancelled)
+    .sort((a, b) => (b.lastEdited || b.createdAt || 0) - (a.lastEdited || a.createdAt || 0));
+
+  if (todayPlans.length > 0) {
+    return todayPlans[0].id;
+  }
+
+  // 2. If preferredId is provided and exists in the practice list, use it
+  if (preferredId && preferredId !== 'p_w3_2') {
+    const found = validPractices.find((p) => p && p.id === preferredId);
+    if (found) return found.id;
+  }
 
   // 3. Check for the most recently edited practice plan
   const sortedByRecentEdit = [...practices]

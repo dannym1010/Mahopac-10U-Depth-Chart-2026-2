@@ -100,15 +100,67 @@ export const HomeView: React.FC<HomeViewProps> = ({
     return dateStr;
   };
 
-  // 1. Determine Upcoming Practice
+  // 1. Determine Today / Upcoming Practice
   const practiceEventData = useMemo(() => {
+    const validPlans = (practicePlans || []).filter(
+      (p) =>
+        p &&
+        p.id &&
+        p.id !== 'p_w3_2' &&
+        p.title !== 'Week 3 - Situational 2-Minute & Scrimmage' &&
+        !p.isCancelled &&
+        (!p.teamId || !activeTeam || p.teamId === activeTeam.id)
+    );
+
+    // Prioritize most recent practice plan for today
+    const todayPlans = validPlans
+      .filter((p) => p.date && p.date.split('T')[0] === todayStr)
+      .sort((a, b) => (b.lastEdited || b.createdAt || 0) - (a.lastEdited || a.createdAt || 0));
+    const mostRecentTodayPlan = todayPlans[0] || null;
+
     const teamPractices = (scheduleEvents || [])
-      .filter((e) => e && (e.type === 'practice' || e.type === 'walkthrough') && !e.isCancelled)
+      .filter((e) => e && (e.type === 'practice' || e.type === 'walkthrough') && !e.isCancelled && (!e.teamId || !activeTeam || e.teamId === activeTeam.id))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const todayEvent = teamPractices.find((e) => e.date && e.date.split('T')[0] === todayStr);
+
+    if (mostRecentTodayPlan) {
+      const derivedEvent: ScheduleEvent = todayEvent || {
+        id: `derived_today_${mostRecentTodayPlan.id}`,
+        teamId: mostRecentTodayPlan.teamId || activeTeam?.id || 'team_10u',
+        type: 'practice',
+        title: mostRecentTodayPlan.title || "Today's Practice Plan",
+        week: mostRecentTodayPlan.weekFolder ? mostRecentTodayPlan.weekFolder.replace(/^week\s*/i, '') : String(currentWeek || '1'),
+        date: todayStr,
+        startTime: mostRecentTodayPlan.startTime || '17:30',
+        endTime: mostRecentTodayPlan.endTime || '19:00',
+        location: mostRecentTodayPlan.location || 'Crane Road',
+        linkedPracticePlanId: mostRecentTodayPlan.id,
+        createdAt: mostRecentTodayPlan.createdAt || Date.now(),
+        lastEdited: mostRecentTodayPlan.lastEdited || Date.now(),
+      };
+      return {
+        event: derivedEvent,
+        plan: mostRecentTodayPlan,
+        isToday: true,
+      };
+    }
+
+    if (todayEvent) {
+      let linkedPlan: PracticePlan | null = null;
+      if (todayEvent.linkedPracticePlanId) {
+        linkedPlan = validPlans.find((p) => p.id === todayEvent.linkedPracticePlanId) || null;
+      }
+      return {
+        event: todayEvent,
+        plan: linkedPlan,
+        isToday: true,
+      };
+    }
 
     if (teamPractices.length === 0) return null;
 
-    // Find today's practice or upcoming future practices
+    // Find upcoming future practices
     const upcoming = teamPractices.filter((e) => {
       const eventEnd = new Date(`${e.date}T${e.endTime || e.startTime || '23:59'}:00`);
       return eventEnd.getTime() >= today.getTime();
@@ -117,28 +169,23 @@ export const HomeView: React.FC<HomeViewProps> = ({
     const selectedEvent = upcoming.length > 0 ? upcoming[0] : teamPractices[teamPractices.length - 1];
     if (!selectedEvent) return null;
 
-    const isToday = selectedEvent.date === todayStr;
-
     // Match linked practice plan
     let linkedPlan: PracticePlan | null = null;
     if (selectedEvent.linkedPracticePlanId) {
-      linkedPlan = (practicePlans || []).find((p) => p.id === selectedEvent.linkedPracticePlanId) || null;
+      linkedPlan = validPlans.find((p) => p.id === selectedEvent.linkedPracticePlanId) || null;
     }
     if (!linkedPlan) {
-      linkedPlan = (practicePlans || []).find(
+      linkedPlan = validPlans.find(
         (p) => p.date === selectedEvent.date || (p.weekFolder && (p.weekFolder === selectedEvent.week || p.weekFolder.includes(selectedEvent.week)))
       ) || null;
-    }
-    if (!linkedPlan && practicePlans && practicePlans.length > 0) {
-      linkedPlan = practicePlans[0];
     }
 
     return {
       event: selectedEvent,
       plan: linkedPlan,
-      isToday,
+      isToday: false,
     };
-  }, [scheduleEvents, practicePlans, today, todayStr]);
+  }, [scheduleEvents, practicePlans, today, todayStr, activeTeam, currentWeek]);
 
   // 2. Determine Upcoming Game or Scrimmage
   const gameEventData = useMemo(() => {
@@ -165,12 +212,26 @@ export const HomeView: React.FC<HomeViewProps> = ({
   }, [scheduleEvents, today, todayStr]);
 
   const handleOpenPracticePlan = (planId?: string) => {
-    if (planId) {
-      if (onSelectPractice) onSelectPractice(planId);
-      onNavigateToUnit('practice', { practiceId: planId });
-    } else if (practiceEventData?.plan) {
-      if (onSelectPractice) onSelectPractice(practiceEventData.plan.id);
-      onNavigateToUnit('practice', { practiceId: practiceEventData.plan.id });
+    // 1. If there's a practice plan for today, open the most recent plan for today!
+    const validPlans = (practicePlans || []).filter(
+      (p) =>
+        p &&
+        p.id &&
+        p.id !== 'p_w3_2' &&
+        p.title !== 'Week 3 - Situational 2-Minute & Scrimmage' &&
+        !p.isCancelled &&
+        (!p.teamId || !activeTeam || p.teamId === activeTeam.id)
+    );
+    const todayPlans = validPlans
+      .filter((p) => p.date && p.date.split('T')[0] === todayStr)
+      .sort((a, b) => (b.lastEdited || b.createdAt || 0) - (a.lastEdited || a.createdAt || 0));
+    const mostRecentTodayPlan = todayPlans[0] || null;
+
+    const targetId = mostRecentTodayPlan?.id || planId || practiceEventData?.plan?.id;
+
+    if (targetId) {
+      if (onSelectPractice) onSelectPractice(targetId);
+      onNavigateToUnit('practice', { practiceId: targetId });
     } else {
       onNavigateToUnit('practice');
     }

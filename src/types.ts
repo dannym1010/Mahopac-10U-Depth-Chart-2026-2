@@ -464,6 +464,7 @@ export interface PracticePlan {
   isCancelled?: boolean; // When true, excluded from practice number/held count
   cancellationReason?: string;
   lastEdited?: number;
+  createdAt?: number;
   plan?: PracticePeriod[];
   periods?: PracticePeriod[];
 }
