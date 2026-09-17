@@ -120,7 +120,8 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
         maxY: 460,
         centerX: 440,
         centerY: 290,
-        scale: 1,
+        scaleX: 1,
+        scaleY: 1,
       };
     }
     let minX = Infinity;
@@ -134,28 +135,36 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
       if (t.y > maxY) maxY = t.y;
     });
 
-    const w = Math.max(maxX - minX, 150);
-    const h = Math.max(maxY - minY, 130);
+    const rawW = maxX - minX;
+    const rawH = maxY - minY;
     const centerX = (minX + maxX) / 2;
     const centerY = (minY + maxY) / 2;
 
-    // Target width ~520, target height ~350 centered at (440, 290)
-    const scaleX = 520 / w;
-    const scaleY = 350 / h;
-    const scale = Math.min(Math.max(Math.min(scaleX, scaleY), 0.95), 1.6);
+    // Target active drill drawing space: ~460px width, ~300px height centered at (440, 285)
+    let scaleX = rawW > 25 ? 460 / Math.max(rawW, 130) : 2.2;
+    let scaleY = rawH > 25 ? 300 / Math.max(rawH, 80) : 2.5;
 
-    return { minX, maxX, minY, maxY, centerX, centerY, scale };
+    // Ensure healthy minimum and maximum scaling so narrow/short drills are never squished together
+    scaleX = Math.min(Math.max(scaleX, 1.2), 3.6);
+    scaleY = Math.min(Math.max(scaleY, 1.4), 3.8);
+
+    // If one dimension has minimal spread (like straight vertical or horizontal drills),
+    // inherit the healthy scale of the other dimension so tokens spread out clearly
+    if (rawW <= 25) scaleX = scaleY;
+    if (rawH <= 25) scaleY = scaleX;
+
+    return { minX, maxX, minY, maxY, centerX, centerY, scaleX, scaleY };
   }, [allTokens]);
 
   // Transform coordinates into the 880x670 Linebacker Triangle layout canvas
   const transformCoord = (rawX: number, rawY: number) => {
     const cx = 440;
-    const cy = 290;
-    const nx = cx + (rawX - bounds.centerX) * bounds.scale;
-    const ny = cy + (rawY - bounds.centerY) * bounds.scale;
+    const cy = 285;
+    const nx = cx + (rawX - bounds.centerX) * bounds.scaleX;
+    const ny = cy + (rawY - bounds.centerY) * bounds.scaleY;
     return {
-      x: Math.round(Math.max(90, Math.min(790, nx))),
-      y: Math.round(Math.max(80, Math.min(520, ny))),
+      x: Math.round(Math.max(120, Math.min(760, nx))),
+      y: Math.round(Math.max(120, Math.min(460, ny))),
     };
   };
 
@@ -163,14 +172,14 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
   const tacticalZone = useMemo(() => {
     if (allTokens.length === 0) {
       return {
-        points: '440,110 180,430 700,430',
+        points: '440,115 180,440 700,440',
         label: 'FIT TRIANGLE',
         midX: 440,
         midY: 310,
         left: 180,
         right: 700,
-        top: 110,
-        bottom: 430,
+        top: 115,
+        bottom: 440,
       };
     }
 
@@ -187,15 +196,33 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
       if (tc.y > bottom) bottom = tc.y;
     });
 
-    const padX = 55;
-    const padY = 45;
-    left = Math.max(110, left - padX);
-    right = Math.min(770, right + padX);
-    top = Math.max(85, top - padY);
-    bottom = Math.min(515, bottom + padY);
+    const padX = 75;
+    const padY = 55;
+    left = Math.max(140, left - padX);
+    right = Math.min(740, right + padX);
+    top = Math.max(110, top - padY);
+    bottom = Math.min(460, bottom + padY);
 
-    const midX = (left + right) / 2;
-    const midY = (top + bottom) / 2;
+    // Enforce authentic wide field boundaries (minimum 480px width, 300px height)
+    // so the whiteboard always frames the action generously like the Linebacker Triangle drill
+    const minZoneW = 480;
+    const minZoneH = 300;
+    const currentW = right - left;
+    const currentH = bottom - top;
+
+    if (currentW < minZoneW) {
+      const expandX = (minZoneW - currentW) / 2;
+      left = Math.max(160, Math.round(left - expandX));
+      right = Math.min(720, Math.round(right + expandX));
+    }
+    if (currentH < minZoneH) {
+      const expandY = (minZoneH - currentH) / 2;
+      top = Math.max(110, Math.round(top - expandY));
+      bottom = Math.min(450, Math.round(bottom + expandY));
+    }
+
+    const midX = Math.round((left + right) / 2);
+    const midY = Math.round((top + bottom) / 2);
 
     // Derive authentic tactical watermark label matching the Linebacker Triangle style
     let label = drill.formationName || '';
@@ -282,6 +309,64 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
     }
     return transformCoord(currentPhase.tokens[0].x, currentPhase.tokens[0].y);
   }, [currentPhase, bounds]);
+
+  // Anti-collision relaxation pass: ensures no tokens or their sublabel badges collide
+  const positionedTokens = useMemo(() => {
+    const rawList = (currentPhase.tokens || []).map((t, idx) => {
+      const p = transformCoord(t.x, t.y);
+      return {
+        ...t,
+        _origIdx: idx,
+        renderX: p.x,
+        renderY: p.y,
+      };
+    });
+
+    // Iterative relaxation pass (min 80px clearance between token centers to prevent label/badge collision)
+    const minDist = 80;
+    for (let iter = 0; iter < 8; iter++) {
+      let shifted = false;
+      for (let i = 0; i < rawList.length; i++) {
+        for (let j = i + 1; j < rawList.length; j++) {
+          const dx = rawList[j].renderX - rawList[i].renderX;
+          const dy = rawList[j].renderY - rawList[i].renderY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < minDist) {
+            shifted = true;
+            const overlap = (minDist - (dist || 0.1)) / 2 + 1;
+            // If tokens are vertically aligned (|dx| < 12), push strictly vertically
+            let pushX = 0;
+            let pushY = 0;
+            if (Math.abs(dx) < 12) {
+              pushX = 0;
+              pushY = (dy >= 0 ? 1 : -1) * overlap;
+            } else if (Math.abs(dy) < 12) {
+              pushX = (dx >= 0 ? 1 : -1) * overlap;
+              pushY = 0;
+            } else {
+              const angle = Math.atan2(dy, dx);
+              pushX = Math.cos(angle) * overlap;
+              pushY = Math.sin(angle) * overlap;
+            }
+            rawList[i].renderX = Math.max(120, Math.min(760, Math.round(rawList[i].renderX - pushX)));
+            rawList[i].renderY = Math.max(120, Math.min(460, Math.round(rawList[i].renderY - pushY)));
+            rawList[j].renderX = Math.max(120, Math.min(760, Math.round(rawList[j].renderX + pushX)));
+            rawList[j].renderY = Math.max(120, Math.min(460, Math.round(rawList[j].renderY + pushY)));
+          }
+        }
+      }
+      if (!shifted) break;
+    }
+
+    return rawList;
+  }, [currentPhase.tokens, bounds]);
+
+  // Helper to snap arrow endpoints to nudged tokens so lines cleanly connect
+  const snapToToken = (rawX: number, rawY: number) => {
+    const match = positionedTokens.find((t) => Math.hypot(t.x - rawX, t.y - rawY) < 18);
+    if (match) return { x: match.renderX, y: match.renderY };
+    return transformCoord(rawX, rawY);
+  };
 
   // Check if drill already has an explicit Coach token
   const hasExplicitCoach = useMemo(() => {
@@ -589,16 +674,16 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                   strokeWidth="2"
                   strokeDasharray="6,6"
                 />
-                {/* Big watermark title */}
+                {/* Subtle watermark title placed high in the zone to prevent overlapping players */}
                 <text
                   x="440"
-                  y={tacticalZone.midY + 12}
+                  y={Math.max(tacticalZone.top + 28, 105)}
                   textAnchor="middle"
                   fill="#adc6ff"
-                  fontSize="32"
+                  fontSize="20"
                   fontWeight="900"
-                  letterSpacing="5"
-                  opacity="0.32"
+                  letterSpacing="4"
+                  opacity="0.08"
                 >
                   {tacticalZone.label}
                 </text>
@@ -638,36 +723,11 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                 </g>
               </g>
 
-              {/* 3. STATIC GUIDE TRACKS (all drill pathways shown with pale dashed guide lines) */}
-              <g id="static-guide-tracks" opacity="0.65">
-                {phases.flatMap((p, pIdx) =>
-                  (p.arrows || []).map((arrow, aIdx) => {
-                    const start = transformCoord(arrow.startX, arrow.startY);
-                    const end = transformCoord(arrow.endX, arrow.endY);
-                    let d = `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
-                    if (arrow.type === 'curved' && arrow.controlX && arrow.controlY) {
-                      const ctrl = transformCoord(arrow.controlX, arrow.controlY);
-                      d = `M ${start.x} ${start.y} Q ${ctrl.x} ${ctrl.y} ${end.x} ${end.y}`;
-                    }
-                    return (
-                      <path
-                        key={`guide-${pIdx}-${aIdx}`}
-                        d={d}
-                        fill="none"
-                        stroke="#ffd591"
-                        strokeWidth="2"
-                        strokeDasharray="4,4"
-                      />
-                    );
-                  })
-                )}
-              </g>
-
-              {/* 4. ACTIVE FLOW PATHS & ARROWS FOR THE CURRENT PHASE */}
+              {/* 3. ACTIVE FLOW PATHS & ARROWS FOR THE CURRENT PHASE (Decluttered, clear pathways) */}
               <g id="active-flow-paths">
                 {(currentPhase.arrows || []).map((arrow, idx) => {
-                  const start = transformCoord(arrow.startX, arrow.startY);
-                  const end = transformCoord(arrow.endX, arrow.endY);
+                  const start = snapToToken(arrow.startX, arrow.startY);
+                  const end = snapToToken(arrow.endX, arrow.endY);
                   let d = `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
                   if (arrow.type === 'curved' && arrow.controlX && arrow.controlY) {
                     const ctrl = transformCoord(arrow.controlX, arrow.controlY);
@@ -700,6 +760,15 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
 
                   const midX = (start.x + end.x) / 2;
                   const midY = (start.y + end.y) / 2;
+                  const dx = end.x - start.x;
+                  const dy = end.y - start.y;
+                  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                  const nx = -dy / len;
+                  const ny = dx / len;
+                  // Generous perpendicular offset so arrow label never touches or blocks arrow shaft
+                  const lx = Math.round(midX + nx * 26);
+                  const ly = Math.round(midY + ny * 26);
+                  const labelW = Math.min(Math.max((arrow.label?.length || 0) * 6.8 + 18, 48), 150);
 
                   return (
                     <g key={arrow.id || idx}>
@@ -712,11 +781,11 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                         className="flow-path-anim"
                       />
                       {arrow.label && (
-                        <g transform={`translate(${midX}, ${midY - 14})`}>
+                        <g transform={`translate(${lx}, ${ly})`}>
                           <rect
-                            x="-65"
+                            x={-labelW / 2}
                             y="-9"
-                            width="130"
+                            width={labelW}
                             height="18"
                             rx="4"
                             fill="#ffffff"
@@ -741,50 +810,71 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                 })}
               </g>
 
-              {/* 5. DEFENSIVE & OFFENSIVE TOKENS (Rendered with the exact Linebacker Triangle visual engine) */}
+              {/* 4. DEFENSIVE & OFFENSIVE TOKENS (Rendered with anti-collision spacing and clean pill badges) */}
               <g id="field-players">
-                {(currentPhase.tokens || []).map((t, idx) => {
-                  const pos = transformCoord(t.x, t.y);
+                {positionedTokens.map((t, idx) => {
+                  const pos = { x: t.renderX, y: t.renderY };
                   const upperLabel = (t.label || '').toUpperCase().trim();
                   const upperSub = (t.subLabel || '').toUpperCase().trim();
 
-                  const isBallCarrier =
-                    upperLabel === 'RB' ||
-                    upperLabel === 'TB' ||
-                    upperLabel === 'FB' ||
-                    upperLabel === 'HB' ||
-                    upperLabel === 'WR' ||
-                    upperLabel === 'BC' ||
-                    upperLabel.includes('BALL') ||
-                    upperLabel.includes('CARRIER') ||
-                    upperSub.includes('BALL') ||
-                    upperSub.includes('CARRIER') ||
-                    upperSub.includes('RUNNER');
+                  // Equipment / Bags / Boards evaluated FIRST so they are never classified as players
+                  const isBag =
+                    (t.type as string) === 'bag' ||
+                    (t.type as string) === 'dummy' ||
+                    upperLabel.includes('BAG') ||
+                    upperLabel.includes('DUMMY') ||
+                    upperLabel.includes('BOARD') ||
+                    upperLabel.includes('SLED') ||
+                    upperSub.includes('BAG') ||
+                    upperSub.includes('DUMMY') ||
+                    upperSub.includes('BOARD') ||
+                    upperSub.includes('SLED');
 
-                  const isBlocker =
-                    t.isSquare ||
-                    t.type === 'square' ||
-                    (t.type === 'O' && !isBallCarrier) ||
-                    upperLabel.startsWith('B') ||
-                    ['OL', 'C', 'G', 'T', 'TE', 'LT', 'RT', 'LG', 'RG', 'SHIELD'].includes(
-                      upperLabel
-                    );
+                  const isCone =
+                    t.type === 'cone' ||
+                    upperLabel.includes('CONE') ||
+                    upperSub.includes('CONE');
 
                   const isCoach =
                     upperLabel.includes('COACH') ||
                     upperSub.includes('COACH') ||
                     (t.type === 'ball' && upperLabel.includes('COACH'));
 
-                  const isBag = t.type === 'bag' || upperLabel.includes('BAG') || upperLabel.includes('DUMMY');
-                  const isCone = t.type === 'cone' || upperLabel.includes('CONE') || upperSub.includes('CONE');
+                  const isBallCarrier =
+                    !isBag &&
+                    !isCone &&
+                    !isCoach &&
+                    (upperLabel === 'RB' ||
+                      upperLabel === 'TB' ||
+                      upperLabel === 'FB' ||
+                      upperLabel === 'HB' ||
+                      upperLabel === 'WR' ||
+                      upperLabel === 'BC' ||
+                      upperLabel.includes('BALL') ||
+                      upperLabel.includes('CARRIER') ||
+                      upperSub.includes('BALL') ||
+                      upperSub.includes('CARRIER') ||
+                      upperSub.includes('RUNNER'));
+
+                  const isBlocker =
+                    !isBag &&
+                    !isCone &&
+                    !isCoach &&
+                    !isBallCarrier &&
+                    (t.isSquare ||
+                      t.type === 'square' ||
+                      ['B1', 'B2', 'B3', 'B4', 'B5', 'OL', 'C', 'G', 'T', 'TE', 'LT', 'RT', 'LG', 'RG', 'SHIELD', 'BLOCKER'].includes(
+                        upperLabel
+                      ) ||
+                      (t.type === 'O' && !['QB', 'WR', 'TE'].includes(upperLabel)));
 
                   const isDefender =
-                    t.type === 'X' ||
-                    (!isBlocker &&
-                      !isBallCarrier &&
-                      !isCoach &&
-                      !isBag &&
-                      !isCone &&
+                    !isBag &&
+                    !isCone &&
+                    !isCoach &&
+                    !isBlocker &&
+                    !isBallCarrier &&
+                    (t.type === 'X' ||
                       [
                         'LB',
                         'DL',
@@ -802,10 +892,11 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                         'ROV',
                         'ROVER',
                         'TACKLE',
-                      ].includes(upperLabel));
+                      ].some((k) => upperLabel.includes(k)));
 
                   // A. Ball Carrier (with angled 3D football at hip)
                   if (isBallCarrier) {
+                    const subW = Math.max((t.subLabel || 'Ball Carrier').length * 6.8 + 16, 54);
                     return (
                       <g
                         key={t.id || idx}
@@ -834,152 +925,67 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                           strokeWidth="0.8"
                           transform="rotate(25 14 4)"
                         />
-                        <text
-                          x="28"
-                          y="5"
-                          fontSize="11"
-                          fontWeight="bold"
-                          fill="#cf1322"
-                          filter="drop-shadow(0 1px 1px #fff)"
-                        >
-                          {t.subLabel || 'Ball Carrier'}
-                        </text>
+                        <g transform="translate(0, -25)">
+                          <rect
+                            x={-subW / 2}
+                            y="-7"
+                            width={subW}
+                            height="14"
+                            rx="4"
+                            fill="#ffffff"
+                            stroke="#cf1322"
+                            strokeWidth="1"
+                          />
+                          <text
+                            x="0"
+                            y="3.5"
+                            fontSize="8.5"
+                            fontWeight="bold"
+                            fill="#cf1322"
+                            textAnchor="middle"
+                          >
+                            {t.subLabel || 'Ball Carrier'}
+                          </text>
+                        </g>
                       </g>
                     );
                   }
 
-                  // B. Offensive Blocker (Metallic Square Shield)
-                  if (isBlocker) {
-                    return (
-                      <g
-                        key={t.id || idx}
-                        className="field-element-transition"
-                        transform={`translate(${pos.x}, ${pos.y})`}
-                      >
-                        <rect
-                          x="-17"
-                          y="-17"
-                          width="34"
-                          height="34"
-                          rx="4"
-                          fill="#e8e8e8"
-                          stroke="#262626"
-                          strokeWidth="3"
-                        />
-                        <text
-                          x="0"
-                          y="5"
-                          fontSize="13"
-                          fontWeight="900"
-                          fill="#262626"
-                          textAnchor="middle"
-                        >
-                          {t.label || 'OL'}
-                        </text>
-                        <text
-                          x="-24"
-                          y="5"
-                          fontSize="10"
-                          fontWeight="bold"
-                          fill="#555"
-                          textAnchor="end"
-                        >
-                          {t.subLabel || 'Blocker'}
-                        </text>
-                      </g>
-                    );
-                  }
-
-                  // C. Primary Defender with Athletic Cleats / Dual Feet
-                  if (isDefender) {
-                    // Calculate lead foot based on phase direction
-                    const movingRight = (currentPhase.arrows || []).some(
-                      (a) => a.startX < a.endX && Math.abs(a.endX - a.startX) > 20
-                    );
-                    const movingLeft = (currentPhase.arrows || []).some(
-                      (a) => a.startX > a.endX && Math.abs(a.startX - a.endX) > 20
-                    );
-
-                    let footLY = 2;
-                    let footRY = 2;
-                    let leadLeft = false;
-                    let leadRight = false;
-                    let footLabel = 'SQUARE BASE (NO BENT NAILS)';
-
-                    if (movingLeft) {
-                      footRY = -6;
-                      footLY = 8;
-                      leadRight = true;
-                      footLabel = 'RIGHT LEAD (ATTACK LEFT)';
-                    } else if (movingRight) {
-                      footLY = -6;
-                      footRY = 8;
-                      leadLeft = true;
-                      footLabel = 'LEFT LEAD (ATTACK RIGHT)';
-                    } else if (activeIdx >= 1) {
-                      footLabel = 'POP-OFF STRIKE & LOCKOUT';
-                    }
-
-                    if (activeIdx === phases.length - 1 && phases.length > 2) {
-                      footLabel = 'SHED & ACCELERATE TO BALL';
-                    }
-
-                    return (
-                      <g
-                        key={t.id || idx}
-                        className="field-element-transition"
-                        transform={`translate(${pos.x}, ${pos.y})`}
-                      >
-                        {/* Dual athletic cleats / stance indicators */}
-                        <rect
-                          x="-18"
-                          y={footLY}
-                          width="11"
-                          height="22"
-                          rx="4"
-                          fill={leadLeft ? '#0958d9' : '#69b1ff'}
-                          stroke="#0958d9"
-                          strokeWidth="1.5"
-                        />
-                        <rect
-                          x="7"
-                          y={footRY}
-                          width="11"
-                          height="22"
-                          rx="4"
-                          fill={leadRight ? '#0958d9' : '#69b1ff'}
-                          stroke="#0958d9"
-                          strokeWidth="1.5"
-                        />
-                        {/* Main circular token */}
-                        <circle cx="0" cy="0" r="22" fill="#bae0ff" stroke="#0958d9" strokeWidth="3.5" />
-                        <text
-                          x="0"
-                          y="5"
-                          fontSize="14"
-                          fontWeight="bold"
-                          fill="#0958d9"
-                          textAnchor="middle"
-                        >
-                          {t.label || 'LB'}
-                        </text>
-                        {/* Stance / Foot Lead Technique Badge */}
-                        <text
-                          x="0"
-                          y="44"
-                          fontSize="10.5"
-                          fontWeight="bold"
-                          fill="#0958d9"
-                          textAnchor="middle"
-                        >
-                          {footLabel}
-                        </text>
-                      </g>
-                    );
-                  }
-
-                  // D. Tackle Bag / Stand-Up Dummy
+                  // B. Tackle Bag / Blocking Board / Stand-Up Dummy
                   if (isBag) {
+                    const isBoardType = upperLabel.includes('BOARD') || upperSub.includes('BOARD');
+                    if (isBoardType) {
+                      return (
+                        <g
+                          key={t.id || idx}
+                          className="field-element-transition"
+                          transform={`translate(${pos.x}, ${pos.y})`}
+                        >
+                          <rect
+                            x="-28"
+                            y="-12"
+                            width="56"
+                            height="24"
+                            rx="5"
+                            fill="#fef3c7"
+                            stroke="#d97706"
+                            strokeWidth="2.5"
+                          />
+                          <text
+                            x="0"
+                            y="4"
+                            fontSize="10"
+                            fontWeight="900"
+                            fill="#b45309"
+                            textAnchor="middle"
+                          >
+                            {t.label || 'BOARD'}
+                          </text>
+                        </g>
+                      );
+                    }
+
+                    const subLabelW = t.subLabel ? Math.max(t.subLabel.length * 6.5 + 16, 44) : 0;
                     return (
                       <g
                         key={t.id || idx}
@@ -1008,16 +1014,138 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                           {t.label || 'BAG'}
                         </text>
                         {t.subLabel && (
-                          <text
-                            x="0"
-                            y="34"
-                            fontSize="9"
-                            fontWeight="bold"
-                            fill="#cf1322"
-                            textAnchor="middle"
-                          >
-                            {t.subLabel}
-                          </text>
+                          <g transform="translate(0, 32)">
+                            <rect
+                              x={-subLabelW / 2}
+                              y="-7"
+                              width={subLabelW}
+                              height="14"
+                              rx="4"
+                              fill="#ffffff"
+                              stroke="#cf1322"
+                              strokeWidth="1"
+                            />
+                            <text
+                              x="0"
+                              y="3.5"
+                              fontSize="8"
+                              fontWeight="bold"
+                              fill="#cf1322"
+                              textAnchor="middle"
+                            >
+                              {t.subLabel}
+                            </text>
+                          </g>
+                        )}
+                      </g>
+                    );
+                  }
+
+                  // C. Offensive Blocker (Metallic Square Shield)
+                  if (isBlocker) {
+                    const subW = t.subLabel ? Math.max(t.subLabel.length * 6.8 + 16, 48) : 0;
+                    return (
+                      <g
+                        key={t.id || idx}
+                        className="field-element-transition"
+                        transform={`translate(${pos.x}, ${pos.y})`}
+                      >
+                        <rect
+                          x="-17"
+                          y="-17"
+                          width="34"
+                          height="34"
+                          rx="4"
+                          fill="#e8e8e8"
+                          stroke="#262626"
+                          strokeWidth="3"
+                        />
+                        <text
+                          x="0"
+                          y="5"
+                          fontSize="13"
+                          fontWeight="900"
+                          fill="#262626"
+                          textAnchor="middle"
+                        >
+                          {t.label || 'OL'}
+                        </text>
+                        {t.subLabel && (
+                          <g transform="translate(0, 26)">
+                            <rect
+                              x={-subW / 2}
+                              y="-7"
+                              width={subW}
+                              height="14"
+                              rx="4"
+                              fill="#ffffff"
+                              stroke="#64748b"
+                              strokeWidth="1"
+                            />
+                            <text
+                              x="0"
+                              y="3.5"
+                              fontSize="8"
+                              fontWeight="bold"
+                              fill="#334155"
+                              textAnchor="middle"
+                            >
+                              {t.subLabel}
+                            </text>
+                          </g>
+                        )}
+                      </g>
+                    );
+                  }
+
+                  // D. Primary Defender
+                  if (isDefender) {
+                    const isLbDrill = drill.title.toUpperCase().includes('TRIANGLE');
+                    const badgeText = t.subLabel || (isLbDrill ? 'SQUARE BASE' : '');
+                    const badgeW = badgeText ? Math.max(badgeText.length * 6.8 + 16, 42) : 0;
+
+                    return (
+                      <g
+                        key={t.id || idx}
+                        className="field-element-transition"
+                        transform={`translate(${pos.x}, ${pos.y})`}
+                      >
+                        {/* Main circular token */}
+                        <circle cx="0" cy="0" r="22" fill="#bae0ff" stroke="#0958d9" strokeWidth="3.5" />
+                        <text
+                          x="0"
+                          y="5"
+                          fontSize="13"
+                          fontWeight="bold"
+                          fill="#0958d9"
+                          textAnchor="middle"
+                        >
+                          {t.label || 'LB'}
+                        </text>
+                        {/* Sublabel / technique badge */}
+                        {badgeText && (
+                          <g transform="translate(0, 32)">
+                            <rect
+                              x={-badgeW / 2}
+                              y="-8"
+                              width={badgeW}
+                              height="16"
+                              rx="4"
+                              fill="#ffffff"
+                              stroke="#0958d9"
+                              strokeWidth="1.2"
+                            />
+                            <text
+                              x="0"
+                              y="3.5"
+                              fontSize="8.5"
+                              fontWeight="bold"
+                              fill="#0958d9"
+                              textAnchor="middle"
+                            >
+                              {badgeText}
+                            </text>
+                          </g>
                         )}
                       </g>
                     );
@@ -1039,15 +1167,19 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                         />
                         <ellipse cx="0" cy="9" rx="8" ry="3" fill="#d46b08" />
                         {t.label && (
-                          <text
-                            x="12"
-                            y="5"
-                            fontSize="9"
-                            fontWeight="bold"
-                            fill="#d46b08"
-                          >
-                            {t.label}
-                          </text>
+                          <g transform="translate(0, 18)">
+                            <rect x="-26" y="-6" width="52" height="12" rx="3" fill="#ffffff" stroke="#d46b08" strokeWidth="1" />
+                            <text
+                              x="0"
+                              y="3"
+                              fontSize="8"
+                              fontWeight="bold"
+                              fill="#d46b08"
+                              textAnchor="middle"
+                            >
+                              {t.label}
+                            </text>
+                          </g>
                         )}
                       </g>
                     );
@@ -1072,26 +1204,19 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                         >
                           COACH
                         </text>
-                        <text
-                          x="0"
-                          y="32"
-                          fontSize="10"
-                          fontWeight="bold"
-                          fill="#722ed1"
-                          textAnchor="middle"
-                        >
-                          (CUE &amp; SIGNAL)
-                        </text>
-                        <text
-                          x="-28"
-                          y="2"
-                          fontSize="11"
-                          fontWeight="bold"
-                          fill="#0958d9"
-                          textAnchor="end"
-                        >
-                          🗣️ {drill.cues[0] || '“Fire with low hips!”'}
-                        </text>
+                        <g transform="translate(0, 30)">
+                          <rect x="-42" y="-7" width="84" height="14" rx="4" fill="#ffffff" stroke="#722ed1" strokeWidth="1" />
+                          <text
+                            x="0"
+                            y="3.5"
+                            fontSize="8.5"
+                            fontWeight="bold"
+                            fill="#722ed1"
+                            textAnchor="middle"
+                          >
+                            (CUE &amp; SIGNAL)
+                          </text>
+                        </g>
                       </g>
                     );
                   }
@@ -1115,84 +1240,26 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                         {t.label}
                       </text>
                       {t.subLabel && (
-                        <text
-                          x="0"
-                          y="28"
-                          fontSize="9.5"
-                          fontWeight="bold"
-                          fill="#475569"
-                          textAnchor="middle"
-                        >
-                          {t.subLabel}
-                        </text>
+                        <g transform="translate(0, 26)">
+                          <rect x="-34" y="-7" width="68" height="14" rx="4" fill="#ffffff" stroke="#64748b" strokeWidth="1" />
+                          <text
+                            x="0"
+                            y="3.5"
+                            fontSize="8.5"
+                            fontWeight="bold"
+                            fill="#475569"
+                            textAnchor="middle"
+                          >
+                            {t.subLabel}
+                          </text>
+                        </g>
                       )}
                     </g>
                   );
                 })}
               </g>
 
-              {/* 6. COACH BEHIND SETUP (Rendered if drill does not have an explicit coach token) */}
-              {!hasExplicitCoach && (
-                <g id="coach-behind-setup">
-                  <g
-                    className="field-element-transition"
-                    transform="translate(440, 520)"
-                  >
-                    <circle cx="0" cy="0" r="21" fill="#ffffff" stroke="#722ed1" strokeWidth="3" />
-                    <text
-                      x="0"
-                      y="5"
-                      fontSize="11"
-                      fontWeight="900"
-                      fill="#722ed1"
-                      textAnchor="middle"
-                    >
-                      COACH
-                    </text>
-                    <text
-                      x="0"
-                      y="32"
-                      fontSize="10.5"
-                      fontWeight="bold"
-                      fill="#722ed1"
-                      textAnchor="middle"
-                    >
-                      (BEHIND / SIGNALS)
-                    </text>
-                    {/* Coach verbal callout bubble */}
-                    <text
-                      x="-30"
-                      y="2"
-                      fontSize="11"
-                      fontWeight="bold"
-                      fill="#0958d9"
-                      textAnchor="end"
-                    >
-                      🗣️ {drill.cues[0] || '“Thumbs Up, Elbows Glued!”'}
-                    </text>
-                  </g>
-                  {/* Coach purple hand-signal trajectory path */}
-                  <path
-                    d={`M 440 495 L ${focalPoint.x} ${Math.max(220, focalPoint.y + 40)}`}
-                    fill="none"
-                    stroke="#722ed1"
-                    strokeWidth="2.5"
-                    strokeDasharray="4,4"
-                    markerEnd="url(#arrow-purple)"
-                  />
-                  <text
-                    x="450"
-                    y="480"
-                    fontSize="10.5"
-                    fontWeight="bold"
-                    fill="#722ed1"
-                  >
-                    COACH HAND SIGNAL / CUE
-                  </text>
-                </g>
-              )}
-
-              {/* 7. CONTACT IMPACT SHOCKWAVE (Ring pulsing on collision / climax) */}
+              {/* 5. CONTACT IMPACT SHOCKWAVE (Ring pulsing on collision / climax) */}
               {isImpactActive && (
                 <circle
                   className="impact-active-pulse"
@@ -1205,17 +1272,17 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                 />
               )}
 
-              {/* 8. ELEVATED ACTION CALLOUT BADGE (Matching Linebacker Triangle strike/tackle badges) */}
+              {/* 6. ELEVATED ACTION CALLOUT BADGE (Positioned at unobstructed top banner area) */}
               {activeIdx >= 1 && (
                 <g
                   className="field-element-transition"
-                  transform={`translate(${focalPoint.x}, ${focalPoint.y - 48})`}
+                  transform="translate(440, 78)"
                 >
                   <rect
-                    x="-135"
-                    y="-16"
-                    width="270"
-                    height="32"
+                    x="-140"
+                    y="-14"
+                    width="280"
+                    height="28"
                     rx="6"
                     fill={activeIdx === phases.length - 1 ? '#e6f4ff' : '#fff1f0'}
                     stroke={activeIdx === phases.length - 1 ? '#0958d9' : '#cf1322'}
@@ -1224,7 +1291,7 @@ export const GenericAnimatedWhiteboard: React.FC<GenericAnimatedWhiteboardProps>
                   />
                   <text
                     x="0"
-                    y="5"
+                    y="4.5"
                     fontSize="11"
                     fontWeight="bold"
                     fill={activeIdx === phases.length - 1 ? '#0958d9' : '#cf1322'}

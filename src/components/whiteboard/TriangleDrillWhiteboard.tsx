@@ -647,9 +647,12 @@ export const TriangleDrillWhiteboard: React.FC<TriangleDrillWhiteboardProps> = (
                   strokeWidth="0.8"
                   transform="rotate(25 14 4)"
                 />
-                <text x="28" y="5" fontSize="11" fontWeight="bold" fill="#cf1322">
-                  Ball Carrier
-                </text>
+                <g transform="translate(0, -25)">
+                  <rect x="-38" y="-7" width="76" height="14" rx="4" fill="#ffffff" stroke="#cf1322" strokeWidth="1" />
+                  <text x="0" y="3.5" fontSize="8.5" fontWeight="bold" fill="#cf1322" textAnchor="middle">
+                    Ball Carrier
+                  </text>
+                </g>
               </g>
 
               {/* ================= 3 BLOCKERS (FRONT LINE) ================= */}
@@ -671,9 +674,12 @@ export const TriangleDrillWhiteboard: React.FC<TriangleDrillWhiteboardProps> = (
                 <text x="0" y="5" fontSize="13" fontWeight="900" fill="#262626" textAnchor="middle">
                   B1
                 </text>
-                <text x="-24" y="5" fontSize="10" fontWeight="bold" fill="#555" textAnchor="end">
-                  Left Blocker
-                </text>
+                <g transform="translate(0, 25)">
+                  <rect x="-36" y="-7" width="72" height="14" rx="4" fill="#ffffff" stroke="#64748b" strokeWidth="1" />
+                  <text x="0" y="3.5" fontSize="8.5" fontWeight="bold" fill="#334155" textAnchor="middle">
+                    Left Blocker
+                  </text>
+                </g>
               </g>
 
               {/* BLOCKER 2 (MIDDLE) */}
@@ -694,9 +700,12 @@ export const TriangleDrillWhiteboard: React.FC<TriangleDrillWhiteboardProps> = (
                 <text x="0" y="5" fontSize="13" fontWeight="900" fill="#262626" textAnchor="middle">
                   B2
                 </text>
-                <text x="26" y="5" fontSize="10" fontWeight="bold" fill="#555" textAnchor="start">
-                  Middle Blocker
-                </text>
+                <g transform="translate(0, -25)">
+                  <rect x="-42" y="-7" width="84" height="14" rx="4" fill="#ffffff" stroke="#64748b" strokeWidth="1" />
+                  <text x="0" y="3.5" fontSize="8.5" fontWeight="bold" fill="#334155" textAnchor="middle">
+                    Middle Blocker
+                  </text>
+                </g>
               </g>
 
               {/* BLOCKER 3 (RIGHT) */}
@@ -717,9 +726,12 @@ export const TriangleDrillWhiteboard: React.FC<TriangleDrillWhiteboardProps> = (
                 <text x="0" y="5" fontSize="13" fontWeight="900" fill="#262626" textAnchor="middle">
                   B3
                 </text>
-                <text x="24" y="5" fontSize="10" fontWeight="bold" fill="#555" textAnchor="start">
-                  Right Blocker
-                </text>
+                <g transform="translate(0, 25)">
+                  <rect x="-38" y="-7" width="76" height="14" rx="4" fill="#ffffff" stroke="#64748b" strokeWidth="1" />
+                  <text x="0" y="3.5" fontSize="8.5" fontWeight="bold" fill="#334155" textAnchor="middle">
+                    Right Blocker
+                  </text>
+                </g>
               </g>
 
               {/* ================= LINEBACKER (LB) ================= */}
@@ -755,16 +767,29 @@ export const TriangleDrillWhiteboard: React.FC<TriangleDrillWhiteboardProps> = (
                 <text x="0" y="5" fontSize="14" fontWeight="bold" fill="#0958d9" textAnchor="middle">
                   LB
                 </text>
-                <text
-                  x="0"
-                  y="44"
-                  fontSize="10.5"
-                  fontWeight="bold"
-                  fill="#0958d9"
-                  textAnchor="middle"
-                >
-                  {footLabel}
-                </text>
+                {/* Footwork & Technique Pill Badge with solid opaque background */}
+                <g transform="translate(0, 38)">
+                  <rect
+                    x="-92"
+                    y="-8"
+                    width="184"
+                    height="16"
+                    rx="4"
+                    fill="#ffffff"
+                    stroke="#0958d9"
+                    strokeWidth="1.2"
+                  />
+                  <text
+                    x="0"
+                    y="3.5"
+                    fontSize="9"
+                    fontWeight="bold"
+                    fill="#0958d9"
+                    textAnchor="middle"
+                  >
+                    {footLabel}
+                  </text>
+                </g>
               </g>
 
               {/* ================= COACH (BEHIND THE LB) ================= */}
@@ -773,24 +798,40 @@ export const TriangleDrillWhiteboard: React.FC<TriangleDrillWhiteboardProps> = (
                 <text x="0" y="5" fontSize="12" fontWeight="900" fill="#722ed1" textAnchor="middle">
                   COACH
                 </text>
-                <text x="0" y="32" fontSize="11" fontWeight="bold" fill="#722ed1" textAnchor="middle">
-                  (BEHIND LB)
-                </text>
+                <g transform="translate(0, 32)">
+                  <rect x="-44" y="-7" width="88" height="14" rx="4" fill="#ffffff" stroke="#722ed1" strokeWidth="1" />
+                  <text x="0" y="3.5" fontSize="9" fontWeight="bold" fill="#722ed1" textAnchor="middle">
+                    (BEHIND LB)
+                  </text>
+                </g>
 
-                {/* Coach Voice Callout to LB */}
-                <text
-                  x="-32"
-                  y="2"
-                  fontSize="11"
-                  fontWeight="bold"
-                  fill="#0958d9"
-                  textAnchor="end"
-                >
-                  {coachCueText}
-                </text>
+                {/* Coach Voice Callout to LB in Speech Bubble Card */}
+                <g transform="translate(-32, 0)">
+                  <rect
+                    x="-180"
+                    y="-11"
+                    width="172"
+                    height="22"
+                    rx="6"
+                    fill="#ffffff"
+                    stroke="#0958d9"
+                    strokeWidth="1.2"
+                    filter="drop-shadow(0 1px 2px rgba(0,0,0,0.12))"
+                  />
+                  <text
+                    x="-94"
+                    y="4"
+                    fontSize="9.5"
+                    fontWeight="bold"
+                    fill="#0958d9"
+                    textAnchor="middle"
+                  >
+                    🗣️ {coachCueText}
+                  </text>
+                </g>
               </g>
 
-              {/* Hand Signal Visual Lines from Coach -> Offense */}
+              {/* Hand Signal Visual Lines from Coach -> Offense (Routed cleanly around players) */}
               <g>
                 {/* Signal Left Path */}
                 <g opacity={currentDirection === 'left' ? 1 : 0.15}>
@@ -802,26 +843,30 @@ export const TriangleDrillWhiteboard: React.FC<TriangleDrillWhiteboardProps> = (
                     strokeDasharray="4,4"
                     markerEnd="url(#arrow-purple)"
                   />
-                  <text x="210" y="320" fontSize="11" fontWeight="bold" fill="#722ed1">
-                    HAND SIGNAL: LEFT
-                  </text>
+                  <g transform="translate(250, 320)">
+                    <rect x="-64" y="-8" width="128" height="16" rx="4" fill="#ffffff" stroke="#722ed1" strokeWidth="1.2" />
+                    <text x="0" y="3.5" fontSize="9.5" fontWeight="bold" fill="#722ed1" textAnchor="middle">
+                      HAND SIGNAL: LEFT
+                    </text>
+                  </g>
                 </g>
 
-                {/* Signal Middle Path */}
+                {/* Signal Middle Path (Curved around LB so it does not cut through linebacker) */}
                 <g opacity={currentDirection === 'middle' ? 1 : 0.15}>
-                  <line
-                    x1="440"
-                    y1="495"
-                    x2="440"
-                    y2="200"
+                  <path
+                    d="M 430 495 Q 495 360 440 215"
+                    fill="none"
                     stroke="#722ed1"
                     strokeWidth="2.5"
                     strokeDasharray="4,4"
                     markerEnd="url(#arrow-purple)"
                   />
-                  <text x="448" y="475" fontSize="11" fontWeight="bold" fill="#722ed1">
-                    HAND SIGNAL: MIDDLE
-                  </text>
+                  <g transform="translate(500, 380)">
+                    <rect x="-70" y="-8" width="140" height="16" rx="4" fill="#ffffff" stroke="#722ed1" strokeWidth="1.2" />
+                    <text x="0" y="3.5" fontSize="9.5" fontWeight="bold" fill="#722ed1" textAnchor="middle">
+                      HAND SIGNAL: MIDDLE
+                    </text>
+                  </g>
                 </g>
 
                 {/* Signal Right Path */}
@@ -834,9 +879,12 @@ export const TriangleDrillWhiteboard: React.FC<TriangleDrillWhiteboardProps> = (
                     strokeDasharray="4,4"
                     markerEnd="url(#arrow-purple)"
                   />
-                  <text x="670" y="320" fontSize="11" fontWeight="bold" fill="#722ed1">
-                    HAND SIGNAL: RIGHT
-                  </text>
+                  <g transform="translate(630, 320)">
+                    <rect x="-68" y="-8" width="136" height="16" rx="4" fill="#ffffff" stroke="#722ed1" strokeWidth="1.2" />
+                    <text x="0" y="3.5" fontSize="9.5" fontWeight="bold" fill="#722ed1" textAnchor="middle">
+                      HAND SIGNAL: RIGHT
+                    </text>
+                  </g>
                 </g>
               </g>
 
@@ -853,17 +901,17 @@ export const TriangleDrillWhiteboard: React.FC<TriangleDrillWhiteboardProps> = (
                 />
               )}
 
-              {/* Strike Callout Badge */}
+              {/* Strike Callout Badge (Positioned at unobstructed top banner area so it never covers players) */}
               {currentStep === 2 && (
                 <g
                   className="field-element-transition"
-                  transform={`translate(${strikePos.x}, ${strikePos.y - 50})`}
+                  transform="translate(440, 78)"
                 >
                   <rect
-                    x="-125"
-                    y="-16"
-                    width="250"
-                    height="32"
+                    x="-140"
+                    y="-14"
+                    width="280"
+                    height="28"
                     rx="6"
                     fill="#fff1f0"
                     stroke="#cf1322"
@@ -872,8 +920,8 @@ export const TriangleDrillWhiteboard: React.FC<TriangleDrillWhiteboardProps> = (
                   />
                   <text
                     x="0"
-                    y="5"
-                    fontSize="11.5"
+                    y="4.5"
+                    fontSize="11"
                     fontWeight="bold"
                     fill="#cf1322"
                     textAnchor="middle"
@@ -883,18 +931,16 @@ export const TriangleDrillWhiteboard: React.FC<TriangleDrillWhiteboardProps> = (
                 </g>
               )}
 
-              {/* Tackle Callout Badge */}
+              {/* Tackle Callout Badge (Positioned at unobstructed top banner area) */}
               {currentStep === 3 && (
                 <g
                   className="field-element-transition"
-                  transform={`translate(${tacklePos.x}, ${
-                    currentDirection === 'middle' ? tacklePos.y - 45 : tacklePos.y - 40
-                  })`}
+                  transform="translate(440, 78)"
                 >
                   <rect
-                    x="-95"
+                    x="-130"
                     y="-14"
-                    width="190"
+                    width="260"
                     height="28"
                     rx="6"
                     fill="#e6f4ff"
@@ -905,7 +951,7 @@ export const TriangleDrillWhiteboard: React.FC<TriangleDrillWhiteboardProps> = (
                   <text
                     x="0"
                     y="4.5"
-                    fontSize="11.5"
+                    fontSize="11"
                     fontWeight="bold"
                     fill="#0958d9"
                     textAnchor="middle"
