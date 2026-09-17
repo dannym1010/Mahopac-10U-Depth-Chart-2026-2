@@ -835,6 +835,13 @@ export default function App() {
     setCurrentWeek(wk);
     currentWeekRef.current = wk;
     safeJSONSet('footballCurrentWeek', wk);
+    const targetKey = getScopedWeekKey(activeTeamIdRef.current, wk);
+    const targetWeekState = weeklyData[targetKey] || weeklyData[wk];
+    if (targetWeekState?.wristbandData?.wristbands?.length) {
+      setWristbandData(targetWeekState.wristbandData);
+      latestStateRef.current.wristbandData = targetWeekState.wristbandData;
+      safeJSONSet('footballWristbandData', targetWeekState.wristbandData);
+    }
   };
 
   activeUnitRef.current = activeUnit;
@@ -1542,6 +1549,8 @@ function mergeRemoteWeeklyData(
       safeWristbandData = localState.wristbandData;
     } else if (remoteWbLastEdited >= localWbLastEdited && remoteState.wristbandData) {
       safeWristbandData = remoteState.wristbandData;
+    } else if (remoteHasWristbandPlays && !localHasWristbandPlays) {
+      safeWristbandData = remoteState.wristbandData;
     } else {
       safeWristbandData = remoteState.wristbandData || localState.wristbandData;
     }
@@ -1939,18 +1948,23 @@ function mergeRemoteWeeklyData(
         // Note: Keep footballCallSheetData_backup intact as a local safety net
       }
     }
-    if (
-      data.wristbandData &&
-      typeof data.wristbandData === 'object' &&
-      Array.isArray(data.wristbandData.wristbands) &&
-      data.wristbandData.wristbands.length > 0
-    ) {
+    const scopedWeekKey = getScopedWeekKey(activeTeamIdRef.current, currentWeekRef.current);
+    const candidateWb =
+      (data.wristbandData && Array.isArray(data.wristbandData.wristbands) && data.wristbandData.wristbands.length > 0 ? data.wristbandData : undefined) ||
+      (data.weeklyData?.[scopedWeekKey]?.wristbandData?.wristbands?.length ? data.weeklyData[scopedWeekKey].wristbandData : undefined) ||
+      (data.weeklyData?.[currentWeekRef.current]?.wristbandData?.wristbands?.length ? data.weeklyData[currentWeekRef.current].wristbandData : undefined);
+
+    if (candidateWb) {
+      const remoteWbTime = Number(candidateWb.lastEdited) || 0;
+      const localWbTime = Number(latestStateRef.current.wristbandData?.lastEdited) || 0;
       const isActivelyEditingWristband =
         Date.now() - lastLocalWristbandEditTimeRef.current < 5000 &&
-        (activeUnitRef.current === 'wristband' || activeUnitRef.current === 'game_day');
+        (activeUnitRef.current === 'wristband' || activeUnitRef.current === 'game_day') &&
+        localWbTime >= remoteWbTime;
+
       if (!isActivelyEditingWristband) {
         const normWb = normalizeWristbandContinuousNumbering(
-          data.wristbandData,
+          candidateWb,
           currentActiveTeam?.name || 'Mahopac 10U'
         );
         setWristbandData(normWb);
@@ -2285,9 +2299,9 @@ function mergeRemoteWeeklyData(
         if (serverRes && serverRes.hasData && serverRes.state) {
           applyRemoteState(serverRes.state, 'server_init', serverRes.version, serverRes.updatedAt);
           initialCloudLoadDoneRef.current = true;
-          if (lastLocalEditTimeRef.current > (serverRes.updatedAt || 0)) {
-            flushAndSaveStateToStorage('client_local_catchup');
-          }
+          // Synchronize local edit time with server so refresh never causes stale auto-overwrites
+          lastLocalEditTimeRef.current = Math.max(lastLocalEditTimeRef.current, serverRes.updatedAt || 0);
+          safeJSONSet('footballLastLocalEditTime', lastLocalEditTimeRef.current);
         } else if (!firestoreLoaded) {
           initialCloudLoadDoneRef.current = true;
         }
@@ -2961,6 +2975,36 @@ function mergeRemoteWeeklyData(
 
   const currentScopedWeekKey = getScopedWeekKey(activeTeamId, currentWeek);
   const currentWeekState: WeekState = resolveWeekState(weeklyData, activeTeamId, currentWeek);
+
+  const effectiveWristbandData: WristbandData = useMemo(() => {
+    const wb = wristbandData;
+    const cwWb = currentWeekState.wristbandData;
+    if (!wb && !cwWb) return INITIAL_TWO_WRISTBANDS_DATA;
+    if (!wb) return cwWb!;
+    if (!cwWb) return wb;
+    const wbTime = Number(wb.lastEdited) || 0;
+    const cwTime = Number(cwWb.lastEdited) || 0;
+    if (cwTime > wbTime) return cwWb;
+    if (wbTime > cwTime) return wb;
+
+    const countPlays = (data?: WristbandData): number => {
+      if (!data || !Array.isArray(data.wristbands)) return 0;
+      let count = 0;
+      for (const w of data.wristbands) {
+        for (const c of w.columns || []) {
+          for (const p of c.plays || []) {
+            if (p && p.text && p.text.trim()) count++;
+          }
+        }
+      }
+      return count;
+    };
+
+    const cwCount = countPlays(cwWb);
+    const wbCount = countPlays(wb);
+    return cwCount > wbCount ? cwWb : wb;
+  }, [wristbandData, currentWeekState.wristbandData]);
+
   const rawFormations = currentWeekState.formations;
 
   const currentFormations: FormationBoard[] = useMemo(() => {
@@ -8130,7 +8174,7 @@ function mergeRemoteWeeklyData(
                   setDeletedPlayIds(newIds);
                   safeJSONSet('footballDeletedPlayIds', newIds);
                 }}
-                wristbandData={wristbandData || currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA}
+                wristbandData={effectiveWristbandData}
                 onUpdateWristbandData={handleUpdateWristbandData}
                 scouting={currentWeekState.scouting || {}}
                 onUpdateScouting={(field: any, val?: any) => {
@@ -8179,7 +8223,7 @@ function mergeRemoteWeeklyData(
             {/* 3. Wristband Builder */}
             {activeUnit === 'wristband' && (
               <WristbandView
-                wristbandData={wristbandData || currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA}
+                wristbandData={effectiveWristbandData}
                 userRole={userRole}
                 masterPlayLibrary={masterPlayLibrary}
                 playDatabase={playDatabase}
@@ -8223,7 +8267,7 @@ function mergeRemoteWeeklyData(
                   safeJSONSet('footballDeletedPlayIds', newDeleted);
                   debouncedSave('all');
                 }}
-                wristbandData={wristbandData || currentWeekState.wristbandData || INITIAL_TWO_WRISTBANDS_DATA}
+                wristbandData={effectiveWristbandData}
               />
             )}
 

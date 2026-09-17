@@ -229,20 +229,16 @@ export const normalizeWristbandContinuousNumbering = (
       activeTeamName
     );
 
-    // Auto-update title if empty, legacy/default, or missing colors/numbers
+    // Only auto-format title if empty or matching default initial placeholders
     let newTitle = wb.title || '';
+    const trimmedTitle = newTitle.trim();
     const isLegacyTitle =
-      !newTitle ||
-      newTitle.startsWith('WRISTBAND 1') ||
-      newTitle.startsWith('WRISTBAND 2') ||
-      newTitle.startsWith('WRISTBAND ') ||
-      newTitle.includes('21 SERIES') ||
-      newTitle.includes('32 & 11') ||
-      newTitle.includes('NEW INSERT') ||
-      (!newTitle.includes('BLUE') &&
-        !newTitle.includes('GREEN') &&
-        !newTitle.includes('ORANGE') &&
-        !newTitle.includes('RED'));
+      !trimmedTitle ||
+      trimmedTitle === 'WRISTBAND 1' ||
+      trimmedTitle === 'WRISTBAND 2' ||
+      trimmedTitle === 'WRISTBAND 1 (21 SERIES)' ||
+      trimmedTitle === 'WRISTBAND 2 (32 & 11)' ||
+      trimmedTitle === 'NEW INSERT';
 
     if (isLegacyTitle) {
       newTitle = autoFormat.title;
@@ -258,33 +254,22 @@ export const normalizeWristbandContinuousNumbering = (
         cIdx === 0 ? autoFormat.pair.col0.textColor : autoFormat.pair.col1.textColor;
 
       let colName = col.name;
+      const trimmedColName = (colName || '').trim();
       const isLegacyColName =
-        !colName ||
-        colName.includes('LEFT COLUMN') ||
-        colName.includes('RIGHT COLUMN') ||
-        (idx === 0 && cIdx === 0 && colName.includes('GOLD')) ||
-        (idx === 0 && cIdx === 1 && colName.includes('BLUE'));
+        !trimmedColName ||
+        trimmedColName === 'LEFT COLUMN' ||
+        trimmedColName === 'RIGHT COLUMN';
 
       if (isLegacyColName) {
         colName = expectedColName;
         hasAnyChange = true;
       }
 
-      // Sync standard colors
-      let colColor = col.color;
-      let colNumBg = col.numberBgColor;
-      let colNumText = col.numberTextColor;
-      if (
-        isLegacyTitle ||
-        isLegacyColName ||
-        (idx === 0 && cIdx === 0 && colColor !== '#2563eb') ||
-        (idx === 0 && cIdx === 1 && colColor !== '#facc15') ||
-        (idx === 1 && cIdx === 0 && colColor !== '#16a34a') ||
-        (idx === 1 && cIdx === 1 && colColor !== '#ec4899')
-      ) {
-        colColor = expectedColor;
-        colNumBg = expectedColor;
-        colNumText = expectedTextColor;
+      // Preserve user-customized colors; only apply default if completely missing
+      let colColor = col.color || expectedColor;
+      let colNumBg = col.numberBgColor || colColor;
+      let colNumText = col.numberTextColor || expectedTextColor;
+      if (!col.color) {
         hasAnyChange = true;
       }
 
@@ -372,9 +357,14 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
   const lastEditTimeRef = useRef<number>(0);
   const lastEmittedWbJson = useRef<string>(safeJSONStringify(internalData));
 
-  // Synchronize internal state when prop changes from parent (only if not actively typing/editing locally)
+  // Synchronize internal state when prop changes from parent
   useEffect(() => {
-    if (Date.now() - lastEditTimeRef.current < 5000) {
+    const incomingLastEdited = Number(propWristbandData?.lastEdited) || 0;
+    const currentLastEdited = Number(internalData.lastEdited) || 0;
+    const isNewerRemote = incomingLastEdited > currentLastEdited;
+
+    // Only guard if user made a newer local edit within the last 5 seconds
+    if (!isNewerRemote && Date.now() - lastEditTimeRef.current < 5000) {
       return;
     }
     if (propWristbandData?.wristbands && propWristbandData.wristbands.length > 0) {
@@ -476,14 +466,6 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     safeJSONSet('footballWristbandData', tagged);
     if (onUpdateWristbandData) {
       onUpdateWristbandData(tagged);
-    }
-    // Automatically keep Call Sheet wristband tables & linked plays synchronized
-    if (onUpdateCallSheetData) {
-      const currentCs: CallSheetFullData =
-        callSheetData || safeJSONParse<CallSheetFullData | null>('footballCallSheetData', null) || DEFAULT_CALL_SHEET_DATA;
-      const syncedCs = syncWristbandToCallSheet(tagged, currentCs, playDatabase);
-      safeJSONSet('footballCallSheetData', syncedCs);
-      onUpdateCallSheetData(syncedCs);
     }
   };
 

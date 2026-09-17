@@ -179,4 +179,5 @@ export const INITIAL_TWO_WRISTBANDS_DATA: WristbandData = {
   activeWristbandId: 'wb_1',
   wristbands: [DEFAULT_WRISTBAND_1, DEFAULT_WRISTBAND_2],
   columns: DEFAULT_WRISTBAND_1.columns,
+  lastEdited: 0,
 };
