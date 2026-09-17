@@ -56,6 +56,12 @@ import { WhiteboardDrill, loadEffectiveWhiteboardDrills } from './whiteboard/whi
 import { findMatchingWhiteboardDrill, createCustomDrillFromStation } from '../utils/drillPlanLinking';
 import { DrillInstructionsModal } from './whiteboard/DrillInstructionsModal';
 import { parseTimeString, formatTimeMinutes } from '../services/storageService';
+import { DEFAULT_PRACTICE_TEMPLATES } from '../data/initialData';
+import {
+  getDayOfWeekForDate,
+  getFormattedDayFolder,
+  calculateWeekFolderForDate,
+} from '../utils/practiceUtils';
 import {
   Team,
   UnitType,
@@ -269,6 +275,8 @@ interface MobileHubViewProps {
   onSelectGuideMain?: (main: string) => void;
   onSelectGuideSub?: (sub: string) => void;
   onUpdatePracticeMeta?: (field: keyof PracticePlan, value: any, targetPlanId?: string) => void;
+  onSyncPracticeToPlan?: (event: ScheduleEvent, templateName?: string) => string;
+  onCreatePracticePlan?: (newPlan: PracticePlan, linkedEventId?: string) => void;
   // Whiteboard Drill integration
   onOpenWhiteboardDrill?: (drillId: string, category?: string) => void;
   whiteboardDrills?: WhiteboardDrill[];
@@ -361,6 +369,8 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
   onSelectGuideMain,
   onSelectGuideSub,
   onUpdatePracticeMeta,
+  onSyncPracticeToPlan,
+  onCreatePracticePlan,
   onOpenWhiteboardDrill,
   whiteboardDrills,
 }) => {
@@ -655,7 +665,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
       isOver = false;
     }
 
-    const planToUse = todayPlan || (practicePlans.length > 0 ? practicePlans[0] : null);
+    const planToUse = todayPlan || null;
 
     return {
       event: todayEvent,
@@ -719,36 +729,100 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
     return dateStr;
   };
 
-  // 1. Determine Upcoming Practice
+  // 1. Determine Today / Upcoming Practice
+  // Prioritizes today's practice plan / event, then the next upcoming practice on the schedule
   const practiceEventData = useMemo(() => {
-    const now = new Date();
     const teamPractices = (scheduleEvents || [])
       .filter((e) => e && (e.type === 'practice' || e.type === 'walkthrough') && !e.isCancelled && (!e.teamId || e.teamId === activeTeam.id))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    if (teamPractices.length === 0) return null;
+    // Step 1: Check for today's practice event or plan
+    const todayEvent = teamPractices.find((e) => e.date && e.date.split('T')[0] === todayStr);
+    const todayPlan = (practicePlans || []).find((p) => p && p.date && p.date.split('T')[0] === todayStr);
 
-    const upcoming = teamPractices.filter((e) => {
-      const eventEnd = new Date(`${e.date}T${e.endTime || e.startTime || '23:59'}:00`);
-      return eventEnd.getTime() >= now.getTime();
+    if (todayEvent || todayPlan) {
+      let linkedPlan: PracticePlan | null = todayPlan || null;
+      if (!linkedPlan && todayEvent?.linkedPracticePlanId) {
+        linkedPlan = (practicePlans || []).find((p) => p.id === todayEvent.linkedPracticePlanId) || null;
+      }
+      if (!linkedPlan && todayEvent) {
+        linkedPlan = (practicePlans || []).find((p) => p.date && p.date.split('T')[0] === todayStr) || null;
+      }
+
+      const eventToUse: ScheduleEvent = todayEvent || {
+        id: `derived_today_${todayPlan?.id || 'event'}`,
+        teamId: todayPlan?.teamId || activeTeam.id,
+        type: 'practice',
+        title: todayPlan?.title || "Today's Practice Plan",
+        week: todayPlan?.weekFolder ? todayPlan.weekFolder.replace(/^week\s*/i, '') : String(currentWeek || '1'),
+        date: todayStr,
+        startTime: todayPlan?.startTime || '17:30',
+        endTime: todayPlan?.endTime || '19:00',
+        location: todayPlan?.location || 'Crane Road',
+        linkedPracticePlanId: todayPlan?.id,
+        createdAt: Date.now(),
+        lastEdited: Date.now(),
+      };
+
+      return {
+        event: eventToUse,
+        plan: linkedPlan,
+        isToday: true,
+      };
+    }
+
+    // Step 2: If no practice today, find the NEXT scheduled practice event in future
+    const futurePractices = teamPractices.filter((e) => {
+      const cleanDate = e.date ? e.date.split('T')[0] : '';
+      return cleanDate >= todayStr;
     });
 
-    const selectedEvent = upcoming.length > 0 ? upcoming[0] : teamPractices[teamPractices.length - 1];
+    let selectedEvent = futurePractices.length > 0 ? futurePractices[0] : null;
+
+    // If no future scheduled events, check if there's any future practice plan
+    if (!selectedEvent) {
+      const futurePlans = (practicePlans || []).filter((p) => p && p.date && p.date.split('T')[0] >= todayStr)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      if (futurePlans.length > 0) {
+        const fp = futurePlans[0];
+        selectedEvent = {
+          id: `derived_plan_${fp.id}`,
+          teamId: fp.teamId || activeTeam.id,
+          type: 'practice',
+          title: fp.title || 'Team Practice',
+          week: fp.weekFolder ? fp.weekFolder.replace(/^week\s*/i, '') : String(currentWeek || '1'),
+          date: fp.date.split('T')[0],
+          startTime: fp.startTime || '17:30',
+          endTime: fp.endTime || '19:00',
+          location: fp.location || 'Crane Road',
+          linkedPracticePlanId: fp.id,
+          createdAt: Date.now(),
+          lastEdited: Date.now(),
+        };
+      }
+    }
+
+    // Fallback: If no future event or plan exists, select the most recent practice
+    if (!selectedEvent && teamPractices.length > 0) {
+      selectedEvent = teamPractices[teamPractices.length - 1];
+    }
+
     if (!selectedEvent) return null;
 
-    const isToday = selectedEvent.date === todayStr;
+    const isToday = selectedEvent.date?.split('T')[0] === todayStr;
 
+    // Find linked plan for selectedEvent (do NOT blindly fall back to an arbitrary old plan)
     let linkedPlan: PracticePlan | null = null;
     if (selectedEvent.linkedPracticePlanId) {
       linkedPlan = (practicePlans || []).find((p) => p.id === selectedEvent.linkedPracticePlanId) || null;
     }
-    if (!linkedPlan) {
-      linkedPlan = (practicePlans || []).find(
-        (p) => p.date === selectedEvent.date || (p.weekFolder && (p.weekFolder === selectedEvent.week || p.weekFolder.includes(selectedEvent.week)))
-      ) || null;
+    if (!linkedPlan && selectedEvent.date) {
+      const cleanDate = selectedEvent.date.split('T')[0];
+      linkedPlan = (practicePlans || []).find((p) => p && p.date && p.date.split('T')[0] === cleanDate) || null;
     }
-    if (!linkedPlan && practicePlans && practicePlans.length > 0) {
-      linkedPlan = practicePlans[0];
+    if (!linkedPlan && selectedEvent.title) {
+      const normEvTitle = selectedEvent.title.trim().toLowerCase();
+      linkedPlan = (practicePlans || []).find((p) => p && p.title && p.title.trim().toLowerCase() === normEvTitle) || null;
     }
 
     return {
@@ -756,7 +830,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
       plan: linkedPlan,
       isToday,
     };
-  }, [scheduleEvents, practicePlans, todayStr, activeTeam.id]);
+  }, [scheduleEvents, practicePlans, todayStr, activeTeam.id, currentWeek]);
 
   // 2. Determine Upcoming Game or Scrimmage
   const gameEventData = useMemo(() => {
@@ -783,22 +857,80 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
     };
   }, [scheduleEvents, todayStr, activeTeam.id]);
 
+  // Handler to create a new practice plan when none exists for the scheduled event
+  const handleCreatePlanForEvent = (event: ScheduleEvent) => {
+    let createdPlanId: string | null = null;
+    if (onSyncPracticeToPlan) {
+      createdPlanId = onSyncPracticeToPlan(event);
+    }
+
+    const cleanDate = event.date ? event.date.split('T')[0] : todayStr;
+    const dayOfWeek = getDayOfWeekForDate(cleanDate);
+    const dayFolder = getFormattedDayFolder(cleanDate);
+    const rawWeek = String(event.week !== undefined ? event.week : currentWeek || '1').trim();
+    const weekFolder = rawWeek.toLowerCase().startsWith('week')
+      ? rawWeek
+      : (rawWeek === '0' || rawWeek.toLowerCase().includes('pre') ? 'Preseason Wk 1' : `Week ${rawWeek}`);
+
+    const title = event.title && !event.title.toLowerCase().includes('practice')
+      ? `${event.title} - Practice Plan`
+      : event.title || `Practice Plan - ${formatDateLabel(cleanDate)}`;
+
+    const newId = createdPlanId || `prac_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const standardPeriods = JSON.parse(JSON.stringify(DEFAULT_PRACTICE_TEMPLATES['Standard Practice'] || []));
+
+    const newPlan: PracticePlan = {
+      id: newId,
+      teamId: event.teamId || activeTeam.id,
+      year: cleanDate.includes('-') ? cleanDate.split('-')[0] : '2026',
+      weekFolder,
+      dayFolder,
+      title,
+      date: cleanDate,
+      day: dayOfWeek,
+      startTime: event.startTime || event.time || '17:30',
+      endTime: event.endTime || '19:00',
+      location: event.location || 'Crane Road',
+      lastEdited: Date.now(),
+      plan: standardPeriods,
+      periods: standardPeriods,
+    };
+
+    if (onCreatePracticePlan) {
+      onCreatePracticePlan(newPlan, event.id);
+    } else if (!onSyncPracticeToPlan) {
+      onUpdatePracticeMeta?.('date' as any, cleanDate, newPlan.id);
+    }
+
+    if (onSelectPractice) {
+      onSelectPractice(newPlan.id);
+    }
+    setMobileViewingPlan(newPlan);
+  };
+
   // Handler to jump directly to a practice plan or open mobile reader
   const handleOpenPracticePlan = (planId?: string) => {
     let target = planId ? (practicePlans || []).find((p) => p.id === planId) : null;
+    if (!target && practiceEventData?.plan) {
+      target = practiceEventData.plan;
+    }
     if (!target) {
-      target = practiceEventData?.plan || todayPracticeInfo?.plan || (practicePlans && practicePlans.length > 0 ? practicePlans[0] : null);
+      target = (practicePlans || []).find((p) => p && p.date && p.date.split('T')[0] === todayStr) || null;
     }
     if (target) {
-      if (planId && onSelectPractice) {
-        onSelectPractice(planId);
+      if (onSelectPractice) {
+        onSelectPractice(target.id);
       }
       setMobileViewingPlan(target);
       return;
     }
-    if (planId && onSelectPractice) {
-      onSelectPractice(planId);
+
+    // If there is no practice plan for the next scheduled event, create a new one!
+    if (practiceEventData?.event) {
+      handleCreatePlanForEvent(practiceEventData.event);
+      return;
     }
+
     onNavigateToUnit('practice');
   };
 
@@ -1119,7 +1251,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                 </div>
               )}
 
-              {practiceEventData.plan?.periods && practiceEventData.plan.periods.length > 0 && (
+              {practiceEventData.plan?.periods && practiceEventData.plan.periods.length > 0 ? (
                 <div className="bg-slate-950/70 rounded-2xl p-2.5 border border-slate-800/80 space-y-1.5">
                   <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400">
                     <span>Practice Script • {practiceEventData.plan.periods.length} Periods</span>
@@ -1143,20 +1275,37 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                     )}
                   </div>
                 </div>
-              )}
+              ) : !practiceEventData.plan ? (
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-2.5 text-amber-300 text-xs font-semibold">
+                  <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>No practice plan built yet for this event. Tap below to create and launch it.</span>
+                </div>
+              ) : null}
             </div>
 
             <div className="space-y-2 pt-2 border-t border-slate-800/80">
-              {/* Action 1: Open Practice Plan & Drill Script in Gold */}
-              <button
-                type="button"
-                onClick={() => handleOpenPracticePlan(practiceEventData.plan?.id)}
-                className="w-full py-3 sm:py-3.5 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs sm:text-sm rounded-2xl shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer border border-amber-300"
-              >
-                <ClipboardList className="w-4 h-4 text-slate-950" />
-                <span>Open Practice Plan &amp; Drill Script</span>
-                <ArrowRight className="w-4 h-4 text-slate-950" />
-              </button>
+              {/* Action 1: Open Practice Plan or Create if none exists */}
+              {practiceEventData.plan ? (
+                <button
+                  type="button"
+                  onClick={() => handleOpenPracticePlan(practiceEventData.plan?.id)}
+                  className="w-full py-3 sm:py-3.5 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs sm:text-sm rounded-2xl shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer border border-amber-300"
+                >
+                  <ClipboardList className="w-4 h-4 text-slate-950" />
+                  <span>Open Practice Plan &amp; Drill Script</span>
+                  <ArrowRight className="w-4 h-4 text-slate-950" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleCreatePlanForEvent(practiceEventData.event)}
+                  className="w-full py-3 sm:py-3.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-white font-black text-xs sm:text-sm rounded-2xl shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer border border-emerald-400"
+                >
+                  <Plus className="w-4.5 h-4.5 text-white" />
+                  <span>Create Practice Plan for {practiceEventData.isToday ? 'Today' : formatDateLabel(practiceEventData.event.date)}</span>
+                  <ArrowRight className="w-4 h-4 text-white" />
+                </button>
+              )}
 
               {/* Action 2: Single direct attendance link */}
               <button
@@ -1178,15 +1327,40 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
             </div>
             <div>
               <h3 className="text-base font-black text-slate-200">No Upcoming Practice Scheduled</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Check back later or schedule a new practice session.</p>
+              <p className="text-xs text-slate-400 mt-0.5">Check back later or create a new practice session right now.</p>
             </div>
-            <button
-              type="button"
-              onClick={() => onNavigateToUnit('practice')}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
-            >
-              Open Practice Planner
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  const todayEv: ScheduleEvent = {
+                    id: `evt_today_${Date.now()}`,
+                    teamId: activeTeam.id,
+                    type: 'practice',
+                    title: "Today's Practice",
+                    week: String(currentWeek || '1'),
+                    date: todayStr,
+                    startTime: '17:30',
+                    endTime: '19:00',
+                    location: 'Crane Road',
+                    createdAt: Date.now(),
+                    lastEdited: Date.now(),
+                  };
+                  handleCreatePlanForEvent(todayEv);
+                }}
+                className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-98"
+              >
+                <Plus className="w-4 h-4 text-white" />
+                <span>Create Today's Practice Plan</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigateToUnit('practice')}
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                Open Practice Planner
+              </button>
+            </div>
           </div>
         )}
 

@@ -51,6 +51,46 @@ function normalizeName(str: string): string {
 }
 
 /**
+ * Cleans common station prefixes, position headers, parentheticals, and suffixes
+ */
+function cleanStationName(str: string): string {
+  let res = str.trim();
+  // Remove category / unit / group prefix like "Defense Group:", "Offense Group:", "Tackling Circuit:", "Station 1:"
+  res = res.replace(/^(?:(?:defense|offense|special teams|tackling|agility|fundamental|individual|team|group|pod|station)\s*(?:group|period|pod|station|circuit)?\s*:\s*)/i, '');
+  // Remove bracket annotations e.g. [DL], [LB]
+  res = res.replace(/\[.*?\]/g, ' ');
+  // Remove parenthetical notes e.g. (Spencer Erickson), (Winona State), (Glazier Clinics)
+  res = res.replace(/\(.*?\)/g, ' ');
+  // Remove words like drill, drills, station, pod, period
+  res = res.replace(/\b(?:drill|drills|station|pod|period)\b/gi, ' ');
+  return normalizeName(res);
+}
+
+const DRILL_STOP_WORDS = new Set([
+  'and',
+  '&',
+  'the',
+  'for',
+  'with',
+  'to',
+  'of',
+  'in',
+  'on',
+  'at',
+  'by',
+  'a',
+  'an',
+  'vs',
+  'group',
+  'drill',
+  'drills',
+  'pod',
+  'period',
+  'station',
+  'circuit',
+]);
+
+/**
  * Finds a matching Whiteboard drill by title, alias, or fuzzy string match
  */
 export function findMatchingWhiteboardDrill(
@@ -63,6 +103,7 @@ export function findMatchingWhiteboardDrill(
 
   const raw = stationName.trim();
   const normalizedRaw = normalizeName(raw);
+  const cleaned = cleanStationName(raw);
 
   // 1. Direct title or ID match
   for (const d of drills) {
@@ -73,19 +114,35 @@ export function findMatchingWhiteboardDrill(
   // 2. Normalized full match
   for (const d of drills) {
     const normTitle = normalizeName(d.title);
-    if (normTitle === normalizedRaw) return d;
+    if (normTitle === normalizedRaw || normTitle === cleaned) return d;
   }
 
-  // 3. Known shorthand and keyword aliases
+  // 3. Known shorthand and keyword aliases (mapped to canonical title or drill IDs)
   const aliasMap: Record<string, string[]> = {
+    'team pursuit & cutback lane contain': [
+      'team pursuit & cutback lane contain',
+      'team pursuit and cutback lane contain',
+      'team pursuit cutback lane contain',
+      'cutback lane contain',
+      'spencer erickson pursuit',
+      'spencer erickson',
+      'team pursuit & cutback',
+      'team pursuit cutback',
+      'team pursuit',
+    ],
+    '4-corner pursuit & swarm': [
+      '4-corner pursuit & swarm',
+      '4 corner pursuit & swarm',
+      '4 corner pursuit',
+      '4-corner pursuit',
+      'four corner pursuit',
+      'pursuit & swarm',
+      'pursuit and swarm',
+    ],
     'ball on a stick': [
       'ball on stick',
-      'get off',
-      'get-off',
-      'cadence',
       'ball-on-a-stick',
       'dl stance',
-      'first step',
       'stance & get-off',
       'first step get-off',
     ],
@@ -147,11 +204,10 @@ export function findMatchingWhiteboardDrill(
     ],
     'pursuit & strip to the cone': [
       'pursuit & strip',
-      'pursuit',
+      'pursuit and strip',
       'strip to cone',
-      'turnover circuit',
+      'strip to the cone',
       'strip ball',
-      'pursuit angles',
     ],
     'cover 3 match': ['cover 3', 'cov 3', 'c3 match', 'c3'],
     'cover 2 hard corner': ['cover 2', 'cov 2', 'c2 hard corner', 'hard flat', 'c2'],
@@ -165,8 +221,6 @@ export function findMatchingWhiteboardDrill(
     ],
     'spill and contain': [
       'contain & spill',
-      'contain',
-      'spill',
       'force player',
       'box defender',
       'perimeter run fit',
@@ -182,53 +236,84 @@ export function findMatchingWhiteboardDrill(
       'spill alley',
     ],
     'cutback lanes': [
-      'cutback',
       'cutbacks',
       'cut back',
       'outside and cutback',
       'press edge and cutback',
       'perimeter press',
       'outside cutback',
-      'cutback lane',
       'outside vs cutback',
     ],
   };
 
   for (const [canonicalKeyword, aliases] of Object.entries(aliasMap)) {
+    const normCanonical = normalizeName(canonicalKeyword);
     const matchesStation =
-      normalizedRaw.includes(canonicalKeyword) ||
-      aliases.some((a) => normalizedRaw.includes(a));
+      normalizedRaw.includes(normCanonical) ||
+      cleaned.includes(normCanonical) ||
+      aliases.some((a) => {
+        const normA = normalizeName(a);
+        return normalizedRaw.includes(normA) || cleaned.includes(normA);
+      });
 
     if (matchesStation) {
       const found = drills.find((d) => {
         const norm = normalizeName(d.title);
-        return norm.includes(canonicalKeyword) || aliases.some((a) => norm.includes(a));
+        return norm.includes(normCanonical) || norm === normCanonical;
       });
       if (found) return found;
     }
   }
 
-  // 4. Substring containment match (minimum 4 characters)
-  if (normalizedRaw.length >= 4) {
-    for (const d of drills) {
-      const normTitle = normalizeName(d.title);
-      if (normTitle.includes(normalizedRaw) || normalizedRaw.includes(normTitle)) {
-        return d;
+  // 4. Substring containment match and multi-token ranking
+  let bestDrill: WhiteboardDrill | null = null;
+  let bestScore = 0;
+
+  for (const d of drills) {
+    const normTitle = normalizeName(d.title);
+    const normSub = d.subtitle ? normalizeName(d.subtitle) : '';
+    let score = 0;
+
+    // Direct substring in title
+    if (cleaned.length >= 5 && normTitle.includes(cleaned)) {
+      score += 1000 + cleaned.length * 10;
+    } else if (cleaned.length >= 5 && cleaned.includes(normTitle)) {
+      score += 800 + normTitle.length * 10;
+    } else if (normalizedRaw.length >= 6 && normTitle.includes(normalizedRaw)) {
+      score += 700;
+    }
+
+    // Subtitle phrase matching
+    if (cleaned.length >= 5 && normSub && normSub.includes(cleaned)) {
+      score += 400;
+    }
+
+    // Significant word token matching
+    const stnWords = cleaned.split(' ').filter((w) => w.length >= 3 && !DRILL_STOP_WORDS.has(w));
+    const titleWords = normTitle.split(' ').filter((w) => w.length >= 3 && !DRILL_STOP_WORDS.has(w));
+
+    let matchedCount = 0;
+    for (const sw of stnWords) {
+      if (titleWords.includes(sw)) {
+        matchedCount++;
+        score += sw.length * 25;
+      } else if (normSub && normSub.includes(sw)) {
+        score += sw.length * 15;
       }
     }
-  }
 
-  // 5. Significant word overlap (e.g. "krausko" or "strip")
-  const words = normalizedRaw.split(' ').filter((w) => w.length >= 4 && !['drill', 'pod', 'period', 'station'].includes(w));
-  if (words.length > 0) {
-    for (const d of drills) {
-      const normTitle = normalizeName(d.title);
-      const hasMatch = words.some((w) => normTitle.includes(w));
-      if (hasMatch) return d;
+    if (stnWords.length > 0 && titleWords.length > 0) {
+      const ratio = matchedCount / Math.max(stnWords.length, titleWords.length);
+      score += Math.round(ratio * 300);
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestDrill = d;
     }
   }
 
-  return null;
+  return bestScore >= 50 ? bestDrill : null;
 }
 
 /**

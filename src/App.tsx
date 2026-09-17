@@ -843,6 +843,10 @@ export default function App() {
       setWristbandData(targetWeekState.wristbandData);
       latestStateRef.current.wristbandData = targetWeekState.wristbandData;
       safeJSONSet('footballWristbandData', targetWeekState.wristbandData);
+    } else {
+      setWristbandData(INITIAL_TWO_WRISTBANDS_DATA);
+      latestStateRef.current.wristbandData = INITIAL_TWO_WRISTBANDS_DATA;
+      safeJSONSet('footballWristbandData', INITIAL_TWO_WRISTBANDS_DATA);
     }
   };
 
@@ -1226,13 +1230,13 @@ export default function App() {
         legacyState?.opponent ||
         defScopedState?.opponent ||
         '',
-      wristbandData: getBestWristbandData([
-        scopedState?.wristbandData,
-        legacyState?.wristbandData,
-        defScopedState?.wristbandData,
-        latestStateRef.current?.wristbandData,
-        safeJSONParse<WristbandData | null>('footballWristbandData', null),
-      ]),
+      wristbandData:
+        (scopedState?.wristbandData?.wristbands?.length ? scopedState.wristbandData : undefined) ||
+        (legacyState?.wristbandData?.wristbands?.length ? legacyState.wristbandData : undefined) ||
+        (defScopedState?.wristbandData?.wristbands?.length ? defScopedState.wristbandData : undefined) ||
+        (latestStateRef.current?.wristbandData?.wristbands?.length ? latestStateRef.current.wristbandData : undefined) ||
+        safeJSONParse<WristbandData | null>('footballWristbandData', null) ||
+        INITIAL_TWO_WRISTBANDS_DATA,
       scouting:
         scopedState?.scouting ||
         legacyState?.scouting ||
@@ -2002,13 +2006,15 @@ function mergeRemoteWeeklyData(
       }
     }
     const scopedWeekKey = getScopedWeekKey(activeTeamIdRef.current, currentWeekRef.current);
-    const candidateSources = [
-      data.wristbandData,
+    const weekWbCandidates = [
       data.weeklyData?.[scopedWeekKey]?.wristbandData,
       data.weeklyData?.[currentWeekRef.current]?.wristbandData,
     ].filter((w) => w && Array.isArray(w.wristbands) && w.wristbands.length > 0);
 
-    const candidateWb = candidateSources.length > 0 ? getBestWristbandData(candidateSources) : undefined;
+    let candidateWb = weekWbCandidates.length > 0 ? getBestWristbandData(weekWbCandidates) : undefined;
+    if (!candidateWb && data.wristbandData && Array.isArray(data.wristbandData.wristbands) && data.wristbandData.wristbands.length > 0) {
+      candidateWb = data.wristbandData;
+    }
 
     if (candidateWb) {
       const remoteWbTime = Number(candidateWb.lastEdited) || 0;
@@ -3053,40 +3059,16 @@ function mergeRemoteWeeklyData(
   const currentWeekState: WeekState = resolveWeekState(weeklyData, activeTeamId, currentWeek);
 
   const effectiveWristbandData: WristbandData = useMemo(() => {
+    const cwWb = currentWeekState?.wristbandData;
+    if (cwWb && Array.isArray(cwWb.wristbands) && cwWb.wristbands.length > 0) {
+      return cwWb;
+    }
     const wb = wristbandData;
-    const cwWb = currentWeekState.wristbandData;
-    if (!wb && !cwWb) return INITIAL_TWO_WRISTBANDS_DATA;
-    if (!wb) return cwWb!;
-    if (!cwWb) return wb;
-    const wbTime = Number(wb.lastEdited) || 0;
-    const cwTime = Number(cwWb.lastEdited) || 0;
-    if (cwTime > wbTime) return cwWb;
-    if (wbTime > cwTime) return wb;
-
-    const getWbMaxRows = (data?: WristbandData) =>
-      Math.max(Number(data?.rows) || 13, ...(data?.wristbands || []).map((w) => Number(w?.rowsCount) || 13));
-    const cwRows = getWbMaxRows(cwWb);
-    const wbRows = getWbMaxRows(wb);
-    if (cwRows > wbRows) return cwWb;
-    if (wbRows > cwRows) return wb;
-
-    const countPlays = (data?: WristbandData): number => {
-      if (!data || !Array.isArray(data.wristbands)) return 0;
-      let count = 0;
-      for (const w of data.wristbands) {
-        for (const c of w.columns || []) {
-          for (const p of c.plays || []) {
-            if (p && p.text && p.text.trim()) count++;
-          }
-        }
-      }
-      return count;
-    };
-
-    const cwCount = countPlays(cwWb);
-    const wbCount = countPlays(wb);
-    return cwCount > wbCount ? cwWb : wb;
-  }, [wristbandData, currentWeekState.wristbandData]);
+    if (wb && Array.isArray(wb.wristbands) && wb.wristbands.length > 0) {
+      return wb;
+    }
+    return INITIAL_TWO_WRISTBANDS_DATA;
+  }, [wristbandData, currentWeekState?.wristbandData]);
 
   const rawFormations = currentWeekState.formations;
 
@@ -7232,6 +7214,7 @@ function mergeRemoteWeeklyData(
       location: location,
       lastEdited: Date.now(),
       plan: deepClone(planTemplate),
+      periods: deepClone(planTemplate),
     };
 
     updatePracticeDataAndSave((prev) => [...prev, newPlan]);
@@ -7958,6 +7941,23 @@ function mergeRemoteWeeklyData(
                   safeJSONSet('footballCurrentPracticeId', id);
                 }}
                 onUpdatePracticeMeta={handleUpdatePracticeMeta}
+                onSyncPracticeToPlan={handleSyncPracticeToPlan}
+                onCreatePracticePlan={(newPlan, linkedEventId) => {
+                  updatePracticeDataAndSave((prev) => [...prev, newPlan], true, newPlan.id);
+                  setCurrentPracticeId(newPlan.id);
+                  safeJSONSet('footballCurrentPracticeId', newPlan.id);
+                  if (linkedEventId) {
+                    setScheduleEvents((prev) => {
+                      const next = prev.map((ev) =>
+                        ev.id === linkedEventId ? { ...ev, linkedPracticePlanId: newPlan.id } : ev
+                      );
+                      safeJSONSet('footballScheduleEvents', next);
+                      latestStateRef.current.scheduleEvents = next;
+                      return next;
+                    });
+                    debouncedSave('schedule');
+                  }
+                }}
                 onOpenPreferencesModal={() => setIsPreferencesModalOpen(true)}
                 onOpenScheduleModal={() => setActiveUnit('schedule')}
                 onOpenThemeGallery={() => setIsThemeGalleryOpen(true)}

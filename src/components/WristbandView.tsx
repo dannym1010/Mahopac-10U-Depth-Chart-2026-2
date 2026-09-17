@@ -1124,7 +1124,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
   // Update Column Highlight Color
   const handleUpdateColumnHighlight = (wbId: string, colIdx: number, newColor: string) => {
     const textColor = getContrastTextColor(newColor);
-    updateCurrentWristband((wb) => {
+    const updatedData = updateCurrentWristband((wb) => {
       const nextCols = wb.columns.map((col, idx) => {
         if (idx !== colIdx) return col;
         const updatedPlays = (col.plays || []).map((p) => ({
@@ -1159,7 +1159,10 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
           slotNumber,
           newColor,
           textColor,
-          col.name || `Column ${colIdx + 1}`
+          col.name || `Column ${colIdx + 1}`,
+          undefined,
+          undefined,
+          updatedData
         );
       }
     });
