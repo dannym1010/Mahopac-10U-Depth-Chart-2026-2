@@ -86,6 +86,8 @@ import {
   normalizePracticeTemplates,
   normalizeCascadingDrills,
   CLIENT_ID,
+  parseTimeString,
+  formatTimeMinutes,
 } from './services/storageService';
 import {
   calculateWeekFolderForDate,
@@ -1029,6 +1031,46 @@ export default function App() {
   // Helper to compute team-scoped week key
   const getScopedWeekKey = (teamId: string, week: string) => `${teamId}__week_${week}`;
 
+  const getBestWristbandData = (
+    candidates: (WristbandData | null | undefined)[]
+  ): WristbandData => {
+    const getRows = (wb: any) =>
+      Math.max(Number(wb?.rows) || 13, ...(wb?.wristbands || []).map((w: any) => Number(w?.rowsCount) || 13));
+    const countPlays = (wb: any) => {
+      if (!wb || !Array.isArray(wb.wristbands)) return 0;
+      let c = 0;
+      for (const w of wb.wristbands) {
+        for (const col of w?.columns || []) {
+          for (const p of col?.plays || []) {
+            if (p?.text?.trim()) c++;
+          }
+        }
+      }
+      return c;
+    };
+
+    let best: WristbandData | null = null;
+    for (const c of candidates) {
+      if (!c || !Array.isArray(c.wristbands) || c.wristbands.length === 0) continue;
+      if (!best) {
+        best = c;
+        continue;
+      }
+      const cTime = Number(c.lastEdited) || 0;
+      const bTime = Number(best.lastEdited) || 0;
+      if (cTime > bTime) {
+        best = c;
+      } else if (cTime === bTime) {
+        const cRows = getRows(c);
+        const bRows = getRows(best);
+        if (cRows > bRows || (cRows === bRows && countPlays(c) > countPlays(best))) {
+          best = c;
+        }
+      }
+    }
+    return best || INITIAL_TWO_WRISTBANDS_DATA;
+  };
+
   // Helper to resolve the richest week state (formations, depthChart, scrimmageChart, etc.)
   const resolveWeekState = (
     wData: Record<string, WeekState>,
@@ -1184,12 +1226,13 @@ export default function App() {
         legacyState?.opponent ||
         defScopedState?.opponent ||
         '',
-      wristbandData:
-        (scopedState?.wristbandData?.wristbands?.length ? scopedState.wristbandData : undefined) ||
-        (legacyState?.wristbandData?.wristbands?.length ? legacyState.wristbandData : undefined) ||
-        (defScopedState?.wristbandData?.wristbands?.length ? defScopedState.wristbandData : undefined) ||
-        safeJSONParse<WristbandData | null>('footballWristbandData', null) ||
-        INITIAL_TWO_WRISTBANDS_DATA,
+      wristbandData: getBestWristbandData([
+        scopedState?.wristbandData,
+        legacyState?.wristbandData,
+        defScopedState?.wristbandData,
+        latestStateRef.current?.wristbandData,
+        safeJSONParse<WristbandData | null>('footballWristbandData', null),
+      ]),
       scouting:
         scopedState?.scouting ||
         legacyState?.scouting ||
@@ -1543,12 +1586,22 @@ function mergeRemoteWeeklyData(
     );
     const localWbLastEdited = Number(localState.wristbandData?.lastEdited) || 0;
     const remoteWbLastEdited = Number(remoteState.wristbandData?.lastEdited) || 0;
+    const getWbRows = (wb: any) =>
+      Math.max(Number(wb?.rows) || 13, ...(wb?.wristbands || []).map((w: any) => Number(w?.rowsCount) || 13));
+    const localRows = getWbRows(localState.wristbandData);
+    const remoteRows = getWbRows(remoteState.wristbandData);
 
     let safeWristbandData = remoteState.wristbandData;
     if (localHasWristbandPlays && !remoteHasWristbandPlays && remoteWbLastEdited <= localWbLastEdited) {
       safeWristbandData = localState.wristbandData;
-    } else if (remoteWbLastEdited >= localWbLastEdited && remoteState.wristbandData) {
+    } else if (remoteWbLastEdited > localWbLastEdited && remoteState.wristbandData) {
       safeWristbandData = remoteState.wristbandData;
+    } else if (localWbLastEdited > remoteWbLastEdited && localState.wristbandData) {
+      safeWristbandData = localState.wristbandData;
+    } else if (remoteRows > localRows && remoteState.wristbandData) {
+      safeWristbandData = remoteState.wristbandData;
+    } else if (localRows > remoteRows && localState.wristbandData) {
+      safeWristbandData = localState.wristbandData;
     } else if (remoteHasWristbandPlays && !localHasWristbandPlays) {
       safeWristbandData = remoteState.wristbandData;
     } else {
@@ -1949,16 +2002,19 @@ function mergeRemoteWeeklyData(
       }
     }
     const scopedWeekKey = getScopedWeekKey(activeTeamIdRef.current, currentWeekRef.current);
-    const candidateWb =
-      (data.wristbandData && Array.isArray(data.wristbandData.wristbands) && data.wristbandData.wristbands.length > 0 ? data.wristbandData : undefined) ||
-      (data.weeklyData?.[scopedWeekKey]?.wristbandData?.wristbands?.length ? data.weeklyData[scopedWeekKey].wristbandData : undefined) ||
-      (data.weeklyData?.[currentWeekRef.current]?.wristbandData?.wristbands?.length ? data.weeklyData[currentWeekRef.current].wristbandData : undefined);
+    const candidateSources = [
+      data.wristbandData,
+      data.weeklyData?.[scopedWeekKey]?.wristbandData,
+      data.weeklyData?.[currentWeekRef.current]?.wristbandData,
+    ].filter((w) => w && Array.isArray(w.wristbands) && w.wristbands.length > 0);
+
+    const candidateWb = candidateSources.length > 0 ? getBestWristbandData(candidateSources) : undefined;
 
     if (candidateWb) {
       const remoteWbTime = Number(candidateWb.lastEdited) || 0;
       const localWbTime = Number(latestStateRef.current.wristbandData?.lastEdited) || 0;
       const isActivelyEditingWristband =
-        Date.now() - lastLocalWristbandEditTimeRef.current < 5000 &&
+        Date.now() - lastLocalWristbandEditTimeRef.current < 2000 &&
         (activeUnitRef.current === 'wristband' || activeUnitRef.current === 'game_day') &&
         localWbTime >= remoteWbTime;
 
@@ -1970,6 +2026,26 @@ function mergeRemoteWeeklyData(
         setWristbandData(normWb);
         latestStateRef.current.wristbandData = normWb;
         safeJSONSet('footballWristbandData', normWb);
+
+        // Also update weeklyData so views consuming weeklyData immediately receive the updated wristband
+        setWeeklyData((prev) => {
+          const curScoped = prev[scopedWeekKey] || prev[currentWeekRef.current];
+          if (!curScoped) return prev;
+          const nextWeekly = {
+            ...prev,
+            [scopedWeekKey]: {
+              ...curScoped,
+              wristbandData: normWb,
+            },
+            [currentWeekRef.current]: {
+              ...curScoped,
+              wristbandData: normWb,
+            },
+          };
+          latestStateRef.current.weeklyData = nextWeekly;
+          safeJSONSet('footballWeeklyData', nextWeekly);
+          return nextWeekly;
+        });
       }
     }
     if (typeof data.globalIdleTimeoutMinutes === 'number') {
@@ -2986,6 +3062,13 @@ function mergeRemoteWeeklyData(
     const cwTime = Number(cwWb.lastEdited) || 0;
     if (cwTime > wbTime) return cwWb;
     if (wbTime > cwTime) return wb;
+
+    const getWbMaxRows = (data?: WristbandData) =>
+      Math.max(Number(data?.rows) || 13, ...(data?.wristbands || []).map((w) => Number(w?.rowsCount) || 13));
+    const cwRows = getWbMaxRows(cwWb);
+    const wbRows = getWbMaxRows(wb);
+    if (cwRows > wbRows) return cwWb;
+    if (wbRows > cwRows) return wb;
 
     const countPlays = (data?: WristbandData): number => {
       if (!data || !Array.isArray(data.wristbands)) return 0;
@@ -5576,9 +5659,10 @@ function mergeRemoteWeeklyData(
 
   const handleUpdatePracticeMeta = (
     field: keyof PracticePlan,
-    value: any
+    value: any,
+    targetPlanId?: string
   ) => {
-    const targetId = currentPracticeId || currentPracticeIdRef.current || (activeTeamPracticeData[0]?.id) || (practiceData[0]?.id);
+    const targetId = targetPlanId || currentPracticeId || currentPracticeIdRef.current || (activeTeamPracticeData[0]?.id) || (practiceData[0]?.id);
     updatePracticeDataAndSave((prev) =>
       prev.map((p) => {
         if (p.id === targetId) {
@@ -5607,6 +5691,26 @@ function mergeRemoteWeeklyData(
       false,
       targetId
     );
+
+    // If changing start time or date, also update any linked schedule event
+    if (field === 'startTime' || field === 'date') {
+      setScheduleEvents((prev) =>
+        prev.map((ev) => {
+          if (ev.linkedPracticePlanId === targetId || (targetId && ev.id === targetId)) {
+            const updatedEv = { ...ev };
+            if (field === 'startTime') {
+              updatedEv.time = formatTimeMinutes(parseTimeString(value));
+              updatedEv.startTime = value;
+            }
+            if (field === 'date') {
+              updatedEv.date = value;
+            }
+            return updatedEv;
+          }
+          return ev;
+        })
+      );
+    }
   };
 
   const getPlanPeriods = (p: PracticePlan): PracticePeriod[] => {
@@ -7410,7 +7514,11 @@ function mergeRemoteWeeklyData(
     const now = Date.now();
     lastLocalWristbandEditTimeRef.current = now;
     lastLocalEditTimeRef.current = now;
-    const taggedWb: WristbandData = { ...updatedWb, lastEdited: now };
+    const maxRows = Math.max(
+      ...(updatedWb.wristbands || []).map((w) => w.rowsCount || 13),
+      updatedWb.rows || 13
+    );
+    const taggedWb: WristbandData = { ...updatedWb, rows: maxRows, lastEdited: now };
     setWristbandData(taggedWb);
     latestStateRef.current.wristbandData = taggedWb;
     safeJSONSet('footballWristbandData', taggedWb);
@@ -7448,7 +7556,9 @@ function mergeRemoteWeeklyData(
     safeJSONSet('footballCallSheetData', taggedCs);
     safeJSONSet('footballCallSheetData_backup', taggedCs);
 
-    debouncedSave('wristband_update', { activeUnit: 'wristband' });
+    // Save and broadcast immediately so other coaches receive changes instantly
+    // and refreshing immediately will NOT lose changes
+    flushAndSaveStateToStorage('wristband_update', { activeUnit: 'wristband', scope: 'wristband_update' });
   };
 
   const handleUpdateCallSheetData = (newCs: CallSheetFullData) => {
@@ -7847,6 +7957,7 @@ function mergeRemoteWeeklyData(
                   setCurrentPracticeId(id);
                   safeJSONSet('footballCurrentPracticeId', id);
                 }}
+                onUpdatePracticeMeta={handleUpdatePracticeMeta}
                 onOpenPreferencesModal={() => setIsPreferencesModalOpen(true)}
                 onOpenScheduleModal={() => setActiveUnit('schedule')}
                 onOpenThemeGallery={() => setIsThemeGalleryOpen(true)}

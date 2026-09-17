@@ -55,6 +55,7 @@ import {
 import { WhiteboardDrill, loadEffectiveWhiteboardDrills } from './whiteboard/whiteboardDrillData';
 import { findMatchingWhiteboardDrill, createCustomDrillFromStation } from '../utils/drillPlanLinking';
 import { DrillInstructionsModal } from './whiteboard/DrillInstructionsModal';
+import { parseTimeString, formatTimeMinutes } from '../services/storageService';
 import {
   Team,
   UnitType,
@@ -267,10 +268,17 @@ interface MobileHubViewProps {
   activeGuideSub?: string;
   onSelectGuideMain?: (main: string) => void;
   onSelectGuideSub?: (sub: string) => void;
+  onUpdatePracticeMeta?: (field: keyof PracticePlan, value: any, targetPlanId?: string) => void;
   // Whiteboard Drill integration
   onOpenWhiteboardDrill?: (drillId: string, category?: string) => void;
   whiteboardDrills?: WhiteboardDrill[];
 }
+
+const formatMinutesTo24H = (totalMinutes: number): string => {
+  const h = Math.floor(totalMinutes / 60) % 24;
+  const m = totalMinutes % 60;
+  return `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`;
+};
 
 const getPlayerFullName = (p: RosterPlayer): string => {
   if (p.rosterName) return p.rosterName;
@@ -352,6 +360,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
   activeGuideSub = 'Full Playbook',
   onSelectGuideMain,
   onSelectGuideSub,
+  onUpdatePracticeMeta,
   onOpenWhiteboardDrill,
   whiteboardDrills,
 }) => {
@@ -398,6 +407,18 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
   const [activeRunningPeriodIdx, setActiveRunningPeriodIdx] = useState<number>(0);
   const [mobilePlanFontSize, setMobilePlanFontSize] = useState<'normal' | 'large'>('normal');
   const [selectedMobilePeriodFilter, setSelectedMobilePeriodFilter] = useState<number | 'all'>('all');
+  const [mobileClockMinutes, setMobileClockMinutes] = useState<number>(() => {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      setMobileClockMinutes(now.getHours() * 60 + now.getMinutes());
+    }, 15000);
+    return () => clearInterval(timer);
+  }, []);
 
   // When attendanceDate changes, load existing log if available
   React.useEffect(() => {
@@ -2862,30 +2883,151 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
             </div>
           </div>
 
-          {/* Session Summary Pill Strip */}
-          <div className="px-3 py-2 bg-slate-900/60 border-b border-slate-800/80 flex items-center justify-between gap-2 overflow-x-auto scrollbar-none text-xs shrink-0">
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-slate-400 font-medium">Session:</span>
-              <span className="font-black text-emerald-400">
-                {(mobileViewingPlan.periods || mobileViewingPlan.plan || []).reduce(
-                  (sum, p) => sum + (p.durationMinutes || p.duration || p.time || 0),
-                  0
-                )}{' '}
-                Minutes Total
-              </span>
-              <span className="text-slate-600">•</span>
-              <span className="font-bold text-slate-300">
-                {(mobileViewingPlan.periods || mobileViewingPlan.plan || []).length} Periods
-              </span>
-            </div>
+          {/* Session Summary & Field Time Manager Strip */}
+          {(() => {
+            const periods = mobileViewingPlan.periods || mobileViewingPlan.plan || [];
+            const totalMins = periods.reduce(
+              (sum, p) => sum + (p.durationMinutes || p.duration || p.time || 0),
+              0
+            );
+            const linkedEv = scheduleEvents?.find(
+              (e) =>
+                (mobileViewingPlan.id && e.linkedPracticePlanId === mobileViewingPlan.id) ||
+                (mobileViewingPlan.date && e.date === mobileViewingPlan.date)
+            );
+            const effectiveStartTime =
+              mobileViewingPlan.startTime || linkedEv?.startTime || linkedEv?.time || '17:30';
+            const planStartMins = parseTimeString(effectiveStartTime);
+            const planEndMins = planStartMins + totalMins;
+            const fullSpanStr = `${formatTimeMinutes(planStartMins)} - ${formatTimeMinutes(planEndMins)}`;
+            const isToday = mobileViewingPlan.date === getLocalDateString();
+            const hasStarted = isToday && mobileClockMinutes >= planStartMins;
+            const hasEnded = isToday && mobileClockMinutes >= planEndMins;
+            const isLiveNow = hasStarted && !hasEnded;
+            const minsUntilStart = isToday && !hasStarted ? planStartMins - mobileClockMinutes : null;
 
-            {mobileViewingPlan.startTime && (
-              <div className="flex items-center gap-1 text-[11px] font-bold text-amber-300 shrink-0">
-                <Clock className="w-3 h-3 text-amber-400" />
-                <span>{mobileViewingPlan.startTime} Start</span>
+            const handleShiftTime = (delta: number) => {
+              const currentMins = parseTimeString(effectiveStartTime);
+              const newMins = Math.max(0, Math.min(23 * 60 + 59, currentMins + delta));
+              const timeStr = formatMinutesTo24H(newMins);
+              setMobileViewingPlan((prev) => (prev ? { ...prev, startTime: timeStr } : null));
+              onUpdatePracticeMeta?.('startTime', timeStr, mobileViewingPlan.id);
+            };
+
+            const handleSetNow = () => {
+              const now = new Date();
+              const roundedM = Math.round(now.getMinutes() / 5) * 5;
+              const newMins = (now.getHours() * 60 + roundedM) % (24 * 60);
+              const timeStr = formatMinutesTo24H(newMins);
+              setMobileViewingPlan((prev) => (prev ? { ...prev, startTime: timeStr } : null));
+              onUpdatePracticeMeta?.('startTime', timeStr, mobileViewingPlan.id);
+            };
+
+            const handleTimeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+              const val = e.target.value;
+              if (val) {
+                setMobileViewingPlan((prev) => (prev ? { ...prev, startTime: val } : null));
+                onUpdatePracticeMeta?.('startTime', val, mobileViewingPlan.id);
+              }
+            };
+
+            return (
+              <div className="bg-slate-900/90 border-b border-slate-800 p-2.5 sm:p-3 space-y-2 shrink-0">
+                {/* Upper Metrics Line */}
+                <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-black text-emerald-400">
+                      {totalMins}m Practice
+                    </span>
+                    <span className="text-slate-600">•</span>
+                    <span className="font-bold text-slate-300">
+                      {periods.length} Periods
+                    </span>
+                    {isLiveNow && (
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black flex items-center gap-1 animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        LIVE NOW
+                      </span>
+                    )}
+                    {minsUntilStart !== null && minsUntilStart > 0 && (
+                      <span className="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-bold">
+                        Starts in {minsUntilStart}m
+                      </span>
+                    )}
+                    {hasEnded && (
+                      <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 text-[10px] font-bold">
+                        Completed
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300 bg-amber-950/40 border border-amber-500/30 px-2.5 py-0.5 rounded-lg font-mono">
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    <span>{fullSpanStr}</span>
+                  </div>
+                </div>
+
+                {/* Touch-Friendly Start Time Controls */}
+                <div className="flex items-center justify-between gap-2 flex-wrap bg-slate-950/70 rounded-xl border border-slate-800 p-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-indigo-400" />
+                      <span>Start Time:</span>
+                    </span>
+                    <input
+                      type="time"
+                      value={formatMinutesTo24H(planStartMins)}
+                      onChange={handleTimeInput}
+                      className="bg-slate-900 border border-slate-700 text-white font-mono font-bold text-xs rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => handleShiftTime(-15)}
+                      className="px-2 py-1 rounded-lg bg-slate-850 hover:bg-slate-800 text-slate-300 text-[11px] font-bold border border-slate-750 active:scale-95 transition-all cursor-pointer"
+                      title="Move start time 15 minutes earlier"
+                    >
+                      -15m
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleShiftTime(-5)}
+                      className="px-2 py-1 rounded-lg bg-slate-850 hover:bg-slate-800 text-slate-300 text-[11px] font-bold border border-slate-750 active:scale-95 transition-all cursor-pointer"
+                      title="Move start time 5 minutes earlier"
+                    >
+                      -5m
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleShiftTime(5)}
+                      className="px-2 py-1 rounded-lg bg-slate-850 hover:bg-slate-800 text-slate-300 text-[11px] font-bold border border-slate-750 active:scale-95 transition-all cursor-pointer"
+                      title="Move start time 5 minutes later"
+                    >
+                      +5m
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleShiftTime(15)}
+                      className="px-2 py-1 rounded-lg bg-slate-850 hover:bg-slate-800 text-slate-300 text-[11px] font-bold border border-slate-750 active:scale-95 transition-all cursor-pointer"
+                      title="Move start time 15 minutes later"
+                    >
+                      +15m
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSetNow}
+                      className="px-2.5 py-1 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 text-[11px] font-bold active:scale-95 transition-all cursor-pointer"
+                      title="Set practice start time to current time"
+                    >
+                      Now
+                    </button>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+            );
+          })()}
 
           {/* Quick Period Filter Tabs */}
           <div className="px-3 py-2 bg-slate-950 border-b border-slate-800 flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
@@ -2969,131 +3111,177 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
             </div>
 
             {/* List of Periods */}
-            {(mobileViewingPlan.periods || mobileViewingPlan.plan || [])
-              .map((period, pIdx) => ({ period, pIdx }))
-              .filter(({ pIdx }) => selectedMobilePeriodFilter === 'all' || selectedMobilePeriodFilter === pIdx)
-              .map(({ period, pIdx }) => {
-                const isRunning = activeRunningPeriodIdx === pIdx;
-                const duration = period.durationMinutes || period.duration || period.time || 0;
-                const stations = period.stations || [];
+            {(() => {
+              const allPeriods = mobileViewingPlan.periods || mobileViewingPlan.plan || [];
+              const linkedEv = scheduleEvents?.find(
+                (e) =>
+                  (mobileViewingPlan.id && e.linkedPracticePlanId === mobileViewingPlan.id) ||
+                  (mobileViewingPlan.date && e.date === mobileViewingPlan.date)
+              );
+              const effectiveStartTime =
+                mobileViewingPlan.startTime || linkedEv?.startTime || linkedEv?.time || '17:30';
+              const planStartMins = parseTimeString(effectiveStartTime);
+              const isToday = mobileViewingPlan.date === getLocalDateString();
 
-                return (
-                  <div
-                    key={pIdx}
-                    className={`rounded-2xl border transition-all p-3.5 space-y-3 ${
-                      isRunning
-                        ? 'bg-slate-900/95 border-emerald-500/80 shadow-lg shadow-emerald-950/40 ring-1 ring-emerald-500/40'
-                        : 'bg-slate-900/80 border-slate-800'
-                    }`}
-                  >
-                    {/* Period Header */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span
-                          className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
-                            isRunning
-                              ? 'bg-emerald-500 text-slate-950'
-                              : 'bg-slate-800 text-indigo-300 border border-slate-700'
-                          }`}
-                        >
-                          Period {pIdx + 1}
-                        </span>
+              return allPeriods
+                .map((period, pIdx) => ({ period, pIdx }))
+                .filter(({ pIdx }) => selectedMobilePeriodFilter === 'all' || selectedMobilePeriodFilter === pIdx)
+                .map(({ period, pIdx }) => {
+                  const duration = period.durationMinutes || period.duration || period.time || 0;
+                  const stations = period.stations || [];
 
-                        {period.category && (
-                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase bg-slate-800/90 text-amber-300 border border-slate-700">
-                            {period.category}
-                          </span>
-                        )}
+                  // Calculate exact running time for this period
+                  let runningMin = planStartMins;
+                  for (let i = 0; i < pIdx; i++) {
+                    runningMin += allPeriods[i]?.durationMinutes || allPeriods[i]?.duration || allPeriods[i]?.time || 0;
+                  }
+                  const pEndMin = runningMin + duration;
+                  const timeSpanStr = `${formatTimeMinutes(runningMin)} - ${formatTimeMinutes(pEndMin)}`;
+                  const isPeriodLiveNow = isToday && mobileClockMinutes >= runningMin && mobileClockMinutes < pEndMin;
+                  const isRunning = activeRunningPeriodIdx === pIdx || isPeriodLiveNow;
 
-                        {period.format && (
-                          <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase bg-slate-800 text-slate-400">
-                            {period.format}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-white bg-slate-950 px-2 py-1 rounded-xl border border-slate-800">
-                          {duration} min
-                        </span>
-                        {!isRunning && (
-                          <button
-                            type="button"
-                            onClick={() => setActiveRunningPeriodIdx(pIdx)}
-                            className="text-[10px] font-bold text-slate-400 hover:text-emerald-300 transition-colors cursor-pointer"
-                          >
-                            Set Active
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Period Title */}
-                    <h3
-                      className={`font-black text-white tracking-tight ${
-                        mobilePlanFontSize === 'large' ? 'text-lg sm:text-xl' : 'text-base'
+                  return (
+                    <div
+                      key={pIdx}
+                      className={`rounded-2xl border transition-all p-3.5 space-y-3 ${
+                        isPeriodLiveNow
+                          ? 'bg-slate-900/95 border-emerald-500 shadow-lg shadow-emerald-950/60 ring-2 ring-emerald-500/50'
+                          : isRunning
+                          ? 'bg-slate-900/95 border-emerald-500/80 shadow-lg shadow-emerald-950/40 ring-1 ring-emerald-500/40'
+                          : 'bg-slate-900/80 border-slate-800'
                       }`}
                     >
-                      {period.name || period.title || `Period ${pIdx + 1}`}
-                    </h3>
+                      {/* Period Header */}
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span
+                            className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                              isPeriodLiveNow || isRunning
+                                ? 'bg-emerald-500 text-slate-950'
+                                : 'bg-slate-800 text-indigo-300 border border-slate-700'
+                            }`}
+                          >
+                            Period {pIdx + 1}
+                          </span>
 
-                    {/* Stations / Drills Display */}
-                    {stations.length > 0 ? (
-                      <div className="space-y-2 pt-1">
-                        {stations.map((stn, sIdx) => {
-                          const matchedDrill = stn.name
-                            ? findMatchingWhiteboardDrill(stn.name, effectiveWhiteboardDrills)
-                            : null;
+                          {isPeriodLiveNow && (
+                            <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-emerald-400 text-slate-950 animate-pulse">
+                              LIVE NOW
+                            </span>
+                          )}
 
-                          const handleOpenInstructions = () => {
-                            const drillObj =
-                              matchedDrill ||
-                              createCustomDrillFromStation(stn, pIdx + 1, period.category || period.name);
-                            setInstructionsModalDrill({
-                              drill: drillObj,
-                              stationName: stn.name || `Station ${sIdx + 1}`,
-                              stationDesc: stn.desc,
-                              stationFocus: stn.focus,
-                              stationCoach: stn.coach,
-                              periodName: period.name || period.title,
-                              periodNumber: pIdx + 1,
-                              periodDuration: duration,
-                            });
-                          };
+                          {period.category && (
+                            <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase bg-slate-800/90 text-amber-300 border border-slate-700">
+                              {period.category}
+                            </span>
+                          )}
 
-                          const handleOpenWhiteboard = () => {
-                            if (onOpenWhiteboardDrill) {
-                              if (matchedDrill) {
-                                onOpenWhiteboardDrill(matchedDrill.id, matchedDrill.category);
-                              } else {
-                                onOpenWhiteboardDrill(stn.name);
-                              }
-                            } else {
-                              onNavigateToUnit('whiteboard');
-                            }
-                          };
+                          {period.format && (
+                            <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase bg-slate-800 text-slate-400">
+                              {period.format === 'rotating' ? '🔄 Rotating' : period.format}
+                            </span>
+                          )}
+                        </div>
 
-                          return (
-                            <div
-                              key={sIdx}
-                              className="bg-slate-950/85 rounded-2xl border border-slate-800 p-3 space-y-2 hover:border-slate-700 transition-all shadow-xs"
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1 text-xs font-bold text-amber-300 bg-slate-950 px-2 py-1 rounded-xl border border-slate-800 font-mono">
+                            <Clock className="w-3 h-3 text-amber-400" />
+                            <span>{timeSpanStr}</span>
+                            <span className="text-emerald-400 font-sans font-medium">({duration}m)</span>
+                          </div>
+                          {!isRunning && (
+                            <button
+                              type="button"
+                              onClick={() => setActiveRunningPeriodIdx(pIdx)}
+                              className="text-[10px] font-bold text-slate-400 hover:text-emerald-300 transition-colors cursor-pointer"
                             >
-                              <div className="flex items-center justify-between gap-2 flex-wrap">
-                                <button
-                                  type="button"
-                                  onClick={handleOpenInstructions}
-                                  className="flex items-center gap-1.5 text-left group cursor-pointer"
-                                  title="View drill instructions and coaching cues"
-                                >
-                                  <span className="text-xs sm:text-sm font-black text-indigo-300 group-hover:text-indigo-200 transition-colors">
-                                    {stn.name || `Station ${sIdx + 1}`}
-                                  </span>
-                                  {matchedDrill && (
-                                    <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black uppercase bg-blue-900/60 text-blue-300 border border-blue-700/50">
-                                      Playbook
-                                    </span>
-                                  )}
-                                </button>
+                              Set Active
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Period Title */}
+                      <h3
+                        className={`font-black text-white tracking-tight ${
+                          mobilePlanFontSize === 'large' ? 'text-lg sm:text-xl' : 'text-base'
+                        }`}
+                      >
+                        {period.name || period.title || `Period ${pIdx + 1}`}
+                      </h3>
+
+                      {/* Stations / Drills Display */}
+                      {stations.length > 0 ? (
+                        <div className="space-y-2 pt-1">
+                          {stations.map((stn, sIdx) => {
+                            const matchedDrill = stn.name
+                              ? findMatchingWhiteboardDrill(stn.name, effectiveWhiteboardDrills)
+                              : null;
+
+                            const numStns = stations.length;
+                            const stnDuration = period.format === 'rotating' && numStns > 0 ? Math.max(1, Math.round(duration / numStns)) : duration;
+                            const stnStart = runningMin + sIdx * stnDuration;
+                            const stnEnd = sIdx === numStns - 1 ? pEndMin : stnStart + stnDuration;
+                            const stnTimeSpan = `${formatTimeMinutes(stnStart)} - ${formatTimeMinutes(stnEnd)}`;
+
+                            const handleOpenInstructions = () => {
+                              const drillObj =
+                                matchedDrill ||
+                                createCustomDrillFromStation(stn, pIdx + 1, period.category || period.name);
+                              setInstructionsModalDrill({
+                                drill: drillObj,
+                                stationName: stn.name || `Station ${sIdx + 1}`,
+                                stationDesc: stn.desc,
+                                stationFocus: stn.focus,
+                                stationCoach: stn.coach,
+                                periodName: period.name || period.title,
+                                periodNumber: pIdx + 1,
+                                periodDuration: duration,
+                              });
+                            };
+
+                            const handleOpenWhiteboard = () => {
+                              if (onOpenWhiteboardDrill) {
+                                if (matchedDrill) {
+                                  onOpenWhiteboardDrill(matchedDrill.id, matchedDrill.category);
+                                } else {
+                                  onOpenWhiteboardDrill(stn.name);
+                                }
+                              } else {
+                                onNavigateToUnit('whiteboard');
+                              }
+                            };
+
+                            return (
+                              <div
+                                key={sIdx}
+                                className="bg-slate-950/85 rounded-2xl border border-slate-800 p-3 space-y-2 hover:border-slate-700 transition-all shadow-xs"
+                              >
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <button
+                                      type="button"
+                                      onClick={handleOpenInstructions}
+                                      className="flex items-center gap-1.5 text-left group cursor-pointer"
+                                      title="View drill instructions and coaching cues"
+                                    >
+                                      <span className="text-xs sm:text-sm font-black text-indigo-300 group-hover:text-indigo-200 transition-colors">
+                                        {stn.name || `Station ${sIdx + 1}`}
+                                      </span>
+                                      {matchedDrill && (
+                                        <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black uppercase bg-blue-900/60 text-blue-300 border border-blue-700/50">
+                                          Playbook
+                                        </span>
+                                      )}
+                                    </button>
+
+                                    {period.format === 'rotating' && stations.length > 1 && (
+                                      <span className="flex items-center gap-1 text-[10px] font-mono font-bold text-amber-300 bg-amber-950/40 border border-amber-500/30 px-2 py-0.5 rounded-md">
+                                        <Clock className="w-2.5 h-2.5 text-amber-400" />
+                                        <span>{stnTimeSpan} ({stnDuration}m)</span>
+                                      </span>
+                                    )}
+                                  </div>
                                 {stn.coach && (
                                   <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-indigo-950 text-indigo-300 border border-indigo-700/50">
                                     👤 {stn.coach}
@@ -3151,7 +3339,8 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                     )}
                   </div>
                 );
-              })}
+              });
+            })()}
 
             {/* Bottom spacer */}
             <div className="h-6" />

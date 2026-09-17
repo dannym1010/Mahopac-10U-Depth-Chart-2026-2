@@ -140,6 +140,19 @@ function countWbPlays(wbData: any): number {
   return count;
 }
 
+function getWbMaxRows(wbData: any): number {
+  if (!wbData) return 13;
+  let max = Number(wbData.rows) || 13;
+  if (Array.isArray(wbData.wristbands)) {
+    for (const wb of wbData.wristbands) {
+      if (wb && typeof wb.rowsCount === 'number' && wb.rowsCount > max) {
+        max = wb.rowsCount;
+      }
+    }
+  }
+  return max;
+}
+
 function mergeServerState(current: any, incoming: any, metadata?: any): any {
   if (!current || typeof current !== 'object') return incoming;
   if (!incoming || typeof incoming !== 'object') return current;
@@ -471,10 +484,21 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
           countWbPlays(incWeekState?.wristbandData) || countWbPlays(incoming?.wristbandData);
         const curCount =
           countWbPlays(curWeekState?.wristbandData) || countWbPlays(current?.wristbandData);
-        mergedWb =
-          incCount >= curCount
-            ? incWeekState.wristbandData || incoming.wristbandData || curWeekState.wristbandData
-            : curWeekState.wristbandData || current.wristbandData;
+        const incRows =
+          getWbMaxRows(incWeekState?.wristbandData) || getWbMaxRows(incoming?.wristbandData);
+        const curRows =
+          getWbMaxRows(curWeekState?.wristbandData) || getWbMaxRows(current?.wristbandData);
+
+        if (curRows > incRows && curCount >= incCount) {
+          mergedWb = curWeekState.wristbandData || current.wristbandData;
+        } else if (incRows > curRows) {
+          mergedWb = incWeekState.wristbandData || incoming.wristbandData;
+        } else {
+          mergedWb =
+            incCount >= curCount
+              ? incWeekState.wristbandData || incoming.wristbandData || curWeekState.wristbandData
+              : curWeekState.wristbandData || current.wristbandData;
+        }
       }
 
       merged.weeklyData[weekKey] = {
@@ -798,53 +822,107 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
   }
 
   // 7. Merge Wristband Data
-  if (
+  const incWb =
     incoming.wristbandData &&
     typeof incoming.wristbandData === 'object' &&
     Array.isArray(incoming.wristbandData.wristbands) &&
     incoming.wristbandData.wristbands.length > 0
-  ) {
-    const incLastEdited = Number(incoming.wristbandData.lastEdited) || 0;
-    const curLastEdited = Number(current.wristbandData?.lastEdited) || 0;
-    const isWbExplicitScope =
-      metadata?.scope === 'wristband' ||
-      metadata?.scope === 'wristband_update' ||
-      metadata?.scope === 'force' ||
-      metadata?.scope === 'import_backup' ||
-      metadata?.activeUnit === 'wristband' ||
-      metadata?.activeUnit === 'game_day';
+      ? incoming.wristbandData
+      : undefined;
+  const curWb =
+    current.wristbandData &&
+    typeof current.wristbandData === 'object' &&
+    Array.isArray(current.wristbandData.wristbands) &&
+    current.wristbandData.wristbands.length > 0
+      ? current.wristbandData
+      : undefined;
+
+  const isWbExplicitScope =
+    metadata?.scope === 'wristband' ||
+    metadata?.scope === 'wristband_update' ||
+    metadata?.scope === 'force' ||
+    metadata?.scope === 'import_backup' ||
+    metadata?.activeUnit === 'wristband' ||
+    metadata?.activeUnit === 'game_day';
+
+  if (incWb) {
+    const incLastEdited = Number(incWb.lastEdited) || 0;
+    const curLastEdited = Number(curWb?.lastEdited) || 0;
+    const incRows = getWbMaxRows(incWb);
+    const curRows = getWbMaxRows(curWb);
+    const incPlays = countWbPlays(incWb);
+    const curPlays = countWbPlays(curWb);
 
     if (isWbExplicitScope) {
-      merged.wristbandData = incoming.wristbandData;
+      merged.wristbandData = incWb;
     } else if (incLastEdited > curLastEdited) {
-      merged.wristbandData = incoming.wristbandData;
+      merged.wristbandData = incWb;
     } else if (curLastEdited > incLastEdited) {
-      merged.wristbandData = current.wristbandData;
+      merged.wristbandData = curWb;
+    } else if (curRows > incRows && curPlays >= incPlays) {
+      merged.wristbandData = curWb;
+    } else if (incRows > curRows) {
+      merged.wristbandData = incWb;
+    } else if (incPlays >= curPlays) {
+      merged.wristbandData = incWb;
     } else {
-      // If timestamps are equal or unset, never overwrite if current has plays and incoming has fewer/none
-      const incPlays = countWbPlays(incoming.wristbandData);
-      const curPlays = countWbPlays(current.wristbandData);
-      if (incPlays >= curPlays) {
-        merged.wristbandData = incoming.wristbandData;
-      } else {
-        merged.wristbandData = current.wristbandData;
-      }
+      merged.wristbandData = curWb;
     }
-  } else if (!merged.wristbandData && current.wristbandData) {
-    merged.wristbandData = current.wristbandData;
+  } else if (!merged.wristbandData && curWb) {
+    merged.wristbandData = curWb;
   }
 
-  // Cross-sync: ensure any weeklyData in merged that lacks wristbands inherits the authoritative wristbandData
-  if (merged.wristbandData && merged.weeklyData && typeof merged.weeklyData === 'object') {
-    const rootWbTime = Number(merged.wristbandData.lastEdited) || 0;
+  // Cross-sync: ensure any weeklyData in merged that has wristbandData or needs it is kept in lockstep
+  if (merged.weeklyData && typeof merged.weeklyData === 'object') {
+    // 1. Scan if any week has a newer wristband or more rows than root merged.wristbandData
+    let bestWb = merged.wristbandData;
+    let bestTime = Number(bestWb?.lastEdited) || 0;
+    let bestRows = getWbMaxRows(bestWb);
+    let bestPlays = countWbPlays(bestWb);
+
     for (const [wKey, wVal] of Object.entries<any>(merged.weeklyData)) {
-      if (!wVal || typeof wVal !== 'object') continue;
-      const wValTime = Number(wVal.wristbandData?.lastEdited) || 0;
-      if (!wVal.wristbandData || (rootWbTime > wValTime && countWbPlays(merged.wristbandData) >= countWbPlays(wVal.wristbandData))) {
-        merged.weeklyData[wKey] = {
-          ...wVal,
-          wristbandData: merged.wristbandData,
-        };
+      if (!wVal || typeof wVal !== 'object' || !wVal.wristbandData) continue;
+      const wTime = Number(wVal.wristbandData.lastEdited) || 0;
+      const wRows = getWbMaxRows(wVal.wristbandData);
+      const wPlays = countWbPlays(wVal.wristbandData);
+
+      if (wTime > bestTime) {
+        bestWb = wVal.wristbandData;
+        bestTime = wTime;
+        bestRows = wRows;
+        bestPlays = wPlays;
+      } else if (wTime === bestTime) {
+        if (wRows > bestRows || (wRows === bestRows && wPlays > bestPlays)) {
+          bestWb = wVal.wristbandData;
+          bestRows = wRows;
+          bestPlays = wPlays;
+        }
+      }
+    }
+
+    if (bestWb) {
+      const authoritativeWb = {
+        ...bestWb,
+        lastEdited: Number(bestWb.lastEdited) || Date.now(),
+        rows: getWbMaxRows(bestWb),
+      };
+      merged.wristbandData = authoritativeWb;
+
+      // Sync across target week and any week lacking wristband or having older wristband
+      for (const [wKey, wVal] of Object.entries<any>(merged.weeklyData)) {
+        if (!wVal || typeof wVal !== 'object') continue;
+        const wTime = Number(wVal.wristbandData?.lastEdited) || 0;
+        const wRows = getWbMaxRows(wVal.wristbandData);
+        if (
+          !wVal.wristbandData ||
+          wTime < (authoritativeWb.lastEdited as number) ||
+          wRows < (authoritativeWb.rows as number)
+        ) {
+          merged.weeklyData[wKey] = {
+            ...wVal,
+            wristbandData: authoritativeWb,
+          };
+        }
       }
     }
   }

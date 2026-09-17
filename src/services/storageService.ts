@@ -602,9 +602,16 @@ export function formatTimeMinutes(mins: number): string {
 
 export function parseTimeString(str: string): number {
   if (!str) return 0;
-  const parts = str.trim().split(':');
-  if (parts.length === 2) {
-    return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+  const isPM = /pm/i.test(str);
+  const isAM = /am/i.test(str);
+  const clean = str.replace(/[^\d:]/g, '');
+  const parts = clean.trim().split(':');
+  if (parts.length >= 2) {
+    let h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+    if (isPM && h < 12) h += 12;
+    if (isAM && h === 12) h = 0;
+    return h * 60 + m;
   }
   return 0;
 }

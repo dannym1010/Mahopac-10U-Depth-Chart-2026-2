@@ -34,6 +34,12 @@ import {
   PenTool,
   BookOpen,
   Shield,
+  Play,
+  Pause,
+  RotateCw,
+  Timer,
+  Bell,
+  Volume2,
 } from 'lucide-react';
 import {
   PracticePlan,
@@ -525,7 +531,125 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
       !practices.some((p) => p && p.date === e.date)
   );
 
-  let currentStartMinutes = parseTimeString(currentPlan?.startTime || '17:05');
+  const baseStartMinutes = useMemo(() => {
+    return parseTimeString(currentPlan?.startTime || '17:05');
+  }, [currentPlan?.startTime]);
+
+  const practiceEndMinutes = baseStartMinutes + currentPlanDurationMinutes;
+  const practiceTimeSpanStr = `${formatTimeMinutes(baseStartMinutes)} - ${formatTimeMinutes(practiceEndMinutes)}`;
+
+  // Live real-time clock (updated every 5 seconds)
+  const [currentClockTime, setCurrentClockTime] = useState<Date>(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentClockTime(new Date()), 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const currentClockMinutes = currentClockTime.getHours() * 60 + currentClockTime.getMinutes();
+  const formattedClockTime = formatTimeMinutes(currentClockMinutes);
+
+  const isPracticeToday = useMemo(() => {
+    if (!currentPlan?.date) return false;
+    const todayStr = new Date().toISOString().split('T')[0];
+    return currentPlan.date === todayStr;
+  }, [currentPlan?.date]);
+
+  // Determine if practice is currently in progress
+  const isPracticeLiveNow = useMemo(() => {
+    if (!isPracticeToday) return false;
+    return currentClockMinutes >= baseStartMinutes && currentClockMinutes < practiceEndMinutes;
+  }, [isPracticeToday, currentClockMinutes, baseStartMinutes, practiceEndMinutes]);
+
+  // Find which period is active based on real clock time
+  const realTimePeriodIdx = useMemo(() => {
+    if (!isPracticeToday) return -1;
+    let running = baseStartMinutes;
+    for (let i = 0; i < currentPlanPeriods.length; i++) {
+      const dur = Number(currentPlanPeriods[i]?.time) || 0;
+      if (currentClockMinutes >= running && currentClockMinutes < running + dur) {
+        return i;
+      }
+      running += dur;
+    }
+    return -1;
+  }, [isPracticeToday, currentClockMinutes, baseStartMinutes, currentPlanPeriods]);
+
+  // Live Sideline Period Countdown Stopwatch / Whistle Timer
+  const [periodTimerActive, setPeriodTimerActive] = useState<boolean>(false);
+  const [periodTimerIdx, setPeriodTimerIdx] = useState<number>(0);
+  const [periodTimerSecondsLeft, setPeriodTimerSecondsLeft] = useState<number>(0);
+  const [timerExpiredNotice, setTimerExpiredNotice] = useState<boolean>(false);
+
+  // Initialize or synchronize timer duration when periodTimerIdx changes or plan changes
+  useEffect(() => {
+    const durationMins = Number(currentPlanPeriods[periodTimerIdx]?.time) || 10;
+    setPeriodTimerSecondsLeft(durationMins * 60);
+    setTimerExpiredNotice(false);
+  }, [periodTimerIdx, currentPlanPeriods]);
+
+  // Timer interval countdown
+  useEffect(() => {
+    if (!periodTimerActive) return;
+    const interval = setInterval(() => {
+      setPeriodTimerSecondsLeft((prev) => {
+        if (prev <= 1) {
+          setPeriodTimerActive(false);
+          setTimerExpiredNotice(true);
+          playWhistleChime();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [periodTimerActive]);
+
+  const playWhistleChime = () => {
+    try {
+      if (typeof window !== 'undefined' && 'navigator' in window && navigator.vibrate) {
+        navigator.vibrate([250, 100, 250]);
+      }
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(950, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1400, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.5);
+    } catch {}
+  };
+
+  const handleShiftStartTime = (deltaMinutes: number) => {
+    const currentMins = parseTimeString(currentPlan?.startTime || '17:05');
+    const newMins = Math.max(0, Math.min(23 * 60 + 59, currentMins + deltaMinutes));
+    const h = Math.floor(newMins / 60);
+    const m = newMins % 60;
+    const timeStr = `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`;
+    onUpdateMeta('startTime', timeStr);
+  };
+
+  const handleSetStartTimeToNow = () => {
+    const now = new Date();
+    // Round to nearest 5 minutes
+    const roundedMins = Math.round(now.getMinutes() / 5) * 5;
+    const h = (now.getHours() + Math.floor(roundedMins / 60)) % 24;
+    const m = roundedMins % 60;
+    const timeStr = `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`;
+    onUpdateMeta('startTime', timeStr);
+  };
+
+  const formatTimerSeconds = (totalSec: number) => {
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${m}:${s < 10 ? '0' + s : s}`;
+  };
 
   // Filter practices based on search and tag
   const filteredPractices = sortedPractices.filter((p) => {
@@ -681,10 +805,12 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                     {currentPlan ? currentPlan.title : 'Select Practice Plan...'}
                   </span>
                 </div>
-                <div className="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center gap-1.5">
+                <div className="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center gap-1.5 flex-wrap">
                   <span>{currentPlan?.date || 'No Date'}</span>
                   <span>•</span>
                   <span>{currentPlan?.day || getDayOfWeekForDate(currentPlan?.date)}</span>
+                  <span>•</span>
+                  <span className="text-amber-300 font-bold">{practiceTimeSpanStr}</span>
                   <span>•</span>
                   <span>{currentPlanPeriodsCount} Periods ({currentPlanDurationMinutes}m)</span>
                 </div>
@@ -2022,6 +2148,265 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
             </div>
           </div>
 
+          {/* Dedicated Mobile Practice Time & Field Stopwatch HUD */}
+          <div className="bg-slate-900/95 border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-2xl space-y-4">
+            {/* Top Row: Scheduled Window & Real-Time Status */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-slate-800/90">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 font-mono font-black text-sm sm:text-base shadow-sm">
+                    <Clock className="w-4 h-4 text-emerald-400" />
+                    <span>{practiceTimeSpanStr}</span>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold border border-slate-700">
+                    {currentPlanDurationMinutes}m Total • {currentPlanPeriods.length} Periods
+                  </span>
+                </div>
+                <div className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
+                  <span>{currentPlan?.day || getDayOfWeekForDate(currentPlan?.date)}</span>
+                  <span>•</span>
+                  <span>{currentPlan?.date || 'No Date'}</span>
+                  <span>•</span>
+                  <span className="font-mono text-slate-300">Local Clock: {formattedClockTime}</span>
+                </div>
+              </div>
+
+              {/* Real-Time Practice Status Pill */}
+              <div className="flex items-center gap-2">
+                {isPracticeLiveNow && realTimePeriodIdx >= 0 ? (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-black animate-pulse shadow-sm">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span>LIVE NOW: P{realTimePeriodIdx + 1} ({currentPlanPeriods[realTimePeriodIdx]?.category || 'Drill'})</span>
+                  </div>
+                ) : isPracticeToday && currentClockMinutes < baseStartMinutes ? (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-black shadow-sm">
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Starts in {baseStartMinutes - currentClockMinutes} mins</span>
+                  </div>
+                ) : isPracticeToday && currentClockMinutes >= practiceEndMinutes ? (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 text-slate-400 border border-slate-700 text-xs font-bold">
+                    <Check className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Practice Completed</span>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Quick Shift Practice Start Time (Touch-Friendly for Field Coaches) */}
+            {(userRole === 'admin' || userRole === 'coach') && (
+              <div className="bg-slate-950/70 rounded-2xl border border-slate-800/90 p-3 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Start Time:</span>
+                  </span>
+                  <input
+                    type="time"
+                    value={currentPlan?.startTime || '17:05'}
+                    onChange={(e) => onUpdateMeta('startTime', e.target.value)}
+                    className="bg-slate-900 border border-slate-700 text-white font-mono font-bold text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+
+                {/* Quick Shift Nudge Pills */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[11px] text-slate-400 font-medium mr-0.5">Shift:</span>
+                  <button
+                    type="button"
+                    onClick={() => handleShiftStartTime(-15)}
+                    className="px-2 py-1 rounded-lg bg-slate-850 hover:bg-slate-800 text-slate-300 text-xs font-bold border border-slate-750 active:scale-95 transition-all"
+                  >
+                    -15m
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleShiftStartTime(-5)}
+                    className="px-2 py-1 rounded-lg bg-slate-850 hover:bg-slate-800 text-slate-300 text-xs font-bold border border-slate-750 active:scale-95 transition-all"
+                  >
+                    -5m
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleShiftStartTime(5)}
+                    className="px-2 py-1 rounded-lg bg-slate-850 hover:bg-slate-800 text-slate-300 text-xs font-bold border border-slate-750 active:scale-95 transition-all"
+                  >
+                    +5m
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleShiftStartTime(15)}
+                    className="px-2 py-1 rounded-lg bg-slate-850 hover:bg-slate-800 text-slate-300 text-xs font-bold border border-slate-750 active:scale-95 transition-all"
+                  >
+                    +15m
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSetStartTimeToNow}
+                    className="px-2.5 py-1 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 text-xs font-bold active:scale-95 transition-all flex items-center gap-1"
+                    title="Snap practice start time to current time"
+                  >
+                    <Timer className="w-3 h-3 text-indigo-400" />
+                    <span>Set to Now</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Live Sideline Whistle Stopwatch / Countdown Timer */}
+            <div className="bg-gradient-to-br from-slate-950 to-slate-900 rounded-2xl border border-slate-800 p-3.5 sm:p-4 space-y-3 shadow-inner">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-300 flex items-center justify-center font-black">
+                    <Timer className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-white flex items-center gap-1.5">
+                      <span>Period {periodTimerIdx + 1} Stopwatch</span>
+                      {currentPlanPeriods[periodTimerIdx]?.category && (
+                        <span className="text-[10px] uppercase font-bold text-amber-300 px-1.5 py-0.2 rounded bg-amber-950/60 border border-amber-500/30">
+                          {currentPlanPeriods[periodTimerIdx].category}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      {currentPlanPeriods[periodTimerIdx]?.time || 10}m Scheduled Duration
+                    </div>
+                  </div>
+                </div>
+
+                {/* Big Digital Countdown Display */}
+                <div className="flex items-center gap-2 font-mono">
+                  <span className={`text-2xl sm:text-3xl font-black tracking-tight px-3 py-1 rounded-xl border ${
+                    periodTimerSecondsLeft === 0
+                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 animate-bounce'
+                      : periodTimerActive
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                      : 'bg-slate-900 text-slate-200 border-slate-800'
+                  }`}>
+                    {formatTimerSeconds(periodTimerSecondsLeft)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Visual Progress Bar */}
+              {(() => {
+                const totalSec = (Number(currentPlanPeriods[periodTimerIdx]?.time) || 10) * 60;
+                const elapsedSec = Math.max(0, totalSec - periodTimerSecondsLeft);
+                const pct = Math.min(100, Math.max(0, (elapsedSec / Math.max(1, totalSec)) * 100));
+                return (
+                  <div className="w-full h-2 rounded-full bg-slate-850 overflow-hidden border border-slate-800">
+                    <div
+                      className={`h-full transition-all duration-500 ${
+                        periodTimerSecondsLeft <= 60
+                          ? 'bg-rose-500'
+                          : periodTimerSecondsLeft <= 180
+                          ? 'bg-amber-400'
+                          : 'bg-emerald-500'
+                      }`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                );
+              })()}
+
+              {/* Timer Controls Strip */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (periodTimerSecondsLeft === 0) {
+                        const dur = (Number(currentPlanPeriods[periodTimerIdx]?.time) || 10) * 60;
+                        setPeriodTimerSecondsLeft(dur);
+                      }
+                      setPeriodTimerActive(!periodTimerActive);
+                      setTimerExpiredNotice(false);
+                    }}
+                    className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer ${
+                      periodTimerActive
+                        ? 'bg-amber-500 hover:bg-amber-450 text-slate-950'
+                        : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
+                    }`}
+                  >
+                    {periodTimerActive ? (
+                      <>
+                        <Pause className="w-4 h-4" />
+                        <span>Pause</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4" />
+                        <span>Start Whistle Timer</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPeriodTimerActive(false);
+                      const dur = (Number(currentPlanPeriods[periodTimerIdx]?.time) || 10) * 60;
+                      setPeriodTimerSecondsLeft(dur);
+                      setTimerExpiredNotice(false);
+                    }}
+                    className="px-3 py-2 rounded-xl bg-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-750 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                    title="Reset period countdown"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reset</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {periodTimerIdx < currentPlanPeriods.length - 1 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextIdx = periodTimerIdx + 1;
+                        setPeriodTimerIdx(nextIdx);
+                        const nextDur = (Number(currentPlanPeriods[nextIdx]?.time) || 10) * 60;
+                        setPeriodTimerSecondsLeft(nextDur);
+                        setPeriodTimerActive(true);
+                        setTimerExpiredNotice(false);
+                        setActiveViewingPeriodIdx(nextIdx);
+                      }}
+                      className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all shadow-md cursor-pointer"
+                    >
+                      <span>Next Period (P{periodTimerIdx + 2})</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={playWhistleChime}
+                    className="p-2 rounded-xl bg-slate-850 hover:bg-slate-800 text-amber-400 border border-slate-750 text-xs transition-all cursor-pointer"
+                    title="Test whistle sound & vibration"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Time Expired Whistle Notification Alert */}
+              {timerExpiredNotice && (
+                <div className="p-3 bg-rose-500/20 border border-rose-500/60 rounded-xl flex items-center justify-between gap-2 animate-bounce text-rose-200 text-xs font-black">
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-rose-400" />
+                    <span>WHISTLE! Period {periodTimerIdx + 1} Time Expired!</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setTimerExpiredNotice(false)}
+                    className="px-2 py-1 bg-rose-950/80 rounded-lg text-[11px] hover:bg-rose-900 border border-rose-500/40 text-white"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Quick Period Selector Strip */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             <button
@@ -2037,7 +2422,8 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
             </button>
             {currentPlanPeriods.map((period, pIdx) => {
               const isSelected = viewFilterPeriod === pIdx;
-              const isActive = activeViewingPeriodIdx === pIdx;
+              const isLiveRealTime = realTimePeriodIdx === pIdx;
+              const isTimerRunning = periodTimerIdx === pIdx && periodTimerActive;
               return (
                 <button
                   key={pIdx}
@@ -2046,11 +2432,14 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer border flex items-center gap-1.5 ${
                     isSelected
                       ? 'bg-emerald-600 text-white border-emerald-400 shadow-md font-black'
-                      : isActive
+                      : isLiveRealTime
+                      ? 'bg-slate-900 text-emerald-400 border-emerald-400/80 ring-1 ring-emerald-500/40'
+                      : isTimerRunning
                       ? 'bg-slate-900 text-amber-300 border-amber-400/60'
                       : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
                   }`}
                 >
+                  {isLiveRealTime && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>}
                   <span>P{pIdx + 1}</span>
                   <span className="text-[10px] opacity-80 font-mono">({period.time || 0}m)</span>
                 </button>
@@ -2064,8 +2453,8 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
               .map((period, pIdx) => ({ period, pIdx }))
               .filter(({ pIdx }) => viewFilterPeriod === 'all' || viewFilterPeriod === pIdx)
               .map(({ period, pIdx }) => {
-                // Calculate time string
-                let runningMin = currentStartMinutes;
+                // Calculate time string safely from baseStartMinutes
+                let runningMin = baseStartMinutes;
                 for (let i = 0; i < pIdx; i++) {
                   runningMin += Number(currentPlanPeriods[i]?.time) || 0;
                 }
@@ -2076,13 +2465,16 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 const rawStations = Array.isArray(period.stations) ? period.stations : [];
                 const validStations = rawStations.filter((st): st is PracticeStation => Boolean(st && typeof st === 'object'));
                 const isRunning = activeViewingPeriodIdx === pIdx;
+                const isLiveNow = realTimePeriodIdx === pIdx;
 
                 return (
                   <div
                     key={pIdx}
                     className={`rounded-3xl border transition-all p-4 sm:p-5 space-y-3.5 shadow-xl ${
-                      isRunning
-                        ? 'bg-slate-850 border-emerald-500/70 ring-1 ring-emerald-500/30'
+                      isLiveNow
+                        ? 'bg-slate-850 border-emerald-500/80 ring-2 ring-emerald-500/40'
+                        : isRunning
+                        ? 'bg-slate-850 border-indigo-500/70 ring-1 ring-indigo-500/30'
                         : 'bg-slate-850/90 border-slate-700/80'
                     }`}
                   >
@@ -2102,38 +2494,84 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                         <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase bg-slate-900 text-slate-300 border border-slate-800">
                           {period.format === 'rotating' ? '🔄 Stations Rotate' : 'Static Whole-Group'}
                         </span>
+
+                        {isLiveNow && (
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                            <span>Live Now</span>
+                          </span>
+                        )}
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Period Scheduled Time Window */}
                         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900 text-white font-mono text-xs font-black border border-slate-750">
                           <Clock className="w-3.5 h-3.5 text-amber-400" />
                           <span>{timeSpanStr}</span>
                           <span className="text-emerald-400 font-sans">({pDuration}m)</span>
                         </div>
 
+                        {/* Quick +/- 5m drill adjustment on mobile for coaches */}
+                        {userRole === 'admin' && (
+                          <div className="flex items-center bg-slate-900 rounded-xl border border-slate-750 p-0.5">
+                            <button
+                              type="button"
+                              onClick={() => onUpdatePeriodTime(pIdx, Math.max(1, pDuration - 5))}
+                              className="px-2 py-0.5 text-xs font-black text-rose-400 hover:bg-rose-950/50 rounded-lg transition-all active:scale-95"
+                              title="Decrease period by 5 minutes"
+                            >
+                              -5m
+                            </button>
+                            <span className="text-slate-600 text-[10px]">•</span>
+                            <button
+                              type="button"
+                              onClick={() => onUpdatePeriodTime(pIdx, pDuration + 5)}
+                              className="px-2 py-0.5 text-xs font-black text-emerald-400 hover:bg-emerald-950/50 rounded-lg transition-all active:scale-95"
+                              title="Increase period by 5 minutes"
+                            >
+                              +5m
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Period Timer Button */}
                         <button
                           type="button"
-                          onClick={() => setActiveViewingPeriodIdx(pIdx)}
-                          className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
-                            isRunning
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                              : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
+                          onClick={() => {
+                            setPeriodTimerIdx(pIdx);
+                            setPeriodTimerSecondsLeft(pDuration * 60);
+                            setPeriodTimerActive(true);
+                            setActiveViewingPeriodIdx(pIdx);
+                          }}
+                          className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                            periodTimerIdx === pIdx && periodTimerActive
+                              ? 'bg-amber-500 text-slate-950 font-black shadow-md'
+                              : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-750'
                           }`}
+                          title="Start whistle timer for this period"
                         >
-                          {isRunning ? 'Active Live' : 'Set Active'}
+                          <Timer className="w-3.5 h-3.5 text-amber-400" />
+                          <span>{periodTimerIdx === pIdx && periodTimerActive ? 'Timing...' : 'Run Timer'}</span>
                         </button>
                       </div>
                     </div>
 
                     {/* Stations / Drills in this Period */}
                     <div className="space-y-3">
-                      {validStations.map((station, sIdx) => (
+                      {validStations.map((station, sIdx) => {
+                        const numStations = validStations.length;
+                        const stationDuration = period.format === 'rotating' && numStations > 0 ? Math.max(1, Math.round(pDuration / numStations)) : pDuration;
+                        const stationStartMin = runningMin + sIdx * stationDuration;
+                        const stationEndMin = sIdx === numStations - 1 ? pEndMin : stationStartMin + stationDuration;
+                        const stationTimeStr = `${formatTimeMinutes(stationStartMin)} - ${formatTimeMinutes(stationEndMin)}`;
+
+                        return (
                         <div
                           key={sIdx}
                           className="bg-slate-900/90 rounded-2xl border border-slate-750 p-3.5 sm:p-4 space-y-2.5"
                         >
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               {validStations.length > 1 && (
                                 <span className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center font-black text-xs">
                                   {sIdx + 1}
@@ -2146,6 +2584,14 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                               >
                                 {station.name || `Drill Station ${sIdx + 1}`}
                               </h4>
+
+                              {/* Station Rotation Time Pill */}
+                              {period.format === 'rotating' && validStations.length > 1 && (
+                                <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-950/40 text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold">
+                                  <Clock className="w-3 h-3 text-amber-400" />
+                                  <span>{stationTimeStr} ({stationDuration}m)</span>
+                                </span>
+                              )}
                             </div>
 
                             {station.coach && (
@@ -2265,7 +2711,8 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                             </div>
                           )}
                         </div>
-                      ))}
+                      );
+                    })}
 
                       {validStations.length === 0 && (
                         <div className="p-3 text-center text-xs text-slate-400 italic">
@@ -2303,8 +2750,9 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 .filter((row): row is PracticePeriod => Boolean(row && typeof row === 'object'))
                 .map((row, pIdx, allPeriods) => {
                   const rowDuration = Number(row.time) || 0;
-                  const periodEndMin = currentStartMinutes + rowDuration;
-                  const timeString = `${formatTimeMinutes(currentStartMinutes)} - ${formatTimeMinutes(periodEndMin)}`;
+                  const periodStartMin = baseStartMinutes + (currentPlanPeriods || []).slice(0, pIdx).reduce((acc, p) => acc + (Number(p?.time) || 0), 0);
+                  const periodEndMin = periodStartMin + rowDuration;
+                  const timeString = `${formatTimeMinutes(periodStartMin)} - ${formatTimeMinutes(periodEndMin)}`;
                   const isRotating = row.format === 'rotating';
 
                   const rawStations = Array.isArray(row.stations) ? row.stations : [];
@@ -2341,7 +2789,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                       .filter(Boolean);
 
                     const stationStartMin =
-                      currentStartMinutes + sIdx * stationDuration;
+                      periodStartMin + sIdx * stationDuration;
                     const stationEndMin = stationStartMin + stationDuration;
 
                     return (
@@ -3015,7 +3463,6 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                     );
                   });
 
-                  currentStartMinutes = periodEndMin;
                   return element;
                 })}
             </tbody>

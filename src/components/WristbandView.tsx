@@ -359,20 +359,21 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
 
   // Synchronize internal state when prop changes from parent
   useEffect(() => {
-    const incomingLastEdited = Number(propWristbandData?.lastEdited) || 0;
+    if (!propWristbandData?.wristbands || propWristbandData.wristbands.length === 0) return;
+
+    const incomingLastEdited = Number(propWristbandData.lastEdited) || 0;
     const currentLastEdited = Number(internalData.lastEdited) || 0;
     const isNewerRemote = incomingLastEdited > currentLastEdited;
+    const isRecentLocalEdit = Date.now() - lastEditTimeRef.current < 2000;
 
-    // Only guard if user made a newer local edit within the last 5 seconds
-    if (!isNewerRemote && Date.now() - lastEditTimeRef.current < 5000) {
+    // Only guard if user made a local edit in the past 2 seconds AND incoming is not strictly newer
+    if (!isNewerRemote && isRecentLocalEdit) {
       return;
     }
-    if (propWristbandData?.wristbands && propWristbandData.wristbands.length > 0) {
-      const incomingJson = safeJSONStringify(propWristbandData);
-      if (incomingJson !== lastEmittedWbJson.current) {
-        lastEmittedWbJson.current = incomingJson;
-        setInternalData(normalizeWristbandContinuousNumbering(propWristbandData, activeTeamName));
-      }
+    const incomingJson = safeJSONStringify(propWristbandData);
+    if (incomingJson !== lastEmittedWbJson.current) {
+      lastEmittedWbJson.current = incomingJson;
+      setInternalData(normalizeWristbandContinuousNumbering(propWristbandData, activeTeamName));
     }
   }, [propWristbandData, activeTeamName]);
 
@@ -460,7 +461,11 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
   const commitWristbandData = (updated: WristbandData) => {
     const now = Date.now();
     lastEditTimeRef.current = now;
-    const tagged: WristbandData = { ...updated, lastEdited: now };
+    const maxRows = Math.max(
+      ...(updated.wristbands || []).map((w) => w.rowsCount || 13),
+      updated.rows || 13
+    );
+    const tagged: WristbandData = { ...updated, rows: maxRows, lastEdited: now };
     lastEmittedWbJson.current = safeJSONStringify(tagged);
     setInternalData(tagged);
     safeJSONSet('footballWristbandData', tagged);
@@ -476,8 +481,13 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
       }
       return wb;
     });
+    const maxRows = Math.max(
+      ...nextWristbands.map((w) => w.rowsCount || 13),
+      normalizedData.rows || 13
+    );
     const nextData: WristbandData = {
       ...normalizedData,
+      rows: maxRows,
       wristbands: nextWristbands,
       activeWristbandId: currentWristband.id,
     };
