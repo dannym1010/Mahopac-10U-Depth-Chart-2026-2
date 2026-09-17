@@ -254,8 +254,8 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
   const baseBgClass = highlightClass
     ? highlightClass
     : isRedZone
-    ? 'bg-rose-50/80 hover:bg-rose-100/90 text-slate-900 border-rose-300/80 dark:bg-rose-950/20 dark:text-rose-100 dark:border-rose-800/40 dark:hover:bg-rose-950/40'
-    : 'bg-white hover:bg-slate-50 text-slate-900 border-slate-300 dark:bg-slate-900/90 dark:text-slate-100 dark:border-slate-800 dark:hover:bg-slate-850';
+    ? 'bg-rose-950/25 hover:bg-rose-950/40 text-rose-100 border-rose-800/40 print:bg-rose-50/80 print:hover:bg-rose-100/90 print:text-slate-900 print:border-rose-300/80'
+    : 'bg-slate-900 hover:bg-slate-850 text-slate-100 border-slate-800 print:bg-white print:hover:bg-slate-50 print:text-slate-900 print:border-slate-300';
 
   if (isInlineEditing) {
     return (
@@ -269,7 +269,7 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
           value={inlineWristband}
           onChange={(e) => setInlineWristband(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="w-10 px-1 py-0.5 text-[10px] font-mono bg-white dark:bg-slate-800 border border-slate-400 rounded text-slate-900 dark:text-white text-center"
+          className="w-10 px-1 py-0.5 text-[10px] font-mono bg-slate-800 border border-slate-700 rounded text-white text-center"
           title="Wristband Number"
         />
         <input
@@ -279,7 +279,7 @@ export const CallSheetCellView: React.FC<CallSheetCellViewProps> = ({
           value={inlineName}
           onChange={(e) => setInlineName(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="flex-1 min-w-0 px-1.5 py-0.5 text-[11px] font-bold uppercase bg-white dark:bg-slate-800 border border-indigo-500 rounded text-slate-900 dark:text-white"
+          className="flex-1 min-w-0 px-1.5 py-0.5 text-[11px] font-bold uppercase bg-slate-800 border border-indigo-500 rounded text-white"
         />
         <button
           type="button"

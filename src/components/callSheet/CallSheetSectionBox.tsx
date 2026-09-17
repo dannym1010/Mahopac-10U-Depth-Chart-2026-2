@@ -73,32 +73,32 @@ const HIGHLIGHT_COLORS: { id: string; label: string; bgClass: string; cellClass:
   {
     id: 'rose',
     label: 'Red / Rose',
-    bgClass: 'bg-rose-50/70 dark:bg-rose-950/20 border-rose-400 dark:border-rose-800/80',
-    cellClass: 'bg-rose-50/80 hover:bg-rose-100/90 text-slate-900 border-rose-300 dark:bg-rose-950/20 dark:text-rose-100 dark:border-rose-800/50',
+    bgClass: 'bg-rose-950/25 border-rose-800/80 print:bg-rose-50/70 print:border-rose-400',
+    cellClass: 'bg-rose-950/25 hover:bg-rose-950/45 text-rose-100 border-rose-800/50 print:bg-rose-50/80 print:hover:bg-rose-100/90 print:text-slate-900 print:border-rose-300',
   },
   {
     id: 'yellow',
     label: 'Gold / Alert',
-    bgClass: 'bg-yellow-50/80 dark:bg-yellow-950/25 border-yellow-400 dark:border-yellow-700/80',
-    cellClass: 'bg-yellow-50/80 hover:bg-yellow-100/90 text-slate-900 border-yellow-300 dark:bg-yellow-950/30 dark:text-yellow-100 dark:border-yellow-800/50',
+    bgClass: 'bg-yellow-950/25 border-yellow-700/80 print:bg-yellow-50/80 print:border-yellow-400',
+    cellClass: 'bg-yellow-950/25 hover:bg-yellow-950/45 text-yellow-100 border-yellow-800/50 print:bg-yellow-50/80 print:hover:bg-yellow-100/90 print:text-slate-900 print:border-yellow-300',
   },
   {
     id: 'emerald',
     label: 'Green / Go',
-    bgClass: 'bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-400 dark:border-emerald-800/80',
-    cellClass: 'bg-emerald-50/80 hover:bg-emerald-100/90 text-slate-900 border-emerald-300 dark:bg-emerald-950/25 dark:text-emerald-100 dark:border-emerald-800/50',
+    bgClass: 'bg-emerald-950/25 border-emerald-800/80 print:bg-emerald-50/70 print:border-emerald-400',
+    cellClass: 'bg-emerald-950/25 hover:bg-emerald-950/45 text-emerald-100 border-emerald-800/50 print:bg-emerald-50/80 print:hover:bg-emerald-100/90 print:text-slate-900 print:border-emerald-300',
   },
   {
     id: 'cyan',
     label: 'Cyan / Deep',
-    bgClass: 'bg-cyan-50/70 dark:bg-cyan-950/20 border-cyan-400 dark:border-cyan-800/80',
-    cellClass: 'bg-cyan-50/80 hover:bg-cyan-100/90 text-slate-900 border-cyan-300 dark:bg-cyan-950/25 dark:text-cyan-100 dark:border-cyan-800/50',
+    bgClass: 'bg-cyan-950/25 border-cyan-800/80 print:bg-cyan-50/70 print:border-cyan-400',
+    cellClass: 'bg-cyan-950/25 hover:bg-cyan-950/45 text-cyan-100 border-cyan-800/50 print:bg-cyan-50/80 print:hover:bg-cyan-100/90 print:text-slate-900 print:border-cyan-300',
   },
   {
     id: 'purple',
     label: 'Purple / Special',
-    bgClass: 'bg-purple-50/70 dark:bg-purple-950/20 border-purple-400 dark:border-purple-800/80',
-    cellClass: 'bg-purple-50/80 hover:bg-purple-100/90 text-slate-900 border-purple-300 dark:bg-purple-950/25 dark:text-purple-100 dark:border-purple-800/50',
+    bgClass: 'bg-purple-950/25 border-purple-800/80 print:bg-purple-50/70 print:border-purple-400',
+    cellClass: 'bg-purple-950/25 hover:bg-purple-950/45 text-purple-100 border-purple-800/50 print:bg-purple-50/80 print:hover:bg-purple-100/90 print:text-slate-900 print:border-purple-300',
   },
 ];
 
@@ -274,7 +274,7 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
   // Determine container styling based on highlight status
   const containerClasses = isHighlighted
     ? highlightConfig.bgClass
-    : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700/80';
+    : 'bg-slate-900 border-slate-750 print:bg-white print:border-black';
 
   return (
     <div
@@ -446,19 +446,19 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
 
       {/* 2. Interactive Editing Drawer (Rows, Columns, Highlight, Color, Delete, Row Position) */}
       {isDrawerOpen && (
-        <div className="p-2 bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs space-y-2 print:hidden animate-in fade-in duration-150">
+        <div className="p-2 bg-slate-950 border-b border-slate-800 text-slate-200 text-xs space-y-2 print:hidden animate-in fade-in duration-150">
           {/* Top Row: Rows, Columns, Highlight, and Delete */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
             {/* Rows (+/-) */}
-            <div className="flex items-center gap-1 bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-700 shadow-2xs">
-              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Rows:</span>
-              <span className="font-mono font-black text-amber-600 dark:text-amber-300 text-xs px-1">
+            <div className="flex items-center gap-1 bg-slate-850 px-1.5 py-0.5 rounded border border-slate-750 shadow-2xs">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Rows:</span>
+              <span className="font-mono font-black text-amber-400 text-xs px-1">
                 {section.slotsCount}
               </span>
               <button
                 type="button"
                 onClick={handleAddSlot}
-                className="p-0.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-emerald-600 dark:text-emerald-400 rounded cursor-pointer"
+                className="p-0.5 hover:bg-slate-700 text-emerald-400 rounded cursor-pointer"
                 title="Add row"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -466,7 +466,7 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
               <button
                 type="button"
                 onClick={handleRemoveSlot}
-                className="p-0.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-rose-600 dark:text-rose-400 rounded cursor-pointer"
+                className="p-0.5 hover:bg-slate-700 text-rose-400 rounded cursor-pointer"
                 title="Remove bottom row"
               >
                 <Minus className="w-3.5 h-3.5" />
@@ -474,8 +474,8 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
             </div>
 
             {/* Columns (1, 2, 3, 4) */}
-            <div className="flex items-center gap-1 bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-700 shadow-2xs">
-              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase flex items-center gap-0.5">
+            <div className="flex items-center gap-1 bg-slate-850 px-1.5 py-0.5 rounded border border-slate-750 shadow-2xs">
+              <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-0.5">
                 <Columns className="w-3 h-3" />
                 Cols:
               </span>
@@ -487,7 +487,7 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
                   className={`px-1.5 py-0.2 rounded text-[10px] font-black cursor-pointer ${
                     columnsCount === cols
                       ? 'bg-indigo-600 text-white'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   {cols}
@@ -501,12 +501,12 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
               onClick={handleToggleHighlight}
               className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 border transition-all cursor-pointer ${
                 isHighlighted
-                  ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-400/20 dark:text-amber-300 dark:border-amber-400/40'
-                  : 'bg-white text-slate-600 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 hover:text-slate-900 dark:hover:text-slate-200'
+                  ? 'bg-amber-400/20 text-amber-300 border-amber-400/40'
+                  : 'bg-slate-850 text-slate-400 border-slate-750 hover:text-slate-200'
               }`}
               title="Toggle table highlight ON or OFF"
             >
-              <Sparkles className="w-3 h-3 text-amber-500 dark:text-amber-400" />
+              <Sparkles className="w-3 h-3 text-amber-400" />
               <span>Highlight {isHighlighted ? 'ON' : 'OFF'}</span>
             </button>
 
@@ -515,7 +515,7 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
               <button
                 type="button"
                 onClick={handleDelete}
-                className="px-2 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-300 hover:bg-rose-600 hover:text-white dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60 text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer ml-auto"
+                className="px-2 py-0.5 rounded bg-rose-950/40 text-rose-400 border border-rose-800/60 hover:bg-rose-600 hover:text-white text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer ml-auto"
                 title="Delete this section table"
               >
                 <Trash2 className="w-3 h-3" />
@@ -526,9 +526,9 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
 
           {/* Row Placement quick controls */}
           {(canMoveLeft || canMoveRight || canMoveUpRow || canMoveDownRow || rowIndex !== undefined || onMoveTableToRow) && (
-            <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-200 dark:border-slate-800 flex-wrap">
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800 flex-wrap">
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
                   <GripVertical className="w-3 h-3" />
                   Row {rowIndex !== undefined ? rowIndex + 1 : 1}:
                 </span>
@@ -539,7 +539,7 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
                       const val = parseInt(e.target.value, 10);
                       if (!isNaN(val)) onMoveTableToRow(section.id, val);
                     }}
-                    className="bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 font-bold text-[10px] rounded px-1.5 py-0.5 border border-slate-300 dark:border-slate-700 focus:outline-none cursor-pointer"
+                    className="bg-slate-850 text-indigo-300 font-bold text-[10px] rounded px-1.5 py-0.5 border border-slate-750 focus:outline-none cursor-pointer"
                     title="Change which row this table belongs to"
                   >
                     {availableRowIndices.map((r) => (
@@ -556,7 +556,7 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
                   <button
                     type="button"
                     onClick={() => onMoveTableLeft?.(section.id)}
-                    className="px-1.5 py-0.5 rounded bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-transparent text-[10px] font-bold flex items-center gap-0.5 cursor-pointer shadow-2xs"
+                    className="px-1.5 py-0.5 rounded bg-slate-850 hover:bg-slate-750 text-slate-200 border border-slate-750 text-[10px] font-bold flex items-center gap-0.5 cursor-pointer shadow-2xs"
                   >
                     <ArrowLeft className="w-3 h-3" /> Left
                   </button>
@@ -565,7 +565,7 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
                   <button
                     type="button"
                     onClick={() => onMoveTableRight?.(section.id)}
-                    className="px-1.5 py-0.5 rounded bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-transparent text-[10px] font-bold flex items-center gap-0.5 cursor-pointer shadow-2xs"
+                    className="px-1.5 py-0.5 rounded bg-slate-850 hover:bg-slate-750 text-slate-200 border border-slate-750 text-[10px] font-bold flex items-center gap-0.5 cursor-pointer shadow-2xs"
                   >
                     Right <ArrowRight className="w-3 h-3" />
                   </button>
@@ -574,7 +574,7 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
                   <button
                     type="button"
                     onClick={() => onMoveTableUpRow?.(section.id)}
-                    className="px-1.5 py-0.5 rounded bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-indigo-700 dark:text-indigo-300 border border-slate-300 dark:border-transparent text-[10px] font-bold flex items-center gap-0.5 cursor-pointer shadow-2xs"
+                    className="px-1.5 py-0.5 rounded bg-slate-850 hover:bg-slate-750 text-indigo-300 border border-slate-750 text-[10px] font-bold flex items-center gap-0.5 cursor-pointer shadow-2xs"
                   >
                     <ArrowUp className="w-3 h-3" /> Row Above
                   </button>
@@ -583,7 +583,7 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
                   <button
                     type="button"
                     onClick={() => onMoveTableDownRow?.(section.id)}
-                    className="px-1.5 py-0.5 rounded bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-indigo-700 dark:text-indigo-300 border border-slate-300 dark:border-transparent text-[10px] font-bold flex items-center gap-0.5 cursor-pointer shadow-2xs"
+                    className="px-1.5 py-0.5 rounded bg-slate-850 hover:bg-slate-750 text-indigo-300 border border-slate-750 text-[10px] font-bold flex items-center gap-0.5 cursor-pointer shadow-2xs"
                   >
                     <ArrowDown className="w-3 h-3" /> Row Below
                   </button>
@@ -594,8 +594,8 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
 
           {/* Highlight Color Palette (when highlight is on) */}
           {isHighlighted && (
-            <div className="flex items-center gap-1.5 pt-1 border-t border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">Tint Color:</span>
+            <div className="flex items-center gap-1.5 pt-1 border-t border-slate-800">
+              <span className="text-[10px] font-bold text-slate-400">Tint Color:</span>
               <div className="flex items-center gap-1">
                 {HIGHLIGHT_COLORS.map((hc) => (
                   <button
@@ -604,8 +604,8 @@ export const CallSheetSectionBox: React.FC<CallSheetSectionBoxProps> = ({
                     onClick={() => handleSelectHighlightColor(hc.id)}
                     className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition-all cursor-pointer ${
                       highlightColorKey === hc.id
-                        ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-black dark:border-white shadow-2xs'
-                        : 'bg-white text-slate-700 border-slate-300 hover:border-slate-500 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+                        ? 'bg-white text-black border-white shadow-2xs'
+                        : 'bg-slate-850 text-slate-300 border-slate-750 hover:border-slate-600'
                     }`}
                   >
                     {hc.label.split(' ')[0]}

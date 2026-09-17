@@ -2193,7 +2193,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
             </div>
 
             {/* Quick Shift Practice Start Time (Touch-Friendly for Field Coaches) */}
-            {(userRole === 'admin' || userRole === 'coach') && (
+            {userRole === 'admin' && (
               <div className="bg-slate-950/70 rounded-2xl border border-slate-800/90 p-3 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">

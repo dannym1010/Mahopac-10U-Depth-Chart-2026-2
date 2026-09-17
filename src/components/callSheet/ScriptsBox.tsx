@@ -31,11 +31,11 @@ export const ScriptsBox: React.FC<ScriptsBoxProps> = ({
   const [isEditing, setIsEditing] = useState(false);
 
   const containerClasses = highlightEnabled
-    ? 'bg-purple-50/75 dark:bg-purple-950/20 border-purple-400 dark:border-purple-800'
-    : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700';
+    ? 'bg-purple-950/20 border-purple-800 print:bg-purple-50/75 print:border-purple-400'
+    : 'bg-slate-900 border-slate-750 print:bg-white print:border-black';
 
   const cellHighlight = highlightEnabled
-    ? 'bg-purple-50/70 hover:bg-purple-100 text-slate-900 border-purple-200 dark:bg-purple-950/20 dark:text-purple-100 dark:border-purple-900/50'
+    ? 'bg-purple-950/25 hover:bg-purple-950/45 text-purple-100 border-purple-800/50 print:bg-purple-50/70 print:hover:bg-purple-100 print:text-slate-900 print:border-purple-200'
     : undefined;
 
   return (

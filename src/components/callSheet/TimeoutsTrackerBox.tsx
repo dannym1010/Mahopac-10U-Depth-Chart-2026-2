@@ -68,16 +68,16 @@ export const TimeoutsTrackerBox: React.FC<TimeoutsTrackerBoxProps> = ({
   };
 
   const containerClasses = highlightEnabled
-    ? 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-400 dark:border-amber-700/80'
-    : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700';
+    ? 'bg-amber-950/20 border-amber-700/80 print:bg-amber-50/70 print:border-amber-400'
+    : 'bg-slate-900 border-slate-750 print:bg-white print:border-black';
 
   return (
     <div
       className={`border shadow-xs rounded-none overflow-hidden print:overflow-visible print:border-black callsheet-timeouts-box callsheet-avoid-break flex flex-col transition-all ${containerClasses}`}
     >
       {/* Header bar */}
-      <div className="py-1 px-2.5 bg-slate-200/90 dark:bg-slate-800 border-b border-slate-300 dark:border-slate-700 flex items-center justify-between text-center">
-        <span className="font-black text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100 flex-1 text-center">
+      <div className="py-1 px-2.5 bg-slate-800 border-b border-slate-700 flex items-center justify-between text-center print:bg-slate-200/90 print:border-slate-300">
+        <span className="font-black text-xs uppercase tracking-wider text-slate-100 flex-1 text-center print:text-slate-900">
           TIMEOUTS LEFT
         </span>
 
@@ -86,7 +86,7 @@ export const TimeoutsTrackerBox: React.FC<TimeoutsTrackerBoxProps> = ({
           <button
             type="button"
             onClick={() => setIsEditing(!isEditing)}
-            className="text-slate-500 hover:text-slate-800 dark:hover:text-white p-0.5 rounded transition-colors cursor-pointer"
+            className="text-slate-400 hover:text-white p-0.5 rounded transition-colors cursor-pointer"
             title="Edit timeout rows / highlight"
           >
             <Settings className="w-3 h-3" />
@@ -96,7 +96,7 @@ export const TimeoutsTrackerBox: React.FC<TimeoutsTrackerBoxProps> = ({
           <button
             type="button"
             onClick={handleReset}
-            className="text-slate-500 hover:text-slate-800 dark:hover:text-white p-0.5 rounded transition-colors cursor-pointer"
+            className="text-slate-400 hover:text-white p-0.5 rounded transition-colors cursor-pointer"
             title="Reset all timeouts"
           >
             <RotateCcw className="w-3 h-3" />
@@ -148,8 +148,8 @@ export const TimeoutsTrackerBox: React.FC<TimeoutsTrackerBoxProps> = ({
       {/* Table */}
       <table className="w-full text-center border-collapse text-xs font-sans">
         <thead>
-          <tr className="border-b border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-850 font-bold text-slate-800 dark:text-slate-200">
-            <th className="py-1 px-2 border-r border-slate-300 dark:border-slate-700 w-1/2">
+          <tr className="border-b border-slate-700 bg-slate-850 font-bold text-slate-200 print:border-slate-300 print:bg-slate-100 print:text-slate-800">
+            <th className="py-1 px-2 border-r border-slate-700 print:border-slate-300 w-1/2">
               US
             </th>
             <th className="py-1 px-2 w-1/2">
@@ -165,13 +165,13 @@ export const TimeoutsTrackerBox: React.FC<TimeoutsTrackerBoxProps> = ({
             const num = idx + 1;
 
             return (
-              <tr key={`1h-${num}`} className="border-b border-slate-300 dark:border-slate-800">
+              <tr key={`1h-${num}`} className="border-b border-slate-800 print:border-slate-300">
                 <td
                   onClick={() => toggleTimeout('first', 'us', idx)}
-                  className={`py-1.5 px-2 border-r border-slate-300 dark:border-slate-700 font-black cursor-pointer transition-colors select-none ${
+                  className={`py-1.5 px-2 border-r border-slate-700 print:border-slate-300 font-black cursor-pointer transition-colors select-none ${
                     usAvail
-                      ? 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100'
-                      : 'bg-red-100/90 dark:bg-red-950/50 text-red-600 dark:text-red-400 line-through'
+                      ? 'hover:bg-slate-800 text-slate-100 print:hover:bg-slate-100 print:text-slate-900'
+                      : 'bg-red-950/50 text-red-400 line-through print:bg-red-100/90 print:text-red-600'
                   }`}
                   title={usAvail ? 'Click to mark timeout used' : 'Click to restore'}
                 >
@@ -181,8 +181,8 @@ export const TimeoutsTrackerBox: React.FC<TimeoutsTrackerBoxProps> = ({
                   onClick={() => toggleTimeout('first', 'opp', idx)}
                   className={`py-1.5 px-2 font-black cursor-pointer transition-colors select-none ${
                     oppAvail
-                      ? 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100'
-                      : 'bg-red-100/90 dark:bg-red-950/50 text-red-600 dark:text-red-400 line-through'
+                      ? 'hover:bg-slate-800 text-slate-100 print:hover:bg-slate-100 print:text-slate-900'
+                      : 'bg-red-950/50 text-red-400 line-through print:bg-red-100/90 print:text-red-600'
                   }`}
                   title={oppAvail ? 'Click to mark timeout used' : 'Click to restore'}
                 >
@@ -193,10 +193,10 @@ export const TimeoutsTrackerBox: React.FC<TimeoutsTrackerBoxProps> = ({
           })}
 
           {/* Divider between halves */}
-          <tr className="bg-slate-200 dark:bg-slate-800 border-y border-slate-400 dark:border-slate-700">
+          <tr className="bg-slate-800 border-y border-slate-700 print:bg-slate-200 print:border-slate-400">
             <td
               colSpan={2}
-              className="py-0.5 px-2 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300"
+              className="py-0.5 px-2 text-[10px] font-black uppercase tracking-wider text-slate-300 print:text-slate-600"
             >
               2nd Half
             </td>
@@ -209,13 +209,13 @@ export const TimeoutsTrackerBox: React.FC<TimeoutsTrackerBoxProps> = ({
             const num = idx + 1;
 
             return (
-              <tr key={`2h-${num}`} className="border-b border-slate-300 dark:border-slate-800 last:border-b-0">
+              <tr key={`2h-${num}`} className="border-b border-slate-800 print:border-slate-300 last:border-b-0">
                 <td
                   onClick={() => toggleTimeout('second', 'us', idx)}
-                  className={`py-1.5 px-2 border-r border-slate-300 dark:border-slate-700 font-black cursor-pointer transition-colors select-none ${
+                  className={`py-1.5 px-2 border-r border-slate-700 print:border-slate-300 font-black cursor-pointer transition-colors select-none ${
                     usAvail
-                      ? 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100'
-                      : 'bg-red-100/90 dark:bg-red-950/50 text-red-600 dark:text-red-400 line-through'
+                      ? 'hover:bg-slate-800 text-slate-100 print:hover:bg-slate-100 print:text-slate-900'
+                      : 'bg-red-950/50 text-red-400 line-through print:bg-red-100/90 print:text-red-600'
                   }`}
                   title={usAvail ? 'Click to mark timeout used' : 'Click to restore'}
                 >
@@ -225,8 +225,8 @@ export const TimeoutsTrackerBox: React.FC<TimeoutsTrackerBoxProps> = ({
                   onClick={() => toggleTimeout('second', 'opp', idx)}
                   className={`py-1.5 px-2 font-black cursor-pointer transition-colors select-none ${
                     oppAvail
-                      ? 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100'
-                      : 'bg-red-100/90 dark:bg-red-950/50 text-red-600 dark:text-red-400 line-through'
+                      ? 'hover:bg-slate-800 text-slate-100 print:hover:bg-slate-100 print:text-slate-900'
+                      : 'bg-red-950/50 text-red-400 line-through print:bg-red-100/90 print:text-red-600'
                   }`}
                   title={oppAvail ? 'Click to mark timeout used' : 'Click to restore'}
                 >

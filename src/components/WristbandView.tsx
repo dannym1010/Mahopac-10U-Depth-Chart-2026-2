@@ -1431,9 +1431,9 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
   };
 
   return (
-    <div className="wristband-root-view h-[calc(100vh-4.5rem)] print:h-auto print:overflow-visible bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col font-sans overflow-hidden">
+    <div className="wristband-root-view h-[calc(100vh-4.5rem)] print:h-auto print:overflow-visible bg-slate-950 text-slate-100 flex flex-col font-sans overflow-hidden">
       {/* 1. Main Navigation Toolbar (Hidden when printing - matching CallSheetMainView) */}
-      <header className="bg-white/95 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-750 px-3 sm:px-6 py-2.5 shrink-0 shadow-md print:hidden">
+      <header className="bg-slate-900 border-b border-slate-800 px-3 sm:px-6 py-2.5 shrink-0 shadow-md print:hidden">
         <div className="max-w-[1500px] mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           {/* Left Title & Team Indicator */}
           <div className="flex items-center gap-3 flex-wrap">
@@ -1442,23 +1442,23 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                 <Watch className="w-5 h-5" />
               </div>
               <div>
-                <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                <h1 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
                   <span>Wristband Insert Builder</span>
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                     {activeTeamName}
                   </span>
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 hidden sm:inline">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 hidden sm:inline">
                     4.5&quot; &times; 2.25&quot; Sleeve
                   </span>
                 </h1>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                <p className="text-[11px] text-slate-400">
                   Full-screen builder like Call Sheet &bull; Drag from Play Bank &bull; Exact 4.5&quot; &times; 2.25&quot; print size
                 </p>
               </div>
             </div>
 
             {/* Wristband Tabs */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl border border-slate-200 dark:border-slate-750 shadow-inner">
+            <div className="flex items-center bg-slate-950 p-1 rounded-2xl border border-slate-800 shadow-inner">
               {wristbands.map((wb, idx) => (
                 <button
                   key={wb.id}
@@ -1467,7 +1467,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                   className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
                     activeWristbandId === wb.id
                       ? 'bg-indigo-600 text-white shadow-md'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                   }`}
                 >
                   <Watch className="w-3.5 h-3.5" />
@@ -1542,7 +1542,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                     });
                     setActiveWristbandId(newWb.id);
                   }}
-                  className="px-2 py-1.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer flex items-center gap-1"
+                  className="px-2 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-indigo-300 hover:bg-slate-850 transition-colors cursor-pointer flex items-center gap-1"
                   title="Add another wristband insert"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -1561,11 +1561,11 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
               className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
                 isPlayBankOpen
                   ? 'bg-indigo-600 text-white border-indigo-500 shadow-md'
-                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-750 hover:text-slate-900 dark:hover:text-white'
+                  : 'bg-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-750'
               }`}
               title="Toggle Play Bank sidebar"
             >
-              <BookOpen className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-300" />
+              <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
               <span>Play Bank ({playDatabase.length})</span>
             </button>
 
@@ -1575,12 +1575,12 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
               onClick={() => setShowPhysicalPreview(!showPhysicalPreview)}
               className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
                 showPhysicalPreview
-                  ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-500/40'
-                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-400 border-slate-300 dark:border-slate-750 hover:text-slate-900 dark:hover:text-slate-200'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                  : 'bg-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-750'
               }`}
               title="Toggle true-scale 4.5 x 2.25 insert cutout preview"
             >
-              <Maximize2 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <Maximize2 className="w-3.5 h-3.5 text-amber-400" />
               <span className="hidden sm:inline">Cutout Preview {showPhysicalPreview ? 'ON' : 'OFF'}</span>
             </button>
 
@@ -1588,7 +1588,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
             <button
               type="button"
               onClick={() => setIsExcelImportOpen(true)}
-              className="px-2.5 py-1.5 rounded-xl bg-emerald-750 hover:bg-emerald-650 dark:bg-emerald-700/90 dark:hover:bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer border border-emerald-600/50"
+              className="px-2.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer border border-emerald-600/50"
               title="Import plays from Excel (.xlsx, .xls, .csv)"
             >
               <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
@@ -1599,10 +1599,10 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
             <button
               type="button"
               onClick={handleAutoFill}
-              className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-300 dark:border-slate-750 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-2.5 py-1.5 rounded-xl bg-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-750 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
               title="Auto-fill empty slots with matching plays"
             >
-              <Zap className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
               <span className="hidden lg:inline">Auto-Fill</span>
             </button>
 
@@ -1636,10 +1636,10 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
               <button
                 type="button"
                 onClick={() => handlePrint('all')}
-                className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-300 dark:border-slate-750 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95"
+                className="px-2.5 py-1.5 rounded-xl bg-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-750 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95"
                 title="Print all made wristbands immediately"
               >
-                <Layers className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <Layers className="w-3.5 h-3.5 text-emerald-400" />
                 <span className="hidden sm:inline">All ({wristbands.length})</span>
               </button>
             )}
@@ -1648,10 +1648,10 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
             <button
               type="button"
               onClick={() => handleOpenPrintTab('active')}
-              className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-300 dark:border-slate-750 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-2.5 py-1.5 rounded-xl bg-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-750 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
               title="Open print view in new tab (PDF export / high-res review)"
             >
-              <ExternalLink className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+              <ExternalLink className="w-3.5 h-3.5 text-indigo-400" />
               <span className="hidden xl:inline">Print Tab</span>
             </button>
 
@@ -1659,7 +1659,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
             <button
               type="button"
               onClick={handleClearAllPlays}
-              className="p-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-750 transition-colors cursor-pointer"
+              className="p-1.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-slate-800 border border-slate-750 transition-colors cursor-pointer"
               title="Clear all plays on this wristband"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -1671,12 +1671,12 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
       {/* 2. Main Content Area (`flex-1 flex overflow-hidden min-h-0` for independent scrolling) */}
       <div className="wristband-builder-screen flex-1 flex overflow-hidden min-h-0 print:hidden">
         {/* Main interactive builder canvas */}
-        <main className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-5 space-y-4 print:p-0 print:overflow-visible overscroll-contain">
+        <main className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-5 space-y-4 print:p-0 print:overflow-visible overscroll-contain bg-slate-950">
           {/* Top Quick Settings Bar */}
-          <div className="bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-750 rounded-2xl p-3 shadow-md flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-md flex flex-wrap items-center justify-between gap-3 text-xs">
             {/* Title Editor */}
             <div className="flex-1 min-w-[260px] flex items-center gap-2">
-              <span className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[11px] whitespace-nowrap">
+              <span className="text-slate-400 font-bold uppercase tracking-wider text-[11px] whitespace-nowrap">
                 Insert Title:
               </span>
               <input
@@ -1684,7 +1684,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                 disabled={userRole !== 'admin'}
                 value={currentWristband.title || ''}
                 onChange={(e) => updateCurrentWristband((wb) => ({ ...wb, title: e.target.value }))}
-                className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-750 text-slate-900 dark:text-white font-black px-3 py-1.5 rounded-xl text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none uppercase"
+                className="flex-1 bg-slate-950 border border-slate-750 text-white font-black px-3 py-1.5 rounded-xl text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none uppercase placeholder:text-slate-500"
                 placeholder="e.g. MAHOPAC 10U • BLUE (1-13) & GOLD (14-26)"
               />
               {userRole === 'admin' && (
@@ -1708,7 +1708,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                     );
                     updateCurrentWristband((wb) => ({ ...wb, title: autoTitle }));
                   }}
-                  className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-bold border border-slate-300 dark:border-slate-700 transition-colors whitespace-nowrap cursor-pointer"
+                  className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 text-[10px] font-bold border border-slate-700 transition-colors whitespace-nowrap cursor-pointer"
                   title="Auto-format title with Team, 10U, Colors, and Play numbers"
                 >
                   Auto Title
@@ -1718,7 +1718,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
 
             {/* Rows Per Column Selector */}
             <div className="flex items-center gap-2">
-              <span className="text-slate-500 dark:text-slate-400 font-bold whitespace-nowrap">Rows / Column:</span>
+              <span className="text-slate-400 font-bold whitespace-nowrap">Rows / Column:</span>
               <select
                 disabled={userRole !== 'admin'}
                 value={currentWristband.rowsCount || 13}
@@ -1739,7 +1739,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                     return { ...wb, rowsCount: rows, columns: updatedCols };
                   });
                 }}
-                className="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-750 text-slate-900 dark:text-white font-bold rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                className="bg-slate-950 border border-slate-750 text-white font-bold rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
               >
                 <option value={10}>10 Rows (20 Plays)</option>
                 <option value={12}>12 Rows (24 Plays)</option>
@@ -1753,8 +1753,8 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
 
             {/* Labeling Scheme */}
             <div className="flex items-center gap-2">
-              <span className="text-slate-500 dark:text-slate-400 font-bold whitespace-nowrap flex items-center gap-1">
-                <Hash className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+              <span className="text-slate-400 font-bold whitespace-nowrap flex items-center gap-1">
+                <Hash className="w-3.5 h-3.5 text-indigo-400" />
                 <span>Labeling:</span>
               </span>
               <select
@@ -1766,7 +1766,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                     labelingMode: e.target.value as any,
                   }));
                 }}
-                className="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-750 text-slate-900 dark:text-white font-bold rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                className="bg-slate-950 border border-slate-750 text-white font-bold rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
               >
                 <option value="same_per_card">Same on Each Card (1 - 26)</option>
                 <option value="continuous">Continuous Numbers (1 - 52+)</option>
@@ -1821,7 +1821,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
               return (
                 <div
                   key={cIdx}
-                  className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-none shadow-md overflow-hidden flex flex-col"
+                  className="bg-slate-900 border border-slate-800 rounded-none shadow-md overflow-hidden flex flex-col"
                 >
                   {/* Table Header Bar (Styled with Column Highlight Color) */}
                   <div
@@ -1936,21 +1936,21 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
 
                   {/* Pop-down Color Palette Swatches Bar */}
                   {openPaletteColIdx === cIdx && userRole === 'admin' && (
-                    <div className="bg-slate-50 dark:bg-slate-950 p-2.5 border-b border-slate-200 dark:border-slate-800 space-y-2 text-xs animate-in fade-in">
+                    <div className="bg-slate-950 p-2.5 border-b border-slate-800 space-y-2 text-xs animate-in fade-in">
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider">
+                        <span className="text-slate-300 font-bold uppercase tracking-wider">
                           Select Column Highlight:
                         </span>
                         {/* Font Contrast Buttons */}
                         <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Number Font:</span>
+                          <span className="text-[10px] text-slate-400 font-semibold">Number Font:</span>
                           <button
                             type="button"
                             onClick={() => handleToggleColumnFontColor(currentWristband.id, cIdx, '#000000')}
                             className={`px-1.5 py-0.5 rounded text-[9px] font-black cursor-pointer ${
                               col.numberTextColor === '#000000'
                                 ? 'bg-black text-white ring-1 ring-amber-400'
-                                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400 hover:text-black dark:hover:text-white'
+                                : 'bg-slate-800 text-slate-400 hover:text-white'
                             }`}
                           >
                             BLK
@@ -1961,7 +1961,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                             className={`px-1.5 py-0.5 rounded text-[9px] font-black cursor-pointer ${
                               col.numberTextColor === '#ffffff'
                                 ? 'bg-white text-black ring-1 ring-indigo-400'
-                                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400 hover:text-black dark:hover:text-white'
+                                : 'bg-slate-800 text-slate-400 hover:text-white'
                             }`}
                           >
                             WHT
@@ -2038,7 +2038,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                   )}
 
                   {/* Table Rows (Spacious, comfortable ~36px height like CallSheetCellView) */}
-                  <div className="divide-y divide-slate-200 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                  <div className="divide-y divide-slate-800 bg-slate-900">
                     {Array.from({ length: rows }).map((_, rIdx) => {
                       const play = plays[rIdx] || { text: '' };
                       const slotLabel = getSlotLabel(currentWristband, cIdx, rIdx, play);
@@ -2143,14 +2143,14 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                           }}
                           className={`flex items-center min-h-[38px] px-2.5 py-1.5 text-xs transition-all group select-none relative ${
                             isDragOver
-                              ? 'bg-indigo-100 dark:bg-indigo-950/70 ring-2 ring-indigo-500 border-indigo-400 z-10 scale-[1.01]'
+                              ? 'bg-indigo-950/70 ring-2 ring-indigo-500 border-indigo-400 z-10 scale-[1.01]'
                               : isInline
-                              ? 'ring-2 ring-amber-500 z-10 bg-amber-50/20'
+                              ? 'ring-2 ring-amber-500 z-10 bg-amber-500/20'
                               : play.rowHighlightColor
                               ? ''
                               : rIdx % 2 === 0
-                              ? 'bg-slate-50/50 dark:bg-slate-900/50 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30'
-                              : 'bg-white dark:bg-slate-900 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30'
+                              ? 'bg-slate-900 hover:bg-slate-800 text-slate-100'
+                              : 'bg-slate-850 hover:bg-slate-800 text-slate-100'
                           } ${isFilled ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
                           title={`Slot #${slotLabel}: Click to open Play Picker, drag from Play Bank, or double-click to type`}
                         >
@@ -2207,14 +2207,14 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                               <div className="flex items-center gap-2 min-w-0">
                                 <span
                                   className={`font-mono font-black text-xs uppercase tracking-tight truncate ${
-                                    play.rowHighlightColor ? '' : 'text-slate-900 dark:text-slate-100'
+                                    play.rowHighlightColor ? '' : 'text-slate-100'
                                   }`}
                                   style={play.rowHighlightColor ? { color: getContrastTextColor(play.rowHighlightColor) } : undefined}
                                 >
                                   {play.text}
                                 </span>
                                 {play.formation && (
-                                  <span className="text-[9.5px] font-bold px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase shrink-0">
+                                  <span className="text-[9.5px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700 uppercase shrink-0">
                                     {play.formation}
                                   </span>
                                 )}
@@ -2238,7 +2238,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                                       e.stopPropagation();
                                       handleClearSlot(currentWristband.id, cIdx, rIdx);
                                     }}
-                                    className="p-1 rounded text-slate-400 hover:text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950/50 transition-colors"
+                                    className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-rose-950/50 transition-colors"
                                     title="Clear slot"
                                   >
                                     <X className="w-3.5 h-3.5" />
@@ -2247,9 +2247,9 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                               )}
                             </div>
                           ) : (
-                            <div className="flex-1 flex items-center justify-between text-slate-400 dark:text-slate-500 italic text-[11px]">
+                            <div className="flex-1 flex items-center justify-between text-slate-400 italic text-[11px]">
                               <span>+ Click to select play or drag from Play Bank</span>
-                              <span className="opacity-0 group-hover:opacity-100 text-[10px] font-bold text-indigo-500 dark:text-indigo-400 not-italic">
+                              <span className="opacity-0 group-hover:opacity-100 text-[10px] font-bold text-indigo-400 not-italic">
                                 Select
                               </span>
                             </div>
@@ -2261,12 +2261,12 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
 
                   {/* Table Footer Controls */}
                   {userRole === 'admin' && (
-                    <div className="bg-slate-100 dark:bg-slate-950/80 px-3 py-1.5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
+                    <div className="bg-slate-950 px-3 py-1.5 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
                           onClick={handleAddRow}
-                          className="px-2 py-0.5 rounded bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                          className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center gap-1 transition-colors cursor-pointer"
                           title="Add row to wristband"
                         >
                           <Plus className="w-3 h-3" />
@@ -2276,7 +2276,7 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
                           type="button"
                           onClick={handleRemoveRow}
                           disabled={rows <= 5}
-                          className="px-2 py-0.5 rounded bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1 transition-colors disabled:opacity-40 cursor-pointer"
+                          className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center gap-1 transition-colors disabled:opacity-40 cursor-pointer"
                           title="Remove row from wristband"
                         >
                           <Minus className="w-3 h-3" />

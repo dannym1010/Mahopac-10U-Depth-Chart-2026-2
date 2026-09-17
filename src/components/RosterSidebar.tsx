@@ -55,13 +55,13 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
     );
 
     return (
-      <div className="w-full lg:w-72 bg-white dark:bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm dark:shadow-xl p-4 sticky top-[170px] flex flex-col max-h-[calc(100vh-190px)] print:hidden">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700/80 mb-3">
+      <div className="w-full lg:w-72 bg-slate-900 rounded-2xl border border-slate-800 shadow-xl p-4 sticky top-[170px] flex flex-col max-h-[calc(100vh-190px)] print:hidden">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl bg-indigo-50 dark:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-300">
+            <div className="w-7 h-7 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300">
               <BookOpen className="w-4 h-4" />
             </div>
-            <h2 className="font-black text-sm text-slate-900 dark:text-slate-100 tracking-tight">
+            <h2 className="font-black text-sm text-slate-100 tracking-tight">
               Play Library
             </h2>
           </div>
@@ -76,7 +76,7 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
                 <FileSpreadsheet className="w-3.5 h-3.5" />
               </button>
             )}
-            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30">
+            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
               {filteredPlays.length} Plays
             </span>
           </div>
@@ -89,7 +89,7 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
             value={playSearchTerm}
             onChange={(e) => onPlaySearchChange(e.target.value)}
             placeholder="Search plays..."
-            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-750 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
 
@@ -102,24 +102,24 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
                 key={idx}
                 draggable={userRole === 'admin'}
                 onDragStart={(e) => onDragStartPlay && onDragStartPlay(e, play)}
-                className="px-2.5 py-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-750 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 hover:border-indigo-400/50 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between cursor-grab active:cursor-grabbing transition-all select-none group"
+                className="px-2.5 py-2 bg-slate-850 hover:bg-slate-800 border border-slate-750 hover:border-indigo-400/50 rounded-xl text-xs font-bold text-slate-200 flex items-center justify-between cursor-grab active:cursor-grabbing transition-all select-none group"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   {/* Highlighted Play Number Badge */}
                   <span
                     className={`font-mono font-black text-[10px] px-1.5 py-0.5 rounded-md min-w-[24px] text-center shrink-0 ${
                       isLeft
-                        ? 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40'
-                        : 'bg-indigo-100 text-indigo-900 border border-indigo-300 dark:bg-indigo-600/30 dark:text-indigo-300 dark:border-indigo-500/40'
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                        : 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
                     }`}
                   >
                     #{playNum}
                   </span>
-                  <span className="truncate uppercase font-bold text-[11px] text-slate-900 dark:text-slate-100">
+                  <span className="truncate uppercase font-bold text-[11px] text-slate-100">
                     {play}
                   </span>
                 </div>
-                <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors shrink-0 ml-1" />
+                <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-300 transition-colors shrink-0 ml-1" />
               </li>
             );
           })}
@@ -162,18 +162,18 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
     : currentWeekState.depthChart || {};
 
   return (
-    <div className="w-full lg:w-80 bg-white dark:bg-slate-800/95 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm dark:shadow-xl p-4 sticky top-[170px] flex flex-col max-h-[calc(100vh-190px)] print:hidden">
+    <div className="w-full lg:w-80 bg-slate-900 rounded-2xl border border-slate-800 shadow-xl p-4 sticky top-[170px] flex flex-col max-h-[calc(100vh-190px)] print:hidden">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700/80 mb-2">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-2">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-7 h-7 rounded-xl bg-indigo-50 dark:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-300 shrink-0">
+          <div className="w-7 h-7 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 shrink-0">
             <UserCheck className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <h2 className="font-black text-sm text-slate-900 dark:text-slate-100 tracking-tight truncate">
+            <h2 className="font-black text-sm text-slate-100 tracking-tight truncate">
               {activeTeamName ? `${activeTeamName}` : 'Team Roster'}
             </h2>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold truncate">
+            <p className="text-[10px] text-slate-400 font-semibold truncate">
               {roster.length} {roster.length === 1 ? 'Player' : 'Players'}
             </p>
           </div>
@@ -182,21 +182,21 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
           {userRole === 'admin' && onOpenRosterManager && (
             <button
               onClick={onOpenRosterManager}
-              className="p-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:hover:bg-indigo-500/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 transition-all text-[10px] font-bold flex items-center gap-1 px-2 cursor-pointer"
+              className="p-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 border border-indigo-500/30 transition-all text-[10px] font-bold flex items-center gap-1 px-2 cursor-pointer"
               title="Add or edit players"
             >
               <UserPlus className="w-3 h-3" />
               <span>Edit</span>
             </button>
           )}
-          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-800 text-slate-200 border border-slate-700">
             {roster.length}
           </span>
         </div>
       </div>
 
       <div className="mb-2">
-        <p className="text-[10px] text-slate-500 dark:text-slate-300 font-medium leading-tight">
+        <p className="text-[10px] text-slate-400 font-medium leading-tight">
           {isScrimmageTab
             ? 'Drag to assign Gold / Blue scrimmage rotations'
             : 'Drag players into formation spots or depth charts'}
@@ -211,7 +211,7 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search name, #, pos..."
-          className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+          className="w-full pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-750 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
         />
       </div>
 
@@ -282,17 +282,17 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
               draggable={userRole === 'admin'}
               onDragStart={(e) => onDragStartPlayer(e, player)}
               onClick={() => onSelectPlayerForEdit && onSelectPlayerForEdit(player)}
-              className={`p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/80 hover:border-indigo-300 dark:hover:border-indigo-400/50 rounded-xl flex items-center justify-between text-xs transition-all select-none ${
+              className={`p-2 bg-slate-850 hover:bg-slate-800 border border-slate-750 hover:border-indigo-400/50 rounded-xl flex items-center justify-between text-xs transition-all select-none ${
                 userRole === 'admin' ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0">
-                <span className="font-black text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 rounded-lg px-1.5 py-0.5 text-[11px] min-w-[26px] text-center font-mono">
+                <span className="font-black text-indigo-300 bg-indigo-500/20 border border-indigo-500/30 rounded-lg px-1.5 py-0.5 text-[11px] min-w-[26px] text-center font-mono">
                   #{player.num}
                 </span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1">
-                    <span className="font-bold text-slate-900 dark:text-slate-100 uppercase tracking-tight text-[11px] truncate">
+                    <span className="font-bold text-slate-100 uppercase tracking-tight text-[11px] truncate">
                       {player.firstName} {player.lastName}
                     </span>
                     {player.isCaptain && (
@@ -304,12 +304,12 @@ export const RosterSidebar: React.FC<RosterSidebarProps> = ({
                   {/* Position Sub-Tag */}
                   <div className="flex items-center gap-1 text-[9px]">
                     {player.primaryPosition && (
-                      <span className="text-indigo-600 dark:text-indigo-400 font-semibold">{cleanTruncatedPosition(player.primaryPosition)}</span>
+                      <span className="text-indigo-400 font-semibold">{cleanTruncatedPosition(player.primaryPosition)}</span>
                     )}
                     {player.secondaryPosition && (
                       <>
-                        <span className="text-slate-400 dark:text-slate-600">/</span>
-                        <span className="text-amber-700 dark:text-amber-400 font-semibold">{cleanTruncatedPosition(player.secondaryPosition)}</span>
+                        <span className="text-slate-600">/</span>
+                        <span className="text-amber-400 font-semibold">{cleanTruncatedPosition(player.secondaryPosition)}</span>
                       </>
                     )}
                   </div>
