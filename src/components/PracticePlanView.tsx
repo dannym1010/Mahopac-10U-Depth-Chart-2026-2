@@ -39,7 +39,15 @@ import {
   RotateCw,
   Timer,
   Bell,
+  BellRing,
   Volume2,
+  VolumeX,
+  SkipForward,
+  Settings2,
+  SunMedium,
+  Smartphone,
+  Vibrate,
+  Sliders,
 } from 'lucide-react';
 import {
   PracticePlan,
@@ -594,50 +602,504 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   const [periodTimerSecondsLeft, setPeriodTimerSecondsLeft] = useState<number>(0);
   const [timerExpiredNotice, setTimerExpiredNotice] = useState<boolean>(false);
 
+  // Auto-notification & Auto-advance preferences (persisted locally)
+  const [timerAutoAdvance, setTimerAutoAdvance] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem('football_timer_auto_advance');
+      return v !== null ? JSON.parse(v) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const [timerTransitionSec, setTimerTransitionSec] = useState<number>(() => {
+    try {
+      const v = localStorage.getItem('football_timer_transition_sec');
+      return v !== null ? JSON.parse(v) : 10;
+    } catch {
+      return 10;
+    }
+  });
+
+  const [timerVoiceEnabled, setTimerVoiceEnabled] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem('football_timer_voice');
+      return v !== null ? JSON.parse(v) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const [timerSoundEnabled, setTimerSoundEnabled] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem('football_timer_sound');
+      return v !== null ? JSON.parse(v) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const [timerWarningEnabled, setTimerWarningEnabled] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem('football_timer_warning');
+      return v !== null ? JSON.parse(v) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const [timerVibrationEnabled, setTimerVibrationEnabled] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem('football_timer_vibrate');
+      return v !== null ? JSON.parse(v) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  // Transition break state between periods (e.g. 10s rotation break)
+  const [isTransitionBreak, setIsTransitionBreak] = useState<boolean>(false);
+  const [transitionSecondsLeft, setTransitionSecondsLeft] = useState<number>(0);
+
+  // System notification permission status
+  const [notificationPermission, setNotificationPermission] = useState<string>(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      return Notification.permission;
+    }
+    return 'default';
+  });
+
+  // Mobile stopwatch settings modal / expanded drawer toggle
+  const [isStopwatchSettingsOpen, setIsStopwatchSettingsOpen] = useState<boolean>(false);
+
+  // Keep mobile screen awake during active practice timing
+  const [screenWakeLocked, setScreenWakeLocked] = useState<boolean>(false);
+  const wakeLockRef = useRef<any>(null);
+
+  // Mutable ref so timer intervals always see current settings & periods without re-binding
+  const timerSettingsRef = useRef({
+    autoAdvance: timerAutoAdvance,
+    transitionSec: timerTransitionSec,
+    voice: timerVoiceEnabled,
+    sound: timerSoundEnabled,
+    warning: timerWarningEnabled,
+    periods: currentPlanPeriods,
+    currentIdx: periodTimerIdx,
+  });
+
+  useEffect(() => {
+    timerSettingsRef.current = {
+      autoAdvance: timerAutoAdvance,
+      transitionSec: timerTransitionSec,
+      voice: timerVoiceEnabled,
+      sound: timerSoundEnabled,
+      warning: timerWarningEnabled,
+      periods: currentPlanPeriods,
+      currentIdx: periodTimerIdx,
+    };
+  }, [
+    timerAutoAdvance,
+    timerTransitionSec,
+    timerVoiceEnabled,
+    timerSoundEnabled,
+    timerWarningEnabled,
+    currentPlanPeriods,
+    periodTimerIdx,
+  ]);
+
+  // Save preference changes to localStorage
+  const updateTimerAutoAdvance = (val: boolean) => {
+    setTimerAutoAdvance(val);
+    try {
+      localStorage.setItem('football_timer_auto_advance', JSON.stringify(val));
+    } catch {}
+  };
+
+  const updateTimerTransitionSec = (val: number) => {
+    setTimerTransitionSec(val);
+    try {
+      localStorage.setItem('football_timer_transition_sec', JSON.stringify(val));
+    } catch {}
+  };
+
+  const updateTimerVoiceEnabled = (val: boolean) => {
+    setTimerVoiceEnabled(val);
+    try {
+      localStorage.setItem('football_timer_voice', JSON.stringify(val));
+    } catch {}
+  };
+
+  const updateTimerSoundEnabled = (val: boolean) => {
+    setTimerSoundEnabled(val);
+    try {
+      localStorage.setItem('football_timer_sound', JSON.stringify(val));
+    } catch {}
+  };
+
+  const updateTimerWarningEnabled = (val: boolean) => {
+    setTimerWarningEnabled(val);
+    try {
+      localStorage.setItem('football_timer_warning', JSON.stringify(val));
+    } catch {}
+  };
+
+  const updateTimerVibrationEnabled = (val: boolean) => {
+    setTimerVibrationEnabled(val);
+    try {
+      localStorage.setItem('football_timer_vibrate', JSON.stringify(val));
+    } catch {}
+  };
+
+  // Screen Wake Lock Handler
+  useEffect(() => {
+    if (periodTimerActive) {
+      if (typeof navigator !== 'undefined' && 'wakeLock' in navigator) {
+        (navigator as any).wakeLock
+          .request('screen')
+          .then((lock: any) => {
+            wakeLockRef.current = lock;
+            setScreenWakeLocked(true);
+            lock.addEventListener('release', () => {
+              setScreenWakeLocked(false);
+            });
+          })
+          .catch(() => {
+            setScreenWakeLocked(false);
+          });
+      }
+    } else {
+      if (wakeLockRef.current) {
+        try {
+          wakeLockRef.current.release();
+        } catch {}
+        wakeLockRef.current = null;
+        setScreenWakeLocked(false);
+      }
+    }
+    return () => {
+      if (wakeLockRef.current) {
+        try {
+          wakeLockRef.current.release();
+        } catch {}
+      }
+    };
+  }, [periodTimerActive]);
+
+  // Speech synthesis voice prompt
+  const speakVoicePrompt = (text: string) => {
+    if (!timerVoiceEnabled || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.05;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      const voices = window.speechSynthesis.getVoices();
+      const voice = voices.find(
+        (v) =>
+          v.lang.startsWith('en') &&
+          (v.name.includes('Google') ||
+            v.name.includes('Natural') ||
+            v.name.includes('Samantha') ||
+            v.name.includes('Alex') ||
+            v.name.includes('Daniel') ||
+            v.name.includes('English'))
+      );
+      if (voice) utterance.voice = voice;
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn('Speech synthesis error:', e);
+    }
+  };
+
+  // Browser System / Lockscreen Notification
+  const requestNotificationPermission = async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      try {
+        const res = await Notification.requestPermission();
+        setNotificationPermission(res);
+        if (res === 'granted') {
+          sendSystemNotification(
+            'Practice Stopwatch Alerts Active',
+            'You will receive automatic notifications to stop and start periods on your phone!'
+          );
+        }
+      } catch (e) {
+        console.warn('Error requesting notification permission:', e);
+      }
+    }
+  };
+
+  const sendSystemNotification = (title: string, body: string) => {
+    try {
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, {
+          body,
+          icon: '/favicon.ico',
+          tag: 'practice-period-timer',
+          silent: false,
+        });
+      }
+    } catch (e) {
+      console.warn('System notification error:', e);
+    }
+  };
+
+  // Authentic Referee Whistle Synthesizer & Vibration
+  const playWhistleBurst = (type: 'stop' | 'start' | 'warning' | 'transition' = 'stop') => {
+    if (!timerSoundEnabled) return;
+    try {
+      if (timerVibrationEnabled && typeof window !== 'undefined' && 'navigator' in window && navigator.vibrate) {
+        if (type === 'stop') {
+          navigator.vibrate([350, 100, 350, 100, 500]);
+        } else if (type === 'start') {
+          navigator.vibrate([250, 80, 250]);
+        } else if (type === 'warning') {
+          navigator.vibrate([200]);
+        } else {
+          navigator.vibrate([100]);
+        }
+      }
+
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+
+      // Realistic whistle burst patterns
+      const bursts =
+        type === 'stop'
+          ? [0, 0.28, 0.58]
+          : type === 'start'
+          ? [0, 0.25]
+          : type === 'warning'
+          ? [0]
+          : [0];
+      const blastDuration = type === 'warning' ? 0.22 : type === 'transition' ? 0.15 : 0.24;
+
+      bursts.forEach((startOffset) => {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        // Dual frequencies simulate authentic pea-whistle harmonics
+        osc1.type = 'triangle';
+        osc1.frequency.setValueAtTime(2450, ctx.currentTime + startOffset);
+        osc1.frequency.linearRampToValueAtTime(2900, ctx.currentTime + startOffset + blastDuration);
+
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(2150, ctx.currentTime + startOffset);
+        osc2.frequency.linearRampToValueAtTime(2600, ctx.currentTime + startOffset + blastDuration);
+
+        gain.gain.setValueAtTime(0.01, ctx.currentTime + startOffset);
+        gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + startOffset + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + startOffset + blastDuration);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc1.start(ctx.currentTime + startOffset);
+        osc1.stop(ctx.currentTime + startOffset + blastDuration);
+        osc2.start(ctx.currentTime + startOffset);
+        osc2.stop(ctx.currentTime + startOffset + blastDuration);
+      });
+    } catch {}
+  };
+
   // Initialize or synchronize timer duration when periodTimerIdx changes or plan changes
   useEffect(() => {
     const durationMins = Number(currentPlanPeriods[periodTimerIdx]?.time) || 10;
     setPeriodTimerSecondsLeft(durationMins * 60);
     setTimerExpiredNotice(false);
+    setIsTransitionBreak(false);
   }, [periodTimerIdx, currentPlanPeriods]);
 
-  // Timer interval countdown
+  // Timer interval countdown with Automatic Stop & Start Notifications
   useEffect(() => {
     if (!periodTimerActive) return;
+
     const interval = setInterval(() => {
+      // 1. If currently in transition break (between periods)
+      if (isTransitionBreak) {
+        setTransitionSecondsLeft((prev) => {
+          if (prev <= 1) {
+            // Transition break finished! START NEXT PERIOD!
+            setIsTransitionBreak(false);
+            const { periods, currentIdx } = timerSettingsRef.current;
+            const nextIdx = currentIdx + 1;
+            if (nextIdx < periods.length) {
+              setPeriodTimerIdx(nextIdx);
+              const nextDur = (Number(periods[nextIdx]?.time) || 10) * 60;
+              setPeriodTimerSecondsLeft(nextDur);
+              setActiveViewingPeriodIdx(nextIdx);
+
+              // Sound START whistle!
+              playWhistleBurst('start');
+
+              const nextCat = periods[nextIdx]?.category || `Period ${nextIdx + 1}`;
+              const nextTime = periods[nextIdx]?.time || 10;
+              speakVoicePrompt(`Start Period ${nextIdx + 1}: ${nextCat}. ${nextTime} minutes.`);
+              sendSystemNotification(
+                `START! Period ${nextIdx + 1}: ${nextCat}`,
+                `${nextTime} minutes scheduled. Clock running!`
+              );
+            } else {
+              setPeriodTimerActive(false);
+              speakVoicePrompt('Practice plan complete! Great work today!');
+              sendSystemNotification('Practice Complete', 'All scheduled periods have finished!');
+            }
+            return 0;
+          }
+
+          // Audible voice countdown during final 3 seconds of rotation break
+          if (prev === 4 && timerVoiceEnabled) {
+            speakVoicePrompt('3');
+          } else if (prev === 3 && timerVoiceEnabled) {
+            speakVoicePrompt('2');
+          } else if (prev === 2 && timerVoiceEnabled) {
+            speakVoicePrompt('1');
+          }
+
+          return prev - 1;
+        });
+        return;
+      }
+
+      // 2. Active Period Countdown
       setPeriodTimerSecondsLeft((prev) => {
-        if (prev <= 1) {
-          setPeriodTimerActive(false);
-          setTimerExpiredNotice(true);
-          playWhistleChime();
-          return 0;
+        const { autoAdvance, transitionSec, warning, periods, currentIdx } = timerSettingsRef.current;
+        const currentPeriodNum = currentIdx + 1;
+        const curCat = periods[currentIdx]?.category || `Period ${currentPeriodNum}`;
+
+        // 1-minute warning (60 seconds)
+        if (prev === 61 && warning) {
+          playWhistleBurst('warning');
+          speakVoicePrompt(`One minute remaining in Period ${currentPeriodNum}: ${curCat}.`);
+          sendSystemNotification(
+            `1 Minute Warning: Period ${currentPeriodNum}`,
+            `Finish up drill reps in ${curCat}`
+          );
         }
+
+        // Period time expired (hits 0) -> AUTOMATIC NOTIFY TO STOP!
+        if (prev <= 1) {
+          const nextIdx = currentIdx + 1;
+          const hasNext = nextIdx < periods.length;
+
+          // Sound Triple Whistle STOP blast!
+          playWhistleBurst('stop');
+
+          if (hasNext && autoAdvance) {
+            const nextCat = periods[nextIdx]?.category || `Period ${nextIdx + 1}`;
+            const nextTime = periods[nextIdx]?.time || 10;
+
+            if (transitionSec > 0) {
+              // Enter rotation break countdown
+              setIsTransitionBreak(true);
+              setTransitionSecondsLeft(transitionSec);
+              speakVoicePrompt(
+                `Stop! Period ${currentPeriodNum} is complete. Blow whistle and rotate! Next up is Period ${nextIdx + 1}: ${nextCat}.`
+              );
+              sendSystemNotification(
+                `STOP! Period ${currentPeriodNum} Complete`,
+                `Rotate stations now! Next: Period ${nextIdx + 1} (${nextCat} - ${nextTime}m)`
+              );
+            } else {
+              // Immediate advance without break
+              setPeriodTimerIdx(nextIdx);
+              const nextDur = nextTime * 60;
+              setActiveViewingPeriodIdx(nextIdx);
+              setTimeout(() => {
+                playWhistleBurst('start');
+                speakVoicePrompt(`Start Period ${nextIdx + 1}: ${nextCat}. ${nextTime} minutes.`);
+                sendSystemNotification(
+                  `START! Period ${nextIdx + 1}: ${nextCat}`,
+                  `${nextTime} minutes scheduled.`
+                );
+              }, 600);
+              return nextDur;
+            }
+            return 0;
+          } else {
+            // Last period or manual advance
+            setPeriodTimerActive(false);
+            setTimerExpiredNotice(true);
+            speakVoicePrompt(`Stop! Period ${currentPeriodNum} is complete!`);
+            sendSystemNotification(
+              `STOP! Period ${currentPeriodNum} Finished`,
+              hasNext ? `Next: Period ${nextIdx + 1}` : `Practice plan complete!`
+            );
+            return 0;
+          }
+        }
+
         return prev - 1;
       });
     }, 1000);
-    return () => clearInterval(interval);
-  }, [periodTimerActive]);
 
-  const playWhistleChime = () => {
-    try {
-      if (typeof window !== 'undefined' && 'navigator' in window && navigator.vibrate) {
-        navigator.vibrate([250, 100, 250]);
-      }
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const ctx = new AudioContextClass();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(950, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(1400, ctx.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.5);
-    } catch {}
+    return () => clearInterval(interval);
+  }, [periodTimerActive, isTransitionBreak]);
+
+  // Skip or advance to Next Period manually
+  const handleSkipToNextPeriod = () => {
+    if (periodTimerIdx < currentPlanPeriods.length - 1) {
+      const nextIdx = periodTimerIdx + 1;
+      setIsTransitionBreak(false);
+      setPeriodTimerIdx(nextIdx);
+      const nextDur = (Number(currentPlanPeriods[nextIdx]?.time) || 10) * 60;
+      setPeriodTimerSecondsLeft(nextDur);
+      setPeriodTimerActive(true);
+      setTimerExpiredNotice(false);
+      setActiveViewingPeriodIdx(nextIdx);
+      playWhistleBurst('start');
+      const nextCat = currentPlanPeriods[nextIdx]?.category || `Period ${nextIdx + 1}`;
+      const nextMins = currentPlanPeriods[nextIdx]?.time || 10;
+      speakVoicePrompt(`Start Period ${nextIdx + 1}: ${nextCat}. ${nextMins} minutes.`);
+      sendSystemNotification(`START! Period ${nextIdx + 1}: ${nextCat}`, `${nextMins} minutes.`);
+    }
+  };
+
+  // Toggle Stopwatch Play / Pause
+  const handleToggleTimer = () => {
+    if (periodTimerSecondsLeft === 0 && !isTransitionBreak) {
+      const dur = (Number(currentPlanPeriods[periodTimerIdx]?.time) || 10) * 60;
+      setPeriodTimerSecondsLeft(dur);
+    }
+    const nextState = !periodTimerActive;
+    setPeriodTimerActive(nextState);
+    setTimerExpiredNotice(false);
+    if (nextState) {
+      playWhistleBurst('start');
+      const curCat = currentPlanPeriods[periodTimerIdx]?.category || `Period ${periodTimerIdx + 1}`;
+      speakVoicePrompt(`Practice timer started. Period ${periodTimerIdx + 1}: ${curCat}.`);
+    }
+  };
+
+  // Reset current period timer
+  const handleResetTimer = () => {
+    setPeriodTimerActive(false);
+    setIsTransitionBreak(false);
+    const dur = (Number(currentPlanPeriods[periodTimerIdx]?.time) || 10) * 60;
+    setPeriodTimerSecondsLeft(dur);
+    setTimerExpiredNotice(false);
+  };
+
+  // Fast-forward transition break immediately to start next period
+  const handleStartNextPeriodNow = () => {
+    setIsTransitionBreak(false);
+    const nextIdx = periodTimerIdx + 1;
+    if (nextIdx < currentPlanPeriods.length) {
+      setPeriodTimerIdx(nextIdx);
+      const nextDur = (Number(currentPlanPeriods[nextIdx]?.time) || 10) * 60;
+      setPeriodTimerSecondsLeft(nextDur);
+      setPeriodTimerActive(true);
+      setActiveViewingPeriodIdx(nextIdx);
+      playWhistleBurst('start');
+      const nextCat = currentPlanPeriods[nextIdx]?.category || `Period ${nextIdx + 1}`;
+      const nextMins = currentPlanPeriods[nextIdx]?.time || 10;
+      speakVoicePrompt(`Start Period ${nextIdx + 1}: ${nextCat}. ${nextMins} minutes.`);
+      sendSystemNotification(`START! Period ${nextIdx + 1}: ${nextCat}`, `${nextMins} minutes.`);
+    }
   };
 
   const handleShiftStartTime = (deltaMinutes: number) => {
@@ -2365,37 +2827,94 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
             )}
 
             {/* Live Sideline Whistle Stopwatch / Countdown Timer */}
-            <div className="bg-gradient-to-br from-slate-950 to-slate-900 rounded-2xl border border-slate-800 p-3.5 sm:p-4 space-y-3 shadow-inner">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-300 flex items-center justify-center font-black">
-                    <Timer className="w-4 h-4 text-amber-400" />
+            <div className="bg-gradient-to-br from-slate-950 to-slate-900 rounded-3xl border border-slate-800 p-4 sm:p-5 space-y-3.5 shadow-2xl">
+              {/* Transition / Station Rotation Break Banner */}
+              {isTransitionBreak && (
+                <div className="bg-gradient-to-r from-amber-500/20 via-amber-400/15 to-amber-500/20 border border-amber-500/60 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3 animate-pulse shadow-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black shadow-md">
+                      <RotateCw className="w-5 h-5 animate-spin" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-black text-amber-300 uppercase tracking-wide flex items-center gap-2">
+                        <span>ROTATION BREAK ({transitionSecondsLeft}s LEFT)</span>
+                        <span className="px-2 py-0.5 rounded-md bg-amber-950 text-amber-200 border border-amber-500/40 text-[10px] font-black">
+                          NEXT: PERIOD {periodTimerIdx + 2}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-200 mt-0.5">
+                        Whistle sounded! Rotate stations to{' '}
+                        <strong className="text-white font-black">
+                          {currentPlanPeriods[periodTimerIdx + 1]?.category || 'Next Drill'}
+                        </strong>{' '}
+                        ({currentPlanPeriods[periodTimerIdx + 1]?.time || 10}m)
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleStartNextPeriodNow}
+                    className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    <span>Start Period {periodTimerIdx + 2} Now</span>
+                  </button>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black transition-all ${
+                    isTransitionBreak
+                      ? 'bg-amber-500 text-slate-950 animate-pulse'
+                      : periodTimerActive
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                      : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                  }`}>
+                    <Timer className="w-5 h-5" />
                   </div>
                   <div>
-                    <div className="text-xs font-black text-white flex items-center gap-1.5">
-                      <span>Period {periodTimerIdx + 1} Stopwatch</span>
+                    <div className="text-xs font-black text-white flex items-center gap-2 flex-wrap">
+                      <span>Period {periodTimerIdx + 1} Practice Clock</span>
                       {currentPlanPeriods[periodTimerIdx]?.category && (
-                        <span className="text-[10px] uppercase font-bold text-amber-300 px-1.5 py-0.2 rounded bg-amber-950/60 border border-amber-500/30">
+                        <span className="text-[10px] uppercase font-black text-amber-300 px-2 py-0.5 rounded-md bg-amber-950/80 border border-amber-500/40">
                           {currentPlanPeriods[periodTimerIdx].category}
                         </span>
                       )}
+                      {screenWakeLocked && (
+                        <span className="text-[10px] font-bold text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-950/70 border border-emerald-500/30 flex items-center gap-1">
+                          <SunMedium className="w-3 h-3 text-emerald-400" />
+                          <span>Screen Awake</span>
+                        </span>
+                      )}
                     </div>
-                    <div className="text-[11px] text-slate-400">
-                      {currentPlanPeriods[periodTimerIdx]?.time || 10}m Scheduled Duration
+                    <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
+                      <span>{currentPlanPeriods[periodTimerIdx]?.time || 10}m Scheduled Duration</span>
+                      <span>•</span>
+                      <span className={timerAutoAdvance ? 'text-emerald-400 font-semibold' : 'text-slate-400'}>
+                        {timerAutoAdvance ? `Auto-Advance (${timerTransitionSec}s break)` : 'Manual Advance'}
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Big Digital Countdown Display */}
                 <div className="flex items-center gap-2 font-mono">
-                  <span className={`text-2xl sm:text-3xl font-black tracking-tight px-3 py-1 rounded-xl border ${
-                    periodTimerSecondsLeft === 0
-                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 animate-bounce'
-                      : periodTimerActive
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                      : 'bg-slate-900 text-slate-200 border-slate-800'
-                  }`}>
-                    {formatTimerSeconds(periodTimerSecondsLeft)}
+                  <span
+                    className={`text-3xl sm:text-4xl font-black tracking-tight px-4 py-1.5 rounded-2xl border transition-all ${
+                      isTransitionBreak
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/60 animate-pulse'
+                        : periodTimerSecondsLeft === 0
+                        ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 animate-bounce'
+                        : periodTimerActive
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
+                        : 'bg-slate-900 text-slate-200 border-slate-800'
+                    }`}
+                  >
+                    {isTransitionBreak
+                      ? `00:${transitionSecondsLeft < 10 ? '0' + transitionSecondsLeft : transitionSecondsLeft}`
+                      : formatTimerSeconds(periodTimerSecondsLeft)}
                   </span>
                 </div>
               </div>
@@ -2404,12 +2923,16 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
               {(() => {
                 const totalSec = (Number(currentPlanPeriods[periodTimerIdx]?.time) || 10) * 60;
                 const elapsedSec = Math.max(0, totalSec - periodTimerSecondsLeft);
-                const pct = Math.min(100, Math.max(0, (elapsedSec / Math.max(1, totalSec)) * 100));
+                const pct = isTransitionBreak
+                  ? Math.min(100, Math.max(0, ((timerTransitionSec - transitionSecondsLeft) / Math.max(1, timerTransitionSec)) * 100))
+                  : Math.min(100, Math.max(0, (elapsedSec / Math.max(1, totalSec)) * 100));
                 return (
                   <div className="w-full h-2 rounded-full bg-slate-850 overflow-hidden border border-slate-800">
                     <div
                       className={`h-full transition-all duration-500 ${
-                        periodTimerSecondsLeft <= 60
+                        isTransitionBreak
+                          ? 'bg-amber-400'
+                          : periodTimerSecondsLeft <= 60
                           ? 'bg-rose-500'
                           : periodTimerSecondsLeft <= 180
                           ? 'bg-amber-400'
@@ -2422,19 +2945,12 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
               })()}
 
               {/* Timer Controls Strip */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     type="button"
-                    onClick={() => {
-                      if (periodTimerSecondsLeft === 0) {
-                        const dur = (Number(currentPlanPeriods[periodTimerIdx]?.time) || 10) * 60;
-                        setPeriodTimerSecondsLeft(dur);
-                      }
-                      setPeriodTimerActive(!periodTimerActive);
-                      setTimerExpiredNotice(false);
-                    }}
-                    className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer ${
+                    onClick={handleToggleTimer}
+                    className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer ${
                       periodTimerActive
                         ? 'bg-amber-500 hover:bg-amber-450 text-slate-950'
                         : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
@@ -2442,12 +2958,12 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                   >
                     {periodTimerActive ? (
                       <>
-                        <Pause className="w-4 h-4" />
-                        <span>Pause</span>
+                        <Pause className="w-4 h-4 fill-current" />
+                        <span>Pause Stopwatch</span>
                       </>
                     ) : (
                       <>
-                        <Play className="w-4 h-4" />
+                        <Play className="w-4 h-4 fill-current" />
                         <span>Start Whistle Timer</span>
                       </>
                     )}
@@ -2455,65 +2971,209 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setPeriodTimerActive(false);
-                      const dur = (Number(currentPlanPeriods[periodTimerIdx]?.time) || 10) * 60;
-                      setPeriodTimerSecondsLeft(dur);
-                      setTimerExpiredNotice(false);
-                    }}
-                    className="px-3 py-2 rounded-xl bg-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-750 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                    onClick={handleResetTimer}
+                    className="px-3 py-2.5 rounded-xl bg-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-750 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
                     title="Reset period countdown"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>Reset</span>
                   </button>
-                </div>
 
-                <div className="flex items-center gap-2">
                   {periodTimerIdx < currentPlanPeriods.length - 1 && (
                     <button
                       type="button"
-                      onClick={() => {
-                        const nextIdx = periodTimerIdx + 1;
-                        setPeriodTimerIdx(nextIdx);
-                        const nextDur = (Number(currentPlanPeriods[nextIdx]?.time) || 10) * 60;
-                        setPeriodTimerSecondsLeft(nextDur);
-                        setPeriodTimerActive(true);
-                        setTimerExpiredNotice(false);
-                        setActiveViewingPeriodIdx(nextIdx);
-                      }}
-                      className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all shadow-md cursor-pointer"
+                      onClick={handleSkipToNextPeriod}
+                      className="px-3 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all shadow-md cursor-pointer"
                     >
-                      <span>Next Period (P{periodTimerIdx + 2})</span>
+                      <span>Skip to P{periodTimerIdx + 2}</span>
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playWhistleBurst('stop');
+                      speakVoicePrompt(`Test: Stop! Period ${periodTimerIdx + 1} complete. Blow whistle and rotate!`);
+                    }}
+                    className="px-3 py-2 rounded-xl bg-slate-850 hover:bg-slate-800 text-amber-400 border border-slate-750 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                    title="Test whistle sound and voice announcement"
+                  >
+                    <Volume2 className="w-4 h-4 text-amber-400" />
+                    <span>Test Audio</span>
+                  </button>
 
                   <button
                     type="button"
-                    onClick={playWhistleChime}
-                    className="p-2 rounded-xl bg-slate-850 hover:bg-slate-800 text-amber-400 border border-slate-750 text-xs transition-all cursor-pointer"
-                    title="Test whistle sound & vibration"
+                    onClick={() => setIsStopwatchSettingsOpen(!isStopwatchSettingsOpen)}
+                    className={`px-3 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                      isStopwatchSettingsOpen
+                        ? 'bg-indigo-600 text-white border-indigo-400 shadow-md'
+                        : 'bg-slate-850 hover:bg-slate-800 text-slate-300 border-slate-750'
+                    }`}
                   >
-                    <Volume2 className="w-4 h-4" />
+                    <Settings2 className="w-4 h-4" />
+                    <span>Auto-Notify Setup</span>
                   </button>
                 </div>
               </div>
 
+              {/* Automatic Stop & Start Notification Settings Panel */}
+              {isStopwatchSettingsOpen && (
+                <div className="bg-slate-950/80 rounded-2xl border border-slate-800/90 p-4 space-y-3 animate-in fade-in duration-200">
+                  <div className="text-xs font-black text-white flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <BellRing className="w-4 h-4 text-amber-400" />
+                      <span>Automatic Stop & Start Notification Options</span>
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-normal">
+                      Optimized for Mobile Sideline Use
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
+                    {/* 1. Auto-Advance to Next Period */}
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-2">
+                      <div>
+                        <div className="text-xs font-bold text-white">Auto-Advance Period</div>
+                        <div className="text-[11px] text-slate-400">Automatically transitions and starts next period</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateTimerAutoAdvance(!timerAutoAdvance)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                          timerAutoAdvance ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {timerAutoAdvance ? 'ON' : 'OFF'}
+                      </button>
+                    </div>
+
+                    {/* 2. Transition / Rotation Break Duration */}
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-2">
+                      <div>
+                        <div className="text-xs font-bold text-white">Rotation Break Buffer</div>
+                        <div className="text-[11px] text-slate-400">Rest / water / station rotation time</div>
+                      </div>
+                      <select
+                        value={timerTransitionSec}
+                        onChange={(e) => updateTimerTransitionSec(Number(e.target.value))}
+                        disabled={!timerAutoAdvance}
+                        aria-label="Rotation Break Buffer"
+                        className="bg-slate-850 border border-slate-700 text-amber-300 font-bold text-xs rounded-lg px-2 py-1 focus:outline-none disabled:opacity-50"
+                      >
+                        <option value={0}>0s (Immediate)</option>
+                        <option value={5}>5 seconds</option>
+                        <option value={10}>10 seconds</option>
+                        <option value={15}>15 seconds</option>
+                        <option value={30}>30 seconds</option>
+                        <option value={60}>1 minute</option>
+                      </select>
+                    </div>
+
+                    {/* 3. Voice Speech Announcements */}
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-2">
+                      <div>
+                        <div className="text-xs font-bold text-white">Voice Audio Alerts</div>
+                        <div className="text-[11px] text-slate-400">Speaks STOP & START commands out loud</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateTimerVoiceEnabled(!timerVoiceEnabled)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                          timerVoiceEnabled ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {timerVoiceEnabled ? 'VOICE ON' : 'MUTED'}
+                      </button>
+                    </div>
+
+                    {/* 4. Referee Whistle Sound */}
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-2">
+                      <div>
+                        <div className="text-xs font-bold text-white">Referee Whistle Chime</div>
+                        <div className="text-[11px] text-slate-400">Loud multi-tone field whistle chime</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateTimerSoundEnabled(!timerSoundEnabled)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                          timerSoundEnabled ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {timerSoundEnabled ? 'WHISTLE ON' : 'OFF'}
+                      </button>
+                    </div>
+
+                    {/* 5. 1-Minute Warning */}
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-2">
+                      <div>
+                        <div className="text-xs font-bold text-white">1-Minute Early Warning</div>
+                        <div className="text-[11px] text-slate-400">Alerts coaches at 60 seconds remaining</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateTimerWarningEnabled(!timerWarningEnabled)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                          timerWarningEnabled ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {timerWarningEnabled ? 'ON' : 'OFF'}
+                      </button>
+                    </div>
+
+                    {/* 6. Lockscreen System Notifications */}
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-2">
+                      <div>
+                        <div className="text-xs font-bold text-white">Lockscreen Push Alerts</div>
+                        <div className="text-[11px] text-slate-400">Notifies phone when locked or in pocket</div>
+                      </div>
+                      {notificationPermission === 'granted' ? (
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Active</span>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={requestNotificationPermission}
+                          className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold active:scale-95 transition-all cursor-pointer shadow-sm"
+                        >
+                          Enable
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Time Expired Whistle Notification Alert */}
               {timerExpiredNotice && (
-                <div className="p-3 bg-rose-500/20 border border-rose-500/60 rounded-xl flex items-center justify-between gap-2 animate-bounce text-rose-200 text-xs font-black">
-                  <div className="flex items-center gap-2">
-                    <Bell className="w-4 h-4 text-rose-400" />
-                    <span>WHISTLE! Period {periodTimerIdx + 1} Time Expired!</span>
+                <div className="p-3.5 bg-rose-500/20 border border-rose-500/60 rounded-2xl flex flex-wrap items-center justify-between gap-2 animate-bounce text-rose-200 text-xs font-black shadow-lg">
+                  <div className="flex items-center gap-2.5">
+                    <BellRing className="w-5 h-5 text-rose-400 animate-spin" />
+                    <span>WHISTLE! Period {periodTimerIdx + 1} ({currentPlanPeriods[periodTimerIdx]?.category || 'Drill'}) Time Expired!</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setTimerExpiredNotice(false)}
-                    className="px-2 py-1 bg-rose-950/80 rounded-lg text-[11px] hover:bg-rose-900 border border-rose-500/40 text-white"
-                  >
-                    Dismiss
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {periodTimerIdx < currentPlanPeriods.length - 1 && (
+                      <button
+                        type="button"
+                        onClick={handleSkipToNextPeriod}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-black text-white shadow-md cursor-pointer"
+                      >
+                        Start Period {periodTimerIdx + 2} Now
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setTimerExpiredNotice(false)}
+                      className="px-2.5 py-1.5 bg-rose-950/80 rounded-xl text-xs hover:bg-rose-900 border border-rose-500/40 text-white cursor-pointer"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -3647,6 +4307,104 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
           }
         }}
       />
+
+      {/* Mobile Floating Sideline Stopwatch Dock (Optimized for Phones on Field) */}
+      {currentPlanPeriods.length > 0 && (
+        <div className="fixed bottom-2 left-2 right-2 md:hidden z-40 bg-slate-950/95 border border-slate-800 backdrop-blur-md rounded-2xl p-2.5 shadow-2xl flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black shrink-0 ${
+              isTransitionBreak
+                ? 'bg-amber-500 text-slate-950 animate-pulse'
+                : periodTimerActive
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                : 'bg-slate-850 text-slate-300'
+            }`}>
+              {isTransitionBreak ? <RotateCw className="w-5 h-5 animate-spin" /> : <Timer className="w-5 h-5" />}
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-black text-white truncate">
+                  {isTransitionBreak ? (
+                    <span className="text-amber-300">BREAK ({transitionSecondsLeft}s)</span>
+                  ) : (
+                    `P${periodTimerIdx + 1}: ${currentPlanPeriods[periodTimerIdx]?.category || 'Drill'}`
+                  )}
+                </span>
+                {timerAutoAdvance && (
+                  <span className="text-[9px] font-bold px-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/30 shrink-0">
+                    AUTO
+                  </span>
+                )}
+              </div>
+              <div className="font-mono text-base font-black tracking-tight text-white leading-tight">
+                {isTransitionBreak
+                  ? `00:${transitionSecondsLeft < 10 ? '0' + transitionSecondsLeft : transitionSecondsLeft}`
+                  : formatTimerSeconds(periodTimerSecondsLeft)}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {isTransitionBreak ? (
+              <button
+                type="button"
+                onClick={handleStartNextPeriodNow}
+                className="h-11 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center gap-1 shadow-md active:scale-95"
+              >
+                <Play className="w-4 h-4 fill-current" />
+                <span>Start P{periodTimerIdx + 2}</span>
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleToggleTimer}
+                  className={`h-11 px-3.5 rounded-xl font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all ${
+                    periodTimerActive
+                      ? 'bg-amber-500 text-slate-950'
+                      : 'bg-emerald-600 text-white shadow-emerald-600/30'
+                  }`}
+                >
+                  {periodTimerActive ? (
+                    <>
+                      <Pause className="w-4 h-4 fill-current" />
+                      <span>Pause</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 fill-current" />
+                      <span>Start</span>
+                    </>
+                  )}
+                </button>
+
+                {periodTimerIdx < currentPlanPeriods.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={handleSkipToNextPeriod}
+                    className="w-11 h-11 rounded-xl bg-slate-850 hover:bg-slate-800 text-slate-200 border border-slate-750 flex items-center justify-center active:scale-95"
+                    title="Skip to next period"
+                    aria-label="Skip to next period"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                )}
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIsStopwatchSettingsOpen(true)}
+              className="w-11 h-11 rounded-xl bg-slate-850 hover:bg-slate-800 text-amber-400 border border-slate-750 flex items-center justify-center active:scale-95"
+              title="Stopwatch Automation Settings"
+              aria-label="Stopwatch Automation Settings"
+            >
+              <Settings2 className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
