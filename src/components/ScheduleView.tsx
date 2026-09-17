@@ -53,6 +53,7 @@ import { getSeasonWeekList, getWeekDisplayLabelWithOpponent } from '../utils/sea
 import { triggerPrint } from '../utils/printUtils';
 import { PracticeWizardModal, PracticeWizardGeneratedResult } from './PracticeWizardModal';
 import { TeamSnapSyncModal } from './TeamSnapSyncModal';
+import { getPracticeSequenceMap, formatPracticeDayTitle } from '../utils/practiceUtils';
 
 interface ScheduleViewProps {
   scheduleEvents: ScheduleEvent[];
@@ -148,6 +149,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   const [practiceEndTime, setPracticeEndTime] = useState('19:00');
   const [practiceLocation, setPracticeLocation] = useState('Crane Road');
   const [practiceFocus, setPracticeFocus] = useState('');
+  const [practiceIsNonPractice, setPracticeIsNonPractice] = useState(false);
   const [autoCreatePlan, setAutoCreatePlan] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState('Offense & Defense Full Practice');
 
@@ -221,6 +223,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
       return (a.startTime || '').localeCompare(b.startTime || '');
     });
   }, [safeScheduleEvents]);
+
+  // Dynamic Practice Sequence Map starting 8/3 (excluding cancelled and non-practice events)
+  const practiceSeqMap = useMemo(() => {
+    return getPracticeSequenceMap(practicePlans, safeScheduleEvents);
+  }, [practicePlans, safeScheduleEvents]);
 
   // Filtered Events
   const filteredEvents = useMemo(() => {
@@ -478,6 +485,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
       locationType: 'home',
       arrivalMinutesBefore: 15,
       focusOrNotes: practiceFocus.trim(),
+      isNonPractice: practiceIsNonPractice,
     };
 
     // Auto-create matching Practice Plan
@@ -496,6 +504,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
     setIsAddPracticeModalOpen(false);
     setPracticeTitle('');
     setPracticeFocus('');
+    setPracticeIsNonPractice(false);
   };
 
   // Cadence Generator (Generates Tuesday & Thursday practices for weeks 1..N)
@@ -1378,6 +1387,34 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                                         {isGame ? '🏈 GAME' : isScrimmage ? '⚔️ SCRIMMAGE' : '📋 PRACTICE'}
                                       </span>
 
+                                      {isPractice && (
+                                        (() => {
+                                          const seq = practiceSeqMap[evt.id] || (evt.date ? practiceSeqMap[evt.date] : undefined);
+                                          if (evt.isCancelled || seq?.isCancelled) {
+                                            return (
+                                              <span className="px-1.5 py-0.2 text-[9px] font-black uppercase rounded bg-rose-950 border border-rose-500/50 text-rose-300">
+                                                🚫 CANCELLED
+                                              </span>
+                                            );
+                                          }
+                                          if (evt.isNonPractice || seq?.isNonPractice) {
+                                            return (
+                                              <span className="px-1.5 py-0.2 text-[9px] font-black uppercase rounded bg-amber-950 border border-amber-500/50 text-amber-300">
+                                                NON-PRACTICE
+                                              </span>
+                                            );
+                                          }
+                                          if (seq?.practiceNumber) {
+                                            return (
+                                              <span className="px-1.5 py-0.2 text-[9px] font-black uppercase rounded bg-indigo-600 text-white shadow-xs">
+                                                DAY {seq.practiceNumber}
+                                              </span>
+                                            );
+                                          }
+                                          return null;
+                                        })()
+                                      )}
+
                                       {evt.locationType && (
                                         <span
                                           className={`px-1.5 py-0.2 text-[9px] font-black uppercase rounded ${
@@ -1449,7 +1486,13 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 
                                   {/* Title & Timing */}
                                   <h4 className="font-extrabold text-sm md:text-base text-slate-100 mb-1">
-                                    {evt.title}
+                                    {(() => {
+                                      if (isPractice) {
+                                        const seq = practiceSeqMap[evt.id] || (evt.date ? practiceSeqMap[evt.date] : undefined);
+                                        if (seq?.formattedTitle) return seq.formattedTitle;
+                                      }
+                                      return evt.title;
+                                    })()}
                                   </h4>
 
                                   <div className="space-y-1 text-xs text-slate-300">
@@ -1769,7 +1812,15 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                           title={`${evt.title} (${formatTimeDisplay(evt.startTime)}) - Click to open details`}
                         >
                           <span className="truncate">
-                            {formatTimeDisplay(evt.startTime)} &bull; {evt.title}
+                            {formatTimeDisplay(evt.startTime)} &bull;{' '}
+                            {(() => {
+                              const isPractice = evt.type === 'practice' || evt.type === 'walkthrough';
+                              if (isPractice) {
+                                const seq = practiceSeqMap[evt.id] || (evt.date ? practiceSeqMap[evt.date] : undefined);
+                                if (seq?.formattedTitle) return seq.formattedTitle;
+                              }
+                              return evt.title;
+                            })()}
                           </span>
                           {isGame && <ExternalLink className="w-2.5 h-2.5 shrink-0 opacity-80" />}
                         </div>
@@ -1827,10 +1878,23 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                               ? 'bg-amber-400 text-slate-950 font-black'
                               : evt.type === 'scrimmage'
                               ? 'bg-purple-600 text-white'
+                              : evt.isCancelled
+                              ? 'bg-rose-950 text-rose-300 border border-rose-500/50'
+                              : evt.isNonPractice
+                              ? 'bg-amber-950 text-amber-300 border border-amber-500/50'
                               : 'bg-indigo-500/20 text-indigo-300'
                           }`}
                         >
-                          {evt.type}
+                          {(() => {
+                            if (evt.isCancelled) return '🚫 Cancelled';
+                            if (evt.isNonPractice) return 'Non-Practice';
+                            const isPractice = evt.type === 'practice' || evt.type === 'walkthrough';
+                            if (isPractice) {
+                              const seq = practiceSeqMap[evt.id] || (evt.date ? practiceSeqMap[evt.date] : undefined);
+                              if (seq?.practiceNumber) return `Day ${seq.practiceNumber}`;
+                            }
+                            return evt.type;
+                          })()}
                         </span>
                       </td>
                       <td className="p-3 whitespace-nowrap">
@@ -1838,7 +1902,16 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                         <div className="text-[11px] text-slate-400">{formatTimeDisplay(evt.startTime)}</div>
                       </td>
                       <td className="p-3">
-                        <div className="font-extrabold text-slate-100">{evt.title}</div>
+                        <div className="font-extrabold text-slate-100">
+                          {(() => {
+                            const isPractice = evt.type === 'practice' || evt.type === 'walkthrough';
+                            if (isPractice) {
+                              const seq = practiceSeqMap[evt.id] || (evt.date ? practiceSeqMap[evt.date] : undefined);
+                              if (seq?.formattedTitle) return seq.formattedTitle;
+                            }
+                            return evt.title;
+                          })()}
+                        </div>
                         {evt.focusOrNotes && (
                           <div className="text-[10px] text-slate-400 truncate max-w-xs">{evt.focusOrNotes}</div>
                         )}
@@ -2343,6 +2416,25 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                     </select>
                   </div>
                 )}
+              </div>
+
+              <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-700">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={practiceIsNonPractice}
+                    onChange={(e) => setPracticeIsNonPractice(e.target.checked)}
+                    className="rounded text-amber-500"
+                  />
+                  <div>
+                    <span className="text-slate-200 text-xs font-bold">
+                      Label as Non-Practice Event
+                    </span>
+                    <p className="text-[11px] text-slate-400">
+                      Excludes this session from the cumulative season practice day count (e.g. equipment pickup, team meeting, orientation).
+                    </p>
+                  </div>
+                </label>
               </div>
             </div>
 
@@ -2864,6 +2956,24 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                   }`}
                 >
                   {editingEvent.isCancelled ? '🚫 CANCELLED' : 'Active Event'}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-slate-900/80 rounded-xl border border-slate-700">
+                <div>
+                  <div className="text-xs font-bold text-slate-200">Practice Total Count</div>
+                  <div className="text-[11px] text-slate-400">Label as non-practice so it doesn't count towards the cumulative season total</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingEvent({ ...editingEvent, isNonPractice: !editingEvent.isNonPractice })}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all border ${
+                    editingEvent.isNonPractice
+                      ? 'bg-amber-950 border-amber-500/60 text-amber-300'
+                      : 'bg-slate-800 border-slate-600 text-slate-300 hover:text-white'
+                  }`}
+                >
+                  {editingEvent.isNonPractice ? '📋 NON-PRACTICE (EXCLUDED)' : 'Counts as Practice'}
                 </button>
               </div>
             </div>

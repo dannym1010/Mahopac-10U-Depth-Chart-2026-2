@@ -5341,6 +5341,49 @@ function mergeRemoteWeeklyData(
     });
   };
 
+  const handleTogglePracticeNonPractice = (
+    practiceId: string,
+    isNonPractice?: boolean
+  ) => {
+    let targetDate = '';
+    updatePracticeDataAndSave((prev) =>
+      prev.map((p) => {
+        if (p.id === practiceId) {
+          targetDate = p.date || '';
+          const newStatus = isNonPractice !== undefined ? isNonPractice : !p.isNonPractice;
+          return {
+            ...p,
+            isNonPractice: newStatus,
+            lastEdited: Date.now(),
+          };
+        }
+        return p;
+      })
+    );
+
+    // Also sync to matching ScheduleEvent if any
+    setScheduleEvents((prev) => {
+      const next = prev.map((ev) => {
+        if (
+          ev.linkedPracticePlanId === practiceId ||
+          (ev.date && targetDate && ev.date === targetDate && (ev.type === 'practice' || ev.type === 'scrimmage' || ev.type === 'walkthrough'))
+        ) {
+          const newStatus = isNonPractice !== undefined ? isNonPractice : !ev.isNonPractice;
+          return {
+            ...ev,
+            isNonPractice: newStatus,
+            lastEdited: Date.now(),
+          };
+        }
+        return ev;
+      });
+      safeJSONSet('footballScheduleEvents', next);
+      latestStateRef.current.scheduleEvents = next;
+      return next;
+    });
+    debouncedSave('schedule');
+  };
+
   const handleQuickCreatePlanFromSchedule = (evt: ScheduleEvent) => {
     const planId = handleSyncPracticeToPlan(evt);
     const rawWeek = String(evt.week !== undefined ? evt.week : '1');
@@ -5692,10 +5735,10 @@ function mergeRemoteWeeklyData(
       targetId
     );
 
-    // If changing start time or date, also update any linked schedule event
-    if (field === 'startTime' || field === 'date') {
-      setScheduleEvents((prev) =>
-        prev.map((ev) => {
+    // If changing start time, date, isNonPractice, or isCancelled, also update any linked schedule event
+    if (field === 'startTime' || field === 'date' || field === 'isNonPractice' || field === 'isCancelled') {
+      setScheduleEvents((prev) => {
+        const next = prev.map((ev) => {
           if (ev.linkedPracticePlanId === targetId || (targetId && ev.id === targetId)) {
             const updatedEv = { ...ev };
             if (field === 'startTime') {
@@ -5705,11 +5748,21 @@ function mergeRemoteWeeklyData(
             if (field === 'date') {
               updatedEv.date = value;
             }
+            if (field === 'isNonPractice') {
+              updatedEv.isNonPractice = Boolean(value);
+            }
+            if (field === 'isCancelled') {
+              updatedEv.isCancelled = Boolean(value);
+            }
             return updatedEv;
           }
           return ev;
-        })
-      );
+        });
+        safeJSONSet('footballScheduleEvents', next);
+        latestStateRef.current.scheduleEvents = next;
+        return next;
+      });
+      debouncedSave('schedule');
     }
   };
 
@@ -7290,6 +7343,21 @@ function mergeRemoteWeeklyData(
           if (updated.type === 'game') {
             handleSyncGameToWeeklyData(updated);
           }
+          if (updates.isNonPractice !== undefined || updates.isCancelled !== undefined) {
+            updatePracticeDataAndSave((prevPlans) =>
+              prevPlans.map((plan) => {
+                if (plan.id === updated.linkedPracticePlanId || (plan.date && plan.date === updated.date)) {
+                  return {
+                    ...plan,
+                    ...(updates.isNonPractice !== undefined ? { isNonPractice: updates.isNonPractice } : {}),
+                    ...(updates.isCancelled !== undefined ? { isCancelled: updates.isCancelled } : {}),
+                    lastEdited: Date.now(),
+                  };
+                }
+                return plan;
+              })
+            );
+          }
           return updated;
         }
         return ev;
@@ -8807,6 +8875,8 @@ function mergeRemoteWeeklyData(
                   safeJSONSet('footballPrintFontSize', size);
                 }}
                 onUpdateMeta={handleUpdatePracticeMeta}
+                onTogglePracticeCancelled={handleTogglePracticeCancelled}
+                onTogglePracticeNonPractice={handleTogglePracticeNonPractice}
                 onAddPeriod={handleAddPeriod}
                 onRemovePeriod={handleRemovePeriod}
                 onMovePeriod={handleMovePeriod}

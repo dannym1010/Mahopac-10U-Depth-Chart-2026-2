@@ -111,6 +111,7 @@ export interface ScheduleEvent {
   preGamePlanId?: string; // Dedicated link to pre-game practice / warmup plan (for game events)
   isCancelled?: boolean;
   cancellationReason?: string;
+  isNonPractice?: boolean; // When true, labeled as non-practice event (excluded from practice day count)
   result?: {
     teamScore?: number;
     opponentScore?: number;
@@ -463,6 +464,8 @@ export interface PracticePlan {
   location?: string;
   isCancelled?: boolean; // When true, excluded from practice number/held count
   cancellationReason?: string;
+  isNonPractice?: boolean; // When true, labeled as non-practice event (excluded from practice day total count)
+  practiceNumber?: number; // Sequential practice day number from start of season (Day 1 on 8/3)
   lastEdited?: number;
   createdAt?: number;
   plan?: PracticePeriod[];

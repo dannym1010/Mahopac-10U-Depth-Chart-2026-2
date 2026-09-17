@@ -97,6 +97,7 @@ interface PracticePlanViewProps {
   onUpdatePrintFontSize: (size: string) => void;
   onUpdateMeta: (field: keyof PracticePlan, value: any) => void;
   onTogglePracticeCancelled?: (practiceId: string, isCancelled?: boolean, reason?: string) => void;
+  onTogglePracticeNonPractice?: (practiceId: string, isNonPractice: boolean) => void;
   onAddPeriod: () => void;
   onRemovePeriod: (pIdx: number) => void;
   onMovePeriod: (pIdx: number, direction: number) => void;
@@ -145,6 +146,7 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
   onUpdatePrintFontSize,
   onUpdateMeta,
   onTogglePracticeCancelled,
+  onTogglePracticeNonPractice,
   onAddPeriod,
   onRemovePeriod,
   onMovePeriod,
@@ -253,17 +255,29 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
     });
   };
 
-  // Calculate dynamic practice sequence map across all practices
-  const practiceSeqMap = getPracticeSequenceMap(practices);
+  // Calculate dynamic practice sequence map across all practices starting from 8/3
+  const practiceSeqMap = getPracticeSequenceMap(practices, scheduleEvents);
   const currentSeq = currentPlan
-    ? practiceSeqMap[currentPlan.id] || {
+    ? practiceSeqMap[currentPlan.id] ||
+      (currentPlan.date ? practiceSeqMap[currentPlan.date] : undefined) || {
         practiceNumber: 1,
         isCancelled: Boolean(currentPlan.isCancelled),
-        totalActivePractices: practices.filter((p) => !p.isCancelled).length,
+        isNonPractice: Boolean(currentPlan.isNonPractice),
+        totalActivePractices: practices.filter((p) => !p.isCancelled && !p.isNonPractice).length,
         totalCancelledPractices: practices.filter((p) => p.isCancelled).length,
+        totalNonPracticeEvents: practices.filter((p) => p.isNonPractice).length,
         isPast: false,
-        displayDayLabel: currentPlan.isCancelled ? 'Cancelled' : 'Day 1',
-        fullBadgeLabel: currentPlan.isCancelled ? 'Cancelled (Not Counted)' : 'Practice Day #1',
+        displayDayLabel: currentPlan.isCancelled
+          ? 'Cancelled'
+          : currentPlan.isNonPractice
+          ? 'Non-Practice'
+          : 'Day 1',
+        fullBadgeLabel: currentPlan.isCancelled
+          ? 'Cancelled (Not Counted)'
+          : currentPlan.isNonPractice
+          ? 'Non-Practice (Not Counted)'
+          : 'Practice Day #1',
+        formattedTitle: currentPlan.title,
       }
     : null;
 
@@ -743,6 +757,16 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
     }
   };
 
+  const handleToggleNonPractice = () => {
+    if (!currentPlan) return;
+    const nextState = !currentPlan.isNonPractice;
+    if (onTogglePracticeNonPractice) {
+      onTogglePracticeNonPractice(currentPlan.id, nextState);
+    } else {
+      onUpdateMeta('isNonPractice', nextState);
+    }
+  };
+
   return (
     <div className="space-y-5 pb-80 sm:pb-96 min-h-[calc(100vh-120px)] print:space-y-0 print:pb-0 print:min-h-0 print:m-0 print:p-0">
       {/* Top Action & Navigation Bar */}
@@ -842,11 +866,15 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                 className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl border text-xs font-bold shadow-inner ${
                   currentSeq.isCancelled
                     ? 'bg-rose-950/70 border-rose-500/50 text-rose-200'
+                    : currentSeq.isNonPractice
+                    ? 'bg-amber-950/80 border-amber-500/50 text-amber-200'
                     : 'bg-indigo-950/80 border-indigo-500/40 text-indigo-200'
                 }`}
                 title={
                   currentSeq.isCancelled
                     ? 'Cancelled practice: Excluded from cumulative practice day held count.'
+                    : currentSeq.isNonPractice
+                    ? 'Non-practice event: Excluded from cumulative practice day count.'
                     : `Held Practice #${currentSeq.practiceNumber} of ${currentSeq.totalActivePractices} active practices in the season.`
                 }
               >
@@ -855,6 +883,13 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                     <Ban className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                     <span className="font-black text-rose-300 uppercase tracking-tight text-[11px]">
                       Cancelled (Not Counted)
+                    </span>
+                  </>
+                ) : currentSeq.isNonPractice ? (
+                  <>
+                    <FileText className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span className="font-black text-amber-300 uppercase tracking-tight text-[11px]">
+                      Non-Practice (Not Counted)
                     </span>
                   </>
                 ) : (
@@ -931,6 +966,25 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                       <span>Cancel Practice</span>
                     </>
                   )}
+                </button>
+
+                {/* Non-Practice Toggle Button */}
+                <button
+                  type="button"
+                  onClick={handleToggleNonPractice}
+                  title={
+                    currentPlan?.isNonPractice
+                      ? 'Re-count as regular practice (will be assigned a Practice Day number)'
+                      : 'Label as non-practice event (will exclude from cumulative practice day count and re-number remaining practices)'
+                  }
+                  className={`px-3 py-2 font-bold text-xs rounded-xl border flex items-center gap-1.5 transition-all cursor-pointer ${
+                    currentPlan?.isNonPractice
+                      ? 'bg-amber-600 hover:bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-600/30'
+                      : 'bg-slate-900 hover:bg-amber-950/60 text-amber-400 hover:text-amber-300 border-slate-700 hover:border-amber-500/50'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>{currentPlan?.isNonPractice ? 'Is Non-Practice' : 'Mark Non-Practice'}</span>
                 </button>
 
                 <button
@@ -1223,9 +1277,36 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
           </div>
         )}
 
+        {/* Non-Practice Notification Banner */}
+        {currentPlan && currentPlan.isNonPractice && !currentPlan.isCancelled && (
+          <div className="bg-amber-950/80 border border-amber-500/50 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5">
+              <FileText className="w-5 h-5 text-amber-400 shrink-0" />
+              <div>
+                <div className="font-black text-amber-100 uppercase tracking-tight">
+                  This event is marked as NON-PRACTICE
+                </div>
+                <div className="text-[11px] text-amber-300/90 font-medium">
+                  This session is excluded from the cumulative practice day count (e.g. equipment pickup, team meeting, orientation). Subsequent practices are automatically re-numbered.
+                </div>
+              </div>
+            </div>
+            {userRole === 'admin' && (
+              <button
+                type="button"
+                onClick={handleToggleNonPractice}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center gap-1 shrink-0 cursor-pointer"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Count as Practice</span>
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Practice Meta Bar */}
         {currentPlan && (
-          <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 bg-slate-900/90 p-3.5 rounded-2xl border border-slate-700 text-xs font-semibold text-slate-200">
+          <div className="grid grid-cols-2 sm:grid-cols-7 gap-3 bg-slate-900/90 p-3.5 rounded-2xl border border-slate-700 text-xs font-semibold text-slate-200">
             <div>
               <span className="text-[10px] uppercase font-black tracking-widest text-slate-400 block mb-1">
                 Year
@@ -1337,6 +1418,37 @@ export const PracticePlanView: React.FC<PracticePlanViewProps> = ({
                     <>
                       <Check className="w-3 h-3" />
                       <span>Active</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <span className="text-[10px] uppercase font-black tracking-widest text-slate-400 block mb-1">
+                Practice Count
+              </span>
+              <div className="flex items-center gap-1.5 pt-0.5">
+                <button
+                  type="button"
+                  disabled={userRole !== 'admin'}
+                  onClick={handleToggleNonPractice}
+                  title="Toggle whether this event counts towards the cumulative season practice day total"
+                  className={`w-full py-1.5 px-2 rounded-xl text-xs font-black transition-all border flex items-center justify-center gap-1 ${
+                    currentPlan.isNonPractice
+                      ? 'bg-amber-950 border-amber-500/60 text-amber-300 hover:bg-amber-900'
+                      : 'bg-indigo-950 border-indigo-500/50 text-indigo-300 hover:bg-indigo-900'
+                  }`}
+                >
+                  {currentPlan.isNonPractice ? (
+                    <>
+                      <FileText className="w-3 h-3" />
+                      <span>Non-Practice</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3 h-3" />
+                      <span>Counted</span>
                     </>
                   )}
                 </button>
