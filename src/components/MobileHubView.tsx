@@ -268,6 +268,7 @@ interface MobileHubViewProps {
   onOpenScheduleModal?: () => void;
   onOpenThemeGallery?: () => void;
   // Guides & Playbook integration
+  currentPracticeId?: string | null;
   guideTree?: PlaybookGuideTree;
   guideOrder?: PlaybookGuideOrder;
   activeGuideMain?: string;
@@ -351,6 +352,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
   onOpenPreferencesModal,
   onOpenScheduleModal,
   onOpenThemeGallery,
+  currentPracticeId,
   guideTree = {
     Offense: { 'Full Playbook': '', Quarterbacks: '', 'Running Backs': '', 'Wide Receivers': '', 'Offensive Line': '' },
     Defense: { 'Full Playbook': '', 'Defensive Line': '', Linebackers: '', Secondary: '' },
@@ -615,28 +617,37 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
   const todayPracticeInfo = useMemo(() => {
     const now = new Date();
 
-    // 1. Look for today's practice event in schedule
+    // 1. Look for today's practice event strictly in the schedule
     const todayEvent = (scheduleEvents || []).find((e) => {
       if (!e || !e.date || e.isCancelled) return false;
       const cleanDate = e.date.split('T')[0];
-      return cleanDate === todayStr && e.type === 'practice';
+      return cleanDate === todayStr && (e.type === 'practice' || e.type === 'walkthrough') && (!e.teamId || e.teamId === activeTeam.id);
     });
 
-    // 2. Look for today's practice plan
-    const todayPlan = (practicePlans || []).find((p) => {
-      if (!p || !p.date) return false;
-      return p.date.split('T')[0] === todayStr;
-    }) || (todayEvent?.linkedPracticePlanId 
-      ? (practicePlans || []).find((p) => p.id === todayEvent.linkedPracticePlanId)
-      : null);
-
-    if (!todayEvent && !todayPlan) {
+    // If no practice is scheduled for today, do not invent one
+    if (!todayEvent) {
       return null;
     }
 
+    // 2. Look for today's practice plan linked specifically to this scheduled event
+    let todayPlan: PracticePlan | null = null;
+    if (todayEvent.linkedPracticePlanId) {
+      todayPlan = (practicePlans || []).find((p) => p.id === todayEvent.linkedPracticePlanId) || null;
+    }
+    if (!todayPlan) {
+      todayPlan = (practicePlans || []).find((p) => p && p.date && p.date.split('T')[0] === todayStr && (!p.teamId || p.teamId === activeTeam.id)) || null;
+    }
+    if (!todayPlan && todayEvent.week) {
+      todayPlan = (practicePlans || []).find((p) => p && p.weekFolder && (p.weekFolder === todayEvent.week || p.weekFolder.includes(todayEvent.week)) && (!p.teamId || p.teamId === activeTeam.id)) || null;
+    }
+    if (!todayPlan && todayEvent.title) {
+      const normEvTitle = todayEvent.title.trim().toLowerCase();
+      todayPlan = (practicePlans || []).find((p) => p && p.title && p.title.trim().toLowerCase() === normEvTitle && (!p.teamId || p.teamId === activeTeam.id)) || null;
+    }
+
     // Determine start and end time
-    const timeStr = todayEvent?.time || '5:30 PM';
-    const durationMinutes = todayEvent?.durationMinutes || 90;
+    const timeStr = todayEvent.time || todayEvent.startTime || '5:30 PM';
+    const durationMinutes = todayEvent.durationMinutes || 90;
 
     let isOver = false;
     let isLiveNow = false;
@@ -729,108 +740,56 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
     return dateStr;
   };
 
-  // 1. Determine Today / Upcoming Practice
-  // Prioritizes today's practice plan / event, then the next upcoming practice on the schedule
+  // 1. Determine Today / Upcoming Practice strictly from scheduleEvents
+  // Aligns directly with computer HomeView practice selection
   const practiceEventData = useMemo(() => {
     const teamPractices = (scheduleEvents || [])
       .filter((e) => e && (e.type === 'practice' || e.type === 'walkthrough') && !e.isCancelled && (!e.teamId || e.teamId === activeTeam.id))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    // Step 1: Check for today's practice event or plan
-    const todayEvent = teamPractices.find((e) => e.date && e.date.split('T')[0] === todayStr);
-    const todayPlan = (practicePlans || []).find((p) => p && p.date && p.date.split('T')[0] === todayStr);
+    if (teamPractices.length === 0) return null;
 
-    if (todayEvent || todayPlan) {
-      let linkedPlan: PracticePlan | null = todayPlan || null;
-      if (!linkedPlan && todayEvent?.linkedPracticePlanId) {
-        linkedPlan = (practicePlans || []).find((p) => p.id === todayEvent.linkedPracticePlanId) || null;
-      }
-      if (!linkedPlan && todayEvent) {
-        linkedPlan = (practicePlans || []).find((p) => p.date && p.date.split('T')[0] === todayStr) || null;
-      }
+    const now = new Date();
 
-      const eventToUse: ScheduleEvent = todayEvent || {
-        id: `derived_today_${todayPlan?.id || 'event'}`,
-        teamId: todayPlan?.teamId || activeTeam.id,
-        type: 'practice',
-        title: todayPlan?.title || "Today's Practice Plan",
-        week: todayPlan?.weekFolder ? todayPlan.weekFolder.replace(/^week\s*/i, '') : String(currentWeek || '1'),
-        date: todayStr,
-        startTime: todayPlan?.startTime || '17:30',
-        endTime: todayPlan?.endTime || '19:00',
-        location: todayPlan?.location || 'Crane Road',
-        linkedPracticePlanId: todayPlan?.id,
-        createdAt: Date.now(),
-        lastEdited: Date.now(),
-      };
-
-      return {
-        event: eventToUse,
-        plan: linkedPlan,
-        isToday: true,
-      };
-    }
-
-    // Step 2: If no practice today, find the NEXT scheduled practice event in future
-    const futurePractices = teamPractices.filter((e) => {
-      const cleanDate = e.date ? e.date.split('T')[0] : '';
-      return cleanDate >= todayStr;
+    // Find today's practice or upcoming future practices from the schedule
+    const upcoming = teamPractices.filter((e) => {
+      const eventEnd = new Date(`${e.date}T${e.endTime || e.startTime || '23:59'}:00`);
+      return eventEnd.getTime() >= now.getTime();
     });
 
-    let selectedEvent = futurePractices.length > 0 ? futurePractices[0] : null;
-
-    // If no future scheduled events, check if there's any future practice plan
-    if (!selectedEvent) {
-      const futurePlans = (practicePlans || []).filter((p) => p && p.date && p.date.split('T')[0] >= todayStr)
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      if (futurePlans.length > 0) {
-        const fp = futurePlans[0];
-        selectedEvent = {
-          id: `derived_plan_${fp.id}`,
-          teamId: fp.teamId || activeTeam.id,
-          type: 'practice',
-          title: fp.title || 'Team Practice',
-          week: fp.weekFolder ? fp.weekFolder.replace(/^week\s*/i, '') : String(currentWeek || '1'),
-          date: fp.date.split('T')[0],
-          startTime: fp.startTime || '17:30',
-          endTime: fp.endTime || '19:00',
-          location: fp.location || 'Crane Road',
-          linkedPracticePlanId: fp.id,
-          createdAt: Date.now(),
-          lastEdited: Date.now(),
-        };
-      }
-    }
-
-    // Fallback: If no future event or plan exists, select the most recent practice
-    if (!selectedEvent && teamPractices.length > 0) {
-      selectedEvent = teamPractices[teamPractices.length - 1];
-    }
-
+    // Pick next scheduled practice, or latest scheduled practice if none upcoming (matching computer HomeView)
+    const selectedEvent = upcoming.length > 0 ? upcoming[0] : teamPractices[teamPractices.length - 1];
     if (!selectedEvent) return null;
 
     const isToday = selectedEvent.date?.split('T')[0] === todayStr;
+    const isPast = !isToday && new Date(`${selectedEvent.date}T${selectedEvent.endTime || selectedEvent.startTime || '23:59'}:00`).getTime() < now.getTime();
 
-    // Find linked plan for selectedEvent (do NOT blindly fall back to an arbitrary old plan)
+    // Match linked practice plan strictly for selectedEvent
     let linkedPlan: PracticePlan | null = null;
     if (selectedEvent.linkedPracticePlanId) {
       linkedPlan = (practicePlans || []).find((p) => p.id === selectedEvent.linkedPracticePlanId) || null;
     }
     if (!linkedPlan && selectedEvent.date) {
       const cleanDate = selectedEvent.date.split('T')[0];
-      linkedPlan = (practicePlans || []).find((p) => p && p.date && p.date.split('T')[0] === cleanDate) || null;
+      linkedPlan = (practicePlans || []).find((p) => p && p.date && p.date.split('T')[0] === cleanDate && (!p.teamId || p.teamId === activeTeam.id)) || null;
+    }
+    if (!linkedPlan && selectedEvent.week) {
+      linkedPlan = (practicePlans || []).find(
+        (p) => p && p.weekFolder && (p.weekFolder === selectedEvent.week || p.weekFolder.includes(selectedEvent.week)) && (!p.teamId || p.teamId === activeTeam.id)
+      ) || null;
     }
     if (!linkedPlan && selectedEvent.title) {
       const normEvTitle = selectedEvent.title.trim().toLowerCase();
-      linkedPlan = (practicePlans || []).find((p) => p && p.title && p.title.trim().toLowerCase() === normEvTitle) || null;
+      linkedPlan = (practicePlans || []).find((p) => p && p.title && p.title.trim().toLowerCase() === normEvTitle && (!p.teamId || p.teamId === activeTeam.id)) || null;
     }
 
     return {
       event: selectedEvent,
       plan: linkedPlan,
       isToday,
+      isPast,
     };
-  }, [scheduleEvents, practicePlans, todayStr, activeTeam.id, currentWeek]);
+  }, [scheduleEvents, practicePlans, todayStr, activeTeam.id]);
 
   // 2. Determine Upcoming Game or Scrimmage
   const gameEventData = useMemo(() => {
@@ -914,8 +873,8 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
     if (!target && practiceEventData?.plan) {
       target = practiceEventData.plan;
     }
-    if (!target) {
-      target = (practicePlans || []).find((p) => p && p.date && p.date.split('T')[0] === todayStr) || null;
+    if (!target && currentPracticeId) {
+      target = (practicePlans || []).find((p) => p.id === currentPracticeId) || null;
     }
     if (target) {
       if (onSelectPractice) {
@@ -925,7 +884,7 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
       return;
     }
 
-    // If there is no practice plan for the next scheduled event, create a new one!
+    // If there is no practice plan for the scheduled event, create a new one!
     if (practiceEventData?.event) {
       handleCreatePlanForEvent(practiceEventData.event);
       return;
@@ -1196,11 +1155,19 @@ export const MobileHubView: React.FC<MobileHubViewProps> = ({
                     className={`px-2.5 py-1 rounded-xl text-[11px] font-black tracking-wider uppercase flex items-center gap-1.5 shadow-xs ${
                       practiceEventData.isToday
                         ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        : practiceEventData.isPast
+                        ? 'bg-slate-800 text-slate-300 border border-slate-700'
                         : 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30'
                     }`}
                   >
                     <ClipboardList className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>{practiceEventData.isToday ? "TODAY'S PRACTICE" : 'UPCOMING PRACTICE'}</span>
+                    <span>
+                      {practiceEventData.isToday
+                        ? "TODAY'S PRACTICE"
+                        : practiceEventData.isPast
+                        ? 'LATEST PRACTICE'
+                        : 'UPCOMING PRACTICE'}
+                    </span>
                   </span>
 
                   {practiceEventData.event.attireCategory && (

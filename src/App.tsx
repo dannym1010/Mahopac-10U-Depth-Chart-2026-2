@@ -7936,6 +7936,7 @@ function mergeRemoteWeeklyData(
                   saveStateToStorage('attendance');
                 }}
                 attendanceLogs={attendanceLogs}
+                currentPracticeId={currentPracticeId}
                 onSelectPractice={(id) => {
                   setCurrentPracticeId(id);
                   safeJSONSet('footballCurrentPracticeId', id);
