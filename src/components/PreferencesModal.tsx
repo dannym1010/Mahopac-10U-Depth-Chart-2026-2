@@ -654,22 +654,29 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
                   </div>
                   {idleTimeoutMinutes !== undefined && (
                     <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 self-start sm:self-center">
-                      Current: {idleTimeoutMinutes === 0 ? 'Disabled (Never)' : `${idleTimeoutMinutes} Minutes`}
+                      Current: {idleTimeoutMinutes === 0
+                        ? 'Disabled (Never)'
+                        : idleTimeoutMinutes === 60
+                        ? '1 Hour'
+                        : idleTimeoutMinutes === 90
+                        ? '1.5 Hours'
+                        : idleTimeoutMinutes >= 120
+                        ? `${idleTimeoutMinutes / 60} Hours`
+                        : `${idleTimeoutMinutes} Minutes`}
                     </span>
                   )}
                 </div>
 
-                <div className="grid grid-cols-3 sm:grid-cols-7 gap-1.5 pt-1">
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 pt-1">
                   {[
-                    { label: '10 Min', value: 10, desc: 'Default' },
-                    { label: '15 Min', value: 15 },
-                    { label: '30 Min', value: 30 },
+                    { label: '30 Min', value: 30, desc: 'Default' },
                     { label: '1 Hour', value: 60 },
+                    { label: '1.5 Hours', value: 90 },
                     { label: '2 Hours', value: 120 },
                     { label: '4 Hours', value: 240 },
                     { label: 'Disabled', value: 0, desc: 'Never' },
                   ].map((opt) => {
-                    const isSelected = (idleTimeoutMinutes ?? 10) === opt.value;
+                    const isSelected = (idleTimeoutMinutes ?? 30) === opt.value;
                     return (
                       <button
                         key={opt.value}
@@ -677,7 +684,17 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
                         onClick={() => {
                           if (onUpdateIdleTimeout) {
                             onUpdateIdleTimeout(opt.value);
-                            showToast(`⏱️ Idle logout set to: ${opt.value === 0 ? 'Disabled (Never)' : `${opt.value} minutes`}`);
+                            const displayDesc =
+                              opt.value === 0
+                                ? 'Disabled (Never)'
+                                : opt.value === 60
+                                ? '1 Hour'
+                                : opt.value === 90
+                                ? '1.5 Hours'
+                                : opt.value >= 120
+                                ? `${opt.value / 60} Hours`
+                                : `${opt.value} Minutes`;
+                            showToast(`⏱️ Idle logout set to: ${displayDesc}`);
                           }
                         }}
                         className={`py-2 px-2 rounded-xl text-xs font-black border transition-all flex flex-col items-center justify-center cursor-pointer ${

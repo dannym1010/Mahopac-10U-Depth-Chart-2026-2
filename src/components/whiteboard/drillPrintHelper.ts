@@ -1,4 +1,4 @@
-import { WhiteboardDrill } from './whiteboardDrillData';
+import { WhiteboardDrill, isDrillWhiteboardEnabled } from './whiteboardDrillData';
 import { printCleanHTML } from '../../utils/printUtils';
 import { spreadDiagramElements } from './whiteboardSpreadHelper';
 
@@ -300,25 +300,37 @@ export function generateDrillPrintHTML(drill: WhiteboardDrill, activePhaseIndex:
     })
     .join('');
 
-  // Helper for tokens SVG
+  // Helper for tokens SVG matching Triangle Drill visual language
   const tokenSvg = currentPhase.tokens
     .map((t) => {
-      const isSquare = t.isSquare || t.type === 'square' || (t.type === 'O' && t.label === 'C');
-      const isLetter = t.type === 'letter';
+      const upperLabel = (t.label || '').toUpperCase().trim();
+      const upperSub = (t.subLabel || '').toUpperCase().trim();
+      const isSquare = t.isSquare || t.type === 'square' || (t.type === 'O' && (upperLabel === 'C' || upperLabel.startsWith('B') || upperLabel === 'G' || upperLabel === 'T' || upperLabel === 'TE' || upperLabel === 'LT' || upperLabel === 'RT' || upperLabel === 'LG' || upperLabel === 'RG'));
+      const isBallCarrier = upperLabel === 'RB' || upperLabel === 'TB' || upperLabel === 'FB' || upperLabel === 'HB' || upperLabel.includes('BALL') || upperLabel.includes('CARRIER') || upperSub.includes('CARRIER') || upperSub.includes('BALL') || upperSub.includes('RUNNER');
+      const isCoach = upperLabel === 'COACH' || upperLabel === 'COACH 1' || upperLabel === 'COACH 2' || upperSub.includes('COACH');
+      const isDef = t.type === 'X' || (!isSquare && !isBallCarrier && !isCoach && (
+        upperLabel === 'LB' || upperLabel === 'DL' || upperLabel === 'DE' || upperLabel === 'DB' ||
+        upperLabel === 'DT' || upperLabel === 'NT' || upperLabel === 'MLB' || upperLabel === 'WLB' ||
+        upperLabel === 'SLB' || upperLabel === 'MIKE' || upperLabel === 'WILL' || upperLabel === 'SAM' ||
+        upperLabel === 'FS' || upperLabel === 'SS' || upperLabel === 'CB' || upperLabel === 'ROV' ||
+        upperLabel === 'C1' || upperLabel === 'C2' || upperLabel === 'S' || upperLabel === 'N' ||
+        upperLabel === 'E' || upperLabel === 'TACKLE' || upperSub.includes('DEFENDER') || upperSub.includes('PEEK') ||
+        upperSub.includes('STRIKE') || upperSub.includes('LEAD') || upperSub.includes('SHED')
+      ));
 
+      // 1. Offense Blocker / Square Shield
       if (isSquare) {
+        const subW = t.subLabel ? Math.max(t.subLabel.length * 5.5 + 14, 30) : 0;
         return `
           <g transform="translate(${t.x}, ${t.y})">
-            <rect x="-14" y="-14" width="28" height="28" rx="2" fill="#ffffff" stroke="#1e293b" stroke-width="2.4" />
-            <text x="0" y="4.5" font-family="sans-serif" font-size="12" font-weight="900" text-anchor="middle" fill="#1e293b">${
-              t.label || 'C'
-            }</text>
+            <rect x="-18" y="-18" width="36" height="36" rx="4" fill="#f1f5f9" stroke="#0f172a" stroke-width="2.5" />
+            <text x="0" y="5" font-family="sans-serif" font-size="13" font-weight="900" fill="#0f172a" text-anchor="middle">${t.label || 'B'}</text>
             ${
               t.subLabel
                 ? `
-                <g transform="translate(0, 24)">
-                  <rect x="${-Math.max(t.subLabel.length * 5.5 + 10, 26) / 2}" y="-7" width="${Math.max(t.subLabel.length * 5.5 + 10, 26)}" height="14" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1" />
-                  <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" text-anchor="middle" fill="#0f172a">${t.subLabel}</text>
+                <g transform="translate(0, 27)">
+                  <rect x="${-subW / 2}" y="-7" width="${subW}" height="14" rx="4" fill="#ffffff" stroke="#64748b" stroke-width="1" />
+                  <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="#334155" text-anchor="middle">${t.subLabel}</text>
                 </g>
               `
                 : ''
@@ -327,70 +339,47 @@ export function generateDrillPrintHTML(drill: WhiteboardDrill, activePhaseIndex:
         `;
       }
 
-      if (isLetter) {
+      // 2. Ball Carrier (RB, TB, HB, FB with Football Graphic)
+      if (isBallCarrier) {
+        const subW = t.subLabel ? Math.max(t.subLabel.length * 5.5 + 14, 32) : 0;
         return `
           <g transform="translate(${t.x}, ${t.y})">
-            <circle cx="0" cy="0" r="14" fill="#ffffff" stroke="${t.color || '#0f172a'}" stroke-width="2.4" />
-            <text x="0" y="4.5" font-family="sans-serif" font-size="${
-              t.label.length > 2 ? '10' : '13'
-            }" font-weight="900" text-anchor="middle" fill="${t.color || '#0f172a'}">${t.label}</text>
+            <circle cx="0" cy="0" r="17" fill="#fee2e2" stroke="#dc2626" stroke-width="2.6" />
+            <text x="0" y="4.5" font-family="sans-serif" font-size="12" font-weight="900" fill="#dc2626" text-anchor="middle">${t.label || 'RB'}</text>
+            <!-- Football on hip -->
+            <ellipse cx="14" cy="4" rx="6.5" ry="4" fill="#8B4513" stroke="#ffffff" stroke-width="0.7" transform="rotate(25 14 4)" />
             ${
               t.subLabel
                 ? `
-                <g transform="translate(0, 24)">
-                  <rect x="${-Math.max(t.subLabel.length * 5.5 + 10, 26) / 2}" y="-7" width="${Math.max(t.subLabel.length * 5.5 + 10, 26)}" height="14" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1" />
-                  <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" text-anchor="middle" fill="#0f172a">${t.subLabel}</text>
+                <g transform="translate(0, 27)">
+                  <rect x="${-subW / 2}" y="-7" width="${subW}" height="14" rx="4" fill="#ffffff" stroke="#dc2626" stroke-width="1" />
+                  <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="#dc2626" text-anchor="middle">${t.subLabel}</text>
                 </g>
               `
-                : ''
-            }
-          </g>
-        `;
-      }
-
-      if (t.type === 'O') {
-        return `
-          <g transform="translate(${t.x}, ${t.y})">
-            <circle cx="0" cy="0" r="14" fill="#ffffff" stroke="${t.color || '#1e293b'}" stroke-width="2.4" />
-            ${
-              t.label.trim()
-                ? `<text x="0" y="4" font-family="sans-serif" font-size="10" font-weight="bold" text-anchor="middle" fill="${
-                    t.color || '#1e293b'
-                  }">${t.label}</text>`
-                : ''
-            }
-            ${
-              t.subLabel
-                ? `
-                <g transform="translate(0, 24)">
-                  <rect x="${-Math.max(t.subLabel.length * 5.5 + 10, 26) / 2}" y="-7" width="${Math.max(t.subLabel.length * 5.5 + 10, 26)}" height="14" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1" />
-                  <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" text-anchor="middle" fill="#0f172a">${t.subLabel}</text>
-                </g>
-              `
-                : ''
-            }
-          </g>
-        `;
-      }
-
-      if (t.type === 'X') {
-        return `
-          <g transform="translate(${t.x}, ${t.y})">
-            <circle cx="0" cy="0" r="14" fill="${t.color || '#2563eb'}" stroke="#0f172a" stroke-width="2" />
-            ${
-              t.label && t.label !== 'X'
-                ? `<text x="0" y="4" font-family="sans-serif" font-size="10" font-weight="900" text-anchor="middle" fill="#ffffff">${t.label}</text>`
                 : `
-                <line x1="-5" y1="-5" x2="5" y2="5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
-                <line x1="5" y1="-5" x2="-5" y2="5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+                <g transform="translate(0, 27)">
+                  <rect x="-38" y="-7" width="76" height="14" rx="4" fill="#ffffff" stroke="#dc2626" stroke-width="1" />
+                  <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="#dc2626" text-anchor="middle">Ball Carrier</text>
+                </g>
               `
             }
+          </g>
+        `;
+      }
+
+      // 3. Coach Token
+      if (isCoach) {
+        const subW = t.subLabel ? Math.max(t.subLabel.length * 5.5 + 14, 32) : 0;
+        return `
+          <g transform="translate(${t.x}, ${t.y})">
+            <circle cx="0" cy="0" r="18" fill="#faf5ff" stroke="#7e22ce" stroke-width="2.5" />
+            <text x="0" y="4.5" font-family="sans-serif" font-size="10" font-weight="900" fill="#7e22ce" text-anchor="middle">${t.label || 'COACH'}</text>
             ${
               t.subLabel
                 ? `
-                <g transform="translate(0, 24)">
-                  <rect x="${-Math.max(t.subLabel.length * 5.5 + 10, 26) / 2}" y="-7" width="${Math.max(t.subLabel.length * 5.5 + 10, 26)}" height="14" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1" />
-                  <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" text-anchor="middle" fill="#0f172a">${t.subLabel}</text>
+                <g transform="translate(0, 26)">
+                  <rect x="${-subW / 2}" y="-7" width="${subW}" height="14" rx="4" fill="#ffffff" stroke="#7e22ce" stroke-width="1.2" />
+                  <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="#7e22ce" text-anchor="middle">${t.subLabel}</text>
                 </g>
               `
                 : ''
@@ -399,55 +388,139 @@ export function generateDrillPrintHTML(drill: WhiteboardDrill, activePhaseIndex:
         `;
       }
 
-      if (t.type === 'bag') {
+      // 4. Defender Token with Athletic Stance Feet Underneath
+      if (isDef) {
+        const subW = t.subLabel ? Math.max(t.subLabel.length * 5.5 + 16, 32) : 0;
+        const color = t.color || '#1d4ed8';
         return `
           <g transform="translate(${t.x}, ${t.y})">
-            <rect x="-14" y="-24" width="28" height="48" rx="8" fill="#ef4444" stroke="#b91c1c" stroke-width="2" />
-            <text x="0" y="4" font-family="sans-serif" font-size="9" font-weight="bold" text-anchor="middle" fill="#ffffff">${t.label}</text>
+            <!-- Athletic Stance Cleats / Feet -->
+            <rect x="-17" y="-5" width="9" height="18" rx="3" fill="#93c5fd" stroke="${color}" stroke-width="1.4" />
+            <rect x="8" y="-3" width="9" height="18" rx="3" fill="${color}" stroke="${color}" stroke-width="1.4" />
+            <circle cx="0" cy="0" r="19" fill="#dbeafe" stroke="${color}" stroke-width="2.8" />
+            <text x="0" y="5" font-family="sans-serif" font-size="12" font-weight="900" fill="${color}" text-anchor="middle">${t.label || 'DEF'}</text>
+            ${
+              t.subLabel
+                ? `
+                <g transform="translate(0, 29)">
+                  <rect x="${-subW / 2}" y="-7" width="${subW}" height="14" rx="4" fill="#ffffff" stroke="${color}" stroke-width="1.2" />
+                  <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="#1e3a8a" text-anchor="middle">${t.subLabel}</text>
+                </g>
+              `
+                : ''
+            }
           </g>
         `;
       }
 
+      // 5. 3D Cones
       if (t.type === 'cone') {
+        const subW = t.subLabel ? Math.max(t.subLabel.length * 5.5 + 12, 26) : 0;
         return `
           <g transform="translate(${t.x}, ${t.y})">
-            <polygon points="0,-12 9,9 -9,9" fill="#f97316" stroke="#c2410c" stroke-width="1.8" />
-            <text x="12" y="4" font-family="sans-serif" font-size="9" font-weight="bold" fill="#c2410c">${t.label}</text>
+            <polygon points="0,-11 -9,7 9,7" fill="#ea580c" stroke="#c2410c" stroke-width="1.4" />
+            <ellipse cx="0" cy="7" rx="8" ry="2.5" fill="#c2410c" />
+            ${
+              t.label && t.label !== 'Cone'
+                ? `<text x="14" y="5" font-family="sans-serif" font-size="9" font-weight="bold" fill="#ea580c">${t.label}</text>`
+                : ''
+            }
+            ${
+              t.subLabel
+                ? `
+                <g transform="translate(0, 20)">
+                  <rect x="${-subW / 2}" y="-6" width="${subW}" height="12" rx="3" fill="#ffffff" stroke="#ea580c" stroke-width="1" />
+                  <text x="0" y="3" font-family="sans-serif" font-size="7.5" font-weight="bold" fill="#ea580c" text-anchor="middle">${t.subLabel}</text>
+                </g>
+              `
+                : ''
+            }
           </g>
         `;
       }
 
-      // Ball / Coach
+      // 6. Tackle Dummy / Bag
+      if (t.type === 'bag') {
+        const subW = t.subLabel ? Math.max(t.subLabel.length * 5.5 + 14, 28) : 0;
+        return `
+          <g transform="translate(${t.x}, ${t.y})">
+            <rect x="-16" y="-26" width="32" height="52" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="2.2" />
+            <circle cx="0" cy="-14" r="5" fill="#ffffff" opacity="0.8" />
+            <text x="0" y="5" font-family="sans-serif" font-size="10" font-weight="900" fill="#dc2626" text-anchor="middle">${t.label || 'BAG'}</text>
+            ${
+              t.subLabel
+                ? `
+                <g transform="translate(0, 32)">
+                  <rect x="${-subW / 2}" y="-7" width="${subW}" height="14" rx="4" fill="#ffffff" stroke="#dc2626" stroke-width="1" />
+                  <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="#dc2626" text-anchor="middle">${t.subLabel}</text>
+                </g>
+              `
+                : ''
+            }
+          </g>
+        `;
+      }
+
+      // 7. Football Token
+      if (t.type === 'ball') {
+        return `
+          <g transform="translate(${t.x}, ${t.y})">
+            <ellipse cx="0" cy="0" rx="14" ry="9" fill="#8B4513" stroke="#5c2d0c" stroke-width="1.5" transform="rotate(-20)" />
+            <line x1="-7" y1="0" x2="7" y2="0" stroke="#ffffff" stroke-width="1.8" transform="rotate(-20)" />
+            <line x1="-3" y1="-3" x2="-3" y2="3" stroke="#ffffff" stroke-width="1.2" transform="rotate(-20)" />
+            <line x1="0" y1="-3" x2="0" y2="3" stroke="#ffffff" stroke-width="1.2" transform="rotate(-20)" />
+            <line x1="3" y1="-3" x2="3" y2="3" stroke="#ffffff" stroke-width="1.2" transform="rotate(-20)" />
+          </g>
+        `;
+      }
+
+      // Default Clean Token with Sublabel Pill
+      const subW = t.subLabel ? Math.max(t.subLabel.length * 5.5 + 14, 28) : 0;
       return `
         <g transform="translate(${t.x}, ${t.y})">
-          <circle cx="0" cy="0" r="14" fill="#f8fafc" stroke="#1e293b" stroke-width="2" />
-          <text x="0" y="4" font-family="sans-serif" font-size="9" font-weight="bold" text-anchor="middle" fill="#1e293b">${t.label}</text>
+          <circle cx="0" cy="0" r="16" fill="#f8fafc" stroke="${t.color || '#0f172a'}" stroke-width="2.4" />
+          <text x="0" y="4.5" font-family="sans-serif" font-size="${t.label && t.label.length > 2 ? '10' : '12'}" font-weight="900" fill="${t.color || '#0f172a'}" text-anchor="middle">${t.label || ''}</text>
+          ${
+            t.subLabel
+              ? `
+              <g transform="translate(0, 26)">
+                <rect x="${-subW / 2}" y="-7" width="${subW}" height="14" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1" />
+                <text x="0" y="3.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="#334155" text-anchor="middle">${t.subLabel}</text>
+              </g>
+            `
+              : ''
+          }
         </g>
       `;
     })
     .join('');
 
-  // Diagram Inset Coaching Card (Only rendered if specifically defined for scheme)
-  const insetSvg =
-    drill.diagramKeys && drill.diagramKeys.length > 0
-      ? `
-    <g transform="translate(40, 370)">
-      <rect x="0" y="0" width="240" height="${Math.min(drill.diagramKeys.length * 20 + 16, 92)}" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
-      ${drill.diagramKeys
-        .slice(0, 4)
+  // Diagram Inset Coaching Card (styled identically to Triangle drill coaching reel keys)
+  const coachingKeys = drill.diagramKeys && drill.diagramKeys.length > 0
+    ? drill.diagramKeys
+    : (drill.cues || []).slice(0, 3).map((cue) => ({ text: cue, isHighlight: false }));
+
+  const insetSvg = coachingKeys.length > 0
+    ? `
+    <g transform="translate(35, 365)">
+      <rect x="0" y="0" width="265" height="${Math.min(coachingKeys.length * 20 + 28, 96)}" rx="6" fill="#ffffff" fill-opacity="0.97" stroke="#94a3b8" stroke-width="1.5" />
+      <rect x="0" y="0" width="265" height="20" rx="6" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" />
+      <text x="10" y="14" font-family="sans-serif" font-size="9" font-weight="900" fill="#1e293b" letter-spacing="0.5">COACHING FOCUS & KEYS</text>
+      ${coachingKeys
+        .slice(0, 3)
         .map(
           (k, i) => `
-        <text x="12" y="${20 + i * 19}" font-family="sans-serif" font-size="9" font-weight="${
-            k.isHighlight ? '900' : '600'
-          }" fill="${k.isHighlight ? '#b91c1c' : '#1e293b'}">
-          • ${k.text}
+        <text x="12" y="${36 + i * 19}" font-family="sans-serif" font-size="8.5" font-weight="${
+            k.isHighlight ? '900' : '700'
+          }" fill="${k.isHighlight ? '#b91c1c' : '#334155'}">
+          • ${k.text.length > 36 ? k.text.substring(0, 35) + '…' : k.text}
         </text>
       `
         )
         .join('')}
     </g>
   `
-      : '';
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -743,7 +816,18 @@ export function generateDrillPrintHTML(drill: WhiteboardDrill, activePhaseIndex:
         <span>${isTriangleDrill ? '6 Personnel / 3 Cones' : `${currentPhase.tokens.length} Players / Markers`}</span>
       </div>
       ${
-        isTriangleDrill
+        !isDrillWhiteboardEnabled(drill.id)
+          ? `
+          <div style="height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 8px; margin: 8px 0; text-align: center; padding: 16px;">
+            <div style="font-size: 13px; font-weight: 900; color: #1e3a8a; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">
+              Diagram Omitted (Whiteboard Deselected for this Drill)
+            </div>
+            <div style="font-size: 10px; color: #64748b; max-width: 480px; line-height: 1.5;">
+              This drill is designated as text/instructions-only in your playbook settings. The complete coaching keys, cues, and execution progression are detailed below.
+            </div>
+          </div>
+          `
+          : isTriangleDrill
           ? generateTriangleDrillPrintSvg()
           : `
       <svg viewBox="0 0 700 500" class="diagram-svg" preserveAspectRatio="xMidYMid meet">

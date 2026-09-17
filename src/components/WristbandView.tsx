@@ -372,9 +372,9 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
   const lastEditTimeRef = useRef<number>(0);
   const lastEmittedWbJson = useRef<string>(safeJSONStringify(internalData));
 
-  // Synchronize internal state when prop changes from parent (only if not recently edited locally)
+  // Synchronize internal state when prop changes from parent (only if not actively typing/editing locally)
   useEffect(() => {
-    if (Date.now() - lastEditTimeRef.current < 15000) {
+    if (Date.now() - lastEditTimeRef.current < 5000) {
       return;
     }
     if (propWristbandData?.wristbands && propWristbandData.wristbands.length > 0) {
@@ -468,18 +468,20 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
 
   // Helper to commit changes to storage, internal state & parent
   const commitWristbandData = (updated: WristbandData) => {
-    lastEditTimeRef.current = Date.now();
-    lastEmittedWbJson.current = safeJSONStringify(updated);
-    setInternalData(updated);
-    safeJSONSet('footballWristbandData', updated);
+    const now = Date.now();
+    lastEditTimeRef.current = now;
+    const tagged: WristbandData = { ...updated, lastEdited: now };
+    lastEmittedWbJson.current = safeJSONStringify(tagged);
+    setInternalData(tagged);
+    safeJSONSet('footballWristbandData', tagged);
     if (onUpdateWristbandData) {
-      onUpdateWristbandData(updated);
+      onUpdateWristbandData(tagged);
     }
     // Automatically keep Call Sheet wristband tables & linked plays synchronized
     if (onUpdateCallSheetData) {
       const currentCs: CallSheetFullData =
         callSheetData || safeJSONParse<CallSheetFullData | null>('footballCallSheetData', null) || DEFAULT_CALL_SHEET_DATA;
-      const syncedCs = syncWristbandToCallSheet(updated, currentCs, playDatabase);
+      const syncedCs = syncWristbandToCallSheet(tagged, currentCs, playDatabase);
       safeJSONSet('footballCallSheetData', syncedCs);
       onUpdateCallSheetData(syncedCs);
     }

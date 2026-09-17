@@ -1878,6 +1878,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
               ? '#ffffff'
               : '#1d4ed8';
 
+            const upperLabel = (token.label || '').toUpperCase().trim();
+            const upperSub = (token.subLabel || '').toUpperCase().trim();
+            const isBallCarrier = upperLabel === 'RB' || upperLabel === 'TB' || upperLabel === 'FB' || upperLabel === 'HB' || upperLabel.includes('BALL') || upperLabel.includes('CARRIER') || upperSub.includes('CARRIER') || upperSub.includes('BALL');
+            const isDefenderStance = isDef && !token.type?.includes('ball') && token.type !== 'bag' && token.type !== 'cone';
+
             return (
               <React.Fragment key={token.id}>
                 {/* Movement Trail during Animation */}
@@ -2098,16 +2103,26 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                       </text>
                     </g>
                   ) : token.type === 'cone' ? (
-                    // Cone / Pylon
+                    // Cone / Pylon (Triangle Drill 3D style)
                     <g>
-                      <polygon points="0,-14 10,10 -10,10" fill="#f97316" stroke="#c2410c" strokeWidth="2" />
-                      <text x="14" y="4" fontFamily="'Space Grotesk', sans-serif" fontSize="11" fill="#c2410c" fontWeight="bold">
-                        {token.label}
-                      </text>
+                      <polygon points="0,-12 9,7 -9,7" fill="#ea580c" stroke="#c2410c" strokeWidth="1.5" />
+                      <ellipse cx="0" cy="7" rx="8" ry="2.5" fill="#c2410c" />
+                      {token.label && token.label !== 'Cone' && (
+                        <text x="13" y="4" fontFamily="'Space Grotesk', sans-serif" fontSize="10" fill="#ea580c" fontWeight="bold">
+                          {token.label}
+                        </text>
+                      )}
                     </g>
                   ) : (
                     // Circle Token (Default: Offense, Defense, Custom)
                     <g filter={isDef && !token.color && !isNoFill ? 'url(#wbDefenseShadow)' : 'url(#wbOffenseShadow)'}>
+                      {/* Athletic Stance Cleats / Feet for Defender (Triangle Drill style) */}
+                      {isDefenderStance && (
+                        <g className="pointer-events-none select-none" opacity="0.95">
+                          <rect x="-16" y="-4" width="8" height="17" rx="3" fill="#93c5fd" stroke="#1d4ed8" strokeWidth="1.2" />
+                          <rect x="8" y="-2" width="8" height="17" rx="3" fill="#1d4ed8" stroke="#1d4ed8" strokeWidth="1.2" />
+                        </g>
+                      )}
                       <circle
                         cx="0"
                         cy="0"
@@ -2128,6 +2143,10 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                           strokeWidth="0.8"
                           strokeOpacity="0.6"
                         />
+                      )}
+                      {/* Football on hip for Ball Carrier (Triangle Drill style) */}
+                      {isBallCarrier && (
+                        <ellipse cx="13" cy="4" rx="6" ry="3.8" fill="#8B4513" stroke="#ffffff" strokeWidth="0.8" transform="rotate(25 13 4)" />
                       )}
                       {token.label && token.label.trim() && token.label !== 'O' ? (
                         <text
@@ -2162,36 +2181,36 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                     </g>
                   )}
 
-                  {/* SubLabel pill badge */}
+                  {/* SubLabel pill badge matching Triangle Drill */}
                   {showLabels && token.subLabel && (
                   <g transform="translate(0, 27)" className="pointer-events-none select-none">
                     <rect
-                      x={-(token.subLabel.length * 3.5 + 8)}
-                      y="-8"
-                      width={token.subLabel.length * 7 + 16}
-                      height="16"
-                      rx="5"
+                      x={-Math.max(token.subLabel.length * 4.2 + 10, 28) / 2}
+                      y="-7"
+                      width={Math.max(token.subLabel.length * 4.2 + 10, 28)}
+                      height="14"
+                      rx="4"
                       fill="#ffffff"
-                      stroke="#cbd5e1"
-                      strokeWidth="1.2"
-                      filter="drop-shadow(0 1px 2px rgba(0,0,0,0.15))"
+                      fillOpacity="0.96"
+                      stroke={isDef ? '#1d4ed8' : '#64748b'}
+                      strokeWidth="1"
                     />
                     <text
                       x="0"
                       y="3.5"
                       fontFamily="'Space Grotesk', sans-serif"
-                      fontSize="9"
-                      fontWeight="800"
+                      fontSize="8"
+                      fontWeight="700"
                       textAnchor="middle"
-                      fill="#0f172a"
+                      fill={isDef ? '#1e3a8a' : '#334155'}
                     >
                       {token.subLabel}
                     </text>
                   </g>
-                )}
-              </g>
-            </React.Fragment>
-          );
+                  )}
+                </g>
+              </React.Fragment>
+            );
         })}
         </g>
 

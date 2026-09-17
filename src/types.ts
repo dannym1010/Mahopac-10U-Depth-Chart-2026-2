@@ -313,6 +313,7 @@ export interface WristbandData {
   copiesPerPage?: number;
   activeWristbandId?: string;
   wristbands?: SingleWristband[];
+  lastEdited?: number;
 }
 
 export interface CoachScoutingNote {

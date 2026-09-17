@@ -1606,6 +1606,43 @@ export function saveDeletedWhiteboardDrillIds(ids: string[]): void {
   safeJSONSet(WHITEBOARD_DELETED_DRILLS_KEY, ids);
 }
 
+export const WHITEBOARD_DISABLED_DRILLS_KEY = 'mahopac_disabled_whiteboard_drill_ids_v1';
+
+export function getDisabledWhiteboardDrillIds(): string[] {
+  return safeJSONParse<string[]>(WHITEBOARD_DISABLED_DRILLS_KEY, []);
+}
+
+export function saveDisabledWhiteboardDrillIds(ids: string[]): void {
+  safeJSONSet(WHITEBOARD_DISABLED_DRILLS_KEY, ids);
+}
+
+export function isDrillWhiteboardEnabled(drillId: string): boolean {
+  const disabled = new Set(getDisabledWhiteboardDrillIds());
+  return !disabled.has(drillId);
+}
+
+export function setDrillWhiteboardEnabled(drillId: string, enabled: boolean): void {
+  const current = new Set(getDisabledWhiteboardDrillIds());
+  if (enabled) {
+    current.delete(drillId);
+  } else {
+    current.add(drillId);
+  }
+  saveDisabledWhiteboardDrillIds(Array.from(current));
+}
+
+export function toggleDrillWhiteboard(drillId: string): boolean {
+  const current = new Set(getDisabledWhiteboardDrillIds());
+  const willBeEnabled = current.has(drillId);
+  if (willBeEnabled) {
+    current.delete(drillId);
+  } else {
+    current.add(drillId);
+  }
+  saveDisabledWhiteboardDrillIds(Array.from(current));
+  return willBeEnabled;
+}
+
 export function loadEffectiveWhiteboardDrills(): WhiteboardDrill[] {
   const custom = getCustomWhiteboardDrills();
   const deletedIds = new Set(getDeletedWhiteboardDrillIds());

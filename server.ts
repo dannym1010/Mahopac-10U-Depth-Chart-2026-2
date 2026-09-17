@@ -431,7 +431,7 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
         depthChart: mergedDC,
         scrimmageChart: mergedSC,
         opponent: incWeekState.opponent || curWeekState.opponent || '',
-        wristbandData: incWeekState.wristbandData || curWeekState.wristbandData,
+        wristbandData: incWeekState.wristbandData || incoming.wristbandData || curWeekState.wristbandData,
         scouting: incWeekState.scouting || curWeekState.scouting,
       };
     }
@@ -577,12 +577,22 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
   if (Array.isArray(incoming.staffList)) {
     const staffMap = new Map<string, any>();
     (current.staffList || []).forEach((s: any) => {
-      const key = s.email || s.id;
+      const key = (s.email || s.id || '').toLowerCase().trim();
       if (key) staffMap.set(key, s);
     });
     incoming.staffList.forEach((s: any) => {
-      const key = s.email || s.id;
-      if (key) staffMap.set(key, s);
+      const key = (s.email || s.id || '').toLowerCase().trim();
+      if (key) {
+        const existing = staffMap.get(key);
+        staffMap.set(key, {
+          ...existing,
+          ...s,
+          idleTimeoutMinutes:
+            typeof s.idleTimeoutMinutes === 'number'
+              ? s.idleTimeoutMinutes
+              : (typeof existing?.idleTimeoutMinutes === 'number' ? existing.idleTimeoutMinutes : 30),
+        });
+      }
     });
     merged.staffList = Array.from(staffMap.values());
   }
@@ -732,6 +742,38 @@ function mergeServerState(current: any, incoming: any, metadata?: any): any {
         merged.callSheetData.defenseScript = purgePlays(merged.callSheetData.defenseScript);
       }
     }
+  }
+
+  // 7. Merge Wristband Data
+  if (
+    incoming.wristbandData &&
+    typeof incoming.wristbandData === 'object' &&
+    Array.isArray(incoming.wristbandData.wristbands) &&
+    incoming.wristbandData.wristbands.length > 0
+  ) {
+    const incLastEdited = Number(incoming.wristbandData.lastEdited) || 0;
+    const curLastEdited = Number(current.wristbandData?.lastEdited) || 0;
+    const isWbScope =
+      metadata?.scope === 'wristband' ||
+      metadata?.scope === 'wristband_update' ||
+      metadata?.scope === 'all' ||
+      metadata?.scope === 'force' ||
+      metadata?.scope === 'import_backup' ||
+      metadata?.activeUnit === 'wristband' ||
+      metadata?.activeUnit === 'game_day';
+
+    if (!current.wristbandData || incLastEdited >= curLastEdited || isWbScope) {
+      merged.wristbandData = incoming.wristbandData;
+    }
+  } else if (!merged.wristbandData && current.wristbandData) {
+    merged.wristbandData = current.wristbandData;
+  }
+
+  // 8. Global Idle Timeout & Staff Preferences
+  if (typeof incoming.globalIdleTimeoutMinutes === 'number') {
+    merged.globalIdleTimeoutMinutes = incoming.globalIdleTimeoutMinutes;
+  } else if (typeof current.globalIdleTimeoutMinutes === 'number') {
+    merged.globalIdleTimeoutMinutes = current.globalIdleTimeoutMinutes;
   }
 
   return merged;

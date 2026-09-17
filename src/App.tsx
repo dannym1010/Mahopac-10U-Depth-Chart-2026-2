@@ -804,6 +804,7 @@ export default function App() {
     typeof window !== 'undefined' ? safeJSONParse('footballLastLocalEditTime', 0) : 0
   );
   const lastLocalCallSheetEditTimeRef = useRef<number>(0);
+  const lastLocalWristbandEditTimeRef = useRef<number>(0);
   const activeUnitRef = useRef<string>(activeUnit);
   const activeTeamIdRef = useRef<string>(activeTeamId);
   const currentWeekRef = useRef<string>(currentWeek);
@@ -857,6 +858,7 @@ export default function App() {
     playDatabase,
     callSheetData,
     wristbandData,
+    globalIdleTimeoutMinutes: 30,
     deletedPlayIds,
     deletedFormationIds,
     deletedPracticePlanIds,
@@ -885,6 +887,7 @@ export default function App() {
       playDatabase,
       callSheetData,
       wristbandData,
+      globalIdleTimeoutMinutes: safeJSONParse('footballGlobalIdleTimeoutMinutes', 30),
       deletedPlayIds,
       deletedFormationIds,
       deletedPracticePlanIds,
@@ -1531,9 +1534,14 @@ function mergeRemoteWeeklyData(
     const remoteHasWristbandPlays = remoteState.wristbandData?.wristbands?.some((wb: any) =>
       wb?.columns?.some((c: any) => c?.plays?.some((p: any) => p && p.text && p.text.trim()))
     );
+    const localWbLastEdited = Number(localState.wristbandData?.lastEdited) || 0;
+    const remoteWbLastEdited = Number(remoteState.wristbandData?.lastEdited) || 0;
+
     let safeWristbandData = remoteState.wristbandData;
-    if (localHasWristbandPlays && !remoteHasWristbandPlays) {
+    if (localHasWristbandPlays && !remoteHasWristbandPlays && remoteWbLastEdited <= localWbLastEdited) {
       safeWristbandData = localState.wristbandData;
+    } else if (remoteWbLastEdited >= localWbLastEdited && remoteState.wristbandData) {
+      safeWristbandData = remoteState.wristbandData;
     } else {
       safeWristbandData = remoteState.wristbandData || localState.wristbandData;
     }
@@ -1823,9 +1831,24 @@ function mergeRemoteWeeklyData(
       localStorage.setItem('footballAdminCustomPasscode', data.adminPasscode);
     }
     if (data.staffList && Array.isArray(data.staffList)) {
-      setStaffList(data.staffList);
-      latestStateRef.current.staffList = data.staffList;
-      safeJSONSet('footballTeamCoaches', data.staffList);
+      setStaffList((prevStaff) => {
+        const prevMap = new Map(prevStaff.map((p) => [((p as any).email || (p as any).id || '').toLowerCase().trim(), p]));
+        const mergedStaff: StaffCoach[] = data.staffList.map((remoteCoach: StaffCoach) => {
+          const key = ((remoteCoach as any).email || (remoteCoach as any).id || '').toLowerCase().trim();
+          const localCoach = prevMap.get(key);
+          return {
+            ...localCoach,
+            ...remoteCoach,
+            idleTimeoutMinutes:
+              typeof remoteCoach.idleTimeoutMinutes === 'number'
+                ? remoteCoach.idleTimeoutMinutes
+                : (typeof localCoach?.idleTimeoutMinutes === 'number' ? localCoach.idleTimeoutMinutes : 30),
+          };
+        });
+        latestStateRef.current.staffList = mergedStaff;
+        safeJSONSet('footballTeamCoaches', mergedStaff);
+        return mergedStaff;
+      });
 
       // Real-time access check for current user
       if (currentUser?.email && !currentUser?.isAdminPasscodeAuth) {
@@ -1922,14 +1945,21 @@ function mergeRemoteWeeklyData(
       Array.isArray(data.wristbandData.wristbands) &&
       data.wristbandData.wristbands.length > 0
     ) {
-      if (Date.now() - lastLocalEditTimeRef.current < 15000 && activeUnitRef.current === 'wristband') {
-        // Coach is actively editing wristbands locally, do not overwrite with remote pulse
-      } else {
-        const normWb = normalizeWristbandContinuousNumbering(data.wristbandData);
+      const isActivelyEditingWristband =
+        Date.now() - lastLocalWristbandEditTimeRef.current < 5000 &&
+        (activeUnitRef.current === 'wristband' || activeUnitRef.current === 'game_day');
+      if (!isActivelyEditingWristband) {
+        const normWb = normalizeWristbandContinuousNumbering(
+          data.wristbandData,
+          currentActiveTeam?.name || 'Mahopac 10U'
+        );
         setWristbandData(normWb);
         latestStateRef.current.wristbandData = normWb;
         safeJSONSet('footballWristbandData', normWb);
       }
+    }
+    if (typeof data.globalIdleTimeoutMinutes === 'number') {
+      safeJSONSet('footballGlobalIdleTimeoutMinutes', data.globalIdleTimeoutMinutes);
     }
     if (data.deletedPlayIds && Array.isArray(data.deletedPlayIds)) {
       setDeletedPlayIds(data.deletedPlayIds);
@@ -2033,6 +2063,7 @@ function mergeRemoteWeeklyData(
       playDatabase: currentState.playDatabase,
       callSheetData: currentState.callSheetData,
       wristbandData: currentState.wristbandData,
+      globalIdleTimeoutMinutes: getActiveUserIdleTimeoutMinutes(),
       deletedPlayIds: currentState.deletedPlayIds,
       collapsedFolders: currentState.collapsedFolders,
       scheduleEvents: currentState.scheduleEvents,
@@ -2048,6 +2079,9 @@ function mergeRemoteWeeklyData(
       scope.startsWith('player_') ||
       scope.startsWith('formation_') ||
       scope.startsWith('practice') ||
+      scope.startsWith('wristband') ||
+      scope.startsWith('idle_timeout') ||
+      scope.startsWith('staff_pref') ||
       scope === 'delete_formation' ||
       scope === 'move_formation' ||
       scope === 'copy_week' ||
@@ -2134,15 +2168,15 @@ function mergeRemoteWeeklyData(
     await saveStateToStorage(scope, extraMeta);
   };
 
-  const debouncedSave = (scope: string = 'all') => {
+  const debouncedSave = (scope: string = 'all', extraMeta?: Record<string, any>) => {
     if (isRemoteSyncRef.current) {
       return;
     }
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
       saveTimeoutRef.current = null;
-      saveStateToStorage(scope);
-    }, 600);
+      saveStateToStorage(scope, extraMeta);
+    }, 400);
   };
 
   const handleForceSave = async () => {
@@ -2409,7 +2443,7 @@ function mergeRemoteWeeklyData(
   const getActiveUserIdleTimeoutMinutes = useCallback((): number => {
     const cleanEmail = (currentUser?.email || '').toLowerCase().trim();
     if (!cleanEmail) {
-      return safeJSONParse<number>('footballGlobalIdleTimeoutMinutes', 10);
+      return safeJSONParse<number>('footballGlobalIdleTimeoutMinutes', 30);
     }
     const userStored = safeJSONParse<number | null>(
       'footballIdleTimeoutMinutes_' + cleanEmail,
@@ -2424,15 +2458,22 @@ function mergeRemoteWeeklyData(
     if (typeof coach?.idleTimeoutMinutes === 'number') {
       return coach.idleTimeoutMinutes;
     }
-    return safeJSONParse<number>('footballGlobalIdleTimeoutMinutes', 10);
+    return safeJSONParse<number>('footballGlobalIdleTimeoutMinutes', 30);
   }, [currentUser?.email, staffList]);
 
   const handleUpdateActiveUserIdleTimeout = useCallback(
-    (minutes: number) => {
+    async (minutes: number) => {
       const cleanEmail = (currentUser?.email || '').toLowerCase().trim();
       safeJSONSet('footballGlobalIdleTimeoutMinutes', minutes);
+      latestStateRef.current.globalIdleTimeoutMinutes = minutes;
       if (cleanEmail) {
         safeJSONSet('footballIdleTimeoutMinutes_' + cleanEmail, minutes);
+        const currentPref = safeJSONParse('footballUserPref_' + cleanEmail, {});
+        safeJSONSet('footballUserPref_' + cleanEmail, {
+          ...currentPref,
+          idleTimeoutMinutes: minutes,
+        });
+
         const coachIdx = staffList.findIndex(
           (c) => c.email.toLowerCase().trim() === cleanEmail
         );
@@ -2443,7 +2484,31 @@ function mergeRemoteWeeklyData(
             staffList[coachIdx].startScreen,
             minutes
           );
+        } else {
+          // Sync directly to cloud and server
+          const { db } = getFirebaseServices();
+          if (db) {
+            db.collection('teamData')
+              .doc('depthChartData')
+              .set({ globalIdleTimeoutMinutes: minutes, updatedAt: Date.now() }, { merge: true })
+              .catch(() => {});
+          }
+          await flushAndSaveStateToStorage('idle_timeout_update', {
+            idleTimeoutMinutes: minutes,
+            userEmail: cleanEmail,
+          });
         }
+      } else {
+        const { db } = getFirebaseServices();
+        if (db) {
+          db.collection('teamData')
+            .doc('depthChartData')
+            .set({ globalIdleTimeoutMinutes: minutes, updatedAt: Date.now() }, { merge: true })
+            .catch(() => {});
+        }
+        await flushAndSaveStateToStorage('idle_timeout_update', {
+          idleTimeoutMinutes: minutes,
+        });
       }
     },
     [currentUser?.email, staffList]
@@ -2662,7 +2727,9 @@ function mergeRemoteWeeklyData(
     const targetIdleTimeout =
       typeof savedUserPref?.idleTimeoutMinutes === 'number'
         ? savedUserPref.idleTimeoutMinutes
-        : (typeof coachEntry?.idleTimeoutMinutes === 'number' ? coachEntry.idleTimeoutMinutes : null);
+        : (typeof coachEntry?.idleTimeoutMinutes === 'number'
+            ? coachEntry.idleTimeoutMinutes
+            : safeJSONParse<number>('footballGlobalIdleTimeoutMinutes', 30));
 
     if (typeof targetIdleTimeout === 'number') {
       safeJSONSet('footballIdleTimeoutMinutes_' + cleanEmail, targetIdleTimeout);
@@ -3380,14 +3447,26 @@ function mergeRemoteWeeklyData(
     if (db) {
       db.collection('teamData')
         .doc('depthChartData')
-        .set({ staffList: updated, updatedAt: Date.now() }, { merge: true })
+        .set({
+          staffList: updated,
+          ...(typeof idleTimeoutMinutes === 'number' ? { globalIdleTimeoutMinutes: idleTimeoutMinutes } : {}),
+          updatedAt: Date.now()
+        }, { merge: true })
         .catch((err: any) => console.warn('Firestore staff pref update sync error:', err));
     }
 
-    saveServerState(latestStateRef.current, currentUser?.email || 'Admin', {
-      scope: 'staff_pref_update',
-      timestamp: Date.now(),
-    }).catch(() => {});
+    saveServerState(
+      {
+        ...latestStateRef.current,
+        staffList: updated,
+        ...(typeof idleTimeoutMinutes === 'number' ? { globalIdleTimeoutMinutes: idleTimeoutMinutes } : {}),
+      },
+      currentUser?.email || 'Admin',
+      {
+        scope: 'staff_pref_update',
+        timestamp: Date.now(),
+      }
+    ).catch(() => {});
   };
 
   const handleAddStaffCoach = (
@@ -3396,7 +3475,7 @@ function mergeRemoteWeeklyData(
     assignedTeamIds: string[] = [activeTeamId],
     favoriteTeamId: string = activeTeamId || 'team_10u',
     startScreen: UnitType = 'schedule',
-    idleTimeoutMinutes: number = 10
+    idleTimeoutMinutes: number = 30
   ) => {
     const cleanEmail = email.toLowerCase().trim();
     if (staffList.some((c) => c.email.toLowerCase().trim() === cleanEmail)) {
@@ -7284,10 +7363,13 @@ function mergeRemoteWeeklyData(
   };
 
   const handleUpdateWristbandData = (updatedWb: WristbandData) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setWristbandData(updatedWb);
-    latestStateRef.current.wristbandData = updatedWb;
-    safeJSONSet('footballWristbandData', updatedWb);
+    const now = Date.now();
+    lastLocalWristbandEditTimeRef.current = now;
+    lastLocalEditTimeRef.current = now;
+    const taggedWb: WristbandData = { ...updatedWb, lastEdited: now };
+    setWristbandData(taggedWb);
+    latestStateRef.current.wristbandData = taggedWb;
+    safeJSONSet('footballWristbandData', taggedWb);
     const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
     setWeeklyData((prev) => {
       const existingWeek = prev[scopedKey] || prev[currentWeek] || {
@@ -7298,7 +7380,7 @@ function mergeRemoteWeeklyData(
       };
       const updatedWeek = {
         ...existingWeek,
-        wristbandData: updatedWb,
+        wristbandData: taggedWb,
       };
       const nextWeekly = {
         ...prev,
@@ -7310,21 +7392,19 @@ function mergeRemoteWeeklyData(
       return nextWeekly;
     });
 
-    const now = Date.now();
-    lastLocalEditTimeRef.current = now;
     lastLocalCallSheetEditTimeRef.current = now;
 
     // Automatically synchronize call sheet tables whenever wristband is updated
     const currentCs = latestStateRef.current.callSheetData || callSheetData;
     const currentDb = latestStateRef.current.playDatabase || playDatabase;
-    const syncedCs = syncWristbandToCallSheet(updatedWb, currentCs, currentDb);
+    const syncedCs = syncWristbandToCallSheet(taggedWb, currentCs, currentDb);
     const taggedCs: CallSheetFullData = { ...syncedCs, lastEdited: now };
     setCallSheetData(taggedCs);
     latestStateRef.current.callSheetData = taggedCs;
     safeJSONSet('footballCallSheetData', taggedCs);
     safeJSONSet('footballCallSheetData_backup', taggedCs);
 
-    debouncedSave('all');
+    debouncedSave('wristband_update', { activeUnit: 'wristband' });
   };
 
   const handleUpdateCallSheetData = (newCs: CallSheetFullData) => {

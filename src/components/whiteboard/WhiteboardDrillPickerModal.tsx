@@ -8,6 +8,7 @@ import {
   Shield,
   Layers,
   Sparkles,
+  PenTool,
 } from 'lucide-react';
 import {
   WhiteboardDrill,
@@ -24,6 +25,8 @@ interface WhiteboardDrillPickerModalProps {
   onSelectCategory: (cat: 'ALL' | DefensivePositionCategory) => void;
   onSelectDrill: (drillId: string) => void;
   onNavigateToDrills?: () => void;
+  disabledDrillIds?: string[];
+  onToggleDrillWhiteboard?: (drillId: string) => void;
 }
 
 export const WhiteboardDrillPickerModal: React.FC<WhiteboardDrillPickerModalProps> = ({
@@ -35,12 +38,15 @@ export const WhiteboardDrillPickerModal: React.FC<WhiteboardDrillPickerModalProp
   onSelectCategory,
   onSelectDrill,
   onNavigateToDrills,
+  disabledDrillIds = [],
+  onToggleDrillWhiteboard,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [libraryMode, setLibraryMode] = useState<'schemes' | 'drills' | 'all'>(() => {
     return selectedCategory === 'SCHEME' ? 'schemes' : 'all';
   });
   const [schemeFilter, setSchemeFilter] = useState<'all' | 'base' | 'blitz' | 'stunt' | 'heavy'>('all');
+  const [whiteboardStatusFilter, setWhiteboardStatusFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
 
   const isSchemePlay = (d: WhiteboardDrill) =>
     d.category === 'SCHEME' ||
@@ -53,9 +59,15 @@ export const WhiteboardDrillPickerModal: React.FC<WhiteboardDrillPickerModalProp
   const schemeCount = useMemo(() => drills.filter(isSchemePlay).length, [drills]);
   const drillCount = useMemo(() => drills.filter((d) => !isSchemePlay(d)).length, [drills]);
 
-  // Filtered drills based on mode, category & search
+  const isDrillEnabled = (id: string) => !disabledDrillIds.includes(id);
+
+  // Filtered drills based on mode, category, search & whiteboard status
   const filteredDrills = useMemo(() => {
     return drills.filter((drill) => {
+      // Whiteboard Status Filter
+      if (whiteboardStatusFilter === 'enabled' && !isDrillEnabled(drill.id)) return false;
+      if (whiteboardStatusFilter === 'disabled' && isDrillEnabled(drill.id)) return false;
+
       const isScheme = isSchemePlay(drill);
 
       // Primary Library Mode Filter
@@ -107,7 +119,7 @@ export const WhiteboardDrillPickerModal: React.FC<WhiteboardDrillPickerModalProp
         (drill.cues && drill.cues.some((c) => c.toLowerCase().includes(q)))
       );
     });
-  }, [drills, libraryMode, schemeFilter, selectedCategory, searchTerm]);
+  }, [drills, libraryMode, schemeFilter, selectedCategory, searchTerm, whiteboardStatusFilter, disabledDrillIds]);
 
   // Count by category
   const categoryCounts = useMemo(() => {
@@ -330,6 +342,49 @@ export const WhiteboardDrillPickerModal: React.FC<WhiteboardDrillPickerModalProp
           )}
         </div>
 
+        {/* Whiteboard Availability Filter Bar */}
+        <div className="px-3 py-1.5 border-b border-slate-800 bg-slate-950 flex items-center justify-between text-[11px] gap-2 shrink-0">
+          <span className="text-slate-400 font-bold flex items-center gap-1.5">
+            <PenTool className="w-3.5 h-3.5 text-blue-400" />
+            <span>Whiteboard Diagram:</span>
+          </span>
+          <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800">
+            <button
+              type="button"
+              onClick={() => setWhiteboardStatusFilter('all')}
+              className={`px-2 py-0.5 rounded-md font-bold text-[10.5px] transition-all cursor-pointer ${
+                whiteboardStatusFilter === 'all'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              All ({drills.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setWhiteboardStatusFilter('enabled')}
+              className={`px-2 py-0.5 rounded-md font-bold text-[10.5px] transition-all cursor-pointer ${
+                whiteboardStatusFilter === 'enabled'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Active ({drills.filter((d) => isDrillEnabled(d.id)).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setWhiteboardStatusFilter('disabled')}
+              className={`px-2 py-0.5 rounded-md font-bold text-[10.5px] transition-all cursor-pointer ${
+                whiteboardStatusFilter === 'disabled'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Deselected ({drills.filter((d) => !isDrillEnabled(d.id)).length})
+            </button>
+          </div>
+        </div>
+
         {/* Drill List */}
         <div className="flex-1 overflow-y-auto p-3 space-y-1.5 divide-y divide-slate-800/40">
           {filteredDrills.length > 0 ? (
@@ -394,7 +449,29 @@ export const WhiteboardDrillPickerModal: React.FC<WhiteboardDrillPickerModalProp
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 shrink-0 mt-1">
+                  <div className="flex items-center gap-2 shrink-0 mt-1">
+                    {onToggleDrillWhiteboard && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleDrillWhiteboard(drill.id);
+                        }}
+                        title={
+                          isDrillEnabled(drill.id)
+                            ? `Whiteboard enabled for "${drill.title}". Click to deselect.`
+                            : `Whiteboard deselected for "${drill.title}". Click to enable.`
+                        }
+                        className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all border flex items-center gap-1 cursor-pointer ${
+                          isDrillEnabled(drill.id)
+                            ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25'
+                            : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200 hover:bg-slate-750'
+                        }`}
+                      >
+                        <PenTool className="w-2.5 h-2.5" />
+                        <span>{isDrillEnabled(drill.id) ? 'Board ON' : 'No Board'}</span>
+                      </button>
+                    )}
                     {isActive ? (
                       <span className="p-1 rounded-full bg-blue-500 text-white">
                         <Check className="w-3.5 h-3.5" />
