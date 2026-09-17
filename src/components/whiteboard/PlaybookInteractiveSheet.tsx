@@ -363,11 +363,14 @@ export const PlaybookInteractiveSheet: React.FC<PlaybookInteractiveSheetProps> =
       )}
 
       {/* 3. WHITEBOARD DIAGRAM AREA */}
-      {!isEditMode && (drill.id === 'drill-lb-5' || drill.title === 'TRIANGLE BLOCK POP & DIRECTIONAL PEEK') ? (
+      {!isEditMode ? (
         <div className="w-full bg-slate-100/60 relative p-2 sm:p-4 lg:p-6 border-b border-slate-300 flex justify-center">
           <TriangleDrillWhiteboard
+            drill={drill}
+            activePhaseIdx={activePhaseIdx}
+            onPhaseChange={setActivePhaseIdx}
             onOpenCustomChalkboard={() => setIsEditMode(true)}
-            onPrint={() => printDrillSheet(drill, 0)}
+            onPrint={() => printDrillSheet(drill, activePhaseIdx)}
           />
         </div>
       ) : (

@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCw, ExternalLink, Video, Printer } from 'lucide-react';
+import { WhiteboardDrill } from './whiteboardDrillData';
+import { GenericAnimatedWhiteboard } from './GenericAnimatedWhiteboard';
 
-interface TriangleDrillWhiteboardProps {
+export interface TriangleDrillWhiteboardProps {
+  drill?: WhiteboardDrill;
+  activePhaseIdx?: number;
+  onPhaseChange?: (idx: number) => void;
   onOpenCustomChalkboard?: () => void;
   onPrint?: () => void;
 }
@@ -157,9 +162,26 @@ const getCoordinates = (direction: Direction, step: number): StepPositions => {
 };
 
 export const TriangleDrillWhiteboard: React.FC<TriangleDrillWhiteboardProps> = ({
+  drill,
+  activePhaseIdx,
+  onPhaseChange,
   onOpenCustomChalkboard,
   onPrint,
 }) => {
+  const isLbTriangleDrill = !drill || drill.id === 'drill-lb-5' || drill.title === 'TRIANGLE BLOCK POP & DIRECTIONAL PEEK';
+
+  if (!isLbTriangleDrill && drill) {
+    return (
+      <GenericAnimatedWhiteboard
+        drill={drill}
+        activePhaseIdx={activePhaseIdx}
+        onPhaseChange={onPhaseChange}
+        onOpenCustomChalkboard={onOpenCustomChalkboard}
+        onPrint={onPrint}
+      />
+    );
+  }
+
   const [currentDirection, setCurrentDirection] = useState<Direction>('left');
   const [isRunning, setIsRunning] = useState<boolean>(true);
   const [autoCycle, setAutoCycle] = useState<boolean>(true);

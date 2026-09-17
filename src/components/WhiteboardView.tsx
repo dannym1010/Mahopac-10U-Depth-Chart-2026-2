@@ -1536,8 +1536,11 @@ export const WhiteboardView: React.FC<WhiteboardViewProps> = ({
                 </button>
               </div>
             </div>
-          ) : !isCustomMode && (currentDrill.id === 'drill-lb-5' || currentDrill.title === 'TRIANGLE BLOCK POP & DIRECTIONAL PEEK') ? (
+          ) : !isCustomMode ? (
             <TriangleDrillWhiteboard
+              drill={currentDrill}
+              activePhaseIdx={activePhaseIdx}
+              onPhaseChange={setActivePhaseIdx}
               onOpenCustomChalkboard={() => setIsCustomMode(true)}
               onPrint={handlePrintWhiteboard}
             />
