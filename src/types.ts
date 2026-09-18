@@ -401,6 +401,8 @@ export interface LiveDrillGroup {
   customFormatLabel?: string;
   offenseLabel: string; // e.g., "1st Team Offense (Gold)"
   defenseLabel: string; // e.g., "1st Team Defense (Blue)"
+  offenseColor?: string; // e.g., 'gold' | 'blue' | 'red' | 'green' | 'black' | 'white' | 'orange' | 'purple' | 'navy'
+  defenseColor?: string; // e.g., 'blue' | 'gold' | 'red' | 'navy' | 'black' | 'white' | 'green'
   notes?: string;
   offensePositions: LiveDrillPosition[];
   defensePositions: LiveDrillPosition[];

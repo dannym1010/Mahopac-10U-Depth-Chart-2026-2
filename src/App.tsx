@@ -8325,6 +8325,7 @@ function mergeRemoteWeeklyData(
                 roster={activeTeamRoster}
                 userRole={userRole}
                 depthChart={currentDepthChart}
+                scrimmageChart={currentWeekState.scrimmageChart || {}}
                 formations={currentFormations}
                 activeTeam={currentActiveTeam}
                 onDragStartPlacedPlayer={handleDragStartPlacedPlayer}
