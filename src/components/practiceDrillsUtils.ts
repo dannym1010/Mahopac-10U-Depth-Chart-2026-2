@@ -166,6 +166,34 @@ export const TEAM_COLOR_OPTIONS: TeamColorConfig[] = [
     chipText: 'text-white font-black',
     printBorder: 'border-cyan-600',
   },
+  {
+    id: 'maroon',
+    label: 'Maroon / Crimson',
+    hex: '#881337',
+    badgeBg: 'bg-rose-900',
+    badgeText: 'text-white',
+    borderClass: 'border-rose-900 dark:border-rose-800',
+    bgLightClass: 'bg-rose-900/15 dark:bg-rose-900/25',
+    ringClass: 'ring-rose-800',
+    headerGrad: 'from-rose-950/30 to-rose-900/10',
+    chipBg: 'bg-rose-900',
+    chipText: 'text-white font-black',
+    printBorder: 'border-rose-900',
+  },
+  {
+    id: 'charcoal',
+    label: 'Charcoal / Steel',
+    hex: '#334155',
+    badgeBg: 'bg-slate-700',
+    badgeText: 'text-white',
+    borderClass: 'border-slate-600 dark:border-slate-500',
+    bgLightClass: 'bg-slate-700/15 dark:bg-slate-700/25',
+    ringClass: 'ring-slate-500',
+    headerGrad: 'from-slate-700/20 to-slate-700/5',
+    chipBg: 'bg-slate-700',
+    chipText: 'text-white font-black',
+    printBorder: 'border-slate-700',
+  },
 ];
 
 export const TEAM_COLOR_MAP: Record<string, TeamColorConfig> = TEAM_COLOR_OPTIONS.reduce(
@@ -177,50 +205,87 @@ export const TEAM_COLOR_MAP: Record<string, TeamColorConfig> = TEAM_COLOR_OPTION
 );
 
 export function getTeamColorConfig(colorId?: string, fallback: 'gold' | 'blue' = 'gold'): TeamColorConfig {
-  if (colorId && TEAM_COLOR_MAP[colorId]) {
+  if (!colorId) {
+    return TEAM_COLOR_MAP[fallback] || TEAM_COLOR_OPTIONS[0];
+  }
+
+  // Known preset
+  if (TEAM_COLOR_MAP[colorId]) {
     return TEAM_COLOR_MAP[colorId];
   }
+
+  // Support arbitrary custom HEX color codes (e.g. "#8b0000", "#ff6600")
+  if (colorId.startsWith('#') || /^[0-9a-fA-F]{6}$/.test(colorId)) {
+    const rawHex = colorId.startsWith('#') ? colorId : `#${colorId}`;
+    const cleanHex = rawHex.replace('#', '');
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    if (cleanHex.length === 6) {
+      r = parseInt(cleanHex.substring(0, 2), 16) || 0;
+      g = parseInt(cleanHex.substring(2, 4), 16) || 0;
+      b = parseInt(cleanHex.substring(4, 6), 16) || 0;
+    } else if (cleanHex.length === 3) {
+      r = parseInt(cleanHex[0] + cleanHex[0], 16) || 0;
+      g = parseInt(cleanHex[1] + cleanHex[1], 16) || 0;
+      b = parseInt(cleanHex[2] + cleanHex[2], 16) || 0;
+    }
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+    const isLight = yiq >= 150;
+
+    return {
+      id: rawHex,
+      label: rawHex.toUpperCase(),
+      hex: rawHex,
+      badgeBg: 'bg-slate-800',
+      badgeText: isLight ? 'text-slate-950 font-black' : 'text-white font-black',
+      borderClass: 'border-slate-300 dark:border-slate-650',
+      bgLightClass: 'bg-slate-100/60 dark:bg-slate-800/40',
+      ringClass: 'ring-slate-400',
+      headerGrad: 'from-slate-500/20 to-slate-500/5',
+      chipBg: 'bg-slate-800',
+      chipText: isLight ? 'text-slate-950 font-black' : 'text-white font-black',
+      printBorder: 'border-slate-800',
+    };
+  }
+
   return TEAM_COLOR_MAP[fallback] || TEAM_COLOR_OPTIONS[0];
 }
 
 // Preset color matchups
 export const COLOR_MATCHUP_PRESETS = [
-  { label: 'Gold vs Blue (Home Scrimmage)', offense: 'gold', defense: 'blue' },
-  { label: 'White vs Blue (Game Simulation)', offense: 'white', defense: 'blue' },
-  { label: 'Red vs White (Varsity vs Scout)', offense: 'red', defense: 'white' },
-  { label: 'Black vs Gold (Under the Lights)', offense: 'black', defense: 'gold' },
-  { label: 'Green vs White (Spring Game)', offense: 'green', defense: 'white' },
-  { label: 'Navy vs Orange (Bears / Broncos)', offense: 'navy', defense: 'orange' },
+  { label: 'Gold vs Blue', offense: 'gold', defense: 'blue' },
+  { label: 'White vs Blue', offense: 'white', defense: 'blue' },
+  { label: 'Red vs White', offense: 'red', defense: 'white' },
+  { label: 'Black vs Gold', offense: 'black', defense: 'gold' },
+  { label: 'Green vs White', offense: 'green', defense: 'white' },
+  { label: 'Navy vs Orange', offense: 'navy', defense: 'orange' },
 ];
 
 // ============================================================================
-// 2. QUICK GROUP LABELS PRESETS
+// 2. DEFAULT GROUP LABELS (Clean, customizable, no hardcoded colors)
 // ============================================================================
-export const OFFENSE_LABEL_PRESETS = [
-  '1st Team Offense (Gold)',
-  '2nd Team Offense (Blue)',
+export const DEFAULT_OFFENSE_LABELS: string[] = [
+  '1st Team Offense',
+  '2nd Team Offense',
   'Varsity Offense',
   'JV Offense',
-  'Scout Offense (Opponent Look)',
+  'Scout Offense',
   'Red Zone Offense',
-  '2-Minute Offense',
-  'Goal Line Offense',
-  'Heavy / Short Yardage',
-  'Empty / 5-Wide',
 ];
 
-export const DEFENSE_LABEL_PRESETS = [
-  '1st Team Defense (Blue)',
-  '2nd Team Defense (Gold)',
+export const DEFAULT_DEFENSE_LABELS: string[] = [
+  '1st Team Defense',
+  '2nd Team Defense',
   'Varsity Defense',
   'JV Defense',
-  'Scout Defense (Opponent Look)',
-  'Lockdown Defense',
+  'Scout Defense',
   'Goal Line Defense',
-  'Nickel Package (Passing Downs)',
-  'Dime Package',
-  'Prevent / 2-Minute Defense',
 ];
+
+// Backward-compatibility aliases
+export const OFFENSE_LABEL_PRESETS = DEFAULT_OFFENSE_LABELS;
+export const DEFENSE_LABEL_PRESETS = DEFAULT_DEFENSE_LABELS;
 
 // Suggested position buttons for adding slots
 export const SUGGESTED_OFFENSE_TAGS = [
@@ -367,8 +432,8 @@ export function createInitialPracticeDrillGroups(): LiveDrillGroup[] {
       id: `live_group_7v7_${Date.now()}`,
       name: 'Period 4: 7v7 Pass Skeleton',
       format: '7v7',
-      offenseLabel: '1st Team Offense (Gold)',
-      defenseLabel: '1st Team Defense (Blue)',
+      offenseLabel: '1st Team Offense',
+      defenseLabel: '1st Team Defense',
       offenseColor: 'gold',
       defenseColor: 'blue',
       notes: 'Focus on 3-step & 5-step pass drops. Defense in Cover 3 match.',
@@ -410,30 +475,37 @@ export function normalizePositionToken(str: string): string {
  */
 const POSITION_SYNONYMS: Record<string, string[]> = {
   qb: ['qb', '1', '1qb', 'quarterback', 'passer', 'grpqb', '211'],
-  rb: ['rb', 'hb', 'fb', '3hb', '2fb', '4rb', 'halfback', 'tailback', 'fullback', 'runningback', 'grprb', 'grpfb', '212', '213'],
-  fb: ['fb', '2fb', 'fullback', 'hback', 'grpfb', '212'],
-  wr_x: ['x', 'wrx', 'wr1', 'wideout1', 'splitend', 'grpx', '21x'],
-  wr_z: ['z', 'wrz', 'wr2', 'flanker', 'grpz', '21z'],
-  wr_w: ['w', 'slotw', 'slot', 'h', 'wr3', 'slot1', 'hslot', 'slot2'],
-  te_y: ['y', 'y1', 'y2', 'te', 'tey', 'tes', 'tightend', 'grptes', '21y1'],
-  lt: ['lt', 'lefttackle', 'ot1', 'ot', 't1', 'grplt', '21lt'],
-  lg: ['lg', 'leftguard', 'og1', 'og', 'g1', 'grplg', '21lg'],
-  c: ['c', 'center', 'grpc', '21c'],
-  rg: ['rg', 'rightguard', 'og2', 'og', 'g2', 'grprg', '21rg'],
-  rt: ['rt', 'righttackle', 'ot2', 'ot', 't2', 'grprt', '21rt'],
-  lde: ['lde', 'de1', 'wde', 'le', 'de', 'edge', 'defensiveend1', '53de1', '44wde'],
-  rde: ['rde', 'de2', 'sde', 're', 'de', 'edge', 'defensiveend2', '53de2', '44sde'],
-  ldt: ['ldt', 'dt1', 'dt', 'defensivetackle1', 'tackle1', '53dt1', '44dt1'],
-  rdt: ['rdt', 'dt2', 'nt', 'nosetackle', 'nose', 'dt', 'defensivetackle2', '53dt2', '44dt2'],
-  nt: ['nt', 'nose', 'nosetackle', 'dt1', 'dt2', '53nt'],
-  mlb: ['mlb', 'mike', 'middlelinebacker', 'ilb', 'lb1', 'grpmike', '53mike', '44mike'],
-  wlb: ['wlb', 'will', 'weaklinebacker', 'olb1', 'lb2', 'grpwill', '53will', '44will'],
-  slb: ['slb', 'sam', 'stronglinebacker', 'olb2', 'lb3', 'rover', 'grpsam', '53sam', '44sam', '44rover'],
-  cb1: ['cb1', 'cb', 'corner1', 'lcb', 'cornerback1', 'grpcb1', '53cb2', '44cb1'],
-  cb2: ['cb2', 'cb', 'corner2', 'rcb', 'cornerback2', 'grpcb2', '53cb1', '44cb2'],
-  fs: ['fs', 'freesafety', 'safety1', 'fsafety', 'grpfs', '53fs', '44fs', 'safety'],
-  ss: ['ss', 'strongsafety', 'rover', 'safety2', 'ssafety', 'grprover', '44rover', 'nickel', 'safety'],
-  nickel: ['nickel', 'nb', 'slotdb', 'db', 'rover', 'slb', 'ss', 'cb'],
+  rb: ['rb', 'hb', 'fb', '3hb', '2fb', '4rb', 'halfback', 'tailback', 'fullback', 'runningback', 'grprb', 'grpfb', '212', '213', 'back'],
+  fb: ['fb', '2fb', 'fullback', 'hback', 'grpfb', '212', 'rb'],
+  wr: ['wr', 'wideout', 'receiver', 'widereceiver', 'x', 'z', 'w', 'h', 'slot', 'wr1', 'wr2', 'wr3', 'wr4', 'wrx', 'wrz', 'splitend', 'flanker', 'wr(x)', 'wr(z)', 'slot(h)', 'slot(w)'],
+  wr_x: ['x', 'wrx', 'wr1', 'wr', 'wideout1', 'splitend', 'grpx', '21x', 'wideout', 'receiver', 'wr(x)'],
+  wr_z: ['z', 'wrz', 'wr2', 'wr', 'flanker', 'grpz', '21z', 'wideout', 'receiver', 'wr(z)'],
+  wr_w: ['w', 'slotw', 'slot', 'h', 'wr3', 'slot1', 'hslot', 'slot2', 'wr', 'wideout', 'receiver', 'slot(w)'],
+  te_y: ['y', 'y1', 'y2', 'te', 'tey', 'tes', 'tightend', 'grptes', '21y1', 'te(y)'],
+  lt: ['lt', 'lefttackle', 'ot1', 'ot', 't1', 'grplt', '21lt', 'ol', 'tackle', 't'],
+  lg: ['lg', 'leftguard', 'og1', 'og', 'g1', 'grplg', '21lg', 'ol', 'guard', 'g'],
+  c: ['c', 'center', 'grpc', '21c', 'ol'],
+  rg: ['rg', 'rightguard', 'og2', 'og', 'g2', 'grprg', '21rg', 'ol', 'guard', 'g'],
+  rt: ['rt', 'righttackle', 'ot2', 'ot', 't2', 'grprt', '21rt', 'ol', 'tackle', 't'],
+  ol: ['ol', 'ot', 'og', 'c', 'lt', 'lg', 'rg', 'rt', 'lineman', 'offensiveline', 'tackle', 'guard', 'center'],
+  lde: ['lde', 'de1', 'wde', 'le', 'de', 'edge', 'defensiveend1', '53de1', '44wde', 'dl', 'end'],
+  rde: ['rde', 'de2', 'sde', 're', 'de', 'edge', 'defensiveend2', '53de2', '44sde', 'dl', 'end'],
+  ldt: ['ldt', 'dt1', 'dt', 'defensivetackle1', 'tackle1', '53dt1', '44dt1', 'dl', 'nose', 'nt'],
+  rdt: ['rdt', 'dt2', 'nt', 'nosetackle', 'nose', 'dt', 'defensivetackle2', '53dt2', '44dt2', 'dl'],
+  nt: ['nt', 'nose', 'nosetackle', 'dt1', 'dt2', '53nt', 'dt', 'dl'],
+  dl: ['dl', 'de', 'dt', 'nt', 'lde', 'rde', 'ldt', 'rdt', 'edge', 'defensiveline', 'defensiveend', 'defensivetackle'],
+  mlb: ['mlb', 'mike', 'middlelinebacker', 'ilb', 'lb1', 'grpmike', '53mike', '44mike', 'lb', 'linebacker', 'mlb(mike)'],
+  wlb: ['wlb', 'will', 'weaklinebacker', 'olb1', 'lb2', 'grpwill', '53will', '44will', 'lb', 'linebacker', 'olb', 'wlb(will)'],
+  slb: ['slb', 'sam', 'stronglinebacker', 'olb2', 'lb3', 'rover', 'grpsam', '53sam', '44sam', '44rover', 'lb', 'linebacker', 'olb', 'slb(sam)'],
+  lb: ['lb', 'linebacker', 'mlb', 'wlb', 'slb', 'ilb', 'olb', 'mike', 'will', 'sam'],
+  cb1: ['cb1', 'cb', 'corner1', 'lcb', 'cornerback1', 'grpcb1', '53cb2', '44cb1', 'db', 'corner'],
+  cb2: ['cb2', 'cb', 'corner2', 'rcb', 'cornerback2', 'grpcb2', '53cb1', '44cb2', 'db', 'corner'],
+  cb: ['cb', 'cornerback', 'corner', 'lcb', 'rcb', 'cb1', 'cb2', 'db'],
+  fs: ['fs', 'freesafety', 'safety1', 'fsafety', 'grpfs', '53fs', '44fs', 'safety', 'db', 's'],
+  ss: ['ss', 'strongsafety', 'rover', 'safety2', 'ssafety', 'grprover', '44rover', 'nickel', 'safety', 'db', 's'],
+  s: ['s', 'safety', 'fs', 'ss', 'db'],
+  nickel: ['nickel', 'nb', 'slotdb', 'db', 'rover', 'slb', 'ss', 'cb', 'safety'],
+  db: ['db', 'defensiveback', 'cb', 'fs', 'ss', 's', 'nickel', 'nb', 'corner', 'safety'],
 };
 
 /**
@@ -445,9 +517,16 @@ export function isPositionMatch(targetName: string, candidateName: string, candi
   const cleanCandId = normalizePositionToken(candidateId);
 
   // Exact match
-  if (cleanTarget === cleanCandName || cleanTarget === cleanCandId) {
+  if (cleanTarget && (cleanTarget === cleanCandName || cleanTarget === cleanCandId)) {
     return true;
   }
+
+  // Broad football unit/position overlap checks
+  if (cleanTarget.startsWith('wr') && (cleanCandName.startsWith('wr') || cleanCandName === 'x' || cleanCandName === 'z' || cleanCandName === 'slot')) return true;
+  if (cleanTarget.startsWith('cb') && (cleanCandName.startsWith('cb') || cleanCandName === 'db' || cleanCandName === 'corner')) return true;
+  if (cleanTarget.startsWith('de') && (cleanCandName.startsWith('de') || cleanCandName === 'dl' || cleanCandName === 'edge')) return true;
+  if (cleanTarget.startsWith('dt') && (cleanCandName.startsWith('dt') || cleanCandName === 'dl' || cleanCandName === 'nt')) return true;
+  if (cleanTarget.endsWith('lb') && (cleanCandName.endsWith('lb') || cleanCandName === 'mike' || cleanCandName === 'will' || cleanCandName === 'sam')) return true;
 
   // Check synonym groupings
   for (const [key, synonyms] of Object.entries(POSITION_SYNONYMS)) {
@@ -456,7 +535,8 @@ export function isPositionMatch(targetName: string, candidateName: string, candi
     );
     if (targetMatchesGroup) {
       const candMatchesGroup = synonyms.some(
-        (s) => cleanCandName === s || cleanCandName.includes(s) || cleanCandId === s || cleanCandId.includes(s)
+        (s) => cleanCandName === s || cleanCandName.includes(s) || s.includes(cleanCandName) ||
+               cleanCandId === s || cleanCandId.includes(s) || s.includes(cleanCandId)
       );
       if (candMatchesGroup) {
         return true;
@@ -466,7 +546,8 @@ export function isPositionMatch(targetName: string, candidateName: string, candi
 
   // Substring inclusion fallback for clear tokens
   if (cleanTarget.length >= 2) {
-    if (cleanCandName.includes(cleanTarget) || cleanTarget.includes(cleanCandName)) {
+    if (cleanCandName.includes(cleanTarget) || cleanTarget.includes(cleanCandName) ||
+        cleanCandId.includes(cleanTarget) || cleanTarget.includes(cleanCandId)) {
       return true;
     }
   }
@@ -484,9 +565,9 @@ export interface AutoFillSummary {
 
 /**
  * High-powered, intelligent auto-fill for drill positions
- * 1. Checks Depth Chart across ALL formations (Offense, Defense, Groups)
+ * 1. Checks Depth Chart across ALL formations & direct depth chart entries
  * 2. Checks Scrimmage Chart
- * 3. Falls back to Active Roster by Primary Position
+ * 3. Falls back to Active Roster by Primary / Secondary Position & Category
  * 4. Ensures no duplicate assignments within the same string
  */
 export function executeIntelligentAutoFill(params: {
@@ -513,15 +594,11 @@ export function executeIntelligentAutoFill(params: {
   let filledOffense = 0;
   let filledDefense = 0;
 
-  // Track used players per unit to prevent placing the same kid in 3 slots
+  // Track used players per unit to prevent placing the same kid in multiple slots
   const usedOffenseNums = new Set<string>();
   const usedDefenseNums = new Set<string>();
 
-  // If preserving existing starters when filling backups or vice versa:
-  // For targetString === 1, we replace or set slot[0]
-  // For targetString === 2, we replace or append slot[1]
-
-  // Collect all depth chart candidates across all formations
+  // 1. Collect all depth chart candidates across all formations
   const depthCandidates: { posName: string; posId: string; players: PlacedPlayer[] }[] = [];
   for (const form of formations) {
     for (const row of form.rows || []) {
@@ -535,7 +612,14 @@ export function executeIntelligentAutoFill(params: {
     }
   }
 
-  // Also include scrimmage chart candidates
+  // Also collect direct depthChart keys
+  for (const [key, players] of Object.entries(depthChart)) {
+    if (players && players.length > 0) {
+      depthCandidates.push({ posName: key, posId: key, players });
+    }
+  }
+
+  // 2. Also include scrimmage chart candidates
   const scrimmageCandidates: { posId: string; players: PlacedPlayer[] }[] = [];
   for (const [posId, players] of Object.entries(scrimmageChart)) {
     if (players && players.length > 0) {
@@ -552,13 +636,11 @@ export function executeIntelligentAutoFill(params: {
     // 1. Check Depth Chart candidates
     for (const cand of depthCandidates) {
       if (isPositionMatch(pos.name, cand.posName, cand.posId)) {
-        // Look for target string player, or fallback to first unused
         const desiredIdx = targetString - 1;
         const targetPlayer = cand.players[desiredIdx] || cand.players[0];
         if (targetPlayer && !usedNums.has(String(targetPlayer.num))) {
           return targetPlayer;
         }
-        // If target was already used, try any other player in that depth slot
         for (const p of cand.players) {
           if (!usedNums.has(String(p.num))) {
             return p;
@@ -578,18 +660,21 @@ export function executeIntelligentAutoFill(params: {
       }
     }
 
-    // 3. Fallback: Search active Roster by primary position
+    // 3. Search active Roster by primary or secondary position
     const cleanPos = normalizePositionToken(pos.name);
     const matchingRoster = roster.filter((r) => {
+      if (usedNums.has(String(r.num))) return false;
       const rPos = normalizePositionToken(r.primaryPosition || '');
+      const secPos = normalizePositionToken(r.secondaryPosition || '');
       return (
-        !usedNums.has(String(r.num)) &&
-        (isPositionMatch(pos.name, rPos, '') || (rPos && cleanPos.includes(rPos)))
+        isPositionMatch(pos.name, rPos, '') ||
+        isPositionMatch(pos.name, secPos, '') ||
+        (rPos && cleanPos.includes(rPos)) ||
+        (secPos && cleanPos.includes(secPos))
       );
     });
 
     if (matchingRoster.length > 0) {
-      // Pick based on target string (1st candidate for starters, 2nd for backups)
       const pickedRoster =
         targetString === 2 && matchingRoster.length > 1 ? matchingRoster[1] : matchingRoster[0];
       return {
@@ -598,10 +683,39 @@ export function executeIntelligentAutoFill(params: {
       };
     }
 
-    // 4. Last-ditch: if starters still need a player and this is high-priority slot (QB, C, MLB, etc.),
-    // find any available unused athlete from roster
+    // 4. Broader category match from Roster (OL, DL, LB, DB, WR, RB)
+    const isOL = ['lt', 'lg', 'c', 'rg', 'rt', 'ol', 'ot', 'og'].some((k) => cleanPos.includes(k));
+    const isDL = ['lde', 'rde', 'ldt', 'rdt', 'nt', 'dl', 'de', 'dt', 'edge'].some((k) => cleanPos.includes(k));
+    const isDB = ['cb', 'fs', 'ss', 'nickel', 'db', 'safety', 'corner'].some((k) => cleanPos.includes(k));
+    const isWR = ['wr', 'slot', 'x', 'z', 'w', 'h', 'wideout'].some((k) => cleanPos.includes(k));
+    const isLB = ['lb', 'mike', 'will', 'sam', 'mlb', 'wlb', 'slb'].some((k) => cleanPos.includes(k));
+    const isRB = ['rb', 'fb', 'hb', 'back'].some((k) => cleanPos.includes(k));
+    const isQB = cleanPos.includes('qb') || cleanPos.includes('passer');
+
+    const categoryRoster = roster.filter((r) => {
+      if (usedNums.has(String(r.num))) return false;
+      const posText = `${r.primaryPosition || ''} ${r.secondaryPosition || ''}`.toLowerCase();
+      if (isQB && (posText.includes('qb') || posText.includes('quarter'))) return true;
+      if (isRB && (posText.includes('rb') || posText.includes('hb') || posText.includes('fb') || posText.includes('back'))) return true;
+      if (isOL && (posText.includes('ol') || posText.includes('t') || posText.includes('g') || posText.includes('c') || posText.includes('line'))) return true;
+      if (isDL && (posText.includes('dl') || posText.includes('de') || posText.includes('dt') || posText.includes('edge') || posText.includes('nose') || posText.includes('d-line'))) return true;
+      if (isDB && (posText.includes('db') || posText.includes('cb') || posText.includes('s') || posText.includes('safety') || posText.includes('corner'))) return true;
+      if (isWR && (posText.includes('wr') || posText.includes('slot') || posText.includes('rec') || posText.includes('wide') || posText.includes('te'))) return true;
+      if (isLB && (posText.includes('lb') || posText.includes('backer') || posText.includes('mike') || posText.includes('will') || posText.includes('sam'))) return true;
+      return false;
+    });
+
+    if (categoryRoster.length > 0) {
+      const picked = targetString === 2 && categoryRoster.length > 1 ? categoryRoster[1] : categoryRoster[0];
+      return {
+        num: picked.num,
+        name: `${picked.firstName} ${picked.lastName}`.trim() || picked.rosterName,
+      };
+    }
+
+    // 5. Final fallback: Any unused player from roster to guarantee complete 7v7 or 11v11 staffing
     const generalAthletes = roster.filter((r) => !usedNums.has(String(r.num)));
-    if (generalAthletes.length > 0 && targetString === 1) {
+    if (generalAthletes.length > 0) {
       const athlete = generalAthletes[0];
       return {
         num: athlete.num,

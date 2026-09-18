@@ -561,11 +561,17 @@ body.theme-light {
   body.is-printing-formations [role="navigation"],
   body.is-printing-formations [role="dialog"],
   body.is-printing header,
+  body.is-printing-drills header,
   body.is-printing nav,
+  body.is-printing-drills nav,
   body.is-printing aside,
+  body.is-printing-drills aside,
   body.is-printing #side-navigation-folder-system,
+  body.is-printing-drills #side-navigation-folder-system,
   body.is-printing .mobile-bottom-nav,
-  body.is-printing [role="navigation"] {
+  body.is-printing-drills .mobile-bottom-nav,
+  body.is-printing [role="navigation"],
+  body.is-printing-drills [role="navigation"] {
     display: none !important;
     visibility: hidden !important;
     height: 0 !important;

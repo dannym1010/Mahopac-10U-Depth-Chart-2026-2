@@ -44,8 +44,8 @@ import {
   TEAM_COLOR_OPTIONS,
   getTeamColorConfig,
   COLOR_MATCHUP_PRESETS,
-  OFFENSE_LABEL_PRESETS,
-  DEFENSE_LABEL_PRESETS,
+  DEFAULT_OFFENSE_LABELS,
+  DEFAULT_DEFENSE_LABELS,
   SUGGESTED_OFFENSE_TAGS,
   SUGGESTED_DEFENSE_TAGS,
   generateDefaultPositions,
@@ -148,6 +148,78 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
   const [showAddSlotUnit, setShowAddSlotUnit] = useState<'offense' | 'defense' | null>(null);
   const [customSlotName, setCustomSlotName] = useState<string>('');
 
+  // --------------------------------------------------------------------------
+  // DYNAMIC TEAM LABELS MANAGEMENT (Add, Delete, Persist)
+  // --------------------------------------------------------------------------
+  const [offenseCustomLabels, setOffenseCustomLabels] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('football_offense_team_labels');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_OFFENSE_LABELS;
+  });
+
+  const [defenseCustomLabels, setDefenseCustomLabels] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('football_defense_team_labels');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_DEFENSE_LABELS;
+  });
+
+  const [newOffenseLabelInput, setNewOffenseLabelInput] = useState<string>('');
+  const [newDefenseLabelInput, setNewDefenseLabelInput] = useState<string>('');
+
+  const handleAddOffenseLabel = (labelToAdd?: string) => {
+    const val = (labelToAdd !== undefined ? labelToAdd : newOffenseLabelInput).trim();
+    if (!val) return;
+    const exists = offenseCustomLabels.some((l) => l.toLowerCase() === val.toLowerCase());
+    const nextList = exists ? offenseCustomLabels : [...offenseCustomLabels, val];
+    setOffenseCustomLabels(nextList);
+    try {
+      localStorage.setItem('football_offense_team_labels', JSON.stringify(nextList));
+    } catch (e) {}
+    updateGroup({ ...currentGroup, offenseLabel: val });
+    setNewOffenseLabelInput('');
+  };
+
+  const handleDeleteOffenseLabel = (labelToDelete: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextList = offenseCustomLabels.filter((l) => l !== labelToDelete);
+    setOffenseCustomLabels(nextList);
+    try {
+      localStorage.setItem('football_offense_team_labels', JSON.stringify(nextList));
+    } catch (e) {}
+  };
+
+  const handleAddDefenseLabel = (labelToAdd?: string) => {
+    const val = (labelToAdd !== undefined ? labelToAdd : newDefenseLabelInput).trim();
+    if (!val) return;
+    const exists = defenseCustomLabels.some((l) => l.toLowerCase() === val.toLowerCase());
+    const nextList = exists ? defenseCustomLabels : [...defenseCustomLabels, val];
+    setDefenseCustomLabels(nextList);
+    try {
+      localStorage.setItem('football_defense_team_labels', JSON.stringify(nextList));
+    } catch (e) {}
+    updateGroup({ ...currentGroup, defenseLabel: val });
+    setNewDefenseLabelInput('');
+  };
+
+  const handleDeleteDefenseLabel = (labelToDelete: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextList = defenseCustomLabels.filter((l) => l !== labelToDelete);
+    setDefenseCustomLabels(nextList);
+    try {
+      localStorage.setItem('football_defense_team_labels', JSON.stringify(nextList));
+    } catch (e) {}
+  };
+
   // Helper to commit updated groups and notify parent
   const updateGroup = (updated: LiveDrillGroup) => {
     const next = groups.map((g) => (g.id === updated.id ? updated : g));
@@ -163,8 +235,8 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
       id: `live_group_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       name: `New ${format.toUpperCase()} Practice Drill`,
       format,
-      offenseLabel: format === '7v7' ? '1st Team Offense (Gold)' : 'Varsity Offense',
-      defenseLabel: format === '7v7' ? '1st Team Defense (Blue)' : 'Varsity Defense',
+      offenseLabel: format === '7v7' ? '1st Team Offense' : 'Varsity Offense',
+      defenseLabel: format === '7v7' ? '1st Team Defense' : 'Varsity Defense',
       offenseColor: 'gold',
       defenseColor: 'blue',
       notes: '',
@@ -462,6 +534,17 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
     setShowAutoFillModal(false);
   };
 
+  const handleTriggerPrint = () => {
+    setShowPrintModal(false);
+    document.body.classList.add('is-printing', 'is-printing-drills');
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => {
+        document.body.classList.remove('is-printing', 'is-printing-drills');
+      }, 500);
+    }, 150);
+  };
+
   // Drag & drop handling
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -522,7 +605,8 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
   const defenseColorConfig = getTeamColorConfig(currentGroup.defenseColor, 'blue');
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-200">
+    <>
+      <div className="space-y-6 pb-12 animate-in fade-in duration-200 print:hidden">
       {/* ==================================================================== */}
       {/* 1. TOP HEADER & MAIN CONTROLS BAR */}
       {/* ==================================================================== */}
@@ -862,56 +946,150 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
             </div>
 
             {/* Offense Group Label Input */}
-            <div className="mb-2">
-              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">
-                Offense Group Label:
-              </label>
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase">
+                  Active Offense Label:
+                </label>
+                {currentGroup.offenseLabel && !offenseCustomLabels.includes(currentGroup.offenseLabel) && (
+                  <button
+                    type="button"
+                    onClick={() => handleAddOffenseLabel(currentGroup.offenseLabel)}
+                    className="text-[10px] text-amber-600 dark:text-amber-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                    title="Save current label to your saved labels list"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Save to My Labels</span>
+                  </button>
+                )}
+              </div>
               <input
                 type="text"
                 value={currentGroup.offenseLabel}
                 onChange={(e) => updateGroup({ ...currentGroup, offenseLabel: e.target.value })}
-                placeholder="e.g. 1st Team Offense (Gold)"
-                className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                placeholder="e.g. 1st Team Offense"
+                className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-xs"
               />
             </div>
 
-            {/* Quick Presets for Offense Label */}
-            <div className="flex flex-wrap gap-1 mb-3">
-              {OFFENSE_LABEL_PRESETS.slice(0, 6).map((preset) => (
+            {/* Dynamic Custom Offense Team Labels (Add, Select, Delete) */}
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                  Offense Team Labels ({offenseCustomLabels.length}):
+                </span>
+                {offenseCustomLabels.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOffenseCustomLabels(DEFAULT_OFFENSE_LABELS);
+                      try {
+                        localStorage.setItem('football_offense_team_labels', JSON.stringify(DEFAULT_OFFENSE_LABELS));
+                      } catch (e) {}
+                    }}
+                    className="text-[10px] text-amber-600 font-bold hover:underline cursor-pointer"
+                  >
+                    Restore Defaults
+                  </button>
+                )}
+              </div>
+
+              {/* Saved Label Badges with 1-click apply and delete */}
+              <div className="flex flex-wrap gap-1.5 mb-2 max-h-28 overflow-y-auto pr-1">
+                {offenseCustomLabels.map((label) => {
+                  const isSelected = currentGroup.offenseLabel === label;
+                  return (
+                    <div
+                      key={label}
+                      onClick={() => updateGroup({ ...currentGroup, offenseLabel: label })}
+                      className={`group inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer border shadow-xs ${
+                        isSelected
+                          ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-400/40'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-400 dark:hover:border-amber-500'
+                      }`}
+                      title={`Click to use "${label}"`}
+                    >
+                      <span>{label}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteOffenseLabel(label, e)}
+                        className={`p-0.5 rounded hover:bg-black/20 transition-colors cursor-pointer ${
+                          isSelected ? 'text-white/90 hover:text-white' : 'text-slate-400 hover:text-rose-500'
+                        }`}
+                        title={`Delete "${label}"`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+                {offenseCustomLabels.length === 0 && (
+                  <span className="text-[11px] italic text-slate-400 py-0.5">
+                    No saved labels. Add custom labels below!
+                  </span>
+                )}
+              </div>
+
+              {/* Add New Offense Label Row */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleAddOffenseLabel();
+                }}
+                className="flex items-center gap-1.5"
+              >
+                <input
+                  type="text"
+                  value={newOffenseLabelInput}
+                  onChange={(e) => setNewOffenseLabelInput(e.target.value)}
+                  placeholder="+ Add new offense label (e.g. Freshman, Heavy)..."
+                  className="flex-1 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-amber-500 shadow-xs"
+                />
                 <button
-                  key={preset}
-                  type="button"
-                  onClick={() => updateGroup({ ...currentGroup, offenseLabel: preset })}
-                  className={`text-[10px] px-2 py-0.5 rounded-lg font-bold transition-all cursor-pointer border ${
-                    currentGroup.offenseLabel === preset
-                      ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
-                      : 'bg-white/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-amber-50 dark:hover:bg-amber-950/40'
-                  }`}
+                  type="submit"
+                  disabled={!newOffenseLabelInput.trim()}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-1 disabled:opacity-40 shadow-xs transition-all cursor-pointer shrink-0"
                 >
-                  {preset}
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add</span>
                 </button>
-              ))}
+              </form>
             </div>
 
             {/* Team Color Selector & Quantity Presets for Offense */}
-            <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-2">
-              {/* Color Swatches */}
-              <div className="flex items-center gap-1.5">
+            <div className="pt-2.5 border-t border-slate-200/70 dark:border-slate-700/70 flex flex-wrap items-center justify-between gap-3">
+              {/* Color Swatches & Color Picker */}
+              <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black uppercase text-slate-500">Color:</span>
-                <div className="flex items-center gap-1">
-                  {TEAM_COLOR_OPTIONS.slice(0, 7).map((color) => (
+                <div className="flex items-center gap-1 flex-wrap">
+                  {TEAM_COLOR_OPTIONS.map((color) => (
                     <button
                       key={color.id}
+                      type="button"
                       onClick={() => updateGroup({ ...currentGroup, offenseColor: color.id })}
                       className={`w-5 h-5 rounded-full border transition-all cursor-pointer ${
                         (currentGroup.offenseColor || 'gold') === color.id
-                          ? 'ring-2 ring-offset-1 ring-slate-900 dark:ring-white scale-110'
-                          : 'opacity-70 hover:opacity-100'
+                          ? 'ring-2 ring-offset-1 ring-slate-900 dark:ring-white scale-110 shadow-xs'
+                          : 'opacity-70 hover:opacity-100 hover:scale-105'
                       }`}
                       style={{ backgroundColor: color.hex }}
                       title={color.label}
                     />
                   ))}
+
+                  {/* Custom Color Dropper / Picker */}
+                  <label
+                    className="relative inline-flex items-center justify-center w-5 h-5 rounded-full border border-dashed border-slate-400 hover:border-slate-600 dark:border-slate-500 cursor-pointer overflow-hidden group shadow-xs ml-0.5"
+                    title="Pick any custom team color"
+                  >
+                    <Palette className="w-3 h-3 text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white" />
+                    <input
+                      type="color"
+                      value={offenseColorConfig.hex}
+                      onChange={(e) => updateGroup({ ...currentGroup, offenseColor: e.target.value })}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                  </label>
                 </div>
               </div>
 
@@ -921,8 +1099,9 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
                 {(['7v7', '11v11', '9v9'] as LiveDrillFormat[]).map((fmt) => (
                   <button
                     key={fmt}
+                    type="button"
                     onClick={() => handleApplyPresetQuantity('offense', fmt)}
-                    className="text-[10px] px-2 py-0.5 rounded-md font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 cursor-pointer"
+                    className="text-[10px] px-2 py-0.5 rounded-md font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-all"
                   >
                     {fmt}
                   </button>
@@ -934,6 +1113,10 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
           {/* ---------------- DEFENSE CUSTOMIZATION CARD ---------------- */}
           <div
             className={`border rounded-2xl p-4 transition-all shadow-xs ${defenseColorConfig.borderClass} ${defenseColorConfig.bgLightClass}`}
+            style={{
+              borderColor: `${defenseColorConfig.hex}40`,
+              backgroundColor: `${defenseColorConfig.hex}12`,
+            }}
           >
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className="flex items-center gap-2">
@@ -973,56 +1156,150 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
             </div>
 
             {/* Defense Group Label Input */}
-            <div className="mb-2">
-              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">
-                Defense Group Label:
-              </label>
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase">
+                  Active Defense Label:
+                </label>
+                {currentGroup.defenseLabel && !defenseCustomLabels.includes(currentGroup.defenseLabel) && (
+                  <button
+                    type="button"
+                    onClick={() => handleAddDefenseLabel(currentGroup.defenseLabel)}
+                    className="text-[10px] text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                    title="Save current label to your saved labels list"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Save to My Labels</span>
+                  </button>
+                )}
+              </div>
               <input
                 type="text"
                 value={currentGroup.defenseLabel}
                 onChange={(e) => updateGroup({ ...currentGroup, defenseLabel: e.target.value })}
-                placeholder="e.g. 1st Team Defense (Blue)"
-                className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g. 1st Team Defense"
+                className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
               />
             </div>
 
-            {/* Quick Presets for Defense Label */}
-            <div className="flex flex-wrap gap-1 mb-3">
-              {DEFENSE_LABEL_PRESETS.slice(0, 6).map((preset) => (
+            {/* Dynamic Custom Defense Team Labels (Add, Select, Delete) */}
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                  Defense Team Labels ({defenseCustomLabels.length}):
+                </span>
+                {defenseCustomLabels.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDefenseCustomLabels(DEFAULT_DEFENSE_LABELS);
+                      try {
+                        localStorage.setItem('football_defense_team_labels', JSON.stringify(DEFAULT_DEFENSE_LABELS));
+                      } catch (e) {}
+                    }}
+                    className="text-[10px] text-blue-600 font-bold hover:underline cursor-pointer"
+                  >
+                    Restore Defaults
+                  </button>
+                )}
+              </div>
+
+              {/* Saved Label Badges with 1-click apply and delete */}
+              <div className="flex flex-wrap gap-1.5 mb-2 max-h-28 overflow-y-auto pr-1">
+                {defenseCustomLabels.map((label) => {
+                  const isSelected = currentGroup.defenseLabel === label;
+                  return (
+                    <div
+                      key={label}
+                      onClick={() => updateGroup({ ...currentGroup, defenseLabel: label })}
+                      className={`group inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer border shadow-xs ${
+                        isSelected
+                          ? 'bg-blue-600 text-white border-blue-700 ring-2 ring-blue-400/40'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500'
+                      }`}
+                      title={`Click to use "${label}"`}
+                    >
+                      <span>{label}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteDefenseLabel(label, e)}
+                        className={`p-0.5 rounded hover:bg-black/20 transition-colors cursor-pointer ${
+                          isSelected ? 'text-white/90 hover:text-white' : 'text-slate-400 hover:text-rose-500'
+                        }`}
+                        title={`Delete "${label}"`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+                {defenseCustomLabels.length === 0 && (
+                  <span className="text-[11px] italic text-slate-400 py-0.5">
+                    No saved labels. Add custom labels below!
+                  </span>
+                )}
+              </div>
+
+              {/* Add New Defense Label Row */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleAddDefenseLabel();
+                }}
+                className="flex items-center gap-1.5"
+              >
+                <input
+                  type="text"
+                  value={newDefenseLabelInput}
+                  onChange={(e) => setNewDefenseLabelInput(e.target.value)}
+                  placeholder="+ Add new defense label (e.g. Goal Line, Nickel)..."
+                  className="flex-1 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-xs"
+                />
                 <button
-                  key={preset}
-                  type="button"
-                  onClick={() => updateGroup({ ...currentGroup, defenseLabel: preset })}
-                  className={`text-[10px] px-2 py-0.5 rounded-lg font-bold transition-all cursor-pointer border ${
-                    currentGroup.defenseLabel === preset
-                      ? 'bg-blue-600 text-white border-blue-700 shadow-xs'
-                      : 'bg-white/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-950/40'
-                  }`}
+                  type="submit"
+                  disabled={!newDefenseLabelInput.trim()}
+                  className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1 disabled:opacity-40 shadow-xs transition-all cursor-pointer shrink-0"
                 >
-                  {preset}
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add</span>
                 </button>
-              ))}
+              </form>
             </div>
 
             {/* Team Color Selector & Quantity Presets for Defense */}
-            <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-2">
-              {/* Color Swatches */}
-              <div className="flex items-center gap-1.5">
+            <div className="pt-2.5 border-t border-slate-200/70 dark:border-slate-700/70 flex flex-wrap items-center justify-between gap-3">
+              {/* Color Swatches & Color Picker */}
+              <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black uppercase text-slate-500">Color:</span>
-                <div className="flex items-center gap-1">
-                  {TEAM_COLOR_OPTIONS.slice(0, 7).map((color) => (
+                <div className="flex items-center gap-1 flex-wrap">
+                  {TEAM_COLOR_OPTIONS.map((color) => (
                     <button
                       key={color.id}
+                      type="button"
                       onClick={() => updateGroup({ ...currentGroup, defenseColor: color.id })}
                       className={`w-5 h-5 rounded-full border transition-all cursor-pointer ${
                         (currentGroup.defenseColor || 'blue') === color.id
-                          ? 'ring-2 ring-offset-1 ring-slate-900 dark:ring-white scale-110'
-                          : 'opacity-70 hover:opacity-100'
+                          ? 'ring-2 ring-offset-1 ring-slate-900 dark:ring-white scale-110 shadow-xs'
+                          : 'opacity-70 hover:opacity-100 hover:scale-105'
                       }`}
                       style={{ backgroundColor: color.hex }}
                       title={color.label}
                     />
                   ))}
+
+                  {/* Custom Color Dropper / Picker */}
+                  <label
+                    className="relative inline-flex items-center justify-center w-5 h-5 rounded-full border border-dashed border-slate-400 hover:border-slate-600 dark:border-slate-500 cursor-pointer overflow-hidden group shadow-xs ml-0.5"
+                    title="Pick any custom team color"
+                  >
+                    <Palette className="w-3 h-3 text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white" />
+                    <input
+                      type="color"
+                      value={defenseColorConfig.hex}
+                      onChange={(e) => updateGroup({ ...currentGroup, defenseColor: e.target.value })}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                  </label>
                 </div>
               </div>
 
@@ -1032,8 +1309,9 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
                 {(['7v7', '11v11', '9v9'] as LiveDrillFormat[]).map((fmt) => (
                   <button
                     key={fmt}
+                    type="button"
                     onClick={() => handleApplyPresetQuantity('defense', fmt)}
-                    className="text-[10px] px-2 py-0.5 rounded-md font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 cursor-pointer"
+                    className="text-[10px] px-2 py-0.5 rounded-md font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-all"
                   >
                     {fmt}
                   </button>
@@ -2053,10 +2331,7 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  setShowPrintModal(false);
-                  setTimeout(() => window.print(), 200);
-                }}
+                onClick={handleTriggerPrint}
                 className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
               >
                 <Printer className="w-4 h-4" />
@@ -2066,6 +2341,8 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
           </div>
         </div>
       )}
+
+      </div>
 
       {/* ==================================================================== */}
       {/* 7. FIELD-READY PRINT LAYOUT (PRINT ONLY) */}
@@ -2229,6 +2506,6 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
           );
         })}
       </div>
-    </div>
+    </>
   );
 };

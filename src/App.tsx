@@ -8299,6 +8299,7 @@ function mergeRemoteWeeklyData(
                 currentWeek={currentWeek}
                 practiceDrillGroups={currentWeekState.practiceDrillGroups || []}
                 onUpdatePracticeDrillGroups={(updatedGroups) => {
+                  lastLocalEditTimeRef.current = Date.now();
                   setWeeklyData((prev) => {
                     const scopedKey = getScopedWeekKey(activeTeamId, currentWeek);
                     const existingWeek = prev[scopedKey] || prev[currentWeek] || {
@@ -8310,17 +8311,16 @@ function mergeRemoteWeeklyData(
                       ...existingWeek,
                       practiceDrillGroups: updatedGroups,
                     };
-                    safeJSONSet('footballWeeklyData', {
-                      ...prev,
-                      [scopedKey]: updatedWeek,
-                      [currentWeek]: updatedWeek,
-                    });
-                    return {
+                    const updatedAll = {
                       ...prev,
                       [scopedKey]: updatedWeek,
                       [currentWeek]: updatedWeek,
                     };
+                    latestStateRef.current.weeklyData = updatedAll;
+                    safeJSONSet('footballWeeklyData', updatedAll);
+                    return updatedAll;
                   });
+                  flushAndSaveStateToStorage('practice_drill_update');
                 }}
                 roster={activeTeamRoster}
                 userRole={userRole}
