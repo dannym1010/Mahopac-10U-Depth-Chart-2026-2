@@ -576,7 +576,7 @@ export function executeIntelligentAutoFill(params: {
   depthChart: Record<string, PlacedPlayer[]>;
   scrimmageChart?: Record<string, PlacedPlayer[]>;
   roster: RosterPlayer[];
-  targetString?: 1 | 2; // 1 = Starters, 2 = Backups
+  targetString?: 1 | 2 | 3 | 'all'; // 1 = Starters, 2 = 2nd Team, 3 = 3rd Team, 'all' = All 3
   fillUnit?: 'both' | 'offense' | 'defense';
 }): { nextLineup: Record<string, PlacedPlayer[]>; summary: AutoFillSummary } {
   const {
@@ -589,14 +589,10 @@ export function executeIntelligentAutoFill(params: {
     fillUnit = 'both',
   } = params;
 
-  const nextLineup: Record<string, PlacedPlayer[]> = { ...group.lineup };
+  let nextLineup: Record<string, PlacedPlayer[]> = { ...group.lineup };
 
   let filledOffense = 0;
   let filledDefense = 0;
-
-  // Track used players per unit to prevent placing the same kid in multiple slots
-  const usedOffenseNums = new Set<string>();
-  const usedDefenseNums = new Set<string>();
 
   // 1. Collect all depth chart candidates across all formations
   const depthCandidates: { posName: string; posId: string; players: PlacedPlayer[] }[] = [];
@@ -627,16 +623,16 @@ export function executeIntelligentAutoFill(params: {
     }
   }
 
-  // Helper to find best player for a position slot
+  // Helper to find best player for a position slot given desired string index (0 = 1st, 1 = 2nd, 2 = 3rd)
   const findBestPlayerForSlot = (
     pos: LiveDrillPosition,
     unit: 'offense' | 'defense',
-    usedNums: Set<string>
+    usedNums: Set<string>,
+    desiredIdx: number
   ): PlacedPlayer | null => {
     // 1. Check Depth Chart candidates
     for (const cand of depthCandidates) {
       if (isPositionMatch(pos.name, cand.posName, cand.posId)) {
-        const desiredIdx = targetString - 1;
         const targetPlayer = cand.players[desiredIdx] || cand.players[0];
         if (targetPlayer && !usedNums.has(String(targetPlayer.num))) {
           return targetPlayer;
@@ -676,7 +672,9 @@ export function executeIntelligentAutoFill(params: {
 
     if (matchingRoster.length > 0) {
       const pickedRoster =
-        targetString === 2 && matchingRoster.length > 1 ? matchingRoster[1] : matchingRoster[0];
+        desiredIdx > 0 && matchingRoster.length > desiredIdx
+          ? matchingRoster[desiredIdx]
+          : matchingRoster[0];
       return {
         num: pickedRoster.num,
         name: `${pickedRoster.firstName} ${pickedRoster.lastName}`.trim() || pickedRoster.rosterName,
@@ -706,7 +704,10 @@ export function executeIntelligentAutoFill(params: {
     });
 
     if (categoryRoster.length > 0) {
-      const picked = targetString === 2 && categoryRoster.length > 1 ? categoryRoster[1] : categoryRoster[0];
+      const picked =
+        desiredIdx > 0 && categoryRoster.length > desiredIdx
+          ? categoryRoster[desiredIdx]
+          : categoryRoster[0];
       return {
         num: picked.num,
         name: `${picked.firstName} ${picked.lastName}`.trim() || picked.rosterName,
@@ -726,63 +727,74 @@ export function executeIntelligentAutoFill(params: {
     return null;
   };
 
-  // Process Offense
-  if (fillUnit === 'both' || fillUnit === 'offense') {
-    group.offensePositions.forEach((pos) => {
-      const player = findBestPlayerForSlot(pos, 'offense', usedOffenseNums);
-      if (player) {
-        usedOffenseNums.add(String(player.num));
-        filledOffense++;
+  const fillSingleString = (strNum: 1 | 2 | 3) => {
+    const desiredIdx = strNum - 1;
+    const usedOffenseNums = new Set<string>();
+    const usedDefenseNums = new Set<string>();
 
-        const currentList = nextLineup[pos.id] || [];
-        if (targetString === 1) {
-          // Set as starter (index 0)
-          const remaining = currentList.filter((p) => String(p.num) !== String(player.num));
-          nextLineup[pos.id] = [player, ...remaining];
-        } else {
-          // Set as backup (index 1)
-          const starter = currentList[0];
-          const filtered = currentList.filter(
-            (p, idx) => idx > 0 && String(p.num) !== String(player.num)
-          );
-          if (starter) {
-            nextLineup[pos.id] = [starter, player, ...filtered];
-          } else {
-            nextLineup[pos.id] = [player, ...filtered];
+    // Process Offense
+    if (fillUnit === 'both' || fillUnit === 'offense') {
+      group.offensePositions.forEach((pos) => {
+        const player = findBestPlayerForSlot(pos, 'offense', usedOffenseNums, desiredIdx);
+        if (player) {
+          usedOffenseNums.add(String(player.num));
+          filledOffense++;
+
+          const currentList = nextLineup[pos.id] || [];
+          const updated = [...currentList];
+          // Ensure slots exist up to desiredIdx
+          while (updated.length < desiredIdx) {
+            updated.push({ num: '?', name: 'TBD' });
           }
+          // Remove if player already in list elsewhere
+          const filtered = updated.filter(
+            (p, idx) => idx === desiredIdx || String(p.num) !== String(player.num)
+          );
+          filtered[desiredIdx] = player;
+          nextLineup[pos.id] = filtered;
         }
-      }
-    });
+      });
+    }
+
+    // Process Defense
+    if (fillUnit === 'both' || fillUnit === 'defense') {
+      group.defensePositions.forEach((pos) => {
+        const player = findBestPlayerForSlot(pos, 'defense', usedDefenseNums, desiredIdx);
+        if (player) {
+          usedDefenseNums.add(String(player.num));
+          filledDefense++;
+
+          const currentList = nextLineup[pos.id] || [];
+          const updated = [...currentList];
+          while (updated.length < desiredIdx) {
+            updated.push({ num: '?', name: 'TBD' });
+          }
+          const filtered = updated.filter(
+            (p, idx) => idx === desiredIdx || String(p.num) !== String(player.num)
+          );
+          filtered[desiredIdx] = player;
+          nextLineup[pos.id] = filtered;
+        }
+      });
+    }
+  };
+
+  if (targetString === 'all') {
+    fillSingleString(1);
+    fillSingleString(2);
+    fillSingleString(3);
+  } else {
+    fillSingleString(targetString);
   }
 
-  // Process Defense
-  if (fillUnit === 'both' || fillUnit === 'defense') {
-    group.defensePositions.forEach((pos) => {
-      const player = findBestPlayerForSlot(pos, 'defense', usedDefenseNums);
-      if (player) {
-        usedDefenseNums.add(String(player.num));
-        filledDefense++;
-
-        const currentList = nextLineup[pos.id] || [];
-        if (targetString === 1) {
-          const remaining = currentList.filter((p) => String(p.num) !== String(player.num));
-          nextLineup[pos.id] = [player, ...remaining];
-        } else {
-          const starter = currentList[0];
-          const filtered = currentList.filter(
-            (p, idx) => idx > 0 && String(p.num) !== String(player.num)
-          );
-          if (starter) {
-            nextLineup[pos.id] = [starter, player, ...filtered];
-          } else {
-            nextLineup[pos.id] = [player, ...filtered];
-          }
-        }
-      }
-    });
-  }
-
-  const stringName = targetString === 1 ? '1st String Starters' : '2nd String Backups';
+  const stringName =
+    targetString === 'all'
+      ? 'All 3 Teams (1st, 2nd & 3rd Strings)'
+      : targetString === 1
+        ? '1st Team Starters'
+        : targetString === 2
+          ? '2nd Team Backups'
+          : '3rd Team Depth';
 
   return {
     nextLineup,

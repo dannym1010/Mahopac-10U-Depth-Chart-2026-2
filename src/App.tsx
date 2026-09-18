@@ -1239,10 +1239,27 @@ export default function App() {
       scrimmageChart = {};
     }
 
+    // Practice drill groups resolution: prioritize state with valid drill groups
+    let practiceDrillGroups: LiveDrillGroup[] = [];
+    if (Array.isArray(scopedState?.practiceDrillGroups) && scopedState.practiceDrillGroups.length > 0) {
+      practiceDrillGroups = scopedState.practiceDrillGroups;
+    } else if (is10U && Array.isArray(legacyState?.practiceDrillGroups) && legacyState.practiceDrillGroups.length > 0) {
+      practiceDrillGroups = legacyState.practiceDrillGroups;
+    } else if (is10U && Array.isArray(defScopedState?.practiceDrillGroups) && defScopedState.practiceDrillGroups.length > 0) {
+      practiceDrillGroups = defScopedState.practiceDrillGroups;
+    } else if (Array.isArray(scopedState?.practiceDrillGroups)) {
+      practiceDrillGroups = scopedState.practiceDrillGroups;
+    } else if (is10U && Array.isArray(legacyState?.practiceDrillGroups)) {
+      practiceDrillGroups = legacyState.practiceDrillGroups;
+    } else if (is10U && Array.isArray(defScopedState?.practiceDrillGroups)) {
+      practiceDrillGroups = defScopedState.practiceDrillGroups;
+    }
+
     return {
       formations,
       depthChart,
       scrimmageChart,
+      practiceDrillGroups,
       opponent:
         scopedState?.opponent ||
         legacyState?.opponent ||
@@ -1302,6 +1319,7 @@ export default function App() {
         formations: deepClone(templateForms),
         depthChart: currentResolved.depthChart || {},
         scrimmageChart: currentResolved.scrimmageChart || {},
+        practiceDrillGroups: currentResolved.practiceDrillGroups || srcResolved.practiceDrillGroups || [],
         opponent: currentResolved.opponent || '',
         wristbandData:
           (currentResolved.wristbandData?.wristbands?.length
