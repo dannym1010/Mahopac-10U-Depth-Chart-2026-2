@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   Swords,
+  Scale,
   Plus,
   Trash2,
   Copy,
@@ -121,8 +122,8 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
     return groups.find((g) => g.id === activeGroupId) || groups[0] || createInitialPracticeDrillGroups()[0];
   }, [groups, activeGroupId]);
 
-  // Active Matchup selection: 1 (1s vs 1s), 2 (2s vs 2s), 3 (3s vs 3s), or 'all' (View All 3 Together)
-  const [activeMatchup, setActiveMatchup] = useState<1 | 2 | 3 | 'all'>(1);
+  // Active Matchup selection: 1 (1s vs 1s), 2 (2s vs 2s), 3 (3s vs 3s), '1v2' (Team 1 vs Team 2), '2v1' (Team 2 vs Team 1), or 'all'
+  const [activeMatchup, setActiveMatchup] = useState<1 | 2 | 3 | '1v2' | '2v1' | 'all'>(1);
   const [activeOffenseString, setActiveOffenseString] = useState<1 | 2 | 3>(1);
   const [activeDefenseString, setActiveDefenseString] = useState<1 | 2 | 3>(1);
 
@@ -130,8 +131,77 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
   const [customizingTeamOffense, setCustomizingTeamOffense] = useState<1 | 2 | 3>(1);
   const [customizingTeamDefense, setCustomizingTeamDefense] = useState<1 | 2 | 3>(1);
 
+  // Lookup map of players to their depth chart tier (1 = Black, 2 = Gold, 3 = Blue)
+  const playerDepthMap = useMemo(() => {
+    const map = new Map<string, { depthString: number; unit: 'offense' | 'defense'; posName: string }>();
+    for (const form of formations) {
+      const formUnit: 'offense' | 'defense' = (form.unit === 'defense' || form.id.includes('def')) ? 'defense' : 'offense';
+      for (const row of form.rows || []) {
+        for (const p of row.positions || []) {
+          if (!p) continue;
+          const players = depthChart[p.id] || [];
+          players.forEach((pl, idx) => {
+            if (pl && pl.num && pl.num !== '?' && !map.has(`${pl.num}_${formUnit}`)) {
+              map.set(`${pl.num}_${formUnit}`, {
+                depthString: idx + 1,
+                unit: formUnit,
+                posName: p.name,
+              });
+            }
+          });
+        }
+      }
+    }
+    return map;
+  }, [formations, depthChart]);
+
+  // Real-time talent composition for current active Offense & Defense on the field
+  const activeOffenseStats = useMemo(() => {
+    if (!currentGroup) return { starters: 0, backups: 0, third: 0, total: 0 };
+    let starters = 0;
+    let backups = 0;
+    let third = 0;
+    let total = 0;
+    const slotIdx = activeOffenseString - 1;
+
+    for (const pos of currentGroup.offensePositions) {
+      const assigned = (currentGroup.lineup[pos.id] || [])[slotIdx];
+      if (assigned && assigned.num && assigned.num !== '?') {
+        total++;
+        const info = playerDepthMap.get(`${assigned.num}_offense`);
+        const depth = info ? info.depthString : 0;
+        if (depth === 1) starters++;
+        else if (depth === 2) backups++;
+        else if (depth >= 3) third++;
+      }
+    }
+    return { starters, backups, third, total };
+  }, [currentGroup, activeOffenseString, playerDepthMap]);
+
+  const activeDefenseStats = useMemo(() => {
+    if (!currentGroup) return { starters: 0, backups: 0, third: 0, total: 0 };
+    let starters = 0;
+    let backups = 0;
+    let third = 0;
+    let total = 0;
+    const slotIdx = activeDefenseString - 1;
+
+    for (const pos of currentGroup.defensePositions) {
+      const assigned = (currentGroup.lineup[pos.id] || [])[slotIdx];
+      if (assigned && assigned.num && assigned.num !== '?') {
+        total++;
+        const info = playerDepthMap.get(`${assigned.num}_defense`);
+        const depth = info ? info.depthString : 0;
+        if (depth === 1) starters++;
+        else if (depth === 2) backups++;
+        else if (depth >= 3) third++;
+      }
+    }
+    return { starters, backups, third, total };
+  }, [currentGroup, activeDefenseString, playerDepthMap]);
+
   // Matchup selection handlers
-  const handleSelectMatchup = (m: 1 | 2 | 3 | 'all') => {
+  const handleSelectMatchup = (m: 1 | 2 | 3 | '1v2' | '2v1' | 'all') => {
     setActiveMatchup(m);
     if (m === 1) {
       setActiveOffenseString(1);
@@ -142,19 +212,57 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
     } else if (m === 3) {
       setActiveOffenseString(3);
       setActiveDefenseString(3);
+    } else if (m === '1v2') {
+      setActiveOffenseString(1);
+      setActiveDefenseString(2);
+    } else if (m === '2v1') {
+      setActiveOffenseString(2);
+      setActiveDefenseString(1);
     }
   };
 
+  const handleSetOffenseString = (num: 1 | 2 | 3) => {
+    setActiveOffenseString(num);
+    if (num === activeDefenseString) setActiveMatchup(num);
+    else if (num === 1 && activeDefenseString === 2) setActiveMatchup('1v2');
+    else if (num === 2 && activeDefenseString === 1) setActiveMatchup('2v1');
+    else setActiveMatchup(num);
+  };
+
+  const handleSetDefenseString = (num: 1 | 2 | 3) => {
+    setActiveDefenseString(num);
+    if (activeOffenseString === num) setActiveMatchup(num);
+    else if (activeOffenseString === 1 && num === 2) setActiveMatchup('1v2');
+    else if (activeOffenseString === 2 && num === 1) setActiveMatchup('2v1');
+    else setActiveMatchup(num);
+  };
+
+  const handleSwapActiveMatchupSides = () => {
+    const nextOff = activeDefenseString;
+    const nextDef = activeOffenseString;
+    setActiveOffenseString(nextOff);
+    setActiveDefenseString(nextDef);
+    if (nextOff === 1 && nextDef === 2) setActiveMatchup('1v2');
+    else if (nextOff === 2 && nextDef === 1) setActiveMatchup('2v1');
+    else if (nextOff === nextDef) setActiveMatchup(nextOff);
+  };
+
   const handleNextSlide = () => {
-    if (activeMatchup === 1) handleSelectMatchup(2);
-    else if (activeMatchup === 2) handleSelectMatchup(3);
+    if (activeMatchup === 1) handleSelectMatchup('1v2');
+    else if (activeMatchup === '1v2') handleSelectMatchup(2);
+    else if (activeMatchup === 2) handleSelectMatchup('2v1');
+    else if (activeMatchup === '2v1') handleSelectMatchup(3);
     else if (activeMatchup === 3) handleSelectMatchup('all');
+    else handleSelectMatchup(1);
   };
 
   const handlePrevSlide = () => {
     if (activeMatchup === 'all') handleSelectMatchup(3);
-    else if (activeMatchup === 3) handleSelectMatchup(2);
-    else if (activeMatchup === 2) handleSelectMatchup(1);
+    else if (activeMatchup === 3) handleSelectMatchup('2v1');
+    else if (activeMatchup === '2v1') handleSelectMatchup(2);
+    else if (activeMatchup === 2) handleSelectMatchup('1v2');
+    else if (activeMatchup === '1v2') handleSelectMatchup(1);
+    else handleSelectMatchup('all');
   };
 
   const handleNextMatchup = handleNextSlide;
@@ -672,14 +780,15 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
     });
   };
 
-  const handlePromoteToActive = (posId: string, fromIndex: number) => {
+  const handlePromoteToActive = (posId: string, fromIndex: number, specificTargetIdx?: number) => {
     if (!currentGroup) return;
     const isOffense = currentGroup.offensePositions.some((p) => p.id === posId);
     const activeString = isOffense ? activeOffenseString : activeDefenseString;
-    const targetIdx = activeString - 1;
+    const targetIdx = specificTargetIdx !== undefined ? specificTargetIdx : activeString - 1;
 
     const list = [...(currentGroup.lineup[posId] || [])];
-    while (list.length <= targetIdx) {
+    const maxIdx = Math.max(targetIdx, fromIndex);
+    while (list.length <= maxIdx) {
       list.push({ num: '?', name: 'TBD' });
     }
     const temp = list[targetIdx];
@@ -728,6 +837,7 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
 
   const handleRunAutoFill = (options: {
     targetString: 1 | 2 | 3 | 'all';
+    balanceMode?: 'pure_depth' | 'semi_balanced_head_to_head' | 'even_mix';
     fillUnit: 'both' | 'offense' | 'defense';
   }) => {
     if (!currentGroup) return;
@@ -738,6 +848,7 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
       scrimmageChart,
       roster,
       targetString: options.targetString,
+      balanceMode: options.balanceMode || 'pure_depth',
       fillUnit: options.fillUnit,
     });
 
@@ -746,9 +857,29 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
       lineup: result.nextLineup,
     });
 
-    const msg = `Auto-filled ${result.summary.filledOffense}/${result.summary.totalOffense} Offense & ${result.summary.filledDefense}/${result.summary.totalDefense} Defense slots (${result.summary.sourceDescription})`;
+    if (options.balanceMode === 'semi_balanced_head_to_head') {
+      setActiveOffenseString(1);
+      setActiveDefenseString(2);
+      setActiveMatchup('1v2');
+    }
+
+    const parts: string[] = [];
+    if (options.balanceMode === 'semi_balanced_head_to_head') {
+      parts.push(`⚔️ Semi-Balanced Teams Created: Team 1 and Team 2 are evenly matched with a 50/50 mix of 1st & 2nd stringers to go against each other.`);
+    } else {
+      parts.push(`Auto-filled ${result.summary.filledOffense}/${result.summary.totalOffense} Offense & ${result.summary.filledDefense}/${result.summary.totalDefense} Defense slots.`);
+    }
+    if (result.summary.startersMixed > 0 && options.balanceMode !== 'semi_balanced_head_to_head') {
+      parts.push(`Balanced ${result.summary.startersMixed} starters evenly across 1s, 2s & 3s.`);
+    }
+    if (result.summary.backupsAdded > 0) {
+      parts.push(`Assigned ${result.summary.backupsAdded} rotation backups (4th & 5th strings) for live playing time.`);
+    }
+    parts.push(`(${result.summary.sourceDescription})`);
+
+    const msg = parts.join(' ');
     setAutoFillFeedback(msg);
-    setTimeout(() => setAutoFillFeedback(null), 5000);
+    setTimeout(() => setAutoFillFeedback(null), 6000);
     setShowAutoFillModal(false);
   };
 
@@ -846,6 +977,22 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
 
           {/* Top action buttons */}
           <div className="flex items-center flex-wrap gap-2">
+            {/* Semi-Balance Teams Quick Button */}
+            <button
+              onClick={() => {
+                handleRunAutoFill({
+                  targetString: 'all',
+                  balanceMode: 'semi_balanced_head_to_head',
+                  fillUnit: 'both',
+                });
+              }}
+              className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-900 dark:text-indigo-200 border border-indigo-300 dark:border-indigo-700/60 font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+              title="Make semi-balanced Team 1 vs Team 2 squads (50/50 mix of 1st & 2nd stringers to go against each other)"
+            >
+              <Swords className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span>⚔️ Semi-Balance Teams</span>
+            </button>
+
             {/* Auto Fill Quick Button */}
             <button
               onClick={() => setShowAutoFillModal(true)}
@@ -1733,9 +1880,10 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
                       ? 'bg-amber-500 text-white shadow-xs font-black'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
+                  title="Team 1 Offense vs Team 1 Defense (1s vs 1s)"
                 >
                   <Zap className="w-3.5 h-3.5" />
-                  <span>Matchup 1 (1s)</span>
+                  <span>1s vs 1s</span>
                 </button>
                 <button
                   type="button"
@@ -1745,9 +1893,10 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
                       ? 'bg-sky-600 text-white shadow-xs font-black'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
+                  title="Team 2 Offense vs Team 2 Defense (2s vs 2s)"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Matchup 2 (2s)</span>
+                  <span>2s vs 2s</span>
                 </button>
                 <button
                   type="button"
@@ -1757,24 +1906,65 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
                       ? 'bg-emerald-600 text-white shadow-xs font-black'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
+                  title="Team 3 Offense vs Team 3 Defense (3s vs 3s)"
                 >
                   <Shield className="w-3.5 h-3.5" />
-                  <span>Matchup 3 (3s)</span>
+                  <span>3s vs 3s</span>
                 </button>
+
+                {/* Semi-Balanced Head-to-Head Scrimmage Tabs */}
+                <button
+                  type="button"
+                  onClick={() => handleSelectMatchup('1v2')}
+                  className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                    activeMatchup === '1v2'
+                      ? 'bg-indigo-600 text-white shadow-xs font-black ring-1 ring-indigo-400'
+                      : 'text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100/60 dark:hover:bg-indigo-950/60'
+                  }`}
+                  title="Semi-Balanced Head-to-Head: Team 1 Offense vs Team 2 Defense"
+                >
+                  <Swords className="w-3.5 h-3.5" />
+                  <span>⚔️ T1 vs T2</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectMatchup('2v1')}
+                  className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                    activeMatchup === '2v1'
+                      ? 'bg-indigo-600 text-white shadow-xs font-black ring-1 ring-indigo-400'
+                      : 'text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100/60 dark:hover:bg-indigo-950/60'
+                  }`}
+                  title="Semi-Balanced Head-to-Head: Team 2 Offense vs Team 1 Defense"
+                >
+                  <Swords className="w-3.5 h-3.5" />
+                  <span>⚔️ T2 vs T1</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => handleSelectMatchup('all')}
                   className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                     activeMatchup === 'all'
-                      ? 'bg-indigo-600 text-white shadow-xs font-black'
+                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs font-black'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                   title="View all 3 team matchups together side-by-side"
                 >
                   <Layers className="w-3.5 h-3.5" />
-                  <span>View All 3 Together</span>
+                  <span>All 3 Together</span>
                 </button>
               </div>
+
+              {/* Quick Flip Sides button */}
+              <button
+                type="button"
+                onClick={handleSwapActiveMatchupSides}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-1 cursor-pointer transition-all border border-slate-200 dark:border-slate-700 shadow-xs"
+                title="Flip active Offense and Defense sides (e.g. swap Team 1 & Team 2)"
+              >
+                <ArrowLeftRight className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Flip Sides</span>
+              </button>
 
               <button
                 type="button"
@@ -1822,7 +2012,7 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
                     <button
                       key={num}
                       type="button"
-                      onClick={() => setActiveOffenseString(num)}
+                      onClick={() => handleSetOffenseString(num)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
                         isActive
                           ? 'bg-amber-500 text-white border-amber-600 shadow-xs font-black ring-1 ring-amber-400'
@@ -1861,7 +2051,7 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
                     <button
                       key={num}
                       type="button"
-                      onClick={() => setActiveDefenseString(num)}
+                      onClick={() => handleSetDefenseString(num)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
                         isActive
                           ? 'bg-blue-600 text-white border-blue-700 shadow-xs font-black ring-1 ring-blue-400'
@@ -1898,6 +2088,18 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
               >
                 {activeDefenseLabel}
               </span>
+              {activeMatchup === '1v2' && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-black flex items-center gap-1">
+                  <Swords className="w-3 h-3" />
+                  <span>Head-to-Head (1 vs 2)</span>
+                </span>
+              )}
+              {activeMatchup === '2v1' && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-black flex items-center gap-1">
+                  <Swords className="w-3 h-3" />
+                  <span>Head-to-Head (2 vs 1)</span>
+                </span>
+              )}
               {activeMatchup === 'all' && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-black">
                   Viewing All 3 Together
@@ -1907,6 +2109,46 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
               Active drill field: Team {activeOffenseString} Offense vs Team {activeDefenseString} Defense. Click any string to promote or assign.
             </p>
+
+            {/* Scrimmage Talent Balance Indicator */}
+            {activeOffenseStats.total > 0 && activeDefenseStats.total > 0 && (
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold border ${
+                  Math.abs((activeOffenseStats.starters / activeOffenseStats.total) - (activeDefenseStats.starters / activeDefenseStats.total)) <= 0.25
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700/60 text-emerald-900 dark:text-emerald-200'
+                    : 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700/60 text-amber-900 dark:text-amber-200'
+                }`}>
+                  <Scale className="w-3.5 h-3.5 text-current" />
+                  <span>
+                    {Math.abs((activeOffenseStats.starters / activeOffenseStats.total) - (activeDefenseStats.starters / activeDefenseStats.total)) <= 0.25
+                      ? '⚖️ Semi-Balanced Scrimmage:'
+                      : 'Talent Distribution:'}
+                  </span>
+                  <span className="font-semibold text-[11px] opacity-90">
+                    Offense ({activeOffenseStats.starters} 1s, {activeOffenseStats.backups} 2s) vs Defense ({activeDefenseStats.starters} 1s, {activeDefenseStats.backups} 2s)
+                  </span>
+                </div>
+
+                {/* Quick button to semi-balance if not balanced */}
+                {Math.abs((activeOffenseStats.starters / activeOffenseStats.total) - (activeDefenseStats.starters / activeDefenseStats.total)) > 0.25 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleRunAutoFill({
+                        targetString: 'all',
+                        balanceMode: 'semi_balanced_head_to_head',
+                        fillUnit: 'both',
+                      });
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] flex items-center gap-1 shadow-2xs cursor-pointer transition-all"
+                    title="Distribute 1st and 2nd stringers evenly across Team 1 and Team 2"
+                  >
+                    <Swords className="w-3 h-3" />
+                    <span>Semi-Balance Teams</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Unit Filter Tabs & Add Slot Buttons */}
@@ -2498,6 +2740,111 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
                                   );
                                 })}
                               </div>
+
+                              {/* Backups & Playing Time Rotations (4th & 5th Strings) */}
+                              {(() => {
+                                const fourthStr = assigned[3];
+                                const fifthStr = assigned[4];
+                                const hasBackups = (fourthStr && fourthStr.num !== '?') || (fifthStr && fifthStr.num !== '?');
+
+                                return (
+                                  <div className="pt-2 border-t border-dashed border-slate-200 dark:border-slate-700/60 space-y-1">
+                                    <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                      <span>Backups (4th & 5th Strings):</span>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setAssigningPos({
+                                            id: pos.id,
+                                            name: pos.name,
+                                            unit: 'offense',
+                                            targetIdx: !fourthStr || fourthStr.num === '?' ? 3 : 4,
+                                          })
+                                        }
+                                        className="text-amber-600 dark:text-amber-400 hover:underline font-bold text-[9px] cursor-pointer"
+                                      >
+                                        + Add Backup
+                                      </button>
+                                    </div>
+
+                                    {/* 4th string backup */}
+                                    {fourthStr && fourthStr.num !== '?' && (
+                                      <div className="flex items-center justify-between px-2 py-1 rounded-md bg-amber-500/5 border border-amber-400/30 text-xs">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                          <span className="text-[9px] font-black px-1 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                                            4th Str
+                                          </span>
+                                          <span className="truncate font-bold text-slate-800 dark:text-slate-200">
+                                            #{fourthStr.num} {fourthStr.name}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          <span className="text-[9px] text-slate-400">Sub:</span>
+                                          {([1, 2, 3] as const).map((tNum) => (
+                                            <button
+                                              key={`sub_off_4th_${pos.id}_t${tNum}`}
+                                              type="button"
+                                              onClick={() => handlePromoteToActive(pos.id, 3, tNum - 1)}
+                                              className="px-1 py-0.5 rounded text-[9px] font-black bg-amber-100 hover:bg-amber-200 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200 cursor-pointer"
+                                              title={`Sub #${fourthStr.num} into Team ${tNum} for playing time`}
+                                            >
+                                              T{tNum}
+                                            </button>
+                                          ))}
+                                          <button
+                                            type="button"
+                                            onClick={() => handleRemovePlayer(pos.id, 3)}
+                                            className="text-slate-400 hover:text-rose-500 p-0.5 cursor-pointer ml-1"
+                                          >
+                                            <X className="w-2.5 h-2.5" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* 5th string backup */}
+                                    {fifthStr && fifthStr.num !== '?' && (
+                                      <div className="flex items-center justify-between px-2 py-1 rounded-md bg-amber-500/5 border border-amber-400/30 text-xs">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                          <span className="text-[9px] font-black px-1 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                                            5th Str
+                                          </span>
+                                          <span className="truncate font-bold text-slate-800 dark:text-slate-200">
+                                            #{fifthStr.num} {fifthStr.name}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          <span className="text-[9px] text-slate-400">Sub:</span>
+                                          {([1, 2, 3] as const).map((tNum) => (
+                                            <button
+                                              key={`sub_off_5th_${pos.id}_t${tNum}`}
+                                              type="button"
+                                              onClick={() => handlePromoteToActive(pos.id, 4, tNum - 1)}
+                                              className="px-1 py-0.5 rounded text-[9px] font-black bg-amber-100 hover:bg-amber-200 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200 cursor-pointer"
+                                              title={`Sub #${fifthStr.num} into Team ${tNum} for playing time`}
+                                            >
+                                              T{tNum}
+                                            </button>
+                                          ))}
+                                          <button
+                                            type="button"
+                                            onClick={() => handleRemovePlayer(pos.id, 4)}
+                                            className="text-slate-400 hover:text-rose-500 p-0.5 cursor-pointer ml-1"
+                                          >
+                                            <X className="w-2.5 h-2.5" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {!hasBackups && (
+                                      <div className="text-[10px] text-slate-400 italic">
+                                        No 4th/5th string backups assigned
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                         );
@@ -2762,6 +3109,111 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
                                   );
                                 })}
                               </div>
+
+                              {/* Backups & Playing Time Rotations (4th & 5th Strings) */}
+                              {(() => {
+                                const fourthStr = assigned[3];
+                                const fifthStr = assigned[4];
+                                const hasBackups = (fourthStr && fourthStr.num !== '?') || (fifthStr && fifthStr.num !== '?');
+
+                                return (
+                                  <div className="pt-2 border-t border-dashed border-slate-200 dark:border-slate-700/60 space-y-1">
+                                    <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                      <span>Backups (4th & 5th Strings):</span>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setAssigningPos({
+                                            id: pos.id,
+                                            name: pos.name,
+                                            unit: 'defense',
+                                            targetIdx: !fourthStr || fourthStr.num === '?' ? 3 : 4,
+                                          })
+                                        }
+                                        className="text-blue-600 dark:text-blue-400 hover:underline font-bold text-[9px] cursor-pointer"
+                                      >
+                                        + Add Backup
+                                      </button>
+                                    </div>
+
+                                    {/* 4th string backup */}
+                                    {fourthStr && fourthStr.num !== '?' && (
+                                      <div className="flex items-center justify-between px-2 py-1 rounded-md bg-blue-500/5 border border-blue-400/30 text-xs">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                          <span className="text-[9px] font-black px-1 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                                            4th Str
+                                          </span>
+                                          <span className="truncate font-bold text-slate-800 dark:text-slate-200">
+                                            #{fourthStr.num} {fourthStr.name}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          <span className="text-[9px] text-slate-400">Sub:</span>
+                                          {([1, 2, 3] as const).map((tNum) => (
+                                            <button
+                                              key={`sub_def_4th_${pos.id}_t${tNum}`}
+                                              type="button"
+                                              onClick={() => handlePromoteToActive(pos.id, 3, tNum - 1)}
+                                              className="px-1 py-0.5 rounded text-[9px] font-black bg-blue-100 hover:bg-blue-200 text-blue-900 dark:bg-blue-900/40 dark:text-blue-200 cursor-pointer"
+                                              title={`Sub #${fourthStr.num} into Team ${tNum} for playing time`}
+                                            >
+                                              T{tNum}
+                                            </button>
+                                          ))}
+                                          <button
+                                            type="button"
+                                            onClick={() => handleRemovePlayer(pos.id, 3)}
+                                            className="text-slate-400 hover:text-rose-500 p-0.5 cursor-pointer ml-1"
+                                          >
+                                            <X className="w-2.5 h-2.5" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* 5th string backup */}
+                                    {fifthStr && fifthStr.num !== '?' && (
+                                      <div className="flex items-center justify-between px-2 py-1 rounded-md bg-blue-500/5 border border-blue-400/30 text-xs">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                          <span className="text-[9px] font-black px-1 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                                            5th Str
+                                          </span>
+                                          <span className="truncate font-bold text-slate-800 dark:text-slate-200">
+                                            #{fifthStr.num} {fifthStr.name}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          <span className="text-[9px] text-slate-400">Sub:</span>
+                                          {([1, 2, 3] as const).map((tNum) => (
+                                            <button
+                                              key={`sub_def_5th_${pos.id}_t${tNum}`}
+                                              type="button"
+                                              onClick={() => handlePromoteToActive(pos.id, 4, tNum - 1)}
+                                              className="px-1 py-0.5 rounded text-[9px] font-black bg-blue-100 hover:bg-blue-200 text-blue-900 dark:bg-blue-900/40 dark:text-blue-200 cursor-pointer"
+                                              title={`Sub #${fifthStr.num} into Team ${tNum} for playing time`}
+                                            >
+                                              T{tNum}
+                                            </button>
+                                          ))}
+                                          <button
+                                            type="button"
+                                            onClick={() => handleRemovePlayer(pos.id, 4)}
+                                            className="text-slate-400 hover:text-rose-500 p-0.5 cursor-pointer ml-1"
+                                          >
+                                            <X className="w-2.5 h-2.5" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {!hasBackups && (
+                                      <div className="text-[10px] text-slate-400 italic">
+                                        No 4th/5th string backups assigned
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                         );
@@ -2940,11 +3392,19 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
                               <span>{getOffenseLabelForString(3)}</span>
                             </span>
                           </th>
+                          <th className="p-2.5 text-amber-600 dark:text-amber-400">
+                            Backups (4th & 5th Str)
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 dark:divide-slate-800 bg-white dark:bg-slate-900">
                         {currentGroup.offensePositions.map((pos) => {
                           const assigned = currentGroup.lineup[pos.id] || [];
+                          const backups = [
+                            assigned[3] && assigned[3].num !== '?' ? `4th: #${assigned[3].num} ${assigned[3].name}` : null,
+                            assigned[4] && assigned[4].num !== '?' ? `5th: #${assigned[4].num} ${assigned[4].name}` : null,
+                          ].filter(Boolean);
+
                           return (
                             <tr key={pos.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                               <td className="p-2.5 font-black text-slate-900 dark:text-white">
@@ -2958,6 +3418,9 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
                               </td>
                               <td className="p-2.5 text-slate-500 dark:text-slate-500">
                                 {assigned[2] && assigned[2].num !== '?' ? `#${assigned[2].num} ${assigned[2].name}` : '—'}
+                              </td>
+                              <td className="p-2.5 text-amber-700 dark:text-amber-300 font-medium">
+                                {backups.length > 0 ? backups.join(' • ') : '—'}
                               </td>
                             </tr>
                           );
@@ -3001,11 +3464,19 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
                               <span>{getDefenseLabelForString(3)}</span>
                             </span>
                           </th>
+                          <th className="p-2.5 text-blue-600 dark:text-blue-400">
+                            Backups (4th & 5th Str)
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 dark:divide-slate-800 bg-white dark:bg-slate-900">
                         {currentGroup.defensePositions.map((pos) => {
                           const assigned = currentGroup.lineup[pos.id] || [];
+                          const backups = [
+                            assigned[3] && assigned[3].num !== '?' ? `4th: #${assigned[3].num} ${assigned[3].name}` : null,
+                            assigned[4] && assigned[4].num !== '?' ? `5th: #${assigned[4].num} ${assigned[4].name}` : null,
+                          ].filter(Boolean);
+
                           return (
                             <tr key={pos.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                               <td className="p-2.5 font-black text-slate-900 dark:text-white">
@@ -3019,6 +3490,9 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
                               </td>
                               <td className="p-2.5 text-slate-500 dark:text-slate-500">
                                 {assigned[2] && assigned[2].num !== '?' ? `#${assigned[2].num} ${assigned[2].name}` : '—'}
+                              </td>
+                              <td className="p-2.5 text-blue-700 dark:text-blue-300 font-medium">
+                                {backups.length > 0 ? backups.join(' • ') : '—'}
                               </td>
                             </tr>
                           );
@@ -3038,88 +3512,186 @@ export const PracticeLiveDrillsView: React.FC<PracticeLiveDrillsViewProps> = ({
       {/* ==================================================================== */}
       {showAutoFillModal && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="font-black text-slate-900 dark:text-white text-base">
-                    Auto-Fill Drill Matchup
+                    Auto-Fill Drill Matchups
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Populate 11v11 or 7v7 slots from Depth Chart & Roster
+                    Smart Depth Chart population with balanced competition
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowAutoFillModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3 py-4">
-              <button
-                onClick={() => handleRunAutoFill({ targetString: 1, fillUnit: 'both' })}
-                className="w-full text-left p-3.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-300 dark:border-amber-600/50 transition-all cursor-pointer group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-black text-sm text-amber-950 dark:text-amber-200">
-                    ⚡ Auto-Fill 1st String Starters (Both)
+            {/* Depth Chart Rules Verification Notice */}
+            <div className="mt-4 p-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/50 text-xs">
+              <div className="font-black text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5 mb-1">
+                <span>🛡️ Formation Depth Chart Rules:</span>
+              </div>
+              <ul className="text-indigo-800/90 dark:text-indigo-300/80 space-y-1 text-[11px] list-disc list-inside">
+                <li><strong>Strict Position Mapping (QB is QB, etc.)</strong>: Players are only placed into drill slots that match their exact position on your offensive or defensive formations.</li>
+                <li><strong>Formation Colors to Teams</strong>: <strong>Black (1st string)</strong> fills Team 1, <strong>Gold (2nd string)</strong> fills Team 2, and <strong>Blue (3rd string)</strong> fills Team 3.</li>
+                <li><strong>4th & 5th String Backups</strong>: Deep formation backups populate active rotation slots so all athletes get practice reps.</li>
+              </ul>
+            </div>
+
+            <div className="space-y-3.5 py-4">
+              {/* PRIMARY: FORMATION DEPTH AUTO-FILL (Black=1, Gold=2, Blue=3) */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50 to-blue-50/40 dark:from-indigo-950/40 dark:to-blue-950/30 border-2 border-indigo-500/80 dark:border-indigo-500/70 shadow-xs">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <span className="px-2 py-0.5 rounded-md bg-indigo-600 text-white font-black text-[10px] uppercase tracking-wider">
+                    Primary Formation Mapping
                   </span>
-                  <span className="text-xs text-amber-600 dark:text-amber-400 font-bold group-hover:translate-x-0.5 transition-transform">
-                    Run →
+                  <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+                    Black=1 • Gold=2 • Blue=3
                   </span>
                 </div>
-                <p className="text-xs text-amber-800/80 dark:text-amber-300/70 mt-1">
-                  Pulls starting depth chart players for both Offense & Defense positions with smart roster fallback.
+                <h4 className="font-black text-slate-900 dark:text-white text-sm">
+                  📋 Auto-Fill from Formation Depth Chart
+                </h4>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 mb-3">
+                  Directly loads players from your offensive & defensive formations into their exact positions (QB is QB, RB is RB, LT is LT, MLB is MLB). Black (1st string) goes to Team 1, Gold (2nd string) goes to Team 2, Blue (3rd string) goes to Team 3, and 4th/5th strings populate backup rotations.
                 </p>
-              </button>
 
-              <button
-                onClick={() => handleRunAutoFill({ targetString: 2, fillUnit: 'both' })}
-                className="w-full text-left p-3.5 rounded-2xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-300 dark:border-sky-600/50 transition-all cursor-pointer group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-black text-sm text-sky-950 dark:text-sky-200">
-                    🔄 Auto-Fill 2nd String Backups (Both)
+                <div className="space-y-2">
+                  <button
+                    onClick={() => handleRunAutoFill({ targetString: 'all', balanceMode: 'pure_depth', fillUnit: 'both' })}
+                    className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>Auto-Fill All 3 Teams (Offense & Defense)</span>
+                  </button>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => handleRunAutoFill({ targetString: 'all', balanceMode: 'pure_depth', fillUnit: 'offense' })}
+                      className="py-1.5 px-3 rounded-lg bg-white dark:bg-slate-800 hover:bg-indigo-100/60 dark:hover:bg-indigo-950/60 border border-indigo-300 dark:border-indigo-700 font-bold text-xs text-indigo-900 dark:text-indigo-200 cursor-pointer text-center transition-all"
+                    >
+                      Offense Only (Formations)
+                    </button>
+                    <button
+                      onClick={() => handleRunAutoFill({ targetString: 'all', balanceMode: 'pure_depth', fillUnit: 'defense' })}
+                      className="py-1.5 px-3 rounded-lg bg-white dark:bg-slate-800 hover:bg-blue-100/60 dark:hover:bg-blue-950/60 border border-blue-300 dark:border-blue-700 font-bold text-xs text-blue-900 dark:text-blue-200 cursor-pointer text-center transition-all"
+                    >
+                      Defense Only (Formations)
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* USER REQUESTED: SEMI-BALANCED HEAD-TO-HEAD SCRIMMAGE (Team 1 vs Team 2) */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-50/50 dark:from-purple-950/40 dark:to-indigo-950/40 border-2 border-purple-400 dark:border-purple-600/80 shadow-xs">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <span className="px-2 py-0.5 rounded-md bg-purple-600 text-white font-black text-[10px] uppercase tracking-wider flex items-center gap-1">
+                    <Swords className="w-3 h-3" />
+                    <span>Head-to-Head Scrimmage</span>
                   </span>
-                  <span className="text-xs text-sky-600 dark:text-sky-400 font-bold group-hover:translate-x-0.5 transition-transform">
-                    Run →
+                  <span className="text-[11px] font-bold text-purple-800 dark:text-purple-300 flex items-center gap-1">
+                    <Scale className="w-3.5 h-3.5" />
+                    <span>50/50 Talent Split</span>
                   </span>
                 </div>
-                <p className="text-xs text-sky-800/80 dark:text-sky-300/70 mt-1">
-                  Populates 2nd-string rotation depth players behind existing starters.
+                <h4 className="font-black text-slate-900 dark:text-white text-sm">
+                  ⚔️ Make Semi-Balanced Teams (Team 1 vs Team 2)
+                </h4>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 mb-3">
+                  Distributes 1st string (Black) and 2nd string (Gold) players evenly 50/50 across Team 1 and Team 2 by position group so both squads are competitive to go against each other. Team 3 retains 3rd string (Blue), and 4th/5th string backups get rotation reps.
                 </p>
-              </button>
 
-              <div className="grid grid-cols-2 gap-2 pt-2">
+                <div className="space-y-2">
+                  <button
+                    onClick={() => handleRunAutoFill({ targetString: 'all', balanceMode: 'semi_balanced_head_to_head', fillUnit: 'both' })}
+                    className="w-full py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
+                  >
+                    <Swords className="w-4 h-4" />
+                    <span>Generate Semi-Balanced Teams (Offense & Defense)</span>
+                  </button>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => handleRunAutoFill({ targetString: 'all', balanceMode: 'semi_balanced_head_to_head', fillUnit: 'offense' })}
+                      className="py-1.5 px-3 rounded-lg bg-white dark:bg-slate-800 hover:bg-purple-100/60 dark:hover:bg-purple-950/60 border border-purple-300 dark:border-purple-700 font-bold text-xs text-purple-900 dark:text-purple-200 cursor-pointer text-center transition-all"
+                    >
+                      Semi-Balance Offense Only
+                    </button>
+                    <button
+                      onClick={() => handleRunAutoFill({ targetString: 'all', balanceMode: 'semi_balanced_head_to_head', fillUnit: 'defense' })}
+                      className="py-1.5 px-3 rounded-lg bg-white dark:bg-slate-800 hover:bg-purple-100/60 dark:hover:bg-purple-950/60 border border-purple-300 dark:border-purple-700 font-bold text-xs text-purple-900 dark:text-purple-200 cursor-pointer text-center transition-all"
+                    >
+                      Semi-Balance Defense Only
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECONDARY: BALANCED 3-TEAM MIX */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="font-black text-slate-900 dark:text-white text-xs">
+                    ⚖️ 3-Way Even Mix (Evenly Mix Across 1s, 2s & 3s)
+                  </h4>
+                  <span className="text-[10px] text-slate-500 font-bold">All 3 Teams</span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2.5">
+                  Mixes 1st, 2nd, and 3rd string depth evenly across all 3 teams so every squad has equal starter representation.
+                </p>
                 <button
-                  onClick={() => handleRunAutoFill({ targetString: 1, fillUnit: 'offense' })}
-                  className="p-3 rounded-xl bg-slate-50 hover:bg-amber-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-left font-bold text-xs text-slate-800 dark:text-slate-200 cursor-pointer"
+                  onClick={() => handleRunAutoFill({ targetString: 'all', balanceMode: 'even_mix', fillUnit: 'both' })}
+                  className="w-full py-2 px-3 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 font-bold text-xs text-slate-800 dark:text-slate-100 cursor-pointer text-center transition-all"
                 >
-                  <div className="text-amber-600 font-black mb-0.5">Offense Only</div>
-                  <div className="text-[11px] text-slate-500">Fill starters on Offense</div>
+                  Run 3-Way Even Mix
                 </button>
-                <button
-                  onClick={() => handleRunAutoFill({ targetString: 1, fillUnit: 'defense' })}
-                  className="p-3 rounded-xl bg-slate-50 hover:bg-blue-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-left font-bold text-xs text-slate-800 dark:text-slate-200 cursor-pointer"
-                >
-                  <div className="text-blue-600 font-black mb-0.5">Defense Only</div>
-                  <div className="text-[11px] text-slate-500">Fill starters on Defense</div>
-                </button>
+              </div>
+
+              {/* INDIVIDUAL STRING QUICK FILLS */}
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
+                  Fill Specific String from Formations:
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => handleRunAutoFill({ targetString: 1, balanceMode: 'pure_depth', fillUnit: 'both' })}
+                    className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-center cursor-pointer transition-all"
+                  >
+                    <div className="font-black text-xs text-slate-900 dark:text-white">Team 1</div>
+                    <div className="text-[10px] font-bold text-slate-500">Black (1st String)</div>
+                  </button>
+                  <button
+                    onClick={() => handleRunAutoFill({ targetString: 2, balanceMode: 'pure_depth', fillUnit: 'both' })}
+                    className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-center cursor-pointer transition-all"
+                  >
+                    <div className="font-black text-xs text-slate-900 dark:text-white">Team 2</div>
+                    <div className="text-[10px] font-bold text-amber-600 dark:text-amber-400">Gold (2nd String)</div>
+                  </button>
+                  <button
+                    onClick={() => handleRunAutoFill({ targetString: 3, balanceMode: 'pure_depth', fillUnit: 'both' })}
+                    className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-center cursor-pointer transition-all"
+                  >
+                    <div className="font-black text-xs text-slate-900 dark:text-white">Team 3</div>
+                    <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400">Blue (3rd String)</div>
+                  </button>
+                </div>
               </div>
             </div>
 
             <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
               <button
                 onClick={() => setShowAutoFillModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
               >
-                Cancel
+                Close
               </button>
             </div>
           </div>

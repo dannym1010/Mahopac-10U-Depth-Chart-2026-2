@@ -6,6 +6,7 @@ import {
   RosterPlayer,
   FormationBoard,
 } from '../types';
+import { cleanTruncatedPosition } from '../utils/depthChartUtils';
 
 // ============================================================================
 // 1. TEAM COLORS SYSTEM
@@ -470,89 +471,469 @@ export function normalizePositionToken(str: string): string {
   return (str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+export type PositionCategory =
+  | 'QB'
+  | 'RB'
+  | 'WR'
+  | 'TE'
+  | 'OL'
+  | 'DL'
+  | 'LB'
+  | 'DB'
+  | 'ST'
+  | 'ATH';
+
+export interface PositionClassification {
+  category: PositionCategory;
+  subRole: string;
+  isSpecialized: boolean; // QB, K, P, LS are strictly specialized
+}
+
 /**
- * Maps common football synonyms to position keys
+ * Classifies any raw football position name into standard category and sub-role
  */
-const POSITION_SYNONYMS: Record<string, string[]> = {
-  qb: ['qb', '1', '1qb', 'quarterback', 'passer', 'grpqb', '211'],
-  rb: ['rb', 'hb', 'fb', '3hb', '2fb', '4rb', 'halfback', 'tailback', 'fullback', 'runningback', 'grprb', 'grpfb', '212', '213', 'back'],
-  fb: ['fb', '2fb', 'fullback', 'hback', 'grpfb', '212', 'rb'],
-  wr: ['wr', 'wideout', 'receiver', 'widereceiver', 'x', 'z', 'w', 'h', 'slot', 'wr1', 'wr2', 'wr3', 'wr4', 'wrx', 'wrz', 'splitend', 'flanker', 'wr(x)', 'wr(z)', 'slot(h)', 'slot(w)'],
-  wr_x: ['x', 'wrx', 'wr1', 'wr', 'wideout1', 'splitend', 'grpx', '21x', 'wideout', 'receiver', 'wr(x)'],
-  wr_z: ['z', 'wrz', 'wr2', 'wr', 'flanker', 'grpz', '21z', 'wideout', 'receiver', 'wr(z)'],
-  wr_w: ['w', 'slotw', 'slot', 'h', 'wr3', 'slot1', 'hslot', 'slot2', 'wr', 'wideout', 'receiver', 'slot(w)'],
-  te_y: ['y', 'y1', 'y2', 'te', 'tey', 'tes', 'tightend', 'grptes', '21y1', 'te(y)'],
-  lt: ['lt', 'lefttackle', 'ot1', 'ot', 't1', 'grplt', '21lt', 'ol', 'tackle', 't'],
-  lg: ['lg', 'leftguard', 'og1', 'og', 'g1', 'grplg', '21lg', 'ol', 'guard', 'g'],
-  c: ['c', 'center', 'grpc', '21c', 'ol'],
-  rg: ['rg', 'rightguard', 'og2', 'og', 'g2', 'grprg', '21rg', 'ol', 'guard', 'g'],
-  rt: ['rt', 'righttackle', 'ot2', 'ot', 't2', 'grprt', '21rt', 'ol', 'tackle', 't'],
-  ol: ['ol', 'ot', 'og', 'c', 'lt', 'lg', 'rg', 'rt', 'lineman', 'offensiveline', 'tackle', 'guard', 'center'],
-  lde: ['lde', 'de1', 'wde', 'le', 'de', 'edge', 'defensiveend1', '53de1', '44wde', 'dl', 'end'],
-  rde: ['rde', 'de2', 'sde', 're', 'de', 'edge', 'defensiveend2', '53de2', '44sde', 'dl', 'end'],
-  ldt: ['ldt', 'dt1', 'dt', 'defensivetackle1', 'tackle1', '53dt1', '44dt1', 'dl', 'nose', 'nt'],
-  rdt: ['rdt', 'dt2', 'nt', 'nosetackle', 'nose', 'dt', 'defensivetackle2', '53dt2', '44dt2', 'dl'],
-  nt: ['nt', 'nose', 'nosetackle', 'dt1', 'dt2', '53nt', 'dt', 'dl'],
-  dl: ['dl', 'de', 'dt', 'nt', 'lde', 'rde', 'ldt', 'rdt', 'edge', 'defensiveline', 'defensiveend', 'defensivetackle'],
-  mlb: ['mlb', 'mike', 'middlelinebacker', 'ilb', 'lb1', 'grpmike', '53mike', '44mike', 'lb', 'linebacker', 'mlb(mike)'],
-  wlb: ['wlb', 'will', 'weaklinebacker', 'olb1', 'lb2', 'grpwill', '53will', '44will', 'lb', 'linebacker', 'olb', 'wlb(will)'],
-  slb: ['slb', 'sam', 'stronglinebacker', 'olb2', 'lb3', 'rover', 'grpsam', '53sam', '44sam', '44rover', 'lb', 'linebacker', 'olb', 'slb(sam)'],
-  lb: ['lb', 'linebacker', 'mlb', 'wlb', 'slb', 'ilb', 'olb', 'mike', 'will', 'sam'],
-  cb1: ['cb1', 'cb', 'corner1', 'lcb', 'cornerback1', 'grpcb1', '53cb2', '44cb1', 'db', 'corner'],
-  cb2: ['cb2', 'cb', 'corner2', 'rcb', 'cornerback2', 'grpcb2', '53cb1', '44cb2', 'db', 'corner'],
-  cb: ['cb', 'cornerback', 'corner', 'lcb', 'rcb', 'cb1', 'cb2', 'db'],
-  fs: ['fs', 'freesafety', 'safety1', 'fsafety', 'grpfs', '53fs', '44fs', 'safety', 'db', 's'],
-  ss: ['ss', 'strongsafety', 'rover', 'safety2', 'ssafety', 'grprover', '44rover', 'nickel', 'safety', 'db', 's'],
-  s: ['s', 'safety', 'fs', 'ss', 'db'],
-  nickel: ['nickel', 'nb', 'slotdb', 'db', 'rover', 'slb', 'ss', 'cb', 'safety'],
-  db: ['db', 'defensiveback', 'cb', 'fs', 'ss', 's', 'nickel', 'nb', 'corner', 'safety'],
-};
+export function getPositionCategory(rawName: string): PositionClassification {
+  const clean = cleanTruncatedPosition(rawName).toUpperCase();
+  const token = normalizePositionToken(rawName);
+
+  // 1. Quarterback - STRICT: only actual QB
+  if (
+    clean === 'QB' ||
+    token === 'qb' ||
+    token === '1qb' ||
+    token.includes('quarterback') ||
+    token === 'passer' ||
+    token === '1' ||
+    token === 'grpqb'
+  ) {
+    return { category: 'QB', subRole: 'QB', isSpecialized: true };
+  }
+
+  // 2. Running Back / Fullback / Halfback
+  if (
+    clean === 'RB' ||
+    clean === 'FB' ||
+    clean === 'HB' ||
+    token === 'rb' ||
+    token === 'fb' ||
+    token === 'hb' ||
+    token.includes('halfback') ||
+    token.includes('tailback') ||
+    token.includes('fullback') ||
+    token.includes('runningback') ||
+    token === '4rb' ||
+    token === '2fb' ||
+    token === '3hb'
+  ) {
+    const isFB = clean === 'FB' || token.includes('fb') || token.includes('fullback');
+    return { category: 'RB', subRole: isFB ? 'FB' : 'RB', isSpecialized: false };
+  }
+
+  // 3. Wide Receiver / Slot / Flanker / Split End
+  if (
+    clean === 'WR' ||
+    clean === 'X' ||
+    clean === 'Z' ||
+    clean === 'W' ||
+    clean === 'H' ||
+    token.startsWith('wr') ||
+    token.includes('wideout') ||
+    token.includes('receiver') ||
+    token.includes('splitend') ||
+    token.includes('flanker') ||
+    token.includes('slot')
+  ) {
+    let sub = 'WR';
+    if (clean === 'X' || token.includes('x')) sub = 'X';
+    else if (clean === 'Z' || token.includes('z')) sub = 'Z';
+    else if (clean === 'W' || token.includes('slot') || token.includes('w') || clean === 'H') sub = 'SLOT';
+    return { category: 'WR', subRole: sub, isSpecialized: false };
+  }
+
+  // 4. Tight End
+  if (
+    clean === 'TE' ||
+    clean === 'Y' ||
+    token === 'te' ||
+    token === 'y' ||
+    token === 'y1' ||
+    token === 'y2' ||
+    token.includes('tightend')
+  ) {
+    return { category: 'TE', subRole: 'TE', isSpecialized: false };
+  }
+
+  // 5. Offensive Line (LT, LG, C, RG, RT, OL)
+  if (
+    clean === 'LT' ||
+    clean === 'LG' ||
+    clean === 'C' ||
+    clean === 'RG' ||
+    clean === 'RT' ||
+    clean === 'OL' ||
+    token.includes('tackle') ||
+    token.includes('guard') ||
+    token.includes('center') ||
+    token === 'lt' ||
+    token === 'lg' ||
+    token === 'c' ||
+    token === 'rg' ||
+    token === 'rt' ||
+    token === 'ol' ||
+    token === 'ot' ||
+    token === 'og' ||
+    token === 'ot1' ||
+    token === 'ot2' ||
+    token === 'og1' ||
+    token === 'og2' ||
+    token.includes('lineman')
+  ) {
+    let sub = 'OL';
+    if (clean === 'C' || token === 'c' || token.includes('center')) sub = 'C';
+    else if (clean === 'LT' || token === 'lt' || token.includes('lefttackle') || token === 'ot1') sub = 'LT';
+    else if (clean === 'LG' || token === 'lg' || token.includes('leftguard') || token === 'og1') sub = 'LG';
+    else if (clean === 'RG' || token === 'rg' || token.includes('rightguard') || token === 'og2') sub = 'RG';
+    else if (clean === 'RT' || token === 'rt' || token.includes('righttackle') || token === 'ot2') sub = 'RT';
+    return { category: 'OL', subRole: sub, isSpecialized: false };
+  }
+
+  // 6. Defensive Line (LDE, RDE, DE, LDT, RDT, DT, NT, DL)
+  if (
+    clean === 'DE' ||
+    clean === 'DT' ||
+    clean === 'NT' ||
+    clean === 'DL' ||
+    token.includes('defensiveend') ||
+    token.includes('defensivetackle') ||
+    token.includes('nosetackle') ||
+    token.includes('nose') ||
+    token.includes('edge') ||
+    token.startsWith('de') ||
+    token.startsWith('dt') ||
+    token === 'lde' ||
+    token === 'rde' ||
+    token === 'ldt' ||
+    token === 'rdt' ||
+    token === 'nt' ||
+    token === 'dl'
+  ) {
+    let sub = 'DL';
+    if (clean === 'NT' || token.includes('nt') || token.includes('nose')) sub = 'NT';
+    else if (clean === 'DT' || token.includes('dt') || token === 'ldt' || token === 'rdt') sub = 'DT';
+    else if (clean === 'DE' || token.includes('de') || token.includes('edge') || token === 'lde' || token === 'rde') sub = 'DE';
+    return { category: 'DL', subRole: sub, isSpecialized: false };
+  }
+
+  // 7. Linebacker (MLB, WLB, SLB, LB, ILB, OLB)
+  if (
+    clean === 'MLB' ||
+    clean === 'WLB' ||
+    clean === 'SLB' ||
+    clean === 'LB' ||
+    clean === 'ILB' ||
+    clean === 'OLB' ||
+    token.includes('linebacker') ||
+    token.includes('mike') ||
+    token.includes('will') ||
+    token.includes('sam') ||
+    token.includes('rover') ||
+    token.endsWith('lb') ||
+    token === 'lb' ||
+    token === 'mlb' ||
+    token === 'wlb' ||
+    token === 'slb' ||
+    token === 'ilb' ||
+    token === 'olb'
+  ) {
+    let sub = 'LB';
+    if (clean === 'MLB' || token.includes('mike') || token === 'mlb' || token === 'ilb') sub = 'MLB';
+    else if (clean === 'WLB' || token.includes('will') || token === 'wlb') sub = 'WLB';
+    else if (clean === 'SLB' || token.includes('sam') || token.includes('rover') || token === 'slb') sub = 'SLB';
+    return { category: 'LB', subRole: sub, isSpecialized: false };
+  }
+
+  // 8. Defensive Back (CB, FS, SS, S, Nickel, DB)
+  if (
+    clean === 'CB' ||
+    clean === 'FS' ||
+    clean === 'SS' ||
+    clean === 'S' ||
+    clean === 'DB' ||
+    token.includes('corner') ||
+    token.includes('safety') ||
+    token.includes('nickel') ||
+    token.includes('defensiveback') ||
+    token.startsWith('cb') ||
+    token === 'fs' ||
+    token === 'ss' ||
+    token === 's' ||
+    token === 'db' ||
+    token === 'nb'
+  ) {
+    let sub = 'DB';
+    if (token.startsWith('cb') || token.includes('corner') || clean === 'CB') sub = 'CB';
+    else if (token === 'fs' || token.includes('free') || clean === 'FS') sub = 'FS';
+    else if (token === 'ss' || token.includes('strong') || clean === 'SS') sub = 'SS';
+    else if (token.includes('nickel') || token === 'nb') sub = 'NICKEL';
+    return { category: 'DB', subRole: sub, isSpecialized: false };
+  }
+
+  // 9. Special Teams (K, P, LS)
+  if (clean === 'K' || clean === 'P' || clean === 'LS' || token === 'k' || token === 'p' || token === 'ls') {
+    return { category: 'ST', subRole: clean, isSpecialized: true };
+  }
+
+  return { category: 'ATH', subRole: 'ATH', isSpecialized: false };
+}
 
 /**
  * Checks if target position name matches a candidate position name or ID
  */
 export function isPositionMatch(targetName: string, candidateName: string, candidateId: string = ''): boolean {
-  const cleanTarget = normalizePositionToken(targetName);
-  const cleanCandName = normalizePositionToken(candidateName);
-  const cleanCandId = normalizePositionToken(candidateId);
-
-  // Exact match
-  if (cleanTarget && (cleanTarget === cleanCandName || cleanTarget === cleanCandId)) {
+  if (isExactPositionSlotMatch(targetName, candidateName, candidateId)) {
     return true;
   }
 
-  // Broad football unit/position overlap checks
-  if (cleanTarget.startsWith('wr') && (cleanCandName.startsWith('wr') || cleanCandName === 'x' || cleanCandName === 'z' || cleanCandName === 'slot')) return true;
-  if (cleanTarget.startsWith('cb') && (cleanCandName.startsWith('cb') || cleanCandName === 'db' || cleanCandName === 'corner')) return true;
-  if (cleanTarget.startsWith('de') && (cleanCandName.startsWith('de') || cleanCandName === 'dl' || cleanCandName === 'edge')) return true;
-  if (cleanTarget.startsWith('dt') && (cleanCandName.startsWith('dt') || cleanCandName === 'dl' || cleanCandName === 'nt')) return true;
-  if (cleanTarget.endsWith('lb') && (cleanCandName.endsWith('lb') || cleanCandName === 'mike' || cleanCandName === 'will' || cleanCandName === 'sam')) return true;
+  const tClass = getPositionCategory(targetName);
+  const cClass = getPositionCategory(candidateName || candidateId);
 
-  // Check synonym groupings
-  for (const [key, synonyms] of Object.entries(POSITION_SYNONYMS)) {
-    const targetMatchesGroup = synonyms.some(
-      (s) => cleanTarget === s || cleanTarget.includes(s) || s.includes(cleanTarget)
-    );
-    if (targetMatchesGroup) {
-      const candMatchesGroup = synonyms.some(
-        (s) => cleanCandName === s || cleanCandName.includes(s) || s.includes(cleanCandName) ||
-               cleanCandId === s || cleanCandId.includes(s) || s.includes(cleanCandId)
-      );
-      if (candMatchesGroup) {
-        return true;
-      }
-    }
+  // Strict QB separation
+  if (tClass.category === 'QB' || cClass.category === 'QB') {
+    return tClass.category === 'QB' && cClass.category === 'QB';
   }
 
-  // Substring inclusion fallback for clear tokens
-  if (cleanTarget.length >= 2) {
-    if (cleanCandName.includes(cleanTarget) || cleanTarget.includes(cleanCandName) ||
-        cleanCandId.includes(cleanTarget) || cleanTarget.includes(cleanCandId)) {
-      return true;
-    }
+  if (tClass.category === cClass.category) {
+    return true;
   }
+
+  // Secondary flex overlaps (WR/TE flex)
+  if (tClass.category === 'WR' && cClass.category === 'TE') return true;
+  if (tClass.category === 'TE' && cClass.category === 'WR') return true;
 
   return false;
+}
+
+/**
+ * Checks if drill position strictly matches the formation position slot
+ * e.g. QB <-> 1 (QB), LT <-> LT, C <-> C, MLB <-> MIKE/MLB, etc.
+ */
+export function isExactPositionSlotMatch(drillPosName: string, formPosName: string, formPosId: string = ''): boolean {
+  const dClean = cleanTruncatedPosition(drillPosName).toUpperCase();
+  const fClean = cleanTruncatedPosition(formPosName).toUpperCase();
+  const dToken = normalizePositionToken(drillPosName);
+  const fToken = normalizePositionToken(formPosName);
+  const idToken = normalizePositionToken(formPosId);
+
+  // Direct clean or token match
+  if (dClean === fClean && dClean.length > 0) return true;
+  if (dToken === fToken && dToken.length > 0) return true;
+
+  // 1. Quarterback: strict QB slot mapping
+  const isDQB = dClean === 'QB' || dToken === 'qb' || dToken === '1' || dToken === '1qb' || dToken.includes('quarterback') || dToken === 'passer';
+  const isFQB = fClean === 'QB' || fToken === 'qb' || fToken === '1' || fToken === '1qb' || fToken.includes('quarterback') || idToken.includes('qb') || idToken.endsWith('-1');
+  if (isDQB || isFQB) return isDQB && isFQB;
+
+  // 2. Running Back / Tailback
+  const isDRB = dClean === 'RB' || dToken === 'rb' || dToken === '4' || dToken === '4rb' || dToken === 'tb' || dToken === '3tb' || dToken === 'hb' || dToken.includes('runningback') || dToken.includes('halfback') || dToken.includes('tailback');
+  const isFRB = fClean === 'RB' || fToken === 'rb' || fToken === '4' || fToken === '4rb' || fToken === 'tb' || fToken === '3tb' || fToken === 'hb' || fToken.includes('runningback') || fToken.includes('halfback') || fToken.includes('tailback') || idToken.includes('rb') || idToken.endsWith('-4');
+  if (isDRB || isFRB) return isDRB && isFRB;
+
+  // 3. Fullback
+  const isDFB = dClean === 'FB' || dToken === 'fb' || dToken === '2' || dToken === '2fb' || dToken.includes('fullback');
+  const isFFB = fClean === 'FB' || fToken === 'fb' || fToken === '2' || fToken === '2fb' || fToken.includes('fullback') || idToken.includes('fb') || idToken.endsWith('-2');
+  if (isDFB || isFFB) return isDFB && isFFB;
+
+  // 4. Center
+  const isDC = dClean === 'C' || dToken === 'c' || dToken.includes('center');
+  const isFC = fClean === 'C' || fToken === 'c' || fToken.includes('center') || idToken.endsWith('-c') || idToken.includes('-c-');
+  if (isDC || isFC) return isDC && isFC;
+
+  // 5. Left Tackle
+  const isDLT = dClean === 'LT' || dToken === 'lt' || dToken.includes('lefttackle');
+  const isFLT = fClean === 'LT' || fToken === 'lt' || fToken.includes('lefttackle') || idToken.includes('lt');
+  if (isDLT || isFLT) return isDLT && isFLT;
+
+  // 6. Left Guard
+  const isDLG = dClean === 'LG' || dToken === 'lg' || dToken.includes('leftguard');
+  const isFLG = fClean === 'LG' || fToken === 'lg' || fToken.includes('leftguard') || idToken.includes('lg');
+  if (isDLG || isFLG) return isDLG && isFLG;
+
+  // 7. Right Guard
+  const isDRG = dClean === 'RG' || dToken === 'rg' || dToken.includes('rightguard');
+  const isFRG = fClean === 'RG' || fToken === 'rg' || fToken.includes('rightguard') || idToken.includes('rg');
+  if (isDRG || isFRG) return isDRG && isFRG;
+
+  // 8. Right Tackle
+  const isDRT = dClean === 'RT' || dToken === 'rt' || dToken.includes('righttackle');
+  const isFRT = fClean === 'RT' || fToken === 'rt' || fToken.includes('righttackle') || idToken.includes('rt');
+  if (isDRT || isFRT) return isDRT && isFRT;
+
+  // 9. Tight End (TE, Y, Y1, Y2)
+  const isDTE = dClean === 'TE' || dClean === 'Y' || dClean === 'Y1' || dToken.includes('te') || dToken === 'y' || dToken === 'y1' || dToken === 'tey' || dToken.includes('tightend');
+  const isFTE = fClean === 'TE' || fClean === 'Y' || fClean === 'Y1' || fToken.includes('te') || fToken === 'y' || fToken === 'y1' || fToken === 'tey' || fToken.includes('tightend') || idToken.includes('y1') || idToken.includes('-y-') || idToken.includes('te');
+  if (isDTE || isFTE) return isDTE && isFTE;
+
+  // 10. Wide Receiver X (Split End)
+  const isDX = dClean === 'X' || dToken === 'x' || dToken === 'wrx' || dToken === 'wr1' || dToken.includes('splitend');
+  const isFX = fClean === 'X' || fToken === 'x' || fToken === 'wrx' || fToken === 'wr1' || fToken.includes('splitend') || idToken.endsWith('-x') || idToken.includes('-x-');
+  if (isDX || isFX) return isDX && isFX;
+
+  // 11. Wide Receiver Z (Flanker)
+  const isDZ = dClean === 'Z' || dToken === 'z' || dToken === 'wrz' || dToken === 'wr2' || dToken.includes('flanker');
+  const isFZ = fClean === 'Z' || fToken === 'z' || fToken === 'wrz' || fToken === 'wr2' || fToken.includes('flanker') || idToken.endsWith('-z') || idToken.includes('-z-');
+  if (isDZ || isFZ) return isDZ && isFZ;
+
+  // 12. Slot Receiver W (Slot / H)
+  const isDW = dClean === 'W' || dToken === 'w' || dToken.includes('slot') || dToken === 'wr3' || dToken.includes('hslot');
+  const isFW = fClean === 'W' || fToken === 'w' || fToken.includes('slot') || fToken === 'wr3' || fToken.includes('hslot') || idToken.endsWith('-w') || idToken.includes('-w-');
+  if (isDW || isFW) return isDW && isFW;
+
+  // 13. Defensive End 1 / Left DE
+  const isFLDE = fClean === 'LDE' || fClean === 'DE 1' || fClean === 'DE1' || fToken === 'lde' || fToken === 'de1' || fToken.includes('leftend') || idToken.includes('de1') || idToken.includes('lde');
+  if (dToken === 'lde' || dToken === 'de1' || dClean === 'DE1') {
+    if (isFLDE) return true;
+  }
+
+  // 14. Defensive End 2 / Right DE
+  const isFRDE = fClean === 'RDE' || fClean === 'DE 2' || fClean === 'DE2' || fToken === 'rde' || fToken === 'de2' || fToken.includes('rightend') || idToken.includes('de2') || idToken.includes('rde');
+  if (dToken === 'rde' || dToken === 'de2' || dClean === 'DE2') {
+    if (isFRDE) return true;
+  }
+
+  // General Defensive End match if not split into LDE/RDE
+  if (dClean === 'DE' || dToken === 'de') {
+    const isFDE = fClean.startsWith('DE') || fToken.startsWith('de') || idToken.includes('de');
+    if (isFDE) return true;
+  }
+
+  // 15. Defensive Tackle 1 / Left DT
+  const isFLDT = fClean === 'LDT' || fClean === 'DT 1' || fClean === 'DT1' || fToken === 'ldt' || fToken === 'dt1' || idToken.includes('dt1') || idToken.includes('ldt') || fToken === 't3';
+  if (dToken === 'ldt' || dToken === 'dt1' || dClean === 'DT1') {
+    if (isFLDT) return true;
+  }
+
+  // 16. Nose Tackle / Nose Guard
+  const isDNT = dClean === 'NT' || dToken === 'nt' || dToken.includes('nose');
+  const isFNT = fClean === 'NT' || fToken === 'nt' || fToken.includes('nose') || idToken.includes('nt') || fToken === 'n0';
+  if (isDNT || isFNT) return isDNT && isFNT;
+
+  // 17. Defensive Tackle 2 / Right DT
+  const isFRDT = fClean === 'RDT' || fClean === 'DT 2' || fClean === 'DT2' || fToken === 'rdt' || fToken === 'dt2' || idToken.includes('dt2') || idToken.includes('rdt');
+  if (dToken === 'rdt' || dToken === 'dt2' || dClean === 'DT2') {
+    if (isFRDT) return true;
+  }
+
+  // General Defensive Tackle
+  if (dClean === 'DT' || dToken === 'dt') {
+    const isFDT = fClean.startsWith('DT') || fToken.startsWith('dt') || idToken.includes('dt');
+    if (isFDT) return true;
+  }
+
+  // 18. Will Linebacker (WLB / WILL)
+  const isDWLB = dClean === 'WLB' || dToken === 'wlb' || dToken.includes('will');
+  const isFWLB = fClean === 'WLB' || fClean === 'WILL' || fToken === 'wlb' || fToken.includes('will') || idToken.includes('will') || idToken.includes('wlb');
+  if (isDWLB || isFWLB) return isDWLB && isFWLB;
+
+  // 19. Mike Linebacker (MLB / MIKE)
+  const isDMLB = dClean === 'MLB' || dToken === 'mlb' || dToken.includes('mike') || dToken === 'ilb';
+  const isFMLB = fClean === 'MLB' || fClean === 'MIKE' || fToken === 'mlb' || fToken.includes('mike') || fToken === 'ilb' || idToken.includes('mike') || idToken.includes('mlb');
+  if (isDMLB || isFMLB) return isDMLB && isFMLB;
+
+  // 20. Sam Linebacker (SLB / SAM)
+  const isDSLB = dClean === 'SLB' || dToken === 'slb' || dToken.includes('sam') || dToken.includes('nickel') || dToken === 'olb';
+  const isFSLB = fClean === 'SLB' || fClean === 'SAM' || fToken === 'slb' || fToken.includes('sam') || idToken.includes('sam') || idToken.includes('slb');
+  if (isDSLB || isFSLB) return isDSLB && isFSLB;
+
+  // 21. Cornerback 1
+  const isDCB1 = dClean === 'CB1' || dToken === 'cb1';
+  const isFCB1 = fClean === 'CB 1' || fClean === 'CB1' || fToken === 'cb1' || idToken.includes('cb1');
+  if (isDCB1 && isFCB1) return true;
+
+  // 22. Cornerback 2
+  const isDCB2 = dClean === 'CB2' || dToken === 'cb2';
+  const isFCB2 = fClean === 'CB 2' || fClean === 'CB2' || fToken === 'cb2' || idToken.includes('cb2');
+  if (isDCB2 && isFCB2) return true;
+
+  // General Cornerback
+  const isDCB = dClean === 'CB' || dToken.startsWith('cb') || dToken.includes('corner');
+  const isFCB = fClean.startsWith('CB') || fToken.startsWith('cb') || fToken.includes('corner') || idToken.includes('cb');
+  if (isDCB && isFCB) return true;
+
+  // 23. Free Safety
+  const isDFS = dClean === 'FS' || dToken === 'fs' || dToken.includes('free');
+  const isFFS = fClean === 'FS' || fToken === 'fs' || fToken.includes('free') || idToken.includes('fs');
+  if (isDFS || isFFS) return isDFS && isFFS;
+
+  // 24. Strong Safety / ROVER
+  const isDSS = dClean === 'SS' || dToken === 'ss' || dToken.includes('strong') || dToken.includes('rover');
+  const isFSS = fClean === 'SS' || fToken === 'ss' || fToken.includes('strong') || fToken.includes('rover') || idToken.includes('rover') || idToken.includes('ss');
+  if (isDSS || isFSS) return isDSS && isFSS;
+
+  return false;
+}
+
+/**
+ * Determines eligibility and compatibility score between drill slot and candidate
+ */
+export function isPositionEligible(
+  targetPosName: string,
+  candPosName: string,
+  targetUnit: 'offense' | 'defense',
+  candUnit?: string,
+  candPosId?: string
+): { eligible: boolean; score: number; exactMatch: boolean } {
+  // Check exact position match first
+  if (isExactPositionSlotMatch(targetPosName, candPosName, candPosId || '')) {
+    return { eligible: true, score: 1000, exactMatch: true };
+  }
+
+  const targetClass = getPositionCategory(targetPosName);
+  const candClass = getPositionCategory(candPosName);
+
+  // 1. STRICT QUARTERBACK VALIDATION:
+  // "only put QB in the drill at QB only if hes on the off or def depth chart."
+  if (targetClass.category === 'QB') {
+    if (candClass.category === 'QB') {
+      return { eligible: true, score: 100, exactMatch: true };
+    }
+    // Never place non-QBs at QB
+    return { eligible: false, score: 0, exactMatch: false };
+  }
+
+  // Non-QBs: prevent QBs from being accidentally auto-filled into other positions
+  if (candClass.category === 'QB') {
+    return { eligible: false, score: 0, exactMatch: false };
+  }
+
+  // 2. Exact category matching
+  if (targetClass.category === candClass.category) {
+    let score = 80;
+    // Bonus for matching sub-role (e.g., LT for LT, MLB for MLB, CB for CB)
+    if (targetClass.subRole === candClass.subRole) {
+      score += 20;
+    }
+    // Unit match bonus
+    if (candUnit && candUnit === targetUnit) {
+      score += 10;
+    }
+    return { eligible: true, score, exactMatch: targetClass.subRole === candClass.subRole };
+  }
+
+  // 3. Permissible hybrid/flex position overlaps (only when same category not available):
+  // WR / TE flex:
+  if (targetClass.category === 'WR' && candClass.category === 'TE') {
+    return { eligible: true, score: 60, exactMatch: false };
+  }
+  if (targetClass.category === 'TE' && candClass.category === 'WR') {
+    return { eligible: true, score: 55, exactMatch: false };
+  }
+  // TE / OL blocking hybrid:
+  if (targetClass.category === 'TE' && candClass.category === 'OL') {
+    return { eligible: true, score: 45, exactMatch: false };
+  }
+
+  // Otherwise not eligible
+  return { eligible: false, score: 0, exactMatch: false };
 }
 
 export interface AutoFillSummary {
@@ -560,15 +941,247 @@ export interface AutoFillSummary {
   totalOffense: number;
   filledDefense: number;
   totalDefense: number;
+  startersMixed: number;
+  backupsAdded: number;
   sourceDescription: string;
+}
+
+export interface CandidateRecord {
+  num: string;
+  name: string;
+  depthString: number; // 1 = 1st string (Black), 2 = 2nd string (Gold), 3 = 3rd string (Blue), 4 = 4th, 5 = 5th
+  category: PositionCategory;
+  subRole: string;
+  score: number;
+  source: 'depth_chart' | 'scrimmage' | 'roster';
+  isExactPosition: boolean;
+}
+
+/**
+ * Collects and ranks eligible candidates for a specific drill position slot
+ * strictly leveraging the actual depth chart as the primary source of truth.
+ *
+ * Enforces the user's explicit rule:
+ * "the offensive and defensive formation has positions black, gold and blue(1,2,3).
+ *  To autofill the use the postions they are in, so QB is QB, etc"
+ */
+function getCandidatesForDrillPosition(params: {
+  pos: LiveDrillPosition;
+  unit: 'offense' | 'defense';
+  formations: FormationBoard[];
+  depthChart: Record<string, PlacedPlayer[]>;
+  scrimmageChart?: Record<string, PlacedPlayer[]>;
+  roster: RosterPlayer[];
+}): CandidateRecord[] {
+  const { pos, unit, formations, depthChart, scrimmageChart = {}, roster } = params;
+  const candidateMap = new Map<string, CandidateRecord>();
+
+  const isQB = getPositionCategory(pos.name).category === 'QB';
+
+  // 1. Scan Formations on the Depth Chart matching this unit
+  for (const form of formations) {
+    const formUnit = form.unit || (form.id.includes('def') ? 'defense' : 'offense');
+    if (formUnit !== unit) continue;
+
+    for (const row of form.rows || []) {
+      for (const p of row.positions || []) {
+        if (!p) continue;
+        const players = depthChart[p.id] || [];
+        if (players.length === 0) continue;
+
+        // Check if this formation position is an exact match for the drill slot
+        const isExact = isExactPositionSlotMatch(pos.name, p.name, p.id);
+        const { eligible, score } = isPositionEligible(pos.name, p.name, unit, formUnit, p.id);
+
+        if (isExact || eligible) {
+          players.forEach((player, idx) => {
+            if (!player || !player.num || player.num === '?') return;
+            const playerNum = String(player.num);
+            const depthString = idx + 1; // 1 = Black, 2 = Gold, 3 = Blue, 4 = 4th backup, 5 = 5th backup
+            const pClass = getPositionCategory(p.name);
+            const candidateScore = isExact ? (10000 - depthString * 10) : score;
+
+            const existing = candidateMap.get(playerNum);
+            // Give absolute precedence to exact position matches
+            if (
+              !existing ||
+              (isExact && !existing.isExactPosition) ||
+              (isExact && existing.isExactPosition && depthString < existing.depthString) ||
+              (!isExact && !existing.isExactPosition && depthString < existing.depthString)
+            ) {
+              candidateMap.set(playerNum, {
+                num: playerNum,
+                name: player.name || `Player #${playerNum}`,
+                depthString,
+                category: pClass.category,
+                subRole: pClass.subRole,
+                score: candidateScore,
+                source: 'depth_chart',
+                isExactPosition: isExact,
+              });
+            }
+          });
+        }
+      }
+    }
+  }
+
+  // Also check direct depthChart keys (e.g. depthChart["QB"] or depthChart["LT"])
+  for (const [key, players] of Object.entries(depthChart)) {
+    if (!players || players.length === 0) continue;
+    const isExact = isExactPositionSlotMatch(pos.name, key, key);
+    const { eligible, score } = isPositionEligible(pos.name, key, unit, undefined, key);
+
+    if (isExact || eligible) {
+      players.forEach((player, idx) => {
+        if (!player || !player.num || player.num === '?') return;
+        const playerNum = String(player.num);
+        const depthString = idx + 1;
+        const pClass = getPositionCategory(key);
+        const candidateScore = isExact ? (10000 - depthString * 10) : score;
+
+        const existing = candidateMap.get(playerNum);
+        if (
+          !existing ||
+          (isExact && !existing.isExactPosition) ||
+          (isExact && existing.isExactPosition && depthString < existing.depthString) ||
+          (!isExact && !existing.isExactPosition && depthString < existing.depthString)
+        ) {
+          candidateMap.set(playerNum, {
+            num: playerNum,
+            name: player.name || `Player #${playerNum}`,
+            depthString,
+            category: pClass.category,
+            subRole: pClass.subRole,
+            score: candidateScore,
+            source: 'depth_chart',
+            isExactPosition: isExact,
+          });
+        }
+      });
+    }
+  }
+
+  // If we found ANY exact position candidates for this slot:
+  // "the offensive and defensive formation has positions black, gold and blue(1,2,3).
+  //  To autofill the use the postions they are in, so QB is QB, etc"
+  // STRIKE ALL non-exact position candidates so players from other positions (e.g. guards at tackle,
+  // or safeties at cornerback) NEVER displace or precede actual depth chart players of that position!
+  const hasExactMatches = Array.from(candidateMap.values()).some((c) => c.isExactPosition);
+  let candidateList = Array.from(candidateMap.values());
+  if (hasExactMatches) {
+    candidateList = candidateList.filter((c) => c.isExactPosition);
+  }
+
+  // 2. Check Scrimmage Chart ONLY if no exact formation candidates exist
+  if (candidateList.length === 0) {
+    for (const [posId, players] of Object.entries(scrimmageChart)) {
+      if (!players || players.length === 0) continue;
+      const isExact = isExactPositionSlotMatch(pos.name, posId, posId);
+      const { eligible, score } = isPositionEligible(pos.name, posId, unit, undefined, posId);
+      if (isExact || eligible) {
+        players.forEach((player, idx) => {
+          if (!player || !player.num || player.num === '?') return;
+          const playerNum = String(player.num);
+          const depthString = idx + 1;
+          const pClass = getPositionCategory(posId);
+          if (!candidateMap.has(playerNum)) {
+            candidateList.push({
+              num: playerNum,
+              name: player.name || `Player #${playerNum}`,
+              depthString: depthString + 1,
+              category: pClass.category,
+              subRole: pClass.subRole,
+              score: isExact ? 500 : score - 5,
+              source: 'scrimmage',
+              isExactPosition: isExact,
+            });
+          }
+        });
+      }
+    }
+  }
+
+  // 3. Fallback to Active Roster ONLY if depth chart had zero eligible candidates
+  // "only put QB in the drill at QB only if hes on the off or def depth chart."
+  if (candidateList.length === 0) {
+    roster.forEach((r) => {
+      const pNum = String(r.num);
+      const rPrimary = r.primaryPosition || '';
+      const rSecondary = r.secondaryPosition || '';
+      const rOff = r.offensivePosition || '';
+      const rDef = r.defensivePosition || '';
+
+      if (isQB) {
+        // QB slot: player MUST be listed as QB on roster if not on depth chart
+        const isRosterQB =
+          getPositionCategory(rPrimary).category === 'QB' ||
+          getPositionCategory(rSecondary).category === 'QB' ||
+          getPositionCategory(rOff).category === 'QB';
+        if (isRosterQB) {
+          candidateList.push({
+            num: pNum,
+            name: `${r.firstName} ${r.lastName}`.trim() || r.rosterName,
+            depthString: 1,
+            category: 'QB',
+            subRole: 'QB',
+            score: 75,
+            source: 'roster',
+            isExactPosition: true,
+          });
+        }
+      } else {
+        // Other positions: match primary or secondary roster position
+        const testPositions = [rPrimary, rSecondary, rOff, rDef].filter(Boolean);
+        for (const testPos of testPositions) {
+          const isExact = isExactPositionSlotMatch(pos.name, testPos, testPos);
+          const { eligible, score } = isPositionEligible(pos.name, testPos, unit, undefined, testPos);
+          if (isExact || eligible) {
+            const pClass = getPositionCategory(testPos);
+            candidateList.push({
+              num: pNum,
+              name: `${r.firstName} ${r.lastName}`.trim() || r.rosterName,
+              depthString: 3,
+              category: pClass.category,
+              subRole: pClass.subRole,
+              score: isExact ? 200 : score - 15,
+              source: 'roster',
+              isExactPosition: isExact,
+            });
+            break;
+          }
+        }
+      }
+    });
+  }
+
+  // Sort candidates:
+  // 1. isExactPosition descending (exact position matches ALWAYS come first)
+  // 2. depthString ascending (1st string Black = 1, 2nd string Gold = 2, 3rd string Blue = 3, 4th = 4, 5th = 5)
+  // 3. score descending
+  const sorted = candidateList.sort((a, b) => {
+    if (a.isExactPosition !== b.isExactPosition) {
+      return a.isExactPosition ? -1 : 1;
+    }
+    if (a.depthString !== b.depthString) {
+      return a.depthString - b.depthString;
+    }
+    return b.score - a.score;
+  });
+
+  return sorted;
 }
 
 /**
  * High-powered, intelligent auto-fill for drill positions
- * 1. Checks Depth Chart across ALL formations & direct depth chart entries
- * 2. Checks Scrimmage Chart
- * 3. Falls back to Active Roster by Primary / Secondary Position & Category
- * 4. Ensures no duplicate assignments within the same string
+ * 1. Derives position assignments strictly from the actual Depth Chart (offense & defense).
+ * 2. Uses the positions they are in from offensive and defensive formations:
+ *    - Black (1) -> Team 1
+ *    - Gold (2)  -> Team 2
+ *    - Blue (3)  -> Team 3
+ *    - 4th & 5th -> Backups & playing time rotations
+ *    - QB is QB, RB is RB, LT is LT, MLB is MLB, etc.
+ * 3. Supports Pure Depth Chart Hierarchy (recommended default) and Balanced Mix mode.
  */
 export function executeIntelligentAutoFill(params: {
   group: LiveDrillGroup;
@@ -576,7 +1189,8 @@ export function executeIntelligentAutoFill(params: {
   depthChart: Record<string, PlacedPlayer[]>;
   scrimmageChart?: Record<string, PlacedPlayer[]>;
   roster: RosterPlayer[];
-  targetString?: 1 | 2 | 3 | 'all'; // 1 = Starters, 2 = 2nd Team, 3 = 3rd Team, 'all' = All 3
+  targetString?: 1 | 2 | 3 | 'all'; // 1 = Starters (Black), 2 = 2nd Team (Gold), 3 = 3rd Team (Blue), 'all' = All 3
+  balanceMode?: 'pure_depth' | 'semi_balanced_head_to_head' | 'even_mix';
   fillUnit?: 'both' | 'offense' | 'defense';
 }): { nextLineup: Record<string, PlacedPlayer[]>; summary: AutoFillSummary } {
   const {
@@ -585,7 +1199,8 @@ export function executeIntelligentAutoFill(params: {
     depthChart = {},
     scrimmageChart = {},
     roster = [],
-    targetString = 1,
+    targetString = 'all',
+    balanceMode = 'pure_depth',
     fillUnit = 'both',
   } = params;
 
@@ -593,208 +1208,303 @@ export function executeIntelligentAutoFill(params: {
 
   let filledOffense = 0;
   let filledDefense = 0;
+  let startersMixed = 0;
+  let backupsAdded = 0;
 
-  // 1. Collect all depth chart candidates across all formations
-  const depthCandidates: { posName: string; posId: string; players: PlacedPlayer[] }[] = [];
-  for (const form of formations) {
-    for (const row of form.rows || []) {
-      for (const p of row.positions || []) {
-        if (!p) continue;
-        const players = depthChart[p.id] || [];
-        if (players.length > 0) {
-          depthCandidates.push({ posName: p.name, posId: p.id, players });
-        }
-      }
-    }
-  }
+  // Process a unit (offense or defense)
+  const processUnit = (unit: 'offense' | 'defense') => {
+    const positions = unit === 'offense' ? group.offensePositions : group.defensePositions;
 
-  // Also collect direct depthChart keys
-  for (const [key, players] of Object.entries(depthChart)) {
-    if (players && players.length > 0) {
-      depthCandidates.push({ posName: key, posId: key, players });
-    }
-  }
+    // Track players assigned per team to avoid jersey conflicts within the same team on the field
+    const usedByTeam: [Set<string>, Set<string>, Set<string>] = [
+      new Set<string>(), // Team 1 (index 0 - Black)
+      new Set<string>(), // Team 2 (index 1 - Gold)
+      new Set<string>(), // Team 3 (index 2 - Blue)
+    ];
 
-  // 2. Also include scrimmage chart candidates
-  const scrimmageCandidates: { posId: string; players: PlacedPlayer[] }[] = [];
-  for (const [posId, players] of Object.entries(scrimmageChart)) {
-    if (players && players.length > 0) {
-      scrimmageCandidates.push({ posId, players });
-    }
-  }
-
-  // Helper to find best player for a position slot given desired string index (0 = 1st, 1 = 2nd, 2 = 3rd)
-  const findBestPlayerForSlot = (
-    pos: LiveDrillPosition,
-    unit: 'offense' | 'defense',
-    usedNums: Set<string>,
-    desiredIdx: number
-  ): PlacedPlayer | null => {
-    // 1. Check Depth Chart candidates
-    for (const cand of depthCandidates) {
-      if (isPositionMatch(pos.name, cand.posName, cand.posId)) {
-        const targetPlayer = cand.players[desiredIdx] || cand.players[0];
-        if (targetPlayer && !usedNums.has(String(targetPlayer.num))) {
-          return targetPlayer;
-        }
-        for (const p of cand.players) {
-          if (!usedNums.has(String(p.num))) {
-            return p;
+    // Pre-populate used sets from existing lineup if targeting a single string
+    if (targetString !== 'all') {
+      positions.forEach((p) => {
+        const assigned = nextLineup[p.id] || [];
+        [0, 1, 2].forEach((tIdx) => {
+          if (tIdx !== (targetString - 1) && assigned[tIdx] && assigned[tIdx].num !== '?') {
+            usedByTeam[tIdx].add(String(assigned[tIdx].num));
           }
-        }
-      }
-    }
-
-    // 2. Check Scrimmage Chart candidates
-    for (const cand of scrimmageCandidates) {
-      if (isPositionMatch(pos.name, cand.posId, cand.posId)) {
-        for (const p of cand.players) {
-          if (!usedNums.has(String(p.num))) {
-            return p;
-          }
-        }
-      }
-    }
-
-    // 3. Search active Roster by primary or secondary position
-    const cleanPos = normalizePositionToken(pos.name);
-    const matchingRoster = roster.filter((r) => {
-      if (usedNums.has(String(r.num))) return false;
-      const rPos = normalizePositionToken(r.primaryPosition || '');
-      const secPos = normalizePositionToken(r.secondaryPosition || '');
-      return (
-        isPositionMatch(pos.name, rPos, '') ||
-        isPositionMatch(pos.name, secPos, '') ||
-        (rPos && cleanPos.includes(rPos)) ||
-        (secPos && cleanPos.includes(secPos))
-      );
-    });
-
-    if (matchingRoster.length > 0) {
-      const pickedRoster =
-        desiredIdx > 0 && matchingRoster.length > desiredIdx
-          ? matchingRoster[desiredIdx]
-          : matchingRoster[0];
-      return {
-        num: pickedRoster.num,
-        name: `${pickedRoster.firstName} ${pickedRoster.lastName}`.trim() || pickedRoster.rosterName,
-      };
-    }
-
-    // 4. Broader category match from Roster (OL, DL, LB, DB, WR, RB)
-    const isOL = ['lt', 'lg', 'c', 'rg', 'rt', 'ol', 'ot', 'og'].some((k) => cleanPos.includes(k));
-    const isDL = ['lde', 'rde', 'ldt', 'rdt', 'nt', 'dl', 'de', 'dt', 'edge'].some((k) => cleanPos.includes(k));
-    const isDB = ['cb', 'fs', 'ss', 'nickel', 'db', 'safety', 'corner'].some((k) => cleanPos.includes(k));
-    const isWR = ['wr', 'slot', 'x', 'z', 'w', 'h', 'wideout'].some((k) => cleanPos.includes(k));
-    const isLB = ['lb', 'mike', 'will', 'sam', 'mlb', 'wlb', 'slb'].some((k) => cleanPos.includes(k));
-    const isRB = ['rb', 'fb', 'hb', 'back'].some((k) => cleanPos.includes(k));
-    const isQB = cleanPos.includes('qb') || cleanPos.includes('passer');
-
-    const categoryRoster = roster.filter((r) => {
-      if (usedNums.has(String(r.num))) return false;
-      const posText = `${r.primaryPosition || ''} ${r.secondaryPosition || ''}`.toLowerCase();
-      if (isQB && (posText.includes('qb') || posText.includes('quarter'))) return true;
-      if (isRB && (posText.includes('rb') || posText.includes('hb') || posText.includes('fb') || posText.includes('back'))) return true;
-      if (isOL && (posText.includes('ol') || posText.includes('t') || posText.includes('g') || posText.includes('c') || posText.includes('line'))) return true;
-      if (isDL && (posText.includes('dl') || posText.includes('de') || posText.includes('dt') || posText.includes('edge') || posText.includes('nose') || posText.includes('d-line'))) return true;
-      if (isDB && (posText.includes('db') || posText.includes('cb') || posText.includes('s') || posText.includes('safety') || posText.includes('corner'))) return true;
-      if (isWR && (posText.includes('wr') || posText.includes('slot') || posText.includes('rec') || posText.includes('wide') || posText.includes('te'))) return true;
-      if (isLB && (posText.includes('lb') || posText.includes('backer') || posText.includes('mike') || posText.includes('will') || posText.includes('sam'))) return true;
-      return false;
-    });
-
-    if (categoryRoster.length > 0) {
-      const picked =
-        desiredIdx > 0 && categoryRoster.length > desiredIdx
-          ? categoryRoster[desiredIdx]
-          : categoryRoster[0];
-      return {
-        num: picked.num,
-        name: `${picked.firstName} ${picked.lastName}`.trim() || picked.rosterName,
-      };
-    }
-
-    // 5. Final fallback: Any unused player from roster to guarantee complete 7v7 or 11v11 staffing
-    const generalAthletes = roster.filter((r) => !usedNums.has(String(r.num)));
-    if (generalAthletes.length > 0) {
-      const athlete = generalAthletes[0];
-      return {
-        num: athlete.num,
-        name: `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.rosterName,
-      };
-    }
-
-    return null;
-  };
-
-  const fillSingleString = (strNum: 1 | 2 | 3) => {
-    const desiredIdx = strNum - 1;
-    const usedOffenseNums = new Set<string>();
-    const usedDefenseNums = new Set<string>();
-
-    // Process Offense
-    if (fillUnit === 'both' || fillUnit === 'offense') {
-      group.offensePositions.forEach((pos) => {
-        const player = findBestPlayerForSlot(pos, 'offense', usedOffenseNums, desiredIdx);
-        if (player) {
-          usedOffenseNums.add(String(player.num));
-          filledOffense++;
-
-          const currentList = nextLineup[pos.id] || [];
-          const updated = [...currentList];
-          // Ensure slots exist up to desiredIdx
-          while (updated.length < desiredIdx) {
-            updated.push({ num: '?', name: 'TBD' });
-          }
-          // Remove if player already in list elsewhere
-          const filtered = updated.filter(
-            (p, idx) => idx === desiredIdx || String(p.num) !== String(player.num)
-          );
-          filtered[desiredIdx] = player;
-          nextLineup[pos.id] = filtered;
-        }
+        });
       });
     }
 
-    // Process Defense
-    if (fillUnit === 'both' || fillUnit === 'defense') {
-      group.defensePositions.forEach((pos) => {
-        const player = findBestPlayerForSlot(pos, 'defense', usedDefenseNums, desiredIdx);
-        if (player) {
-          usedDefenseNums.add(String(player.num));
-          filledDefense++;
-
-          const currentList = nextLineup[pos.id] || [];
-          const updated = [...currentList];
-          while (updated.length < desiredIdx) {
-            updated.push({ num: '?', name: 'TBD' });
-          }
-          const filtered = updated.filter(
-            (p, idx) => idx === desiredIdx || String(p.num) !== String(player.num)
-          );
-          filtered[desiredIdx] = player;
-          nextLineup[pos.id] = filtered;
-        }
+    positions.forEach((pos, pIdx) => {
+      const candidates = getCandidatesForDrillPosition({
+        pos,
+        unit,
+        formations,
+        depthChart,
+        scrimmageChart,
+        roster,
       });
-    }
+
+      const currentList = [...(nextLineup[pos.id] || [])];
+      // Ensure slots exist for at least 3 teams
+      while (currentList.length < 3) {
+        currentList.push({ num: '?', name: 'TBD' });
+      }
+
+      if (targetString === 'all') {
+        if (balanceMode === 'semi_balanced_head_to_head') {
+          // ================================================================
+          // SEMI-BALANCED HEAD-TO-HEAD (TEAM 1 VS TEAM 2)
+          // Designed specifically for competitive scrimmage where Team 1 and
+          // Team 2 go against each other.
+          // 50% Starters (Black) and 50% 2nd-string depth (Gold) are alternated
+          // across Team 1 and Team 2 by position group (QB, RB, WR, OL, DL, LB, DB).
+          // Team 3 retains 3rd-string depth (Blue) & developmental players.
+          // Backups (4th & 5th strings) populate active rotation slots.
+          // ================================================================
+          const assignedCandidates = new Set<string>();
+
+          if (candidates.length === 1) {
+            const cand = candidates[0];
+            const targetTeam = pIdx % 2 === 0 ? 0 : 1;
+            currentList[targetTeam] = { num: cand.num, name: cand.name };
+            usedByTeam[targetTeam].add(cand.num);
+            assignedCandidates.add(cand.num);
+            if (unit === 'offense') filledOffense++;
+            else filledDefense++;
+          } else if (candidates.length >= 2) {
+            // Even index: Team 1 gets Starter (0), Team 2 gets 2nd string (1)
+            // Odd index:  Team 2 gets Starter (0), Team 1 gets 2nd string (1)
+            const teamForStarter = pIdx % 2 === 0 ? 0 : 1;
+            const teamForBackup = pIdx % 2 === 0 ? 1 : 0;
+
+            const starterCand = candidates[0];
+            const backupCand = candidates[1];
+
+            if (!usedByTeam[teamForStarter].has(starterCand.num)) {
+              currentList[teamForStarter] = { num: starterCand.num, name: starterCand.name };
+              usedByTeam[teamForStarter].add(starterCand.num);
+              assignedCandidates.add(starterCand.num);
+              startersMixed++;
+              if (unit === 'offense') filledOffense++;
+              else filledDefense++;
+            }
+
+            if (!usedByTeam[teamForBackup].has(backupCand.num)) {
+              currentList[teamForBackup] = { num: backupCand.num, name: backupCand.name };
+              usedByTeam[teamForBackup].add(backupCand.num);
+              assignedCandidates.add(backupCand.num);
+              startersMixed++;
+              if (unit === 'offense') filledOffense++;
+              else filledDefense++;
+            }
+
+            // Team 3 (slot 2) receives the 3rd string candidate (Blue)
+            if (candidates[2] && !usedByTeam[2].has(candidates[2].num) && !assignedCandidates.has(candidates[2].num)) {
+              currentList[2] = { num: candidates[2].num, name: candidates[2].name };
+              usedByTeam[2].add(candidates[2].num);
+              assignedCandidates.add(candidates[2].num);
+              if (unit === 'offense') filledOffense++;
+              else filledDefense++;
+            }
+          }
+
+          // 4th & 5th String Backups (Index 3 & 4)
+          const unassignedCandidates = candidates.filter((c) => !assignedCandidates.has(c.num));
+          if (unassignedCandidates.length > 0) {
+            if (unassignedCandidates[0]) {
+              currentList[3] = { num: unassignedCandidates[0].num, name: unassignedCandidates[0].name };
+              backupsAdded++;
+            }
+            if (unassignedCandidates[1]) {
+              currentList[4] = { num: unassignedCandidates[1].num, name: unassignedCandidates[1].name };
+              backupsAdded++;
+            }
+          }
+        } else if (balanceMode === 'even_mix') {
+          // ================================================================
+          // BALANCED MIXING OF 1ST, 2ND & 3RD STRINGS
+          // Mix depth chart tiers across teams for competitive balance,
+          // while strictly using players assigned to this EXACT position.
+          // ================================================================
+          const assignedCandidates = new Set<string>();
+
+          // If only 1 candidate exists for this position (e.g. only 1 QB in Black):
+          // That starter stays on Team 1!
+          if (candidates.length === 1) {
+            const cand = candidates[0];
+            currentList[0] = { num: cand.num, name: cand.name };
+            usedByTeam[0].add(cand.num);
+            assignedCandidates.add(cand.num);
+            if (unit === 'offense') filledOffense++;
+            else filledDefense++;
+          } else {
+            const shift = pIdx % 3;
+            const tierToTeam: [number, number, number] = [
+              (0 + shift) % 3,
+              (1 + shift) % 3,
+              (2 + shift) % 3,
+            ];
+
+            for (let tier = 0; tier < 3; tier++) {
+              const teamIdx = tierToTeam[tier];
+              let pickedCand: CandidateRecord | null = null;
+
+              // Try matching candidate corresponding to this tier (0 = Black/1st, 1 = Gold/2nd, 2 = Blue/3rd)
+              if (candidates[tier] && !usedByTeam[teamIdx].has(candidates[tier].num) && !assignedCandidates.has(candidates[tier].num)) {
+                pickedCand = candidates[tier];
+              } else {
+                for (const cand of candidates) {
+                  if (!usedByTeam[teamIdx].has(cand.num) && !assignedCandidates.has(cand.num)) {
+                    pickedCand = cand;
+                    break;
+                  }
+                }
+              }
+
+              // Backups can step in for playing time
+              if (!pickedCand && candidates.length > 3) {
+                for (let b = 3; b < candidates.length; b++) {
+                  if (!usedByTeam[teamIdx].has(candidates[b].num) && !assignedCandidates.has(candidates[b].num)) {
+                    pickedCand = candidates[b];
+                    break;
+                  }
+                }
+              }
+
+              if (pickedCand) {
+                currentList[teamIdx] = { num: pickedCand.num, name: pickedCand.name };
+                usedByTeam[teamIdx].add(pickedCand.num);
+                assignedCandidates.add(pickedCand.num);
+                startersMixed++;
+                if (unit === 'offense') filledOffense++;
+                else filledDefense++;
+              }
+            }
+          }
+
+          // 4th & 5th String Backups (Index 3 & 4)
+          const unassignedCandidates = candidates.filter((c) => !assignedCandidates.has(c.num));
+          if (unassignedCandidates.length > 0) {
+            if (unassignedCandidates[0]) {
+              currentList[3] = { num: unassignedCandidates[0].num, name: unassignedCandidates[0].name };
+              backupsAdded++;
+            }
+            if (unassignedCandidates[1]) {
+              currentList[4] = { num: unassignedCandidates[1].num, name: unassignedCandidates[1].name };
+              backupsAdded++;
+            }
+          }
+        } else {
+          // ================================================================
+          // FORMATIONS DEPTH CHART (PURE DEPTH)
+          // "the offensive and defensive formation has positions black, gold and blue(1,2,3).
+          //  To autofill the use the postions they are in, so QB is QB, etc"
+          // Team 1 = Black (1st string, depthString 1)
+          // Team 2 = Gold  (2nd string, depthString 2)
+          // Team 3 = Blue  (3rd string, depthString 3)
+          // Index 3 = 4th string backup
+          // Index 4 = 5th string backup
+          // ================================================================
+          const assignedCandidates = new Set<string>();
+
+          for (let teamIdx = 0; teamIdx < 3; teamIdx++) {
+            const expectedDepthString = teamIdx + 1; // 1 = Black, 2 = Gold, 3 = Blue
+
+            // Find candidate with exact depthString for this team slot
+            let pickedCand: CandidateRecord | null =
+              candidates.find((c) => c.depthString === expectedDepthString && !usedByTeam[teamIdx].has(c.num) && !assignedCandidates.has(c.num)) || null;
+
+            // If no exact depth tier candidate, find first available candidate for this position
+            if (!pickedCand) {
+              for (const cand of candidates) {
+                if (!usedByTeam[teamIdx].has(cand.num) && !assignedCandidates.has(cand.num)) {
+                  pickedCand = cand;
+                  break;
+                }
+              }
+            }
+
+            if (pickedCand) {
+              currentList[teamIdx] = { num: pickedCand.num, name: pickedCand.name };
+              usedByTeam[teamIdx].add(pickedCand.num);
+              assignedCandidates.add(pickedCand.num);
+              if (unit === 'offense') filledOffense++;
+              else filledDefense++;
+            }
+          }
+
+          // Backups at index 3 & 4 (4th and 5th string candidates from this position)
+          const unassignedCandidates = candidates.filter((c) => !assignedCandidates.has(c.num));
+          if (unassignedCandidates.length > 0) {
+            // Find depthString === 4 candidate or first unassigned
+            const backup4 = unassignedCandidates.find((c) => c.depthString === 4) || unassignedCandidates[0];
+            if (backup4) {
+              currentList[3] = { num: backup4.num, name: backup4.name };
+              assignedCandidates.add(backup4.num);
+              backupsAdded++;
+            }
+
+            const remainingFor5 = unassignedCandidates.filter((c) => !assignedCandidates.has(c.num));
+            const backup5 = remainingFor5.find((c) => c.depthString === 5) || remainingFor5[0];
+            if (backup5) {
+              currentList[4] = { num: backup5.num, name: backup5.name };
+              assignedCandidates.add(backup5.num);
+              backupsAdded++;
+            }
+          }
+        }
+      } else {
+        // Target single string:
+        // 1 = Team 1 (Black / 1st String)
+        // 2 = Team 2 (Gold / 2nd String)
+        // 3 = Team 3 (Blue / 3rd String)
+        const targetIdx = targetString - 1;
+        const expectedDepth = targetString;
+
+        // Find candidate matching this exact depth tier (Black=1, Gold=2, Blue=3)
+        let pickedCand: CandidateRecord | null =
+          candidates.find((c) => c.depthString === expectedDepth && !usedByTeam[targetIdx].has(c.num)) || null;
+
+        if (!pickedCand) {
+          for (const cand of candidates) {
+            if (!usedByTeam[targetIdx].has(cand.num)) {
+              pickedCand = cand;
+              break;
+            }
+          }
+        }
+
+        if (pickedCand) {
+          currentList[targetIdx] = { num: pickedCand.num, name: pickedCand.name };
+          usedByTeam[targetIdx].add(pickedCand.num);
+          if (unit === 'offense') filledOffense++;
+          else filledDefense++;
+        }
+      }
+
+      nextLineup[pos.id] = currentList;
+    });
   };
 
-  if (targetString === 'all') {
-    fillSingleString(1);
-    fillSingleString(2);
-    fillSingleString(3);
-  } else {
-    fillSingleString(targetString);
+  if (fillUnit === 'both' || fillUnit === 'offense') {
+    processUnit('offense');
+  }
+  if (fillUnit === 'both' || fillUnit === 'defense') {
+    processUnit('defense');
   }
 
-  const stringName =
+  const modeDescription =
     targetString === 'all'
-      ? 'All 3 Teams (1st, 2nd & 3rd Strings)'
+      ? balanceMode === 'semi_balanced_head_to_head'
+        ? 'Semi-Balanced Head-to-Head (Team 1 vs Team 2 Scrimmage)'
+        : balanceMode === 'even_mix'
+          ? 'Semi-Balanced 3-Way Mix (Teams 1, 2 & 3)'
+          : 'Formation Depth Chart (Black=Team 1, Gold=Team 2, Blue=Team 3)'
       : targetString === 1
-        ? '1st Team Starters'
+        ? 'Team 1 (Black / 1st String)'
         : targetString === 2
-          ? '2nd Team Backups'
-          : '3rd Team Depth';
+          ? 'Team 2 (Gold / 2nd String)'
+          : 'Team 3 (Blue / 3rd String)';
 
   return {
     nextLineup,
@@ -803,7 +1513,10 @@ export function executeIntelligentAutoFill(params: {
       totalOffense: group.offensePositions.length,
       filledDefense,
       totalDefense: group.defensePositions.length,
-      sourceDescription: `${stringName} from Depth Chart & Roster`,
+      startersMixed,
+      backupsAdded,
+      sourceDescription: `${modeDescription} from Formation Depth Chart`,
     },
   };
 }
+
