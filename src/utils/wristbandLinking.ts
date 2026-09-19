@@ -713,15 +713,17 @@ export function syncWristbandToCallSheet(
     }
 
     if (matchedSlot) {
-      // If this play originated from a wristband slot and the wristband text is now empty, clear it
+      // Never wipe a play that has a name entered by the user
       const isDirectWbPlay = play.id.includes('wb_sec_') || play.id.includes('cs_wb_');
-      if (isDirectWbPlay && !matchedSlot.text) {
+      if (isDirectWbPlay && !matchedSlot.text && (!play.name || !play.name.trim())) {
         return null;
       }
 
-      // Synchronize play name with updated wristband text
-      const nextName = matchedSlot.text || play.name;
-      const nextFormation = formation || inferFormation(nextName, 'offense', matchedSlot.formation);
+      // CRITICAL FIX: NEVER overwrite user-edited call sheet play names or formations!
+      // The call sheet play name and formation belong to the coach customizing the call sheet.
+      // Only fall back to matchedSlot.text if the play has NO name yet.
+      const nextName = (play.name && play.name.trim()) ? play.name : (matchedSlot.text || '');
+      const nextFormation = play.formation || formation || inferFormation(nextName, 'offense', matchedSlot.formation);
 
       return {
         ...play,
@@ -759,45 +761,24 @@ export function syncWristbandToCallSheet(
   };
 
   const syncSection = (sec: CallSheetSection): CallSheetSection => {
-    const titleMatchesWb = wristbands.some(
-      (w) =>
-        Boolean(w.title && (sec.title.includes(w.title) || w.title.includes(sec.title))) ||
-        (w.columns || []).some((col) => col.name && sec.title.includes(col.name))
-    );
+    // Only tables explicitly created as wristband presets should be synced as full wristband tables.
+    // Situational sections (1-10, 2nd Long, Red Zone, Custom, Scripts, etc.) MUST NEVER be wiped or overwritten!
     const isWbPreset =
-      Boolean(sec.wristbandId) ||
-      Boolean(sec.wristbandPresetMode) ||
-      sec.id.startsWith('wb_table_') ||
-      sec.id.startsWith('sec_wb_') ||
-      sec.title.toLowerCase().includes('wristband') ||
-      titleMatchesWb;
+      Boolean(sec.wristbandId) &&
+      (Boolean(sec.wristbandPresetMode) ||
+        sec.id.startsWith('wb_table_') ||
+        sec.id.startsWith('sec_wb_') ||
+        Boolean((sec as any).isWristbandTable));
 
     let wb: SingleWristband | undefined;
     if (sec.wristbandId) {
       wb = wbMap.get(sec.wristbandId);
     }
-    if (!wb && (sec.id.startsWith('wb_table_') || sec.id.startsWith('sec_wb_'))) {
+    if (!wb && isWbPreset && (sec.id.startsWith('wb_table_') || sec.id.startsWith('sec_wb_'))) {
       const match = sec.id.match(/(?:wb_table_|sec_wb_)([^_]+)/);
       if (match && match[1]) {
         wb = wbMap.get(match[1]) || wristbands.find((w) => w.id === match[1]);
       }
-    }
-    if (!wb) {
-      wb = wristbands.find((w) =>
-        (w.title && sec.title.toLowerCase().includes(w.title.toLowerCase())) ||
-        (w.title && w.title.toLowerCase().includes(sec.title.toLowerCase())) ||
-        (w.columns || []).some((col) => col.name && sec.title.toLowerCase().includes(col.name.toLowerCase()))
-      );
-    }
-    if (!wb) {
-      const firstWbPlay = (sec.plays || []).find((p) => p?.wristbandId || p?.wristbandSlotMatch?.wristbandId);
-      const playWbId = firstWbPlay?.wristbandId || firstWbPlay?.wristbandSlotMatch?.wristbandId;
-      if (playWbId) {
-        wb = wbMap.get(playWbId) || wristbands.find((w) => w.id === playWbId);
-      }
-    }
-    if (!wb && isWbPreset && wristbands.length > 0) {
-      wb = wristbands[0];
     }
 
     if (isWbPreset && wb) {
@@ -808,7 +789,7 @@ export function syncWristbandToCallSheet(
       const wbIndex = wristbands.findIndex((w) => w.id === wb!.id);
       const wbStart = getWristbandStartNumber(wristbands, wbIndex >= 0 ? wbIndex : 0);
 
-      // Create a map of existing plays by slot key to preserve user notes / custom tags
+      // Create a map of existing plays by slot key to preserve user edits, notes, and custom play assignments
       const existingPlayBySlot = new Map<string, CallSheetPlay>();
       (sec.plays || []).forEach((p) => {
         if (p) {
@@ -837,23 +818,25 @@ export function syncWristbandToCallSheet(
           const color1 = col1.numberBgColor || col1.color || '#facc15';
           const textCol1 = col1.numberTextColor || (isDarkColor(color1) ? '#ffffff' : '#000000');
           const name1 = (p1?.text || '').trim();
-          const form1 = inferFormation(name1, 'offense', p1?.formation);
-          const pers1 = extractPersonnel({ name: name1, formation: form1, unit: 'offense' });
           const existing1 = existingPlayBySlot.get(`0_${r}`);
+          // Preserve user-edited play name and formation if present on the call sheet!
+          const play1Name = (existing1?.name && existing1.name.trim()) ? existing1.name : name1;
+          const form1 = existing1?.formation || inferFormation(play1Name, 'offense', p1?.formation);
+          const pers1 = existing1?.personnel || extractPersonnel({ name: play1Name, formation: form1, unit: 'offense' });
 
-          const play1: CallSheetPlay | null = name1
+          const play1: CallSheetPlay | null = play1Name
             ? {
                 id: existing1?.id || `wb_sec_${wb.id}_0_${r}`,
-                name: name1,
+                name: play1Name,
                 formation: form1,
                 personnel: pers1,
-                type: (p1?.type as any) || 'run',
+                type: existing1?.type || (p1?.type as any) || 'run',
                 wristbandNum: slotNum1,
                 wristbandLabel: slotLabel1,
                 wristbandColor: color1,
                 wristbandNumberColor: color1,
                 wristbandTextColor: textCol1,
-                wristbandRowColor: p1?.rowHighlightColor,
+                wristbandRowColor: p1?.rowHighlightColor || existing1?.wristbandRowColor,
                 notes: existing1?.notes,
                 isStarred: existing1?.isStarred,
                 gainYards: existing1?.gainYards,
@@ -878,23 +861,25 @@ export function syncWristbandToCallSheet(
           const color2 = col2.numberBgColor || col2.color || '#38bdf8';
           const textCol2 = col2.numberTextColor || (isDarkColor(color2) ? '#ffffff' : '#000000');
           const name2 = (p2?.text || '').trim();
-          const form2 = inferFormation(name2, 'offense', p2?.formation);
-          const pers2 = extractPersonnel({ name: name2, formation: form2, unit: 'offense' });
           const existing2 = existingPlayBySlot.get(`1_${r}`);
+          // Preserve user-edited play name and formation if present on the call sheet!
+          const play2Name = (existing2?.name && existing2.name.trim()) ? existing2.name : name2;
+          const form2 = existing2?.formation || inferFormation(play2Name, 'offense', p2?.formation);
+          const pers2 = existing2?.personnel || extractPersonnel({ name: play2Name, formation: form2, unit: 'offense' });
 
-          const play2: CallSheetPlay | null = name2
+          const play2: CallSheetPlay | null = play2Name
             ? {
                 id: existing2?.id || `wb_sec_${wb.id}_1_${r}`,
-                name: name2,
+                name: play2Name,
                 formation: form2,
                 personnel: pers2,
-                type: (p2?.type as any) || 'run',
+                type: existing2?.type || (p2?.type as any) || 'run',
                 wristbandNum: slotNum2,
                 wristbandLabel: slotLabel2,
                 wristbandColor: color2,
                 wristbandNumberColor: color2,
                 wristbandTextColor: textCol2,
-                wristbandRowColor: p2?.rowHighlightColor,
+                wristbandRowColor: p2?.rowHighlightColor || existing2?.wristbandRowColor,
                 notes: existing2?.notes,
                 isStarred: existing2?.isStarred,
                 gainYards: existing2?.gainYards,
@@ -942,34 +927,8 @@ export function syncWristbandToCallSheet(
             (col2.name && sec.title.includes(col2.name))
           ) {
             colIdx = 1;
-          } else if (
-            mode === 'col_1' ||
-            sec.id.includes('_c1_') ||
-            sec.id.includes('split1') ||
-            sec.title.includes('Column 1') ||
-            (col1.name && sec.title.includes(col1.name))
-          ) {
-            colIdx = 0;
           } else {
-            // Inspect plays to determine which wristband column this table holds
-            const populatedPlays = (sec.plays || []).filter(Boolean) as CallSheetPlay[];
-            let col0Count = 0;
-            let col1Count = 0;
-            populatedPlays.forEach((p) => {
-              if (p.wristbandSlotMatch?.colIdx === 0) col0Count++;
-              else if (p.wristbandSlotMatch?.colIdx === 1) col1Count++;
-              else if (p.wristbandNum !== undefined) {
-                const num = Number(p.wristbandNum);
-                if (wb!.labelingMode === 'same_per_card') {
-                  if (num <= rows) col0Count++;
-                  else col1Count++;
-                } else {
-                  if (num < wbStart + rows) col0Count++;
-                  else col1Count++;
-                }
-              }
-            });
-            colIdx = col1Count > col0Count ? 1 : 0;
+            colIdx = 0;
           }
         }
 
@@ -981,22 +940,23 @@ export function syncWristbandToCallSheet(
           const color = targetCol.numberBgColor || targetCol.color || (colIdx === 1 ? '#38bdf8' : '#facc15');
           const textCol = targetCol.numberTextColor || (isDarkColor(color) ? '#ffffff' : '#000000');
           const name = (p.text || '').trim();
-          if (!name) return null;
-          const form = inferFormation(name, 'offense', p.formation);
-          const pers = extractPersonnel({ name, formation: form, unit: 'offense' });
           const existing = existingPlayBySlot.get(`${colIdx}_${r}`);
+          const resolvedName = (existing?.name && existing.name.trim()) ? existing.name : name;
+          if (!resolvedName) return null;
+          const form = existing?.formation || inferFormation(resolvedName, 'offense', p.formation);
+          const pers = existing?.personnel || extractPersonnel({ name: resolvedName, formation: form, unit: 'offense' });
           return {
             id: existing?.id || `wb_sec_${wb!.id}_${colIdx}_${r}`,
-            name,
+            name: resolvedName,
             formation: form,
             personnel: pers,
-            type: (p.type as any) || 'run',
+            type: existing?.type || (p.type as any) || 'run',
             wristbandNum: slotNum,
             wristbandLabel: slotLabel,
             wristbandColor: color,
             wristbandNumberColor: color,
             wristbandTextColor: textCol,
-            wristbandRowColor: p.rowHighlightColor,
+            wristbandRowColor: p.rowHighlightColor || existing?.wristbandRowColor,
             notes: existing?.notes,
             isStarred: existing?.isStarred,
             gainYards: existing?.gainYards,
@@ -1014,25 +974,11 @@ export function syncWristbandToCallSheet(
           };
         });
 
-        // The column header should match the wristband label
         const colLabel = (targetCol.name && targetCol.name.trim())
           ? targetCol.name.trim()
           : (colIdx === 1 ? 'Column 2' : 'Column 1');
 
-        // Check if title should be updated to match the wristband label
-        const shouldUpdateTitle =
-          !sec.title ||
-          sec.title.trim() === '' ||
-          sec.title.includes(wb.title) ||
-          wb.title.includes(sec.title) ||
-          sec.title.includes('•') ||
-          sec.title.toLowerCase().includes('wristband') ||
-          sec.title.toLowerCase().includes('column 1') ||
-          sec.title.toLowerCase().includes('column 2') ||
-          (col1.name && sec.title === col1.name) ||
-          (col2.name && sec.title === col2.name);
-
-        const colTitle = shouldUpdateTitle ? colLabel : sec.title;
+        const colTitle = sec.title && sec.title.trim() ? sec.title : colLabel;
         const headerBg = sec.headerBgColor || targetCol.color || (colIdx === 1 ? '#38bdf8' : '#facc15');
         const headerText = sec.headerTextColor || (!isDarkColor(headerBg) ? '#000000' : '#ffffff');
 
@@ -1050,7 +996,7 @@ export function syncWristbandToCallSheet(
       }
     }
 
-    // Default for regular (situational/custom) sections: sync individual plays without overriding custom table titles
+    // Default for regular (situational/custom) sections: sync individual plays without overriding custom table titles or plays
     return {
       ...sec,
       plays: (sec.plays || []).map(syncPlay),
@@ -1059,7 +1005,7 @@ export function syncWristbandToCallSheet(
 
   return {
     ...callSheetData,
-    lastEdited: Date.now(),
+    lastEdited: callSheetData.lastEdited || Date.now(),
     offenseSections: (callSheetData.offenseSections || []).map(syncSection),
     defenseSections: (callSheetData.defenseSections || []).map(syncSection),
     offenseScript: (callSheetData.offenseScript || []).map(syncPlay),

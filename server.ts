@@ -787,6 +787,7 @@ export function mergeServerState(current: any, incoming: any, metadata?: any): a
     const isCallSheetScope =
       metadata?.scope === 'call_sheet' ||
       metadata?.scope === 'call_sheet_winner' ||
+      Boolean(metadata?.scope && metadata.scope.startsWith('call_sheet')) ||
       metadata?.scope === 'all' ||
       metadata?.scope === 'force' ||
       metadata?.scope === 'import_backup' ||

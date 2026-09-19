@@ -122,15 +122,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
       }
     }
 
-    // Synchronize wristband tables immediately on load so wristband updates are visible
-    if (propWristbandData && Array.isArray(propWristbandData.wristbands) && propWristbandData.wristbands.length > 0) {
-      try {
-        return syncWristbandToCallSheet(propWristbandData, bestData, propPlayDatabase);
-      } catch (err) {
-        console.warn('Initial syncWristbandToCallSheet error:', err);
-      }
-    }
-
+    // Return best stored candidate directly without mutating on mount
     return bestData;
   });
 
@@ -195,26 +187,31 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
   const applyCallSheetUpdate = useCallback(
     (updater: CallSheetFullData | ((prev: CallSheetFullData) => CallSheetFullData)) => {
       try {
+        const now = Date.now();
+        isLocalEditRef.current = now;
+
         setCallSheetData((prev) => {
           try {
             const next = typeof updater === 'function' ? updater(prev) : updater;
             if (!next) return prev;
-            const now = Date.now();
             const stampedNext: CallSheetFullData = { ...next, lastEdited: now };
             const nextJson = safeJSONStringify(stampedNext);
             lastEmittedCallSheetJson.current = nextJson;
-            isLocalEditRef.current = now;
 
             // Save snapshot and update storage immediately
             saveCallSheetSnapshot(stampedNext);
+            safeJSONSet('footballCallSheetData', stampedNext);
+            safeJSONSet('footballCallSheetData_backup', stampedNext);
 
-            // CRITICAL: Notify parent App component immediately so App state and debouncedSave to server & Firestore fire!
+            // Notify parent App asynchronously outside the React state updater
             if (onUpdateCallSheetData) {
-              try {
-                onUpdateCallSheetData(stampedNext);
-              } catch (notifyErr) {
-                console.warn('Error calling onUpdateCallSheetData:', notifyErr);
-              }
+              queueMicrotask(() => {
+                try {
+                  onUpdateCallSheetData(stampedNext);
+                } catch (notifyErr) {
+                  console.warn('Error calling onUpdateCallSheetData:', notifyErr);
+                }
+              });
             }
 
             return stampedNext;
@@ -245,13 +242,12 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
   useEffect(() => {
     if (propCallSheetData && (propCallSheetData.offenseSections || propCallSheetData.defenseSections)) {
-      // Prevent stale parent prop re-renders from overwriting recent local user edits (60s buffer)
-      if (Date.now() - isLocalEditRef.current < 60000) {
+      // Prevent stale parent prop re-renders from overwriting recent local user edits (15 min buffer)
+      if (Date.now() - isLocalEditRef.current < 900000) {
         return;
       }
       const incomingJson = safeJSONStringify(propCallSheetData);
       if (incomingJson !== lastEmittedCallSheetJson.current) {
-        lastEmittedCallSheetJson.current = incomingJson;
         setCallSheetData((prev) => {
           const prevPlayCount = countPopulatedPlays(prev);
           const incomingPlayCount = countPopulatedPlays(propCallSheetData);
@@ -264,13 +260,14 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
           if (prevLastEdited >= incomingLastEdited && prevPlayCount > 0) {
             return prev;
           }
+          lastEmittedCallSheetJson.current = incomingJson;
           return propCallSheetData;
         });
       }
     }
   }, [propCallSheetData]);
 
-  // Re-sync call sheet tables whenever wristband data changes
+  // Re-sync call sheet tables whenever wristband data changes (without overwriting recent user edits)
   useEffect(() => {
     if (propWristbandData && Array.isArray(propWristbandData.wristbands)) {
       const wbJson = safeJSONStringify(propWristbandData);
@@ -285,6 +282,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
           if (syncedJson !== prevJson) {
             lastEmittedCallSheetJson.current = syncedJson;
             safeJSONSet('footballCallSheetData', synced);
+            safeJSONSet('footballCallSheetData_backup', synced);
             return synced;
           }
         } catch (err) {

@@ -2003,7 +2003,7 @@ function mergeRemoteWeeklyData(
         }
       }
 
-      const isLocalRecent = Date.now() - Math.max(lastLocalEditTimeRef.current, lastLocalCallSheetEditTimeRef.current) < 180000;
+      const isLocalRecent = Date.now() - Math.max(lastLocalEditTimeRef.current, lastLocalCallSheetEditTimeRef.current) < 900000; // 15 min buffer
       const localLastEdited = Math.max(localCs?.lastEdited || 0, highestLocalTimestamp);
       const remoteLastEdited = (data.callSheetData as any)?.lastEdited || 0;
 
@@ -2019,8 +2019,8 @@ function mergeRemoteWeeklyData(
       const remotePlayCount = countPlays(data.callSheetData);
 
       // Do NOT overwrite if:
-      // 1. Local was edited recently (< 3 mins)
-      // 2. Local timestamp is newer than remote
+      // 1. Local was edited recently (< 15 mins)
+      // 2. Local timestamp is >= remote timestamp and local has plays
       // 3. Local has plays while remote is empty
       if (
         isLocalRecent ||
@@ -2028,17 +2028,21 @@ function mergeRemoteWeeklyData(
         (localPlayCount > 0 && remotePlayCount === 0)
       ) {
         // Preserving local call sheet data
-        if (localLastEdited > remoteLastEdited) {
+        if (localLastEdited > remoteLastEdited && bestLocalCs) {
           setCallSheetData(bestLocalCs);
           latestStateRef.current.callSheetData = bestLocalCs;
           safeJSONSet('footballCallSheetData', bestLocalCs);
+          safeJSONSet('footballCallSheetData_backup', bestLocalCs);
           debouncedSave('all');
         }
-      } else {
+      } else if (data.callSheetData) {
+        // Always back up best local copy before adopting remote update
+        if (bestLocalCs && localPlayCount > 0) {
+          safeJSONSet('footballCallSheetData_backup', bestLocalCs);
+        }
         setCallSheetData(data.callSheetData);
         latestStateRef.current.callSheetData = data.callSheetData;
         safeJSONSet('footballCallSheetData', data.callSheetData);
-        // Note: Keep footballCallSheetData_backup intact as a local safety net
       }
     }
     const scopedWeekKey = getScopedWeekKey(activeTeamIdRef.current, currentWeekRef.current);
@@ -2212,6 +2216,7 @@ function mergeRemoteWeeklyData(
       scope.startsWith('formation_') ||
       scope.startsWith('practice') ||
       scope.startsWith('wristband') ||
+      scope.startsWith('call_sheet') ||
       scope.startsWith('idle_timeout') ||
       scope.startsWith('staff_pref') ||
       scope === 'delete_formation' ||
@@ -7649,14 +7654,19 @@ function mergeRemoteWeeklyData(
   };
 
   const handleUpdateCallSheetData = (newCs: CallSheetFullData) => {
-    const now = Date.now();
+    const now = newCs.lastEdited || Date.now();
     lastLocalEditTimeRef.current = now;
     lastLocalCallSheetEditTimeRef.current = now;
     const taggedCs: CallSheetFullData = { ...newCs, lastEdited: now };
     setCallSheetData(taggedCs);
     latestStateRef.current.callSheetData = taggedCs;
     saveCallSheetSnapshot(taggedCs);
-    debouncedSave('all');
+    safeJSONSet('footballCallSheetData', taggedCs);
+    safeJSONSet('footballCallSheetData_backup', taggedCs);
+
+    // Save and broadcast immediately so other coaches receive changes instantly
+    // and refreshing immediately will NOT lose changes
+    flushAndSaveStateToStorage('call_sheet_update', { activeUnit: 'call_sheet', scope: 'call_sheet_update' });
   };
 
   const handleSetAdminPasscode = async (newPasscode: string) => {
