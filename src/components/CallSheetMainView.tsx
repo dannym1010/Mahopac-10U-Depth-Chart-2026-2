@@ -242,10 +242,6 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
 
   useEffect(() => {
     if (propCallSheetData && (propCallSheetData.offenseSections || propCallSheetData.defenseSections)) {
-      // Prevent stale parent prop re-renders from overwriting recent local user edits (15 min buffer)
-      if (Date.now() - isLocalEditRef.current < 900000) {
-        return;
-      }
       const incomingJson = safeJSONStringify(propCallSheetData);
       if (incomingJson !== lastEmittedCallSheetJson.current) {
         setCallSheetData((prev) => {
@@ -257,6 +253,12 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
           }
           const prevLastEdited = prev.lastEdited || 0;
           const incomingLastEdited = propCallSheetData.lastEdited || 0;
+          if (incomingLastEdited > prevLastEdited) {
+            lastEmittedCallSheetJson.current = incomingJson;
+            safeJSONSet('footballCallSheetData', propCallSheetData);
+            safeJSONSet('footballCallSheetData_backup', propCallSheetData);
+            return propCallSheetData;
+          }
           if (prevLastEdited >= incomingLastEdited && prevPlayCount > 0) {
             return prev;
           }
@@ -267,7 +269,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
     }
   }, [propCallSheetData]);
 
-  // Re-sync call sheet tables whenever wristband data changes (without overwriting recent user edits)
+  // Re-sync call sheet tables whenever wristband data changes
   useEffect(() => {
     if (propWristbandData && Array.isArray(propWristbandData.wristbands)) {
       const wbJson = safeJSONStringify(propWristbandData);
@@ -283,6 +285,15 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
             lastEmittedCallSheetJson.current = syncedJson;
             safeJSONSet('footballCallSheetData', synced);
             safeJSONSet('footballCallSheetData_backup', synced);
+            if (onUpdateCallSheetData) {
+              queueMicrotask(() => {
+                try {
+                  onUpdateCallSheetData(synced);
+                } catch (notifyErr) {
+                  console.warn('Error notifying onUpdateCallSheetData after wb sync:', notifyErr);
+                }
+              });
+            }
             return synced;
           }
         } catch (err) {
@@ -291,7 +302,7 @@ export const CallSheetMainView: React.FC<CallSheetMainViewProps> = ({
         return prev;
       });
     }
-  }, [propWristbandData, playDatabase]);
+  }, [propWristbandData, playDatabase, onUpdateCallSheetData]);
 
   useEffect(() => {
     if (propDeletedPlayIds && Array.isArray(propDeletedPlayIds)) {

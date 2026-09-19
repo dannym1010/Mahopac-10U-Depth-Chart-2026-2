@@ -596,6 +596,8 @@ export const GameDayHubView: React.FC<GameDayHubViewProps> = ({
               userRole={userRole}
               activeTeamName={activeTeamName}
               playDatabase={playDatabase}
+              callSheetData={callSheetData}
+              onUpdateCallSheetData={onUpdateCallSheetData}
               onUpdatePlayDatabase={onUpdatePlayDatabase}
               onUpdateWristbandData={onUpdateWristbandData}
             />
@@ -941,6 +943,7 @@ export const GameDayHubView: React.FC<GameDayHubViewProps> = ({
           onUpdateCallSheetData={onUpdateCallSheetData}
           deletedPlayIds={deletedPlayIds}
           onUpdateDeletedPlayIds={onUpdateDeletedPlayIds}
+          wristbandData={wristbandData}
         />
       )}
 
@@ -951,6 +954,8 @@ export const GameDayHubView: React.FC<GameDayHubViewProps> = ({
           userRole={userRole}
           activeTeamName={activeTeamName}
           playDatabase={playDatabase}
+          callSheetData={callSheetData}
+          onUpdateCallSheetData={onUpdateCallSheetData}
           onUpdatePlayDatabase={onUpdatePlayDatabase}
           onUpdateWristbandData={onUpdateWristbandData}
         />

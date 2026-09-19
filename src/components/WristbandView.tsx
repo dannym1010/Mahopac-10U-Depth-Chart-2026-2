@@ -472,6 +472,15 @@ export const WristbandView: React.FC<WristbandViewProps> = ({
     if (onUpdateWristbandData) {
       onUpdateWristbandData(tagged);
     }
+    if (onUpdateCallSheetData) {
+      const currentCs: CallSheetFullData =
+        callSheetData || safeJSONParse<CallSheetFullData | null>('footballCallSheetData', null) || DEFAULT_CALL_SHEET_DATA;
+      const syncedCs = syncWristbandToCallSheet(tagged, currentCs, playDatabase);
+      const taggedCs: CallSheetFullData = { ...syncedCs, lastEdited: now };
+      safeJSONSet('footballCallSheetData', taggedCs);
+      safeJSONSet('footballCallSheetData_backup', taggedCs);
+      onUpdateCallSheetData(taggedCs);
+    }
   };
 
   const updateWristbandById = (targetWbId: string, updater: (wb: SingleWristband) => SingleWristband): WristbandData => {
